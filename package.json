@@ -19,6 +19,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"dev:local": "tsx src/local.ts",
+		"figma:debug": "./scripts/auto-launch-figma-plugin.sh",
 		"build": "npm run build:local && npm run build:cloudflare",
 		"build:local": "tsc -p tsconfig.local.json",
 		"build:cloudflare": "tsc -p tsconfig.cloudflare.json",
@@ -54,7 +55,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/puppeteer": "^1.0.4",
-		"@modelcontextprotocol/sdk": "1.19.1",
+		"@modelcontextprotocol/sdk": "^1.25.3",
 		"agents": "^0.2.8",
 		"chrome-remote-interface": "^0.33.2",
 		"pino": "^9.5.0",
