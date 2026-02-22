@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Figma Desktop Bridge Autorun Uninstaller
+# F-MCP ATezer Bridge Autorun Uninstaller
 
 set -e
 
 PLIST_NAME="com.figma.desktop-bridge.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 
-echo "🗑️  Uninstalling Figma Desktop Bridge Autorun..."
+echo "🗑️  Uninstalling F-MCP ATezer Bridge Autorun..."
 echo ""
 
 # Unload the Launch Agent
@@ -28,5 +28,5 @@ fi
 echo ""
 echo "🎉 Uninstallation complete!"
 echo ""
-echo "ℹ️  The Desktop Bridge plugin will no longer auto-run"
+echo "ℹ️  The F-MCP ATezer Bridge plugin will no longer auto-run"
 echo "   You can still run it manually from Figma's plugin menu"

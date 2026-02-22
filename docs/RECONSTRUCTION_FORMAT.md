@@ -338,8 +338,8 @@ For issues or questions about the reconstruction format:
 1. Check validation errors in the response
 2. Verify node types are supported
 3. Ensure color values are in 0-1 range
-4. Review [Figma Component Reconstructor plugin documentation](https://github.com/your-repo/figma-reconstructor)
-5. [Open an issue](https://github.com/your-repo/figma-console-mcp/issues) with example spec
+4. Review [Figma Component Reconstructor plugin documentation](https://github.com/atezer/figma-mcp-bridge)
+5. [Open an issue](https://github.com/atezer/figma-mcp-bridge/issues) with example spec
 
 ## Future Enhancements
 

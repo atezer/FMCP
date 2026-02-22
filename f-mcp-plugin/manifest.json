@@ -1,0 +1,14 @@
+{
+  "name": "F-MCP ATezer Bridge",
+  "id": "f-mcp-atezer-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma", "dev"],
+  "capabilities": ["inspect"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["http://localhost", "http://localhost:5454", "ws://localhost:5454", "http://localhost:5455", "ws://localhost:5455", "http://localhost:5456", "ws://localhost:5456", "http://localhost:5457", "ws://localhost:5457", "http://localhost:5458", "ws://localhost:5458", "http://localhost:5459", "ws://localhost:5459", "http://localhost:5460", "ws://localhost:5460"],
+    "reasoning": "Connect to local MCP server (no Figma debug port needed)"
+  }
+}

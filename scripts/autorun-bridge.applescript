@@ -1,4 +1,4 @@
--- Figma Desktop Bridge - Tek yöntem: arama (Cmd+/) ile plugin aç
+-- F-MCP ATezer Bridge - Tek yöntem: arama (Cmd+/) ile plugin aç
 -- Figma'nın kesinlikle önde (frontmost) olmasını bekler
 
 on appendLog(msg)
@@ -47,7 +47,7 @@ try
 		tell process "Figma"
 			keystroke "/" using {command down}
 			delay 1.2
-			keystroke "Figma Desktop Bridge"
+			keystroke "F-MCP ATezer Bridge"
 			delay 0.8
 			keystroke return
 		end tell

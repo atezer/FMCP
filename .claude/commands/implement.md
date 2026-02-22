@@ -4,7 +4,7 @@ Implement a feature or fix using best practices for this MCP server project.
 
 ## Instructions
 
-When implementing features for the Figma Console MCP server:
+When implementing features for the F-MCP ATezer server:
 
 1. **Use MCP SDK Patterns**
    - Follow Model Context Protocol TypeScript SDK conventions
@@ -31,7 +31,7 @@ When implementing features for the Figma Console MCP server:
 
 5. **Documentation**
    - Update README.md if adding new tools
-   - Update ARCHITECTURE.md for significant changes
+   - Update docs/ARCHITECTURE.md for significant changes
    - Add inline comments for complex logic
 
 ## Example Usage

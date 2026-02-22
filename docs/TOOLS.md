@@ -2,6 +2,16 @@
 
 This guide provides detailed documentation for each tool, including when to use them and best practices.
 
+## Çalışma modları (debug portu gerekmez)
+
+Araçlar **iki şekilde** kullanılabilir:
+
+1. **Plugin-only / WebSocket (önerilen, debug yok)**  
+   Figma’yı **normal** açarsınız; **F-MCP ATezer Bridge** plugin’ini çalıştırırsınız. Plugin, MCP sunucusuna WebSocket (port 5454) ile bağlanır. **`--remote-debugging-port=9222` gerekmez.** Variables, components, file data, execute, screenshot vb. bu modda çalışır. Token zorunlu değildir.
+
+2. **Local + CDP (debug portu ile)**  
+   Figma’yı `--remote-debugging-port=9222` ile açarsanız console log izleme, sayfa yenileme gibi ek özellikler kullanılabilir. Bu mod **isteğe bağlıdır**; sadece plugin bridge ile de tüm tasarım araçları kullanılır.
+
 ## Quick Reference
 
 | Category | Tool | Purpose | Mode |
@@ -56,7 +66,7 @@ figma_navigate({
 
 ### `figma_get_status`
 
-Check browser and monitoring status. **In local mode, also validates if Figma Desktop is running with the required `--remote-debugging-port=9222` flag.**
+Check connection and monitoring status. **Debug portu olmadan (plugin-only)** çalışır: plugin’in WebSocket ile bağlı olup olmadığını ve veri alınıp alınamayacağını gösterir.
 
 **Usage:**
 ```javascript
@@ -64,17 +74,23 @@ figma_get_status()
 ```
 
 **Returns:**
-- **Setup validation** (local mode only):
-  - `setup.valid` - Whether Figma Desktop is running with debug flag
-  - `setup.message` - Human-readable status
-  - `setup.setupInstructions` - Step-by-step setup guide (if invalid)
-  - `setup.ai_instruction` - Guidance for AI assistants
-- Browser connection status
-- Console monitoring active/inactive
+- **Plugin-only / WebSocket modunda:** Plugin bridge bağlantısı (port 5454), plugin "ready" durumu, mevcut dosya bilgisi. Figma’yı debug portu ile açmanız gerekmez.
+- **CDP modunda (isteğe bağlı):** Ek olarak `setup.valid` — Figma’nın `--remote-debugging-port=9222` ile açılıp açılmadığı; console izleme açık mı. Bu alanlar sadece debug portu kullanıyorsanız dolu gelir.
+- Browser/bridge connection status
+- Console monitoring active/inactive (yalnızca CDP modunda anlamlı)
 - Current URL (if navigated)
 - Number of captured console logs
 
-**Example Response (Local Mode - Setup Valid):**
+**Example Response (Plugin-only – no debug port):**
+```json
+{
+  "mode": "local",
+  "pluginBridge": "connected",
+  "message": "✅ Plugin connected via WebSocket; no debug port required"
+}
+```
+
+**Example Response (CDP mode – setup valid, optional):**
 ```json
 {
   "mode": "local",
@@ -85,26 +101,13 @@ figma_get_status()
 }
 ```
 
-**Example Response (Local Mode - Setup Invalid):**
-```json
-{
-  "mode": "local",
-  "setup": {
-    "valid": false,
-    "message": "❌ Figma Desktop is NOT running with --remote-debugging-port=9222",
-    "setupInstructions": {
-      "step1": "QUIT Figma Desktop completely",
-      "step2_macOS": "open -a \"Figma\" --args --remote-debugging-port=9222",
-      "step2_windows": "cmd /c \"%LOCALAPPDATA%\\Figma\\Figma.exe\" --remote-debugging-port=9222"
-    },
-    "ai_instruction": "CRITICAL: User must restart Figma with the debug flag"
-  }
-}
-```
+**Example Response (CDP mode – setup invalid):**  
+Sadece debug portu kullanıyorsanız ve Figma 9222 ile açılmamışsa `setup.valid: false` ve yeniden başlatma talimatları döner. **Plugin-only kullanıyorsanız bu adımlara gerek yok.**
 
 **Best Practice:**
-- Call this tool first when starting a debugging session in local mode
-- If `setup.valid` is false, guide user through setup before using console tools
+- Önce bu aracı çağırın; bağlantı tipini (plugin bridge vs CDP) ve durumu görün.
+- Debug portu kullanmıyorsanız: Figma’yı normal açın, plugin’i çalıştırın; `figma_get_status` bridge bağlantısını doğrular.
+- Console log araçları kullanacaksanız ve `setup.valid` false ise, kullanıcıya Figma’yı `--remote-debugging-port=9222` ile yeniden başlatmasını söyleyin veya sadece plugin bridge ile devam edin (console log’lar CDP modunda çalışır).
 
 ---
 
@@ -240,9 +243,8 @@ figma_reload_plugin({
 
 ## 🎨 Design System Tools
 
-> **⚠️ All Design System tools require `FIGMA_ACCESS_TOKEN`** configured in your MCP client.
->
-> See [Installation Guide](../README.md#step-2-add-your-figma-access-token-for-design-system-tools) for setup instructions.
+> **Plugin-only modda** (WebSocket, debug portu yok): **Token gerekmez.** Plugin açık ve MCP’ye bağlı olsun; variables, components, file data plugin üzerinden alınır.  
+> **Remote / CDP modda** token gerekebilir. Bkz. [SETUP.md](SETUP.md), [NPX-INSTALLATION.md](NPX-INSTALLATION.md).
 
 ### `figma_get_variables`
 
@@ -509,7 +511,7 @@ figma_get_file_for_plugin({
 
 ## ✏️ Design Creation Tools (Local Mode Only)
 
-> **⚠️ Requires Desktop Bridge Plugin**: These tools only work in Local Mode with the Desktop Bridge plugin running in Figma.
+> **⚠️ Requires F-MCP ATezer Bridge Plugin**: These tools only work in Local Mode with the F-MCP ATezer Bridge plugin running in Figma.
 
 ### `figma_execute`
 
@@ -603,7 +605,7 @@ frame.paddingRight = 16;
 
 ## 🔧 Variable Management Tools (Local Mode Only)
 
-> **⚠️ Requires Desktop Bridge Plugin**: These tools only work in Local Mode with the Desktop Bridge plugin running in Figma.
+> **⚠️ Requires F-MCP ATezer Bridge Plugin**: These tools only work in Local Mode with the F-MCP ATezer Bridge plugin running in Figma.
 
 ### `figma_create_variable_collection`
 
@@ -843,9 +845,10 @@ figma_rename_mode({
 
 Before using write tools, ensure:
 1. ✅ Running in **Local Mode** (not Remote SSE)
-2. ✅ Figma Desktop started with `--remote-debugging-port=9222`
-3. ✅ **Desktop Bridge plugin** is running in Figma
-4. ✅ `figma_get_status` returns `setup.valid: true`
+2. ✅ **F-MCP ATezer Bridge plugin** is running in Figma (Plugins → Development → F-MCP ATezer Bridge)
+3. ✅ Plugin connected to MCP (WebSocket bridge or CDP): `figma_get_status` shows connection OK
+
+**Debug portu zorunlu değil:** Variables, components, execute, screenshot **plugin-only** (WebSocket) ile çalışır; Figma’yı `--remote-debugging-port=9222` ile açmanız gerekmez. Console log izleme kullanacaksanız isteğe bağlı olarak Figma’yı 9222 ile başlatabilirsiniz.
 
 ---
 
@@ -862,11 +865,11 @@ All tools return structured error responses:
 ```
 
 Common errors:
-- `"FIGMA_ACCESS_TOKEN not configured"` - Set up your token (see installation guide)
+- `"FIGMA_ACCESS_TOKEN not configured"` - When using plugin-only, token is not required. If using REST fallback, set token (see [SETUP](SETUP.md)).
 - `"Failed to connect to browser"` - Browser initializing or connection issue
 - `"Invalid Figma URL"` - Check URL format
 - `"Node not found"` - Verify node ID is correct
-- `"Desktop Bridge plugin not found"` - Ensure plugin is running in Figma
+- `"F-MCP ATezer Bridge plugin not found"` - Ensure plugin is running in Figma
 - `"Invalid hex color"` - Check hex format (use #RGB, #RGBA, #RRGGBB, or #RRGGBBAA)
 
 See [Troubleshooting Guide](TROUBLESHOOTING.md) for detailed solutions.

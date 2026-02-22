@@ -6,7 +6,9 @@
 
 **For Plugin Developers in Local Mode:**
 
-> **🚨 CRITICAL FIRST-TIME SETUP:**
+> **💡 Plugin-only (no debug port):** If you only need variables, components, execute, and screenshot, use **`local-plugin-only.js`** in MCP config. Open Figma **normally**, run the plugin; no 9222 or token required. The steps below are **only for console log** capture.
+>
+> **If you need console logs**, follow this first-time setup:
 >
 > **Step 1:** Quit Figma Desktop completely (Cmd+Q on macOS / Alt+F4 on Windows)
 >
@@ -26,7 +28,7 @@
 >
 > **Step 4:** Open your design file and run your plugin
 >
-> ✅ **You only need to do this once per Figma session.** Every time you quit Figma, you'll need to relaunch it with this command.
+> ✅ **You only need to do this once per Figma session** (and only if using console log tools). For plugin-only mode, open Figma normally; no relaunch with debug flag needed.
 
 ### How to Verify Setup is Working
 
@@ -173,7 +175,7 @@ Should show:
 - `initialized: true`
 - `consoleMonitor.isMonitoring: true`
 
-**Note:** If using the public server at `https://figma-console-mcp.southleft.com`, browser launch is handled automatically and should work without issues.
+**Note:** If using a remote MCP SSE server, ensure its URL is correctly set and browser launch may be handled by the server.
 
 ---
 
@@ -286,14 +288,14 @@ figma_get_status()  // Fast, shows current state
 
 #### Check Server Health
 ```bash
-curl https://figma-console-mcp.southleft.com/health
+curl https://your-worker.workers.dev/health
 ```
 
 Should return:
 ```json
 {
   "status": "healthy",
-  "service": "Figma Console MCP",
+  "service": "F-MCP ATezer",
   "version": "0.1.0",
   "endpoints": ["/sse", "/mcp", "/test-browser"]
 }
@@ -317,18 +319,18 @@ Should return:
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://figma-console-mcp.southleft.com/sse"
+        "https://your-worker.workers.dev/sse"
       ]
     }
   }
 }
 ```
 
-**Important:** URL must be exactly `https://figma-console-mcp.southleft.com/sse` (note the `/sse` endpoint).
+**Important:** Use your deployment URL with the `/sse` endpoint (e.g. `https://your-worker.workers.dev/sse`).
 
 #### Restart Claude Desktop
 After changing configuration:
@@ -411,7 +413,7 @@ If you're still experiencing issues:
 
 2. **Verify Deployment**
    ```bash
-   curl https://figma-console-mcp.southleft-llc.workers.dev/health
+   curl https://your-worker.workers.dev/health
    ```
 
 3. **Check Cloudflare Status**
@@ -419,7 +421,7 @@ If you're still experiencing issues:
    - Browser Rendering API status
 
 4. **Report Issues**
-   - GitHub Issues: https://github.com/southleft/figma-console-mcp/issues
+   - GitHub Issues: https://github.com/atezer/figma-mcp-bridge/issues
    - Include error messages
    - Include steps to reproduce
    - Include figma_get_status output
@@ -482,7 +484,7 @@ NODE_ENV=production
 
 ## Advanced Configuration
 
-Create `~/.config/figma-console-mcp/config.json`:
+Create `~/.config/figma-mcp-bridge/config.json`:
 
 ```json
 {
@@ -506,4 +508,4 @@ Create `~/.config/figma-console-mcp/config.json`:
 }
 ```
 
-**Note:** Custom configuration is optional. The public server at `https://figma-console-mcp.southleft.com` uses sensible defaults that work for most use cases.
+**Note:** Custom configuration is optional. When using your own deployment, set `MCP_OAUTH_BASE_URL` to your worker URL so OAuth redirects work.

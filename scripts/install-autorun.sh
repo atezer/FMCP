@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Figma Desktop Bridge Autorun Installer
-# This script sets up the Desktop Bridge plugin to run automatically when Figma opens
+# F-MCP ATezer Bridge Autorun Installer
+# This script sets up the F-MCP ATezer Bridge plugin to run automatically when Figma opens
 
 set -e
 
@@ -10,7 +10,7 @@ PLIST_NAME="com.figma.desktop-bridge.plist"
 PLIST_SOURCE="$SCRIPT_DIR/$PLIST_NAME"
 PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 
-echo "🚀 Installing Figma Desktop Bridge Autorun..."
+echo "🚀 Installing F-MCP ATezer Bridge Autorun..."
 echo ""
 
 # Create LaunchAgents directory if it doesn't exist
@@ -50,12 +50,12 @@ echo "   - Stderr: ~/Library/Logs/figma-bridge-stderr.log"
 echo ""
 echo "🎉 Installation complete!"
 echo ""
-echo "ℹ️  The Desktop Bridge plugin will now automatically run when:"
+echo "ℹ️  The F-MCP ATezer Bridge plugin will now automatically run when:"
 echo "   1. You log in to macOS (if Figma is already running)"
 echo "   2. You open Figma Desktop"
 echo ""
 echo "⚠️  IMPORTANT: Make sure you've installed the plugin first:"
 echo "   Figma → Plugins → Development → Import plugin from manifest"
-echo "   Path: $SCRIPT_DIR/../figma-desktop-bridge/manifest.json"
+echo "   Path: $SCRIPT_DIR/../f-mcp-plugin/manifest.json"
 echo ""
 echo "🛠️  To uninstall autorun, run: ./uninstall-autorun.sh"

@@ -1,4 +1,4 @@
-# Figma Desktop Bridge
+# F-MCP ATezer Bridge
 
 A Figma plugin that bridges the Variables API and Component descriptions to MCP (Model Context Protocol) clients without requiring an Enterprise plan.
 
@@ -28,24 +28,56 @@ MCP Request → Plugin UI → postMessage → Plugin Worker → figma.getNodeByI
 - ✅ Clean, minimal UI
 - ✅ Real-time data updates
 
+### Design Mode vs Dev Mode (no design seat required)
+
+The plugin runs in **both** Figma Design and Dev Mode (`"editorType": ["figma", "dev"]` in manifest). **You do not need a design seat** to use it with MCP.
+
+| | Design mode | Dev mode (no design seat) |
+|--|-------------|---------------------------|
+| **MCP connection** | ✅ Works | ✅ Works |
+| **Read** (variables, components, logs, screenshot) | ✅ Works | ✅ Works |
+| **Write** (variable update, create nodes, `figma_execute` that edits doc) | ✅ Works | ⚠️ May be restricted by Figma (Dev Mode is read-only for document edits) |
+
+So: Design vs Dev mode does **not** block MCP. Users with only Dev Mode access can run the plugin and use all read-only MCP tools.
+
+### Plugin Bridge (no Figma debug port)
+
+You can use MCP **without** launching Figma with a debug port. When the plugin runs, it connects to the MCP server over WebSocket (`ws://127.0.0.1:5454`). No `--remote-debugging-port=9222` needed.
+
+1. Start Claude (or your MCP client) so the MCP server is running (it starts the bridge server on port 5454).
+2. Open Figma **normally** (no special launch args).
+3. Run the **F-MCP ATezer Bridge** plugin (Plugins → Development → F-MCP ATezer Bridge).
+4. The plugin connects to the MCP server automatically; status shows "ready" when connected.
+
+Port is configurable via `FIGMA_PLUGIN_BRIDGE_PORT` or config `local.pluginBridgePort` (default 5454).
+
+### Plugin-only mode (recommended: no REST API, no token)
+
+You can run **without** the full MCP server (figma-mcp-bridge) and **without** any Figma REST API token:
+
+1. Use the **plugin-only MCP relay**: `node dist/local-plugin-only.js` (or add it to Claude as the only MCP server).
+2. All data comes from the plugin: variables, file structure, components, styles, execute, screenshot. No `FIGMA_ACCESS_TOKEN` needed.
+3. Token use is minimized: tools default to `verbosity=summary` and compact responses.
+4. Claude config: point `args` to `.../f-mcp-bridge/dist/local-plugin-only.js` and you only need the plugin running in Figma.
+
 ## Installation
 
 ### Quick Install (Recommended)
 
 1. **Open Figma Desktop**
 2. **Go to Plugins → Development → Import plugin from manifest...**
-3. **Navigate to:** `/path/to/figma-console-mcp/figma-desktop-bridge/manifest.json`
+3. **Navigate to:** `/path/to/f-mcp-bridge/f-mcp-plugin/manifest.json`
 4. **Click "Open"**
 
-The plugin will appear in your Development plugins list as "Figma Desktop Bridge".
+The plugin will appear in your Development plugins list as "F-MCP ATezer Bridge".
 
 ### Manual Installation
 
 Alternatively, you can install from the plugin directory:
 
 ```bash
-# From the figma-console-mcp directory
-cd figma-desktop-bridge
+# From the project root (f-mcp-bridge)
+cd f-mcp-plugin
 
 # Figma will use these files:
 # - manifest.json (plugin configuration)
@@ -58,8 +90,8 @@ cd figma-desktop-bridge
 ### Running the Plugin
 
 1. **Open your Figma file** with variables and/or components
-2. **Run the plugin:** Right-click → Plugins → Development → Figma Desktop Bridge
-3. **Wait for confirmation:** Plugin UI will show "✓ Desktop Bridge active"
+2. **Run the plugin:** Right-click → Plugins → Development → F-MCP ATezer Bridge
+3. **Wait for confirmation:** Plugin UI will show "✓ F-MCP ATezer Bridge active"
 
 The plugin will:
 - Fetch all local variables and collections on startup
@@ -67,6 +99,24 @@ The plugin will:
 - Store variables in `window.__figmaVariablesData`
 - Provide on-demand component data via `window.requestComponentData(nodeId)`
 - Keep running until manually closed
+
+### Connecting Claude App (plugin-only, no token)
+
+1. **Build** (once): `cd f-mcp-bridge && npm run build:local`
+2. **Claude config** (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "figma": {
+         "command": "node",
+         "args": ["/ABSOLUTE/PATH/TO/f-mcp-bridge/dist/local-plugin-only.js"]
+       }
+     }
+   }
+   ```
+3. **Restart Claude.** Then open Figma, run **Plugins → Development → F-MCP ATezer Bridge**. When the plugin shows "ready", ask Claude e.g. "Figma'daki variable'ları listele" or "design system özetini ver".
+
+No Figma REST API token or debug port required.
 
 ### Accessing Data via MCP
 
@@ -121,19 +171,17 @@ figma_get_component({
 4. Resolves promise when `COMPONENT_DATA` message received
 5. Includes 10-second timeout and error handling
 
-### MCP Desktop Connector
+### MCP connection: WebSocket (default) or CDP
 
-**Variables (getVariablesFromPluginUI):**
-1. Connects to Figma Desktop via remote debugging port (9222)
-2. Enumerates plugin UI iframes
-3. Checks for `window.__figmaVariablesData` availability
-4. Retrieves pre-loaded variables data
+**WebSocket (plugin-only, no debug port):**
+1. Plugin UI connects to MCP server at `ws://127.0.0.1:5454`
+2. MCP sends RPCs (getVariables, getComponent, execute, etc.) over the WebSocket
+3. No Figma debug port or token required
 
-**Components (getComponentFromPluginUI):**
-1. Connects to same Figma Desktop instance
-2. Finds iframe with `window.requestComponentData` function
-3. Calls function with nodeId parameter
-4. Returns Promise with component data including descriptions
+**CDP (optional, for console logs):**
+1. When using `local.js` and Figma started with `--remote-debugging-port=9222`, MCP can connect via Puppeteer
+2. Enumerates plugin UI iframes and reads `window.__figmaVariablesData` / calls `window.requestComponentData(nodeId)`
+3. Returns variables and component data to MCP tools
 
 ## Troubleshooting
 
@@ -143,10 +191,10 @@ figma_get_component({
 - Try **Plugins → Development → Refresh plugin list**
 
 ### "No plugin UI found with variables data" or "No plugin UI found with requestComponentData"
-- Ensure plugin is running (check for open plugin window showing "✓ Desktop Bridge active")
+- Ensure plugin is running (check for open plugin window showing "✓ F-MCP ATezer Bridge active" or "ready")
 - Try closing and reopening the plugin
-- Check browser console for errors
-- Verify Figma Desktop was launched with `--remote-debugging-port=9222`
+- **Plugin-only (WebSocket):** Ensure MCP server is running and nothing else is using port 5454; open Figma normally (debug port not required)
+- **CDP mode:** If using debug port, verify Figma was launched with `--remote-debugging-port=9222`
 
 ### Variables not updating
 - Close and reopen the plugin to refresh data
@@ -155,12 +203,12 @@ figma_get_component({
 
 ### Component descriptions are empty or missing
 - **First, verify in Figma:** Check if the component actually has a description set
-- If using REST API fallback (not Desktop Bridge), descriptions may be missing due to known Figma API bug
+- If using REST API fallback (not F-MCP ATezer Bridge), descriptions may be missing due to known Figma API bug
 - Ensure the plugin is running - component data requires active plugin connection
 - Check that the nodeId is correct (format: "123:456")
 
 ### Component request times out
-- Ensure plugin is running and shows "Desktop Bridge active"
+- Ensure plugin is running and shows "F-MCP ATezer Bridge active"
 - Check that the component exists in the current file
 - Verify nodeId format is correct
 - Timeout is set to 10 seconds - complex files may take longer
@@ -175,7 +223,7 @@ figma_get_component({
 
 ### File Structure
 ```
-figma-desktop-bridge/
+f-mcp-plugin/
 ├── manifest.json    # Plugin configuration
 ├── code.js          # Plugin worker (accesses Figma API)
 ├── ui.html          # Plugin UI (stores/requests data for MCP access)
@@ -188,23 +236,23 @@ The plugin logs to Figma's console:
 
 **Variables (startup):**
 ```
-🌉 [Desktop Bridge] Plugin loaded and ready
-🌉 [Desktop Bridge] Fetching variables...
-🌉 [Desktop Bridge] Found 404 variables in 2 collections
-🌉 [Desktop Bridge] Variables data sent to UI successfully
-🌉 [Desktop Bridge] UI iframe now has variables data accessible via window.__figmaVariablesData
+🌉 [F-MCP ATezer Bridge] Plugin loaded and ready
+🌉 [F-MCP ATezer Bridge] Fetching variables...
+🌉 [F-MCP ATezer Bridge] Found 404 variables in 2 collections
+🌉 [F-MCP ATezer Bridge] Variables data sent to UI successfully
+🌉 [F-MCP ATezer Bridge] UI iframe now has variables data accessible via window.__figmaVariablesData
 ```
 
 **Components (on-demand):**
 ```
-🌉 [Desktop Bridge] Fetching component: 279:2861
-🌉 [Desktop Bridge] Component data ready. Has description: true
+🌉 [F-MCP ATezer Bridge] Fetching component: 279:2861
+🌉 [F-MCP ATezer Bridge] Component data ready. Has description: true
 ```
 
 **Ready state:**
 ```
-🌉 [Desktop Bridge] Ready to handle component requests
-🌉 [Desktop Bridge] Plugin will stay open until manually closed
+🌉 [F-MCP ATezer Bridge] Ready to handle component requests
+🌉 [F-MCP ATezer Bridge] Plugin will stay open until manually closed
 ```
 
 View logs: **Plugins → Development → Open Console** (Cmd+Option+I on Mac)
@@ -214,10 +262,10 @@ View logs: **Plugins → Development → Open Console** (Cmd+Option+I on Mac)
 - Plugin requires **no network access** (allowedDomains: ["none"])
 - Data never leaves Figma Desktop
 - Uses standard Figma Plugin API (no unofficial APIs)
-- Read-only access (cannot modify variables or components)
+- Variable and component **read** via MCP; **write** (variable CRUD, `figma_execute`) available when using the plugin bridge
 - Component requests are scoped to current file only
 
-## Why Desktop Bridge for Components?
+## Why F-MCP ATezer Bridge for Components?
 
 Figma's REST API has a known bug where component `description` and `descriptionMarkdown` fields are often missing or outdated. This is particularly problematic for:
 
@@ -225,8 +273,8 @@ Figma's REST API has a known bug where component `description` and `descriptionM
 - **Unpublished components** in active development
 - **Team collaboration** where descriptions contain important usage guidelines
 
-The Desktop Bridge plugin bypasses this limitation by using the Figma Plugin API (`figma.getNodeByIdAsync()`), which has reliable, real-time access to all component fields including descriptions. This makes it ideal for teams working with local components in shared project files.
+The F-MCP ATezer Bridge plugin bypasses this limitation by using the Figma Plugin API (`figma.getNodeByIdAsync()`), which has reliable, real-time access to all component fields including descriptions. This makes it ideal for teams working with local components in shared project files.
 
 ## License
 
-Part of the figma-console-mcp project.
+Part of the F-MCP ATezer (figma-mcp-bridge) project.

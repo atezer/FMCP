@@ -2,7 +2,7 @@
 #
 # Launch Figma Desktop with Remote Debugging Enabled
 # This script starts Figma with Chrome Remote Debugging Protocol enabled,
-# allowing the Figma Console MCP to capture plugin console logs.
+# allowing the F-MCP ATezer to capture plugin console logs.
 #
 
 set -e
@@ -76,7 +76,7 @@ if curl -s "http://localhost:$DEBUG_PORT/json/version" > /dev/null 2>&1; then
     echo
     echo "  2. Run your plugin in Figma"
     echo
-    echo "  3. Start the Figma Console MCP:"
+    echo "  3. Start the F-MCP ATezer:"
     echo "     ${YELLOW}npm run dev:local${NC}"
     echo
     echo "     Or in Claude Desktop, your MCP will automatically connect!"

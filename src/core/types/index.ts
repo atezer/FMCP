@@ -1,5 +1,5 @@
 /**
- * Type definitions for Figma Console MCP
+ * Type definitions for F-MCP ATezer (Figma MCP Bridge)
  */
 
 /**
@@ -92,6 +92,8 @@ export interface BrowserConfig {
 export interface LocalModeConfig {
   debugHost: string;
   debugPort: number;
+  /** Plugin bridge WebSocket server port (no CDP needed when plugin connects) */
+  pluginBridgePort?: number;
 }
 
 /**

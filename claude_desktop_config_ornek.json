@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "node",
+      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local.js"]
+    }
+  }
+}

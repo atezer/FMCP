@@ -2,7 +2,7 @@
 
 # Test script to verify autorun setup
 
-echo "🧪 Testing Figma Desktop Bridge Autorun Setup..."
+echo "🧪 Testing F-MCP ATezer Bridge Autorun Setup..."
 echo ""
 
 PLIST_NAME="com.figma.desktop-bridge.plist"

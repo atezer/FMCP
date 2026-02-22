@@ -1,10 +1,10 @@
-// Figma Desktop Bridge - MCP Plugin
+// F-MCP ATezer Bridge - MCP Plugin
 // Bridges Figma API to MCP clients via plugin UI window
 // Supports: Variables, Components, Styles, and more
 // Uses postMessage to communicate with UI, bypassing worker sandbox limitations
 // Puppeteer can access UI iframe's window context to retrieve data
 
-console.log('🌉 [Desktop Bridge] Plugin loaded and ready');
+console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 
 // Show minimal UI - compact status indicator
 figma.showUI(__html__, { width: 120, height: 36, visible: true, themeColors: true });
@@ -12,13 +12,13 @@ figma.showUI(__html__, { width: 120, height: 36, visible: true, themeColors: tru
 // Immediately fetch and send variables data to UI
 (async () => {
   try {
-    console.log('🌉 [Desktop Bridge] Fetching variables...');
+    console.log('🌉 [F-MCP ATezer Bridge] Fetching variables...');
 
     // Get all local variables and collections
     const variables = await figma.variables.getLocalVariablesAsync();
     const collections = await figma.variables.getLocalVariableCollectionsAsync();
 
-    console.log(`🌉 [Desktop Bridge] Found ${variables.length} variables in ${collections.length} collections`);
+    console.log(`🌉 [F-MCP ATezer Bridge] Found ${variables.length} variables in ${collections.length} collections`);
 
     // Format the data
     const variablesData = {
@@ -52,11 +52,11 @@ figma.showUI(__html__, { width: 120, height: 36, visible: true, themeColors: tru
       data: variablesData
     });
 
-    console.log('🌉 [Desktop Bridge] Variables data sent to UI successfully');
-    console.log('🌉 [Desktop Bridge] UI iframe now has variables data accessible via window.__figmaVariablesData');
+    console.log('🌉 [F-MCP ATezer Bridge] Variables data sent to UI successfully');
+    console.log('🌉 [F-MCP ATezer Bridge] UI iframe now has variables data accessible via window.__figmaVariablesData');
 
   } catch (error) {
-    console.error('🌉 [Desktop Bridge] Error fetching variables:', error);
+    console.error('🌉 [F-MCP ATezer Bridge] Error fetching variables:', error);
     figma.ui.postMessage({
       type: 'ERROR',
       error: error.message || String(error)
@@ -141,7 +141,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   if (msg.type === 'EXECUTE_CODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Executing code, length:', msg.code.length);
+      console.log('🌉 [F-MCP ATezer Bridge] Executing code, length:', msg.code.length);
 
       // Use eval with async IIFE wrapper instead of AsyncFunction constructor
       // AsyncFunction is restricted in Figma's plugin sandbox, but eval works
@@ -151,7 +151,7 @@ figma.ui.onmessage = async (msg) => {
       // This allows async/await in user code while using eval
       var wrappedCode = "(async function() {\n" + msg.code + "\n})()";
 
-      console.log('🌉 [Desktop Bridge] Wrapped code for eval');
+      console.log('🌉 [F-MCP ATezer Bridge] Wrapped code for eval');
 
       // Execute with timeout
       var timeoutMs = msg.timeout || 5000;
@@ -168,7 +168,7 @@ figma.ui.onmessage = async (msg) => {
       } catch (syntaxError) {
         // Log the actual syntax error message
         var syntaxErrorMsg = syntaxError && syntaxError.message ? syntaxError.message : String(syntaxError);
-        console.error('🌉 [Desktop Bridge] Syntax error in code:', syntaxErrorMsg);
+        console.error('🌉 [F-MCP ATezer Bridge] Syntax error in code:', syntaxErrorMsg);
         figma.ui.postMessage({
           type: 'EXECUTE_CODE_RESULT',
           requestId: msg.requestId,
@@ -183,7 +183,7 @@ figma.ui.onmessage = async (msg) => {
         timeoutPromise
       ]);
 
-      console.log('🌉 [Desktop Bridge] Code executed successfully, result type:', typeof result);
+      console.log('🌉 [F-MCP ATezer Bridge] Code executed successfully, result type:', typeof result);
 
       // Analyze result for potential silent failures
       var resultAnalysis = {
@@ -217,7 +217,7 @@ figma.ui.onmessage = async (msg) => {
       }
 
       if (resultAnalysis.warning) {
-        console.warn('🌉 [Desktop Bridge] ⚠️ Result warning:', resultAnalysis.warning);
+        console.warn('🌉 [F-MCP ATezer Bridge] ⚠️ Result warning:', resultAnalysis.warning);
       }
 
       figma.ui.postMessage({
@@ -240,9 +240,9 @@ figma.ui.onmessage = async (msg) => {
       var errorStack = error && error.stack ? error.stack : '';
 
       // Log error details as strings so they show up properly in Puppeteer
-      console.error('🌉 [Desktop Bridge] Code execution error: [' + errorName + '] ' + errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Code execution error: [' + errorName + '] ' + errorMsg);
       if (errorStack) {
-        console.error('🌉 [Desktop Bridge] Stack:', errorStack);
+        console.error('🌉 [F-MCP ATezer Bridge] Stack:', errorStack);
       }
 
       figma.ui.postMessage({
@@ -259,7 +259,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'UPDATE_VARIABLE') {
     try {
-      console.log('🌉 [Desktop Bridge] Updating variable:', msg.variableId);
+      console.log('🌉 [F-MCP ATezer Bridge] Updating variable:', msg.variableId);
 
       var variable = await figma.variables.getVariableByIdAsync(msg.variableId);
       if (!variable) {
@@ -276,7 +276,7 @@ figma.ui.onmessage = async (msg) => {
           type: 'VARIABLE_ALIAS',
           id: value
         };
-        console.log('🌉 [Desktop Bridge] Converting to variable alias:', value.id);
+        console.log('🌉 [F-MCP ATezer Bridge] Converting to variable alias:', value.id);
       } else if (variable.resolvedType === 'COLOR' && typeof value === 'string') {
         // Convert hex string to Figma color
         value = hexToFigmaRGB(value);
@@ -285,7 +285,7 @@ figma.ui.onmessage = async (msg) => {
       // Set the value for the specified mode
       variable.setValueForMode(msg.modeId, value);
 
-      console.log('🌉 [Desktop Bridge] Variable updated successfully');
+      console.log('🌉 [F-MCP ATezer Bridge] Variable updated successfully');
 
       figma.ui.postMessage({
         type: 'UPDATE_VARIABLE_RESULT',
@@ -295,7 +295,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Update variable error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Update variable error:', error);
       figma.ui.postMessage({
         type: 'UPDATE_VARIABLE_RESULT',
         requestId: msg.requestId,
@@ -310,7 +310,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CREATE_VARIABLE') {
     try {
-      console.log('🌉 [Desktop Bridge] Creating variable:', msg.name);
+      console.log('🌉 [F-MCP ATezer Bridge] Creating variable:', msg.name);
 
       // Get the collection
       var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
@@ -343,7 +343,7 @@ figma.ui.onmessage = async (msg) => {
         variable.scopes = msg.scopes;
       }
 
-      console.log('🌉 [Desktop Bridge] Variable created:', variable.id);
+      console.log('🌉 [F-MCP ATezer Bridge] Variable created:', variable.id);
 
       figma.ui.postMessage({
         type: 'CREATE_VARIABLE_RESULT',
@@ -353,7 +353,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Create variable error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Create variable error:', error);
       figma.ui.postMessage({
         type: 'CREATE_VARIABLE_RESULT',
         requestId: msg.requestId,
@@ -368,7 +368,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CREATE_VARIABLE_COLLECTION') {
     try {
-      console.log('🌉 [Desktop Bridge] Creating collection:', msg.name);
+      console.log('🌉 [F-MCP ATezer Bridge] Creating collection:', msg.name);
 
       // Create the collection
       var collection = figma.variables.createVariableCollection(msg.name);
@@ -385,7 +385,7 @@ figma.ui.onmessage = async (msg) => {
         }
       }
 
-      console.log('🌉 [Desktop Bridge] Collection created:', collection.id);
+      console.log('🌉 [F-MCP ATezer Bridge] Collection created:', collection.id);
 
       figma.ui.postMessage({
         type: 'CREATE_VARIABLE_COLLECTION_RESULT',
@@ -395,7 +395,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Create collection error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Create collection error:', error);
       figma.ui.postMessage({
         type: 'CREATE_VARIABLE_COLLECTION_RESULT',
         requestId: msg.requestId,
@@ -410,7 +410,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'DELETE_VARIABLE') {
     try {
-      console.log('🌉 [Desktop Bridge] Deleting variable:', msg.variableId);
+      console.log('🌉 [F-MCP ATezer Bridge] Deleting variable:', msg.variableId);
 
       var variable = await figma.variables.getVariableByIdAsync(msg.variableId);
       if (!variable) {
@@ -424,7 +424,7 @@ figma.ui.onmessage = async (msg) => {
 
       variable.remove();
 
-      console.log('🌉 [Desktop Bridge] Variable deleted');
+      console.log('🌉 [F-MCP ATezer Bridge] Variable deleted');
 
       figma.ui.postMessage({
         type: 'DELETE_VARIABLE_RESULT',
@@ -434,7 +434,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Delete variable error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Delete variable error:', error);
       figma.ui.postMessage({
         type: 'DELETE_VARIABLE_RESULT',
         requestId: msg.requestId,
@@ -449,7 +449,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'DELETE_VARIABLE_COLLECTION') {
     try {
-      console.log('🌉 [Desktop Bridge] Deleting collection:', msg.collectionId);
+      console.log('🌉 [F-MCP ATezer Bridge] Deleting collection:', msg.collectionId);
 
       var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
       if (!collection) {
@@ -464,7 +464,7 @@ figma.ui.onmessage = async (msg) => {
 
       collection.remove();
 
-      console.log('🌉 [Desktop Bridge] Collection deleted');
+      console.log('🌉 [F-MCP ATezer Bridge] Collection deleted');
 
       figma.ui.postMessage({
         type: 'DELETE_VARIABLE_COLLECTION_RESULT',
@@ -474,7 +474,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Delete collection error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Delete collection error:', error);
       figma.ui.postMessage({
         type: 'DELETE_VARIABLE_COLLECTION_RESULT',
         requestId: msg.requestId,
@@ -489,7 +489,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'RENAME_VARIABLE') {
     try {
-      console.log('🌉 [Desktop Bridge] Renaming variable:', msg.variableId, 'to', msg.newName);
+      console.log('🌉 [F-MCP ATezer Bridge] Renaming variable:', msg.variableId, 'to', msg.newName);
 
       var variable = await figma.variables.getVariableByIdAsync(msg.variableId);
       if (!variable) {
@@ -499,7 +499,7 @@ figma.ui.onmessage = async (msg) => {
       var oldName = variable.name;
       variable.name = msg.newName;
 
-      console.log('🌉 [Desktop Bridge] Variable renamed from "' + oldName + '" to "' + msg.newName + '"');
+      console.log('🌉 [F-MCP ATezer Bridge] Variable renamed from "' + oldName + '" to "' + msg.newName + '"');
 
       figma.ui.postMessage({
         type: 'RENAME_VARIABLE_RESULT',
@@ -510,7 +510,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Rename variable error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Rename variable error:', error);
       figma.ui.postMessage({
         type: 'RENAME_VARIABLE_RESULT',
         requestId: msg.requestId,
@@ -525,7 +525,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'ADD_MODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Adding mode to collection:', msg.collectionId);
+      console.log('🌉 [F-MCP ATezer Bridge] Adding mode to collection:', msg.collectionId);
 
       var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
       if (!collection) {
@@ -535,7 +535,7 @@ figma.ui.onmessage = async (msg) => {
       // Add the mode (returns the new mode ID)
       var newModeId = collection.addMode(msg.modeName);
 
-      console.log('🌉 [Desktop Bridge] Mode "' + msg.modeName + '" added with ID:', newModeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Mode "' + msg.modeName + '" added with ID:', newModeId);
 
       figma.ui.postMessage({
         type: 'ADD_MODE_RESULT',
@@ -549,7 +549,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Add mode error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Add mode error:', error);
       figma.ui.postMessage({
         type: 'ADD_MODE_RESULT',
         requestId: msg.requestId,
@@ -564,7 +564,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'RENAME_MODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Renaming mode:', msg.modeId, 'in collection:', msg.collectionId);
+      console.log('🌉 [F-MCP ATezer Bridge] Renaming mode:', msg.modeId, 'in collection:', msg.collectionId);
 
       var collection = await figma.variables.getVariableCollectionByIdAsync(msg.collectionId);
       if (!collection) {
@@ -580,7 +580,7 @@ figma.ui.onmessage = async (msg) => {
       var oldName = currentMode.name;
       collection.renameMode(msg.modeId, msg.newName);
 
-      console.log('🌉 [Desktop Bridge] Mode renamed from "' + oldName + '" to "' + msg.newName + '"');
+      console.log('🌉 [F-MCP ATezer Bridge] Mode renamed from "' + oldName + '" to "' + msg.newName + '"');
 
       figma.ui.postMessage({
         type: 'RENAME_MODE_RESULT',
@@ -591,7 +591,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Rename mode error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Rename mode error:', error);
       figma.ui.postMessage({
         type: 'RENAME_MODE_RESULT',
         requestId: msg.requestId,
@@ -606,7 +606,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'REFRESH_VARIABLES') {
     try {
-      console.log('🌉 [Desktop Bridge] Refreshing variables data...');
+      console.log('🌉 [F-MCP ATezer Bridge] Refreshing variables data...');
 
       var variables = await figma.variables.getLocalVariablesAsync();
       var collections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -633,10 +633,10 @@ figma.ui.onmessage = async (msg) => {
         data: variablesData
       });
 
-      console.log('🌉 [Desktop Bridge] Variables refreshed:', variables.length, 'variables in', collections.length, 'collections');
+      console.log('🌉 [F-MCP ATezer Bridge] Variables refreshed:', variables.length, 'variables in', collections.length, 'collections');
 
     } catch (error) {
-      console.error('🌉 [Desktop Bridge] Refresh variables error:', error);
+      console.error('🌉 [F-MCP ATezer Bridge] Refresh variables error:', error);
       figma.ui.postMessage({
         type: 'REFRESH_VARIABLES_RESULT',
         requestId: msg.requestId,
@@ -651,7 +651,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'GET_COMPONENT') {
     try {
-      console.log(`🌉 [Desktop Bridge] Fetching component: ${msg.nodeId}`);
+      console.log(`🌉 [F-MCP ATezer Bridge] Fetching component: ${msg.nodeId}`);
 
       const node = await figma.getNodeByIdAsync(msg.nodeId);
 
@@ -698,7 +698,7 @@ figma.ui.onmessage = async (msg) => {
         }
       };
 
-      console.log(`🌉 [Desktop Bridge] Component data ready. Has description: ${!!componentData.component.description}, annotations: ${componentData.component.annotations.length}`);
+      console.log(`🌉 [F-MCP ATezer Bridge] Component data ready. Has description: ${!!componentData.component.description}, annotations: ${componentData.component.annotations.length}`);
 
       // Send to UI
       figma.ui.postMessage({
@@ -708,7 +708,7 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
-      console.error(`🌉 [Desktop Bridge] Error fetching component:`, error);
+      console.error(`🌉 [F-MCP ATezer Bridge] Error fetching component:`, error);
       figma.ui.postMessage({
         type: 'COMPONENT_ERROR',
         requestId: msg.requestId,
@@ -722,7 +722,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'GET_LOCAL_COMPONENTS') {
     try {
-      console.log('🌉 [Desktop Bridge] Fetching all local components for manifest...');
+      console.log('🌉 [F-MCP ATezer Bridge] Fetching all local components for manifest...');
 
       // Find all component sets and standalone components in the file
       var components = [];
@@ -854,9 +854,9 @@ figma.ui.onmessage = async (msg) => {
       }
 
       // Load all pages first (required before accessing children)
-      console.log('🌉 [Desktop Bridge] Loading all pages...');
+      console.log('🌉 [F-MCP ATezer Bridge] Loading all pages...');
       await figma.loadAllPagesAsync();
-      console.log('🌉 [Desktop Bridge] All pages loaded, searching for components...');
+      console.log('🌉 [F-MCP ATezer Bridge] All pages loaded, searching for components...');
 
       // Search through all pages
       var pages = figma.root.children;
@@ -864,7 +864,7 @@ figma.ui.onmessage = async (msg) => {
         findComponents(page);
       });
 
-      console.log('🌉 [Desktop Bridge] Found ' + components.length + ' components and ' + componentSets.length + ' component sets');
+      console.log('🌉 [F-MCP ATezer Bridge] Found ' + components.length + ' components and ' + componentSets.length + ' component sets');
 
       figma.ui.postMessage({
         type: 'GET_LOCAL_COMPONENTS_RESULT',
@@ -884,7 +884,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Get local components error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Get local components error:', errorMsg);
       figma.ui.postMessage({
         type: 'GET_LOCAL_COMPONENTS_RESULT',
         requestId: msg.requestId,
@@ -899,7 +899,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'INSTANTIATE_COMPONENT') {
     try {
-      console.log('🌉 [Desktop Bridge] Instantiating component:', msg.componentKey || msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Instantiating component:', msg.componentKey || msg.nodeId);
 
       var component = null;
       var instance = null;
@@ -909,7 +909,7 @@ figma.ui.onmessage = async (msg) => {
         try {
           component = await figma.importComponentByKeyAsync(msg.componentKey);
         } catch (importError) {
-          console.log('🌉 [Desktop Bridge] Not a published component, trying local...');
+          console.log('🌉 [F-MCP ATezer Bridge] Not a published component, trying local...');
         }
       }
 
@@ -930,14 +930,14 @@ figma.ui.onmessage = async (msg) => {
                 }
               }
               var targetVariantName = variantParts.join(', ');
-              console.log('🌉 [Desktop Bridge] Looking for variant:', targetVariantName);
+              console.log('🌉 [F-MCP ATezer Bridge] Looking for variant:', targetVariantName);
 
               // Find matching variant
               for (var i = 0; i < node.children.length; i++) {
                 var child = node.children[i];
                 if (child.type === 'COMPONENT' && child.name === targetVariantName) {
                   component = child;
-                  console.log('🌉 [Desktop Bridge] Found exact variant match');
+                  console.log('🌉 [F-MCP ATezer Bridge] Found exact variant match');
                   break;
                 }
               }
@@ -959,7 +959,7 @@ figma.ui.onmessage = async (msg) => {
                     }
                     if (matches) {
                       component = child;
-                      console.log('🌉 [Desktop Bridge] Found partial variant match:', child.name);
+                      console.log('🌉 [F-MCP ATezer Bridge] Found partial variant match:', child.name);
                       break;
                     }
                   }
@@ -970,7 +970,7 @@ figma.ui.onmessage = async (msg) => {
             // Default to first variant if no match
             if (!component && node.children && node.children.length > 0) {
               component = node.children[0];
-              console.log('🌉 [Desktop Bridge] Using default variant:', component.name);
+              console.log('🌉 [F-MCP ATezer Bridge] Using default variant:', component.name);
             }
           }
         }
@@ -1018,7 +1018,7 @@ figma.ui.onmessage = async (msg) => {
             try {
               instance.setProperties({ [propName]: msg.overrides[propName] });
             } catch (propError) {
-              console.warn('🌉 [Desktop Bridge] Could not set property ' + propName + ':', propError.message);
+              console.warn('🌉 [F-MCP ATezer Bridge] Could not set property ' + propName + ':', propError.message);
             }
           }
         }
@@ -1029,7 +1029,7 @@ figma.ui.onmessage = async (msg) => {
         try {
           instance.setProperties(msg.variant);
         } catch (variantError) {
-          console.warn('🌉 [Desktop Bridge] Could not set variant:', variantError.message);
+          console.warn('🌉 [F-MCP ATezer Bridge] Could not set variant:', variantError.message);
         }
       }
 
@@ -1041,7 +1041,7 @@ figma.ui.onmessage = async (msg) => {
         }
       }
 
-      console.log('🌉 [Desktop Bridge] Component instantiated:', instance.id);
+      console.log('🌉 [F-MCP ATezer Bridge] Component instantiated:', instance.id);
 
       figma.ui.postMessage({
         type: 'INSTANTIATE_COMPONENT_RESULT',
@@ -1059,7 +1059,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Instantiate component error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Instantiate component error:', errorMsg);
       figma.ui.postMessage({
         type: 'INSTANTIATE_COMPONENT_RESULT',
         requestId: msg.requestId,
@@ -1074,7 +1074,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_NODE_DESCRIPTION') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting description on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting description on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1092,7 +1092,7 @@ figma.ui.onmessage = async (msg) => {
         node.descriptionMarkdown = msg.descriptionMarkdown;
       }
 
-      console.log('🌉 [Desktop Bridge] Description set successfully');
+      console.log('🌉 [F-MCP ATezer Bridge] Description set successfully');
 
       figma.ui.postMessage({
         type: 'SET_NODE_DESCRIPTION_RESULT',
@@ -1103,7 +1103,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set description error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set description error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_NODE_DESCRIPTION_RESULT',
         requestId: msg.requestId,
@@ -1118,7 +1118,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'ADD_COMPONENT_PROPERTY') {
     try {
-      console.log('🌉 [Desktop Bridge] Adding component property:', msg.propertyName, 'type:', msg.propertyType);
+      console.log('🌉 [F-MCP ATezer Bridge] Adding component property:', msg.propertyName, 'type:', msg.propertyType);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1143,7 +1143,7 @@ figma.ui.onmessage = async (msg) => {
       // Use msg.propertyType (not msg.type which is the message type 'ADD_COMPONENT_PROPERTY')
       var propertyNameWithId = node.addComponentProperty(msg.propertyName, msg.propertyType, msg.defaultValue, options);
 
-      console.log('🌉 [Desktop Bridge] Property added:', propertyNameWithId);
+      console.log('🌉 [F-MCP ATezer Bridge] Property added:', propertyNameWithId);
 
       figma.ui.postMessage({
         type: 'ADD_COMPONENT_PROPERTY_RESULT',
@@ -1154,7 +1154,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Add component property error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Add component property error:', errorMsg);
       figma.ui.postMessage({
         type: 'ADD_COMPONENT_PROPERTY_RESULT',
         requestId: msg.requestId,
@@ -1169,7 +1169,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'EDIT_COMPONENT_PROPERTY') {
     try {
-      console.log('🌉 [Desktop Bridge] Editing component property:', msg.propertyName);
+      console.log('🌉 [F-MCP ATezer Bridge] Editing component property:', msg.propertyName);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1182,7 +1182,7 @@ figma.ui.onmessage = async (msg) => {
 
       var propertyNameWithId = node.editComponentProperty(msg.propertyName, msg.newValue);
 
-      console.log('🌉 [Desktop Bridge] Property edited:', propertyNameWithId);
+      console.log('🌉 [F-MCP ATezer Bridge] Property edited:', propertyNameWithId);
 
       figma.ui.postMessage({
         type: 'EDIT_COMPONENT_PROPERTY_RESULT',
@@ -1193,7 +1193,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Edit component property error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Edit component property error:', errorMsg);
       figma.ui.postMessage({
         type: 'EDIT_COMPONENT_PROPERTY_RESULT',
         requestId: msg.requestId,
@@ -1208,7 +1208,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'DELETE_COMPONENT_PROPERTY') {
     try {
-      console.log('🌉 [Desktop Bridge] Deleting component property:', msg.propertyName);
+      console.log('🌉 [F-MCP ATezer Bridge] Deleting component property:', msg.propertyName);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1221,7 +1221,7 @@ figma.ui.onmessage = async (msg) => {
 
       node.deleteComponentProperty(msg.propertyName);
 
-      console.log('🌉 [Desktop Bridge] Property deleted');
+      console.log('🌉 [F-MCP ATezer Bridge] Property deleted');
 
       figma.ui.postMessage({
         type: 'DELETE_COMPONENT_PROPERTY_RESULT',
@@ -1231,7 +1231,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Delete component property error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Delete component property error:', errorMsg);
       figma.ui.postMessage({
         type: 'DELETE_COMPONENT_PROPERTY_RESULT',
         requestId: msg.requestId,
@@ -1246,7 +1246,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'RESIZE_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Resizing node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Resizing node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1263,7 +1263,7 @@ figma.ui.onmessage = async (msg) => {
         node.resizeWithoutConstraints(msg.width, msg.height);
       }
 
-      console.log('🌉 [Desktop Bridge] Node resized to:', msg.width, 'x', msg.height);
+      console.log('🌉 [F-MCP ATezer Bridge] Node resized to:', msg.width, 'x', msg.height);
 
       figma.ui.postMessage({
         type: 'RESIZE_NODE_RESULT',
@@ -1274,7 +1274,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Resize node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Resize node error:', errorMsg);
       figma.ui.postMessage({
         type: 'RESIZE_NODE_RESULT',
         requestId: msg.requestId,
@@ -1289,7 +1289,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'MOVE_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Moving node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Moving node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1303,7 +1303,7 @@ figma.ui.onmessage = async (msg) => {
       node.x = msg.x;
       node.y = msg.y;
 
-      console.log('🌉 [Desktop Bridge] Node moved to:', msg.x, ',', msg.y);
+      console.log('🌉 [F-MCP ATezer Bridge] Node moved to:', msg.x, ',', msg.y);
 
       figma.ui.postMessage({
         type: 'MOVE_NODE_RESULT',
@@ -1314,7 +1314,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Move node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Move node error:', errorMsg);
       figma.ui.postMessage({
         type: 'MOVE_NODE_RESULT',
         requestId: msg.requestId,
@@ -1329,7 +1329,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_NODE_FILLS') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting fills on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting fills on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1356,7 +1356,7 @@ figma.ui.onmessage = async (msg) => {
 
       node.fills = processedFills;
 
-      console.log('🌉 [Desktop Bridge] Fills set successfully');
+      console.log('🌉 [F-MCP ATezer Bridge] Fills set successfully');
 
       figma.ui.postMessage({
         type: 'SET_NODE_FILLS_RESULT',
@@ -1367,7 +1367,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set fills error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set fills error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_NODE_FILLS_RESULT',
         requestId: msg.requestId,
@@ -1382,7 +1382,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_NODE_STROKES') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting strokes on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting strokes on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1412,7 +1412,7 @@ figma.ui.onmessage = async (msg) => {
         node.strokeWeight = msg.strokeWeight;
       }
 
-      console.log('🌉 [Desktop Bridge] Strokes set successfully');
+      console.log('🌉 [F-MCP ATezer Bridge] Strokes set successfully');
 
       figma.ui.postMessage({
         type: 'SET_NODE_STROKES_RESULT',
@@ -1423,7 +1423,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set strokes error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set strokes error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_NODE_STROKES_RESULT',
         requestId: msg.requestId,
@@ -1438,7 +1438,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_NODE_OPACITY') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting opacity on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting opacity on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1451,7 +1451,7 @@ figma.ui.onmessage = async (msg) => {
 
       node.opacity = Math.max(0, Math.min(1, msg.opacity));
 
-      console.log('🌉 [Desktop Bridge] Opacity set to:', node.opacity);
+      console.log('🌉 [F-MCP ATezer Bridge] Opacity set to:', node.opacity);
 
       figma.ui.postMessage({
         type: 'SET_NODE_OPACITY_RESULT',
@@ -1462,7 +1462,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set opacity error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set opacity error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_NODE_OPACITY_RESULT',
         requestId: msg.requestId,
@@ -1477,7 +1477,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_NODE_CORNER_RADIUS') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting corner radius on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting corner radius on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1490,7 +1490,7 @@ figma.ui.onmessage = async (msg) => {
 
       node.cornerRadius = msg.radius;
 
-      console.log('🌉 [Desktop Bridge] Corner radius set to:', msg.radius);
+      console.log('🌉 [F-MCP ATezer Bridge] Corner radius set to:', msg.radius);
 
       figma.ui.postMessage({
         type: 'SET_NODE_CORNER_RADIUS_RESULT',
@@ -1501,7 +1501,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set corner radius error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set corner radius error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_NODE_CORNER_RADIUS_RESULT',
         requestId: msg.requestId,
@@ -1516,7 +1516,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CLONE_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Cloning node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Cloning node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1529,7 +1529,7 @@ figma.ui.onmessage = async (msg) => {
 
       var clonedNode = node.clone();
 
-      console.log('🌉 [Desktop Bridge] Node cloned:', clonedNode.id);
+      console.log('🌉 [F-MCP ATezer Bridge] Node cloned:', clonedNode.id);
 
       figma.ui.postMessage({
         type: 'CLONE_NODE_RESULT',
@@ -1540,7 +1540,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Clone node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Clone node error:', errorMsg);
       figma.ui.postMessage({
         type: 'CLONE_NODE_RESULT',
         requestId: msg.requestId,
@@ -1555,7 +1555,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'DELETE_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Deleting node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Deleting node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1566,7 +1566,7 @@ figma.ui.onmessage = async (msg) => {
 
       node.remove();
 
-      console.log('🌉 [Desktop Bridge] Node deleted');
+      console.log('🌉 [F-MCP ATezer Bridge] Node deleted');
 
       figma.ui.postMessage({
         type: 'DELETE_NODE_RESULT',
@@ -1577,7 +1577,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Delete node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Delete node error:', errorMsg);
       figma.ui.postMessage({
         type: 'DELETE_NODE_RESULT',
         requestId: msg.requestId,
@@ -1592,7 +1592,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'RENAME_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Renaming node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Renaming node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1602,7 +1602,7 @@ figma.ui.onmessage = async (msg) => {
       var oldName = node.name;
       node.name = msg.newName;
 
-      console.log('🌉 [Desktop Bridge] Node renamed from "' + oldName + '" to "' + msg.newName + '"');
+      console.log('🌉 [F-MCP ATezer Bridge] Node renamed from "' + oldName + '" to "' + msg.newName + '"');
 
       figma.ui.postMessage({
         type: 'RENAME_NODE_RESULT',
@@ -1613,7 +1613,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Rename node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Rename node error:', errorMsg);
       figma.ui.postMessage({
         type: 'RENAME_NODE_RESULT',
         requestId: msg.requestId,
@@ -1628,7 +1628,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_TEXT_CONTENT') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting text content on node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting text content on node:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1649,7 +1649,7 @@ figma.ui.onmessage = async (msg) => {
         node.fontSize = msg.fontSize;
       }
 
-      console.log('🌉 [Desktop Bridge] Text content set');
+      console.log('🌉 [F-MCP ATezer Bridge] Text content set');
 
       figma.ui.postMessage({
         type: 'SET_TEXT_CONTENT_RESULT',
@@ -1660,7 +1660,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set text content error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set text content error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_TEXT_CONTENT_RESULT',
         requestId: msg.requestId,
@@ -1675,7 +1675,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CREATE_CHILD_NODE') {
     try {
-      console.log('🌉 [Desktop Bridge] Creating child node of type:', msg.nodeType);
+      console.log('🌉 [F-MCP ATezer Bridge] Creating child node of type:', msg.nodeType);
 
       var parent = await figma.getNodeByIdAsync(msg.parentId);
       if (!parent) {
@@ -1751,7 +1751,7 @@ figma.ui.onmessage = async (msg) => {
       // Add to parent
       parent.appendChild(newNode);
 
-      console.log('🌉 [Desktop Bridge] Child node created:', newNode.id);
+      console.log('🌉 [F-MCP ATezer Bridge] Child node created:', newNode.id);
 
       figma.ui.postMessage({
         type: 'CREATE_CHILD_NODE_RESULT',
@@ -1770,7 +1770,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Create child node error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Create child node error:', errorMsg);
       figma.ui.postMessage({
         type: 'CREATE_CHILD_NODE_RESULT',
         requestId: msg.requestId,
@@ -1786,7 +1786,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CAPTURE_SCREENSHOT') {
     try {
-      console.log('🌉 [Desktop Bridge] Capturing screenshot for node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Capturing screenshot for node:', msg.nodeId);
 
       var node = msg.nodeId ? await figma.getNodeByIdAsync(msg.nodeId) : figma.currentPage;
       if (!node) {
@@ -1819,7 +1819,7 @@ figma.ui.onmessage = async (msg) => {
         bounds = node.absoluteBoundingBox;
       }
 
-      console.log('🌉 [Desktop Bridge] Screenshot captured:', bytes.length, 'bytes');
+      console.log('🌉 [F-MCP ATezer Bridge] Screenshot captured:', bytes.length, 'bytes');
 
       figma.ui.postMessage({
         type: 'CAPTURE_SCREENSHOT_RESULT',
@@ -1841,7 +1841,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Screenshot capture error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Screenshot capture error:', errorMsg);
       figma.ui.postMessage({
         type: 'CAPTURE_SCREENSHOT_RESULT',
         requestId: msg.requestId,
@@ -1857,7 +1857,7 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'SET_INSTANCE_PROPERTIES') {
     try {
-      console.log('🌉 [Desktop Bridge] Setting instance properties on:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge] Setting instance properties on:', msg.nodeId);
 
       var node = await figma.getNodeByIdAsync(msg.nodeId);
       if (!node) {
@@ -1870,7 +1870,7 @@ figma.ui.onmessage = async (msg) => {
 
       // Get current properties for reference
       var currentProps = node.componentProperties;
-      console.log('🌉 [Desktop Bridge] Current properties:', JSON.stringify(Object.keys(currentProps)));
+      console.log('🌉 [F-MCP ATezer Bridge] Current properties:', JSON.stringify(Object.keys(currentProps)));
 
       // Build the properties object
       // Note: TEXT, BOOLEAN, INSTANCE_SWAP properties use the format "PropertyName#nodeId"
@@ -1884,7 +1884,7 @@ figma.ui.onmessage = async (msg) => {
         // Check if this exact property name exists
         if (currentProps[propName] !== undefined) {
           propsToSet[propName] = newValue;
-          console.log('🌉 [Desktop Bridge] Setting property:', propName, '=', newValue);
+          console.log('🌉 [F-MCP ATezer Bridge] Setting property:', propName, '=', newValue);
         } else {
           // Try to find a matching property with a suffix (for TEXT/BOOLEAN/INSTANCE_SWAP)
           var foundMatch = false;
@@ -1892,14 +1892,14 @@ figma.ui.onmessage = async (msg) => {
             // Check if this is the base property name with a node ID suffix
             if (existingProp.startsWith(propName + '#')) {
               propsToSet[existingProp] = newValue;
-              console.log('🌉 [Desktop Bridge] Found suffixed property:', existingProp, '=', newValue);
+              console.log('🌉 [F-MCP ATezer Bridge] Found suffixed property:', existingProp, '=', newValue);
               foundMatch = true;
               break;
             }
           }
 
           if (!foundMatch) {
-            console.warn('🌉 [Desktop Bridge] Property not found:', propName, '- Available:', Object.keys(currentProps).join(', '));
+            console.warn('🌉 [F-MCP ATezer Bridge] Property not found:', propName, '- Available:', Object.keys(currentProps).join(', '));
           }
         }
       }
@@ -1914,7 +1914,7 @@ figma.ui.onmessage = async (msg) => {
       // Get updated properties
       var updatedProps = node.componentProperties;
 
-      console.log('🌉 [Desktop Bridge] Instance properties updated');
+      console.log('🌉 [F-MCP ATezer Bridge] Instance properties updated');
 
       figma.ui.postMessage({
         type: 'SET_INSTANCE_PROPERTIES_RESULT',
@@ -1937,7 +1937,7 @@ figma.ui.onmessage = async (msg) => {
 
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
-      console.error('🌉 [Desktop Bridge] Set instance properties error:', errorMsg);
+      console.error('🌉 [F-MCP ATezer Bridge] Set instance properties error:', errorMsg);
       figma.ui.postMessage({
         type: 'SET_INSTANCE_PROPERTIES_RESULT',
         requestId: msg.requestId,
@@ -1946,10 +1946,107 @@ figma.ui.onmessage = async (msg) => {
       });
     }
   }
+
+  // ============================================================================
+  // GET_DOCUMENT_STRUCTURE - File tree without REST API (token-friendly)
+  // ============================================================================
+  else if (msg.type === 'GET_DOCUMENT_STRUCTURE') {
+    try {
+      await figma.loadAllPagesAsync();
+
+      var depth = Math.min(Math.max(msg.depth || 1, 0), 3);
+      var verbosity = msg.verbosity || 'summary';
+
+      function walkNode(node, currentDepth) {
+        if (currentDepth > depth) return null;
+        var out = { id: node.id, name: node.name, type: node.type };
+        if (verbosity !== 'inventory' && verbosity !== 'summary') {
+          if (node.absoluteBoundingBox) {
+            out.absoluteBoundingBox = node.absoluteBoundingBox;
+          }
+          if (node.width !== undefined) out.width = node.width;
+          if (node.height !== undefined) out.height = node.height;
+        }
+        if (node.children && node.children.length > 0 && currentDepth < depth) {
+          out.children = node.children.map(function(c) { return walkNode(c, currentDepth + 1); }).filter(Boolean);
+          if (verbosity === 'summary' || verbosity === 'inventory') out.childCount = node.children.length;
+        }
+        return out;
+      }
+
+      var document = {
+        name: figma.root.name,
+        id: figma.root.id,
+        type: 'DOCUMENT',
+        fileKey: figma.fileKey || null,
+        children: figma.root.children ? figma.root.children.map(function(p) { return walkNode(p, 1); }).filter(Boolean) : []
+      };
+
+      figma.ui.postMessage({
+        type: 'GET_DOCUMENT_STRUCTURE_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: { document: document, fileKey: figma.fileKey, fileName: figma.root.name }
+      });
+    } catch (error) {
+      var errMsg = error && error.message ? error.message : String(error);
+      figma.ui.postMessage({
+        type: 'GET_DOCUMENT_STRUCTURE_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errMsg
+      });
+    }
+  }
+
+  // ============================================================================
+  // GET_LOCAL_STYLES - Paint, text, effect styles without REST API
+  // ============================================================================
+  else if (msg.type === 'GET_LOCAL_STYLES') {
+    try {
+      var verbosity = msg.verbosity || 'summary';
+      var paints = await figma.getLocalPaintStylesAsync();
+      var texts = await figma.getLocalTextStylesAsync();
+      var effects = await figma.getLocalEffectStylesAsync();
+
+      function styleToSummary(s) {
+        return { id: s.id, name: s.name };
+      }
+      function styleToFull(s) {
+        var o = { id: s.id, name: s.name, description: s.description || '' };
+        if (s.paints) o.paints = s.paints;
+        if (s.fontName) o.fontName = s.fontName;
+        if (s.fontSize !== undefined) o.fontSize = s.fontSize;
+        if (s.effects) o.effects = s.effects;
+        return o;
+      }
+
+      var mapFn = verbosity === 'full' ? styleToFull : styleToSummary;
+
+      figma.ui.postMessage({
+        type: 'GET_LOCAL_STYLES_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: {
+          paintStyles: paints.map(mapFn),
+          textStyles: texts.map(mapFn),
+          effectStyles: effects.map(mapFn)
+        }
+      });
+    } catch (error) {
+      var errMsg = error && error.message ? error.message : String(error);
+      figma.ui.postMessage({
+        type: 'GET_LOCAL_STYLES_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errMsg
+      });
+    }
+  }
 };
 
-console.log('🌉 [Desktop Bridge] Ready to handle component requests');
-console.log('🌉 [Desktop Bridge] Plugin will stay open until manually closed');
+console.log('🌉 [F-MCP ATezer Bridge] Ready to handle component requests');
+console.log('🌉 [F-MCP ATezer Bridge] Plugin will stay open until manually closed');
 
 // Plugin stays open - no auto-close
 // UI iframe remains accessible for Puppeteer to read data from window object

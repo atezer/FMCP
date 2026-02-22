@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Figma Console MCP Server - Local Mode
+ * F-MCP ATezer (Figma MCP Bridge) - Local Mode
  *
  * Entry point for local MCP server that connects to Figma Desktop
  * via Chrome Remote Debugging Protocol (port 9222).
@@ -30,19 +30,24 @@ import { createChildLogger } from "./core/logger.js";
 import { FigmaAPI, extractFileKey } from "./core/figma-api.js";
 import { registerFigmaAPITools } from "./core/figma-tools.js";
 import { FigmaDesktopConnector } from "./core/figma-desktop-connector.js";
+import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
+import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 
 const logger = createChildLogger({ component: "local-server" });
+
+export type DesktopConnector = FigmaDesktopConnector | PluginBridgeConnector;
 
 /**
  * Local MCP Server
  * Connects to Figma Desktop and provides identical tools to Cloudflare mode
  */
-class LocalFigmaConsoleMCP {
+class LocalFigmaMCP {
 	private server: McpServer;
 	private browserManager: LocalBrowserManager | null = null;
 	private consoleMonitor: ConsoleMonitor | null = null;
 	private figmaAPI: FigmaAPI | null = null;
-	private desktopConnector: FigmaDesktopConnector | null = null;
+	private desktopConnector: DesktopConnector | null = null;
+	private pluginBridge: PluginBridgeServer | null = null;
 	private config = getConfig();
 
 	// In-memory cache for variables data to avoid MCP token limits
@@ -54,34 +59,8 @@ class LocalFigmaConsoleMCP {
 
 	constructor() {
 		this.server = new McpServer({
-			name: "Figma Console MCP (Local)",
+			name: "F-MCP ATezer (Local)",
 			version: "0.1.0",
-			instructions: `## Figma Console MCP - Visual Design Workflow
-
-This MCP server enables AI-assisted design creation in Figma. Follow these mandatory workflows:
-
-### VISUAL VALIDATION WORKFLOW (Required)
-After creating or modifying ANY visual design elements:
-1. **CREATE**: Execute design code via figma_execute
-2. **SCREENSHOT**: Capture result with figma_take_screenshot
-3. **ANALYZE**: Check alignment, spacing, proportions, visual balance
-4. **ITERATE**: Fix issues and repeat (max 3 iterations)
-5. **VERIFY**: Final screenshot to confirm
-
-### COMPONENT INSTANTIATION
-- ALWAYS call figma_search_components at the start of each session
-- NodeIds are session-specific and become stale across conversations
-- Never reuse nodeIds from previous sessions without re-searching
-
-### PAGE CREATION
-- Before creating a page, check if it already exists to avoid duplicates
-- Use: await figma.loadAllPagesAsync(); const existing = figma.root.children.find(p => p.name === 'PageName');
-
-### COMMON DESIGN ISSUES TO CHECK
-- Elements using "hug contents" instead of "fill container" (causes lopsided layouts)
-- Inconsistent padding (elements not visually balanced)
-- Text/inputs not filling available width
-- Items not centered properly in their containers`,
 		});
 	}
 
@@ -112,24 +91,38 @@ After creating or modifying ANY visual design elements:
 	}
 
 	/**
-	 * Get or create Desktop Connector for write operations
-	 * Requires the browser to be initialized and the Desktop Bridge plugin to be running
+	 * Get or create Desktop Connector for write operations.
+	 * Prefers Plugin Bridge (no CDP) when the plugin is connected; otherwise uses CDP.
 	 */
-	private async getDesktopConnector(): Promise<FigmaDesktopConnector> {
+	private async getDesktopConnector(): Promise<DesktopConnector> {
+		// Prefer plugin bridge when connected (no Figma debug port needed)
+		const bridgePort = this.config.local?.pluginBridgePort ?? 5454;
+		if (!this.pluginBridge) {
+			this.pluginBridge = new PluginBridgeServer(bridgePort);
+			this.pluginBridge.start();
+		}
+		if (this.pluginBridge.isConnected()) {
+			this.desktopConnector = new PluginBridgeConnector(this.pluginBridge);
+			await this.desktopConnector.initialize();
+			logger.debug("Using plugin bridge connector (no CDP)");
+			return this.desktopConnector;
+		}
+
+		// Fallback: CDP with Figma Desktop debug port
 		await this.ensureInitialized();
 
 		if (!this.browserManager) {
-			throw new Error("Browser manager not initialized");
+			throw new Error(
+				"F-MCP ATezer Bridge plugin not connected and Figma Desktop not in debug mode. " +
+					"Either: (1) Open Figma, run the F-MCP ATezer Bridge plugin (no debug needed), or " +
+					"(2) Launch Figma with: open -a \"Figma\" --args --remote-debugging-port=9222"
+			);
 		}
 
-		// Always get a fresh page reference to handle page navigation/refresh
 		const page = await this.browserManager.getPage();
-
-		// Always recreate the connector with the current page to avoid stale references
-		// This prevents "detached Frame" errors when Figma page is refreshed
 		this.desktopConnector = new FigmaDesktopConnector(page);
 		await this.desktopConnector.initialize();
-		logger.debug("Desktop connector initialized with fresh page reference");
+		logger.debug("Desktop connector initialized with CDP (fresh page)");
 
 		return this.desktopConnector;
 	}
@@ -736,7 +729,7 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
 										clearedCount,
 										timestamp: Date.now(),
 										ai_instruction:
-											"⚠️ CRITICAL: Console cleared successfully, but this operation disrupts the monitoring connection. You MUST reconnect the MCP server using `/mcp reconnect figma-console` before calling figma_get_console_logs again. Best practice: Avoid clearing console - filter/parse logs instead to maintain monitoring connection.",
+											"⚠️ CRITICAL: Console cleared successfully, but this operation disrupts the monitoring connection. You MUST reconnect the MCP server using `/mcp reconnect figma-mcp-bridge` before calling figma_get_console_logs again. Best practice: Avoid clearing console - filter/parse logs instead to maintain monitoring connection.",
 									},
 									null,
 									2,
@@ -902,7 +895,7 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
 								currentFileName = fileInfo.result.fileName;
 							}
 						} catch {
-							// Non-critical - Desktop Bridge might not be running yet
+							// Non-critical - F-MCP ATezer Bridge might not be running yet
 						}
 					}
 
@@ -914,7 +907,7 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
 									{
 										mode: "local",
 										// Surface file name prominently for context clarity
-										currentFileName: currentFileName || "(Desktop Bridge not running - file name unavailable)",
+										currentFileName: currentFileName || "(F-MCP ATezer Bridge not running - file name unavailable)",
 										monitoredPageUrl: currentUrl,
 										monitorWorkerCount: monitorStatus?.workerCount ?? 0,
 										setup: {
@@ -1027,7 +1020,7 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
 										status: "reconnected",
 										currentUrl,
 										// Include file name prominently for clarity
-										fileName: fileName || "(unknown - Desktop Bridge may need to be restarted)",
+										fileName: fileName || "(unknown - F-MCP ATezer Bridge may need to be restarted)",
 										timestamp: Date.now(),
 										message: fileName
 											? `Successfully reconnected to Figma Desktop. Now monitoring: "${fileName}"`
@@ -1069,7 +1062,7 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
 		// Tool: Execute arbitrary code in Figma plugin context (Power Tool)
 		this.server.tool(
 			"figma_execute",
-			`Execute arbitrary JavaScript code in Figma's plugin context. This is a POWER TOOL that can run any Figma Plugin API code. Use for complex operations not covered by other tools. Requires the Desktop Bridge plugin to be running in Figma. Returns the result of the code execution. CAUTION: Can modify your Figma document - use carefully.
+			`Execute arbitrary JavaScript code in Figma's plugin context. This is a POWER TOOL that can run any Figma Plugin API code. Use for complex operations not covered by other tools. Requires the F-MCP ATezer Bridge plugin to be running in Figma. Returns the result of the code execution. CAUTION: Can modify your Figma document - use carefully.
 
 **IMPORTANT: COMPONENT INSTANCES vs DIRECT NODE EDITING**
 When working with component instances (node.type === 'INSTANCE'), you must use the correct approach:
@@ -1192,7 +1185,7 @@ Common issues to check:
 								{
 									error: lastError?.message || "Unknown error",
 									message: "Failed to execute code in Figma plugin context",
-									hint: "Make sure the Desktop Bridge plugin is running in Figma",
+									hint: "Make sure the F-MCP ATezer Bridge plugin is running in Figma",
 								},
 								null,
 								2,
@@ -1207,7 +1200,7 @@ Common issues to check:
 		// Tool: Update a variable's value
 		this.server.tool(
 			"figma_update_variable",
-			"Update a Figma variable's value in a specific mode. Use figma_get_variables first to get variable IDs and mode IDs. Supports COLOR (hex string like '#FF0000'), FLOAT (number), STRING (text), and BOOLEAN values. Requires the Desktop Bridge plugin to be running.",
+			"Update a Figma variable's value in a specific mode. Use figma_get_variables first to get variable IDs and mode IDs. Supports COLOR (hex string like '#FF0000'), FLOAT (number), STRING (text), and BOOLEAN values. Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				variableId: z.string().describe(
 					"The variable ID to update (e.g., 'VariableID:123:456'). Get this from figma_get_variables."
@@ -1251,7 +1244,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to update variable",
-										hint: "Make sure the Desktop Bridge plugin is running and the variable ID is correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running and the variable ID is correct",
 									},
 									null,
 									2,
@@ -1267,7 +1260,7 @@ Common issues to check:
 		// Tool: Create a new variable
 		this.server.tool(
 			"figma_create_variable",
-			"Create a new Figma variable in an existing collection. Use figma_get_variables first to get collection IDs. Supports COLOR, FLOAT, STRING, and BOOLEAN types. Requires the Desktop Bridge plugin to be running.",
+			"Create a new Figma variable in an existing collection. Use figma_get_variables first to get collection IDs. Supports COLOR, FLOAT, STRING, and BOOLEAN types. Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				name: z.string().describe("Name for the new variable (e.g., 'primary-blue')"),
 				collectionId: z.string().describe(
@@ -1316,7 +1309,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to create variable",
-										hint: "Make sure the Desktop Bridge plugin is running and the collection ID is correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running and the collection ID is correct",
 									},
 									null,
 									2,
@@ -1332,7 +1325,7 @@ Common issues to check:
 		// Tool: Create a new variable collection
 		this.server.tool(
 			"figma_create_variable_collection",
-			"Create a new Figma variable collection. Collections organize variables and define modes (like Light/Dark themes). Requires the Desktop Bridge plugin to be running.",
+			"Create a new Figma variable collection. Collections organize variables and define modes (like Light/Dark themes). Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				name: z.string().describe("Name for the new collection (e.g., 'Brand Colors')"),
 				initialModeName: z.string().optional().describe(
@@ -1377,7 +1370,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to create variable collection",
-										hint: "Make sure the Desktop Bridge plugin is running in Figma",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running in Figma",
 									},
 									null,
 									2,
@@ -1393,7 +1386,7 @@ Common issues to check:
 		// Tool: Delete a variable
 		this.server.tool(
 			"figma_delete_variable",
-			"Delete a Figma variable. WARNING: This is a destructive operation that cannot be undone (except with Figma's undo). Use figma_get_variables first to get variable IDs. Requires the Desktop Bridge plugin to be running.",
+			"Delete a Figma variable. WARNING: This is a destructive operation that cannot be undone (except with Figma's undo). Use figma_get_variables first to get variable IDs. Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				variableId: z.string().describe(
 					"The variable ID to delete (e.g., 'VariableID:123:456'). Get this from figma_get_variables."
@@ -1432,7 +1425,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to delete variable",
-										hint: "Make sure the Desktop Bridge plugin is running and the variable ID is correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running and the variable ID is correct",
 									},
 									null,
 									2,
@@ -1448,7 +1441,7 @@ Common issues to check:
 		// Tool: Delete a variable collection
 		this.server.tool(
 			"figma_delete_variable_collection",
-			"Delete a Figma variable collection and ALL its variables. WARNING: This is a destructive operation that deletes all variables in the collection and cannot be undone (except with Figma's undo). Requires the Desktop Bridge plugin to be running.",
+			"Delete a Figma variable collection and ALL its variables. WARNING: This is a destructive operation that deletes all variables in the collection and cannot be undone (except with Figma's undo). Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				collectionId: z.string().describe(
 					"The collection ID to delete (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."
@@ -1487,7 +1480,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to delete variable collection",
-										hint: "Make sure the Desktop Bridge plugin is running and the collection ID is correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running and the collection ID is correct",
 									},
 									null,
 									2,
@@ -1503,7 +1496,7 @@ Common issues to check:
 		// Tool: Rename a variable
 		this.server.tool(
 			"figma_rename_variable",
-			"Rename an existing Figma variable. This updates the variable's name while preserving all its values and settings. Requires the Desktop Bridge plugin to be running.",
+			"Rename an existing Figma variable. This updates the variable's name while preserving all its values and settings. Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				variableId: z.string().describe(
 					"The variable ID to rename (e.g., 'VariableID:123:456'). Get this from figma_get_variables."
@@ -1545,7 +1538,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to rename variable",
-										hint: "Make sure the Desktop Bridge plugin is running and the variable ID is correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running and the variable ID is correct",
 									},
 									null,
 									2,
@@ -1561,7 +1554,7 @@ Common issues to check:
 		// Tool: Add a mode to a collection
 		this.server.tool(
 			"figma_add_mode",
-			"Add a new mode to an existing Figma variable collection. Modes allow variables to have different values for different contexts (e.g., Light/Dark themes, device sizes). Requires the Desktop Bridge plugin to be running.",
+			"Add a new mode to an existing Figma variable collection. Modes allow variables to have different values for different contexts (e.g., Light/Dark themes, device sizes). Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				collectionId: z.string().describe(
 					"The collection ID to add the mode to (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."
@@ -1603,7 +1596,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to add mode to collection",
-										hint: "Make sure the Desktop Bridge plugin is running, the collection ID is correct, and you haven't exceeded Figma's mode limit",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running, the collection ID is correct, and you haven't exceeded Figma's mode limit",
 									},
 									null,
 									2,
@@ -1619,7 +1612,7 @@ Common issues to check:
 		// Tool: Rename a mode in a collection
 		this.server.tool(
 			"figma_rename_mode",
-			"Rename an existing mode in a Figma variable collection. Requires the Desktop Bridge plugin to be running.",
+			"Rename an existing mode in a Figma variable collection. Requires the F-MCP ATezer Bridge plugin to be running.",
 			{
 				collectionId: z.string().describe(
 					"The collection ID containing the mode (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."
@@ -1664,7 +1657,7 @@ Common issues to check:
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to rename mode",
-										hint: "Make sure the Desktop Bridge plugin is running, the collection ID and mode ID are correct",
+										hint: "Make sure the F-MCP ATezer Bridge plugin is running, the collection ID and mode ID are correct",
 									},
 									null,
 									2,
@@ -1978,7 +1971,7 @@ Common issues to check:
 							type: "text",
 							text: JSON.stringify({
 								error: error instanceof Error ? error.message : String(error),
-								hint: "Make sure the Desktop Bridge plugin is running in Figma",
+								hint: "Make sure the F-MCP ATezer Bridge plugin is running in Figma",
 							}, null, 2),
 						}],
 						isError: true,
@@ -2016,7 +2009,7 @@ Common issues to check:
 							content: [{
 								type: "text",
 								text: JSON.stringify({
-									error: "Could not load design system data. Make sure the Desktop Bridge plugin is running.",
+									error: "Could not load design system data. Make sure the F-MCP ATezer Bridge plugin is running.",
 								}, null, 2),
 							}],
 							isError: true,
@@ -2098,7 +2091,7 @@ Common issues to check:
 							content: [{
 								type: "text",
 								text: JSON.stringify({
-									error: "Could not load design system data. Make sure the Desktop Bridge plugin is running.",
+									error: "Could not load design system data. Make sure the F-MCP ATezer Bridge plugin is running.",
 								}, null, 2),
 							}],
 							isError: true,
@@ -2194,7 +2187,7 @@ Common issues to check:
 							content: [{
 								type: "text",
 								text: JSON.stringify({
-									error: "Could not load design system data. Make sure the Desktop Bridge plugin is running.",
+									error: "Could not load design system data. Make sure the F-MCP ATezer Bridge plugin is running.",
 								}, null, 2),
 							}],
 							isError: true,
@@ -2338,7 +2331,7 @@ After instantiating components, use figma_take_screenshot to verify the result l
 									{
 										error: error instanceof Error ? error.message : String(error),
 										message: "Failed to instantiate component",
-										hint: "Make sure the component key is correct and the Desktop Bridge plugin is running",
+										hint: "Make sure the component key is correct and the F-MCP ATezer Bridge plugin is running",
 									},
 									null,
 									2,
@@ -2975,7 +2968,8 @@ After instantiating components, use figma_take_screenshot to verify the result l
 			() => this.consoleMonitor || null,
 			() => this.browserManager || null,
 			() => this.ensureInitialized(),
-			this.variablesCache  // Pass cache for efficient variable queries
+			this.variablesCache, // Pass cache for efficient variable queries
+			() => this.getDesktopConnector() // Plugin Bridge (no CDP) or CDP connector for screenshot/setInstanceProperties
 		);
 
 		logger.info("All MCP tools registered successfully (including write operations)");
@@ -2986,7 +2980,7 @@ After instantiating components, use figma_take_screenshot to verify the result l
 	 */
 	async start(): Promise<void> {
 		try {
-			logger.info({ config: this.config }, "Starting Figma Console MCP (Local Mode)");
+			logger.info({ config: this.config }, "Starting F-MCP ATezer (Local Mode)");
 
 			// Check if Figma Desktop is accessible (non-blocking, just for logging)
 			logger.info("Checking Figma Desktop accessibility...");
@@ -2999,10 +2993,16 @@ After instantiating components, use figma_take_screenshot to verify the result l
 				logger.warn({ error: errorMsg }, "⚠️ Figma Desktop not accessible yet - MCP will connect when you use a tool");
 				console.error("\n⚠️ Figma Desktop Check:\n");
 				console.error("Figma Desktop is not currently running with remote debugging enabled.");
-				console.error("The MCP server will start anyway, but tools won't work until you:");
-				console.error("1. Launch Figma Desktop with: --remote-debugging-port=9222");
-				console.error("2. Then use figma_get_status to verify connection\n");
+				console.error("The MCP server will start anyway. To use tools, either:");
+				console.error("1. Run the F-MCP ATezer Bridge plugin in Figma (no debug port needed), or");
+				console.error("2. Launch Figma with: --remote-debugging-port=9222\n");
 			}
+
+			// Start plugin bridge server (plugin can connect without CDP)
+			const bridgePort = this.config.local?.pluginBridgePort ?? 5454;
+			this.pluginBridge = new PluginBridgeServer(bridgePort);
+			this.pluginBridge.start();
+			logger.info({ port: bridgePort }, "Plugin bridge: ws://127.0.0.1:%s (no debug port needed when plugin connects)", bridgePort);
 
 			// Register all tools
 			this.registerTools();
@@ -3022,7 +3022,7 @@ After instantiating components, use figma_take_screenshot to verify the result l
 			logger.error({ error }, "Failed to start MCP server");
 
 			// Log helpful error message to stderr
-			console.error("\n❌ Failed to start Figma Console MCP:\n");
+			console.error("\n❌ Failed to start F-MCP ATezer:\n");
 			console.error(error instanceof Error ? error.message : String(error));
 			console.error("\n");
 
@@ -3037,6 +3037,10 @@ After instantiating components, use figma_take_screenshot to verify the result l
 		logger.info("Shutting down MCP server...");
 
 		try {
+			if (this.pluginBridge) {
+				this.pluginBridge.stop();
+				this.pluginBridge = null;
+			}
 			if (this.consoleMonitor) {
 				await this.consoleMonitor.stopMonitoring();
 			}
@@ -3056,7 +3060,7 @@ After instantiating components, use figma_take_screenshot to verify the result l
  * Main entry point
  */
 async function main() {
-	const server = new LocalFigmaConsoleMCP();
+	const server = new LocalFigmaMCP();
 
 	// Handle graceful shutdown
 	process.on("SIGINT", async () => {
@@ -3086,4 +3090,4 @@ if (currentFile === entryFile) {
 	});
 }
 
-export { LocalFigmaConsoleMCP };
+export { LocalFigmaMCP };

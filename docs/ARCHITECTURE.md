@@ -1,8 +1,8 @@
-# Figma Console MCP - Technical Architecture
+# F-MCP ATezer (Figma MCP Bridge) - Technical Architecture
 
 ## Overview
 
-This document describes the technical architecture of the Figma Console MCP server, which enables AI coding assistants to access console logs and screenshots from Figma plugins in real-time.
+This document describes the technical architecture of the F-MCP ATezer server, which enables AI coding assistants to access console logs and screenshots from Figma plugins in real-time.
 
 ## System Architecture Diagram
 
@@ -14,7 +14,7 @@ This document describes the technical architecture of the Figma Console MCP serv
                     │ MCP Protocol (stdio/HTTP)
                     │
 ┌───────────────────▼─────────────────────────────────┐
-│              Figma Console MCP Server                │
+│              F-MCP ATezer Server                │
 │                                                      │
 │  ┌─────────────────────────────────────────────┐   │
 │  │  MCP Protocol Layer                         │   │
@@ -91,7 +91,7 @@ This implementation uses **Puppeteer + Chrome DevTools Protocol** (similar to Ch
 
 **Key Functions:**
 ```typescript
-class FigmaConsoleMCPServer {
+class FigmaMCP {
   // Initialize server and register tools
   async start(): Promise<void>
 
@@ -379,7 +379,7 @@ interface Screenshot {
 // Screenshots stored in temp directory with cleanup
 const screenshotPath = path.join(
   os.tmpdir(),
-  'figma-console-mcp',
+  'figma-mcp-bridge',
   'screenshots',
   `${Date.now()}-${uuid()}.${format}`
 );
@@ -845,7 +845,7 @@ describe('Console Monitor', () => {
 ```
 User's Machine
 ├── Claude Code / Cursor (MCP Client)
-├── Figma Console MCP Server (Node.js process)
+├── F-MCP ATezer Server (Node.js process)
 └── Chrome Browser (Puppeteer-controlled)
     └── Figma Web App
         └── User's Plugin
@@ -853,7 +853,7 @@ User's Machine
 
 ### Configuration File
 
-**`~/.config/figma-console-mcp/config.json`:**
+**`~/.config/figma-mcp-bridge/config.json`:**
 ```json
 {
   "browser": {
@@ -868,7 +868,7 @@ User's Machine
   "screenshots": {
     "defaultFormat": "png",
     "quality": 90,
-    "storePath": "/tmp/figma-console-mcp/screenshots"
+    "storePath": "/tmp/figma-mcp-bridge/screenshots"
   }
 }
 ```
@@ -879,11 +879,11 @@ User's Machine
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["figma-console-mcp"],
+      "args": ["figma-mcp-bridge"],
       "env": {
-        "FIGMA_CONSOLE_CONFIG": "~/.config/figma-console-mcp/config.json"
+        "FIGMA_CONSOLE_CONFIG": "~/.config/figma-mcp-bridge/config.json"
       }
     }
   }

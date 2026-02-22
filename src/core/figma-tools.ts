@@ -712,7 +712,8 @@ export function registerFigmaAPITools(
 	getConsoleMonitor?: () => ConsoleMonitor | null,
 	getBrowserManager?: () => any,
 	ensureInitialized?: () => Promise<void>,
-	variablesCache?: Map<string, { data: any; timestamp: number }>
+	variablesCache?: Map<string, { data: any; timestamp: number }>,
+	getDesktopConnector?: () => Promise<{ captureScreenshot?: (nodeId: string | null, options?: { format?: string; scale?: number }) => Promise<any>; setInstanceProperties?: (nodeId: string, properties: Record<string, unknown>) => Promise<any> } | null>
 ) {
 	// Tool 8: Get File Data (General Purpose)
 	// NOTE: For specific use cases, consider using specialized tools:
@@ -758,7 +759,7 @@ export function registerFigmaAPITools(
 		},
 		async ({ fileUrl, depth, nodeIds, enrich, verbosity }) => {
 			try {
-				// Initialize API client (required for file data - no Desktop Bridge alternative)
+				// Initialize API client (required for file data - no F-MCP ATezer Bridge alternative)
 				let api;
 				try {
 					api = await getFigmaAPI();
@@ -771,7 +772,7 @@ export function registerFigmaAPITools(
 						`1. Local mode: Set FIGMA_ACCESS_TOKEN environment variable\n` +
 						`2. Cloud mode: Authenticate via OAuth\n\n` +
 						`Note: figma_get_file_data requires REST API access. ` +
-						`For component-specific data, use figma_get_component which has Desktop Bridge fallback.`
+						`For component-specific data, use figma_get_component which has F-MCP ATezer Bridge fallback.`
 					);
 				}
 
@@ -1486,7 +1487,7 @@ export function registerFigmaAPITools(
 
 				// PRIORITY LOGIC:
 				// 1. If token exists → Try REST API FIRST (enterprise users)
-				// 2. If no token OR REST API fails → Try Desktop Bridge as fallback
+				// 2. If no token OR REST API fails → Try F-MCP ATezer Bridge as fallback
 				logger.info({ hasToken }, "Authentication method detection");
 
 				// Try REST API first if token is available
@@ -1741,7 +1742,7 @@ export function registerFigmaAPITools(
 
 						// Mark REST API as successful
 						restApiSucceeded = true;
-						logger.info({ fileKey }, "REST API fetch successful, skipping Desktop Bridge");
+						logger.info({ fileKey }, "REST API fetch successful, skipping F-MCP ATezer Bridge");
 
 						// Use adaptive response to prevent context exhaustion
 						return adaptiveResponse(responseData, {
@@ -1777,8 +1778,8 @@ export function registerFigmaAPITools(
 						});
 					} catch (restError) {
 						const errorMessage = restError instanceof Error ? restError.message : String(restError);
-						logger.warn({ error: errorMessage }, "REST API failed, will try Desktop Bridge fallback");
-						// Don't throw - fall through to Desktop Bridge
+						logger.warn({ error: errorMessage }, "REST API failed, will try F-MCP ATezer Bridge fallback");
+						// Don't throw - fall through to F-MCP ATezer Bridge
 					}
 				}
 
@@ -2151,10 +2152,10 @@ export function registerFigmaAPITools(
 					`Cannot retrieve variables. All methods failed.\n\n` +
 					`Tried methods:\n` +
 					`${hasToken ? '✗ REST API (failed)\n' : ''}` +
-					`✗ Desktop Bridge (failed or not available)\n` +
+					`✗ F-MCP ATezer Bridge (failed or not available)\n` +
 					`\nTo fix:\n` +
 					`1. If you have FIGMA_ACCESS_TOKEN: Check your token permissions\n` +
-					`2. Install and run the Figma Desktop Bridge plugin\n` +
+					`2. Install and run the F-MCP ATezer Bridge\n` +
 					`3. Alternative: Use parseFromConsole=true with console snippet workflow`
 				);
 			} catch (error) {
@@ -2272,7 +2273,7 @@ export function registerFigmaAPITools(
 	// Tool 10: Get Component Data
 	server.tool(
 		"figma_get_component",
-		"Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the Figma Desktop Bridge plugin is running (Right-click in Figma → Plugins → Development → Figma Desktop Bridge) to get complete description data.",
+		"Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the F-MCP ATezer Bridge is running (Right-click in Figma → Plugins → Development → F-MCP ATezer Bridge) to get complete description data.",
 		{
 			fileUrl: z
 				.string()
@@ -2314,10 +2315,10 @@ export function registerFigmaAPITools(
 
 				logger.info({ fileKey, nodeId, format, enrich }, "Fetching component data");
 
-				// PRIORITY 1: Try Desktop Bridge plugin UI first (has reliable description field!)
+				// PRIORITY 1: Try F-MCP ATezer Bridge plugin UI first (has reliable description field!)
 				if (getBrowserManager && ensureInitialized) {
 					try {
-						logger.info({ nodeId }, "Attempting to get component via Desktop Bridge plugin UI");
+						logger.info({ nodeId }, "Attempting to get component via F-MCP ATezer Bridge plugin UI");
 						await ensureInitialized();
 
 						const browserManager = getBrowserManager();
@@ -2340,7 +2341,7 @@ export function registerFigmaAPITools(
 									hasDescriptionMarkdown: !!desktopResult.component.descriptionMarkdown,
 									annotationsCount: desktopResult.component.annotations?.length || 0
 								},
-								"Successfully retrieved component via Desktop Bridge plugin UI!"
+								"Successfully retrieved component via F-MCP ATezer Bridge plugin UI!"
 							);
 
 							// Handle reconstruction format
@@ -2418,7 +2419,7 @@ export function registerFigmaAPITools(
 												component: formatted,
 												source: "desktop_bridge_plugin",
 												enriched: enrich || false,
-												note: "Retrieved via Desktop Bridge plugin - description fields and annotations are reliable and current"
+												note: "Retrieved via F-MCP ATezer Bridge plugin - description fields and annotations are reliable and current"
 											},
 											null,
 											2
@@ -2428,7 +2429,7 @@ export function registerFigmaAPITools(
 							};
 						}
 					} catch (desktopError) {
-						logger.warn({ error: desktopError, nodeId }, "Desktop Bridge plugin failed, falling back to REST API");
+						logger.warn({ error: desktopError, nodeId }, "F-MCP ATezer Bridge plugin failed, falling back to REST API");
 					}
 				}
 
@@ -2442,11 +2443,11 @@ export function registerFigmaAPITools(
 				} catch (apiError) {
 					const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
 					throw new Error(
-						`Cannot retrieve component data. Both Desktop Bridge and REST API are unavailable.\n` +
-						`Desktop Bridge: ${getBrowserManager && ensureInitialized ? 'Failed (see logs above)' : 'Not available (local mode only)'}\n` +
+						`Cannot retrieve component data. Both F-MCP ATezer Bridge and REST API are unavailable.\n` +
+						`F-MCP ATezer Bridge: ${getBrowserManager && ensureInitialized ? 'Failed (see logs above)' : 'Not available (local mode only)'}\n` +
 						`REST API: ${errorMessage}\n\n` +
 						`To fix:\n` +
-						`1. Local mode: Set FIGMA_ACCESS_TOKEN environment variable, OR ensure Figma Desktop Bridge plugin is running\n` +
+						`1. Local mode: Set FIGMA_ACCESS_TOKEN environment variable, OR ensure F-MCP ATezer Bridge is running\n` +
 						`2. Cloud mode: Authenticate via OAuth\n` +
 						`3. Make sure figma_navigate was called to initialize browser connection`
 					);
@@ -2534,7 +2535,7 @@ export function registerFigmaAPITools(
 									source: "rest_api",
 									enriched: enrich || false,
 									warning: "Retrieved via REST API - description field may be missing due to known Figma API bug",
-									action_required: formatted.description || formatted.descriptionMarkdown ? null : "To get reliable component descriptions, run the Desktop Bridge plugin in Figma Desktop: Right-click → Plugins → Development → Figma Desktop Bridge, then try again."
+									action_required: formatted.description || formatted.descriptionMarkdown ? null : "To get reliable component descriptions, run the F-MCP ATezer Bridge plugin in Figma Desktop: Right-click → Plugins → Development → F-MCP ATezer Bridge, then try again."
 								},
 								null,
 								2
@@ -2948,7 +2949,7 @@ export function registerFigmaAPITools(
 						`To fix:\n` +
 						`1. Local mode: Set FIGMA_ACCESS_TOKEN environment variable\n` +
 						`2. Cloud mode: Authenticate via OAuth\n\n` +
-						`Note: For component metadata, figma_get_component has Desktop Bridge fallback ` +
+						`Note: For component metadata, figma_get_component has F-MCP ATezer Bridge fallback ` +
 						`that works without token (requires figma_navigate first).`
 					);
 				}
@@ -3321,12 +3322,12 @@ export function registerFigmaAPITools(
 		}
 	);
 
-	// Tool 15: Capture Screenshot via Plugin (Desktop Bridge)
+	// Tool 15: Capture Screenshot via Plugin (F-MCP ATezer Bridge)
 	// This uses exportAsync() which reads the current plugin runtime state, not the cloud state
 	// Solves race condition where REST API screenshots show stale data after changes
 	server.tool(
 		"figma_capture_screenshot",
-		"Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires Desktop Bridge connection (Figma Desktop with plugin running).",
+		"Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires F-MCP ATezer Bridge connection (Figma Desktop with plugin running).",
 		{
 			nodeId: z
 				.string()
@@ -3349,46 +3350,40 @@ export function registerFigmaAPITools(
 		},
 		async ({ nodeId, format, scale }) => {
 			try {
-				// Check for Desktop Bridge connection
+				// Prefer connector (works with Plugin Bridge WebSocket, no CDP needed)
+				const connector = getDesktopConnector ? await getDesktopConnector().catch(() => null) : null;
+				let result: any = null;
+				if (connector && typeof connector.captureScreenshot === "function") {
+					logger.info({ nodeId, format, scale }, "Capturing screenshot via connector (bridge or CDP)");
+					result = await connector.captureScreenshot(nodeId ?? null, { format, scale });
+				}
+
 				const browserManager = getBrowserManager?.();
-				if (!browserManager) {
-					throw new Error(
-						"Desktop Bridge not available. To capture screenshots:\n" +
-						"1. Open your Figma file in Figma Desktop\n" +
-						"2. Install and run the 'Figma Console MCP' plugin\n" +
-						"3. Ensure the plugin shows 'MCP ready' status"
-					);
-				}
-
-				// Ensure browser is initialized
-				if (ensureInitialized) {
-					await ensureInitialized();
-				}
-
-				const page = await browserManager.getPage();
-				logger.info({ nodeId, format, scale }, "Capturing screenshot via Desktop Bridge");
-
-				// Find the plugin UI frame and call the captureScreenshot function
-				const frames = page.frames();
-				let result = null;
-
-				for (const frame of frames) {
-					try {
-						const hasFunction = await frame.evaluate('typeof window.captureScreenshot === "function"');
-						if (hasFunction) {
-							result = await frame.evaluate(
-								`window.captureScreenshot(${JSON.stringify(nodeId)}, ${JSON.stringify({ format, scale })})`
-							);
-							break;
+				if (!result && browserManager) {
+					// Fallback: CDP path with page/frames
+					if (ensureInitialized) await ensureInitialized();
+					const page = await browserManager.getPage();
+					logger.info({ nodeId, format, scale }, "Capturing screenshot via F-MCP ATezer Bridge (CDP)");
+					const frames = page.frames();
+					for (const frame of frames) {
+						try {
+							const hasFunction = await frame.evaluate('typeof window.captureScreenshot === "function"');
+							if (hasFunction) {
+								result = await frame.evaluate(
+									`window.captureScreenshot(${JSON.stringify(nodeId)}, ${JSON.stringify({ format, scale })})`
+								);
+								break;
+							}
+						} catch {
+							continue;
 						}
-					} catch {
-						continue;
 					}
 				}
 
 				if (!result) {
 					throw new Error(
-						"Desktop Bridge plugin not found. Ensure the 'Figma Console MCP' plugin is running in Figma Desktop."
+						"F-MCP ATezer Bridge not available. Open Figma, run the 'F-MCP ATezer Bridge' plugin (Plugins → Development). " +
+						"No debug port needed when plugin connects via WebSocket."
 					);
 				}
 
@@ -3428,7 +3423,7 @@ export function registerFigmaAPITools(
 							type: "text",
 							text: JSON.stringify({
 								error: errorMessage,
-								message: "Failed to capture screenshot via Desktop Bridge",
+								message: "Failed to capture screenshot via F-MCP ATezer Bridge",
 								suggestion: "Ensure Figma Desktop is open with the plugin running",
 							}, null, 2),
 						},
@@ -3439,12 +3434,12 @@ export function registerFigmaAPITools(
 		}
 	);
 
-	// Tool 16: Set Instance Properties (Desktop Bridge)
+	// Tool 16: Set Instance Properties (F-MCP ATezer Bridge)
 	// Updates component properties on an instance using setProperties()
 	// This is the correct way to update TEXT/BOOLEAN/VARIANT properties on component instances
 	server.tool(
 		"figma_set_instance_properties",
-		"Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires Desktop Bridge connection.",
+		"Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires F-MCP ATezer Bridge connection.",
 		{
 			nodeId: z
 				.string()
@@ -3461,46 +3456,37 @@ export function registerFigmaAPITools(
 		},
 		async ({ nodeId, properties }) => {
 			try {
-				// Check for Desktop Bridge connection
-				const browserManager = getBrowserManager?.();
-				if (!browserManager) {
-					throw new Error(
-						"Desktop Bridge not available. To set instance properties:\n" +
-						"1. Open your Figma file in Figma Desktop\n" +
-						"2. Install and run the 'Figma Console MCP' plugin\n" +
-						"3. Ensure the plugin shows 'MCP ready' status"
-					);
+				let result: any = null;
+				const connector = getDesktopConnector ? await getDesktopConnector().catch(() => null) : null;
+				if (connector && typeof connector.setInstanceProperties === "function") {
+					logger.info({ nodeId, properties: Object.keys(properties) }, "Setting instance properties via connector");
+					result = await connector.setInstanceProperties(nodeId, properties);
 				}
 
-				// Ensure browser is initialized
-				if (ensureInitialized) {
-					await ensureInitialized();
-				}
-
-				const page = await browserManager.getPage();
-				logger.info({ nodeId, properties: Object.keys(properties) }, "Setting instance properties via Desktop Bridge");
-
-				// Find the plugin UI frame and call the setInstanceProperties function
-				const frames = page.frames();
-				let result = null;
-
-				for (const frame of frames) {
-					try {
-						const hasFunction = await frame.evaluate('typeof window.setInstanceProperties === "function"');
-						if (hasFunction) {
-							result = await frame.evaluate(
-								`window.setInstanceProperties(${JSON.stringify(nodeId)}, ${JSON.stringify(properties)})`
-							);
-							break;
+				const browserManagerSet = getBrowserManager?.();
+				if (!result && browserManagerSet) {
+					if (ensureInitialized) await ensureInitialized();
+					const page = await browserManagerSet.getPage();
+					logger.info({ nodeId, properties: Object.keys(properties) }, "Setting instance properties via F-MCP ATezer Bridge (CDP)");
+					const frames = page.frames();
+					for (const frame of frames) {
+						try {
+							const hasFunction = await frame.evaluate('typeof window.setInstanceProperties === "function"');
+							if (hasFunction) {
+								result = await frame.evaluate(
+									`window.setInstanceProperties(${JSON.stringify(nodeId)}, ${JSON.stringify(properties)})`
+								);
+								break;
+							}
+						} catch {
+							continue;
 						}
-					} catch {
-						continue;
 					}
 				}
 
 				if (!result) {
 					throw new Error(
-						"Desktop Bridge plugin not found. Ensure the 'Figma Console MCP' plugin is running in Figma Desktop."
+						"F-MCP ATezer Bridge not available. Open Figma, run the 'F-MCP ATezer Bridge' plugin (Plugins → Development)."
 					);
 				}
 
@@ -3531,7 +3517,7 @@ export function registerFigmaAPITools(
 							type: "text",
 							text: JSON.stringify({
 								error: errorMessage,
-								message: "Failed to set instance properties via Desktop Bridge",
+								message: "Failed to set instance properties via F-MCP ATezer Bridge",
 								suggestions: [
 									"Verify the node is a component INSTANCE (not a regular frame)",
 									"Check available properties with figma_get_component first",

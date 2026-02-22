@@ -1,10 +1,10 @@
 # Self-Hosting Guide
 
-Deploy your own instance of Figma Console MCP on Cloudflare Workers.
+Deploy your own instance of F-MCP ATezer (Figma MCP Bridge) on Cloudflare Workers.
 
 ## Why Self-Host?
 
-**Use the public server** (`https://figma-console-mcp.southleft.com`) for most use cases.
+**Use a hosted MCP SSE endpoint** (your deployment URL, e.g. `https://your-worker.workers.dev`) for remote use.
 
 **Self-host when:**
 - You need guaranteed uptime/SLA
@@ -15,13 +15,13 @@ Deploy your own instance of Figma Console MCP on Cloudflare Workers.
 
 ## Quick Deploy
 
-[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/southleft/figma-console-mcp)
+[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/atezer/figma-mcp-bridge)
 
 Or via CLI:
 
 ```bash
-git clone https://github.com/southleft/figma-console-mcp.git
-cd figma-console-mcp
+git clone https://github.com/atezer/figma-mcp-bridge.git
+cd figma-mcp-bridge
 npm install
 npm run deploy
 ```
@@ -44,8 +44,8 @@ npm run deploy
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/southleft/figma-console-mcp.git
-cd figma-console-mcp
+git clone https://github.com/atezer/figma-mcp-bridge.git
+cd figma-mcp-bridge
 npm install
 ```
 
@@ -63,7 +63,7 @@ Edit `wrangler.jsonc` (optional):
 
 ```jsonc
 {
-  "name": "figma-console-mcp",  // Change to your preferred name
+  "name": "figma-mcp-bridge",  // Change to your preferred name
   "main": "dist/index.js",
   "compatibility_date": "2024-01-01",
   "browser": {
@@ -96,6 +96,10 @@ npx wrangler secret put LOG_LEVEL
 # Browser timeout (default: 120000ms)
 npx wrangler secret put BROWSER_TIMEOUT
 # Enter milliseconds
+
+# OAuth base URL (required for "auth_url" in errors; use your worker URL)
+npx wrangler secret put MCP_OAUTH_BASE_URL
+# Enter e.g. https://figma-mcp-bridge.<your-subdomain>.workers.dev
 ```
 
 ### 5. Build and Deploy
@@ -115,19 +119,19 @@ Expected output:
   Uploading...
 ( Deployment complete!
 
-https://figma-console-mcp.<your-subdomain>.workers.dev
+https://figma-mcp-bridge.<your-subdomain>.workers.dev
 ```
 
 ### 6. Test Your Deployment
 
 ```bash
 # Health check
-curl https://figma-console-mcp.<your-subdomain>.workers.dev/health
+curl https://figma-mcp-bridge.<your-subdomain>.workers.dev/health
 
 # Should return:
 {
   "status": "healthy",
-  "service": "Figma Console MCP",
+  "service": "F-MCP ATezer",
   "version": "0.1.0",
   "endpoints": ["/sse", "/mcp", "/test-browser"]
 }
@@ -142,9 +146,9 @@ Update your AI client config to use your instance:
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["mcp-remote", "https://figma-console-mcp.<your-subdomain>.workers.dev/sse"]
+      "args": ["mcp-remote", "https://figma-mcp-bridge.<your-subdomain>.workers.dev/sse"]
     }
   }
 }
@@ -158,7 +162,7 @@ Update your AI client config to use your instance:
 
 ### 1. Add Custom Domain in Cloudflare Dashboard
 
-1. Go to Workers & Pages ’ figma-console-mcp
+1. Go to Workers & Pages ’? figma-mcp-bridge
 2. Click "Custom Domains"
 3. Click "Add Custom Domain"
 4. Enter your domain (e.g., `mcp.example.com`)
@@ -169,7 +173,7 @@ Update your AI client config to use your instance:
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "npx",
       "args": ["mcp-remote", "https://mcp.example.com/sse"]
     }
@@ -235,7 +239,7 @@ npx wrangler tail --status error
 ### Analytics
 
 View analytics in Cloudflare Dashboard:
-1. Go to Workers & Pages ’ figma-console-mcp
+1. Go to Workers & Pages ’? figma-mcp-bridge
 2. Click "Analytics" tab
 3. See:
    - Request count
@@ -283,7 +287,7 @@ View analytics in Cloudflare Dashboard:
 ### Update Code
 
 ```bash
-cd figma-console-mcp
+cd figma-mcp-bridge
 git pull origin main
 npm install
 npm run build:cloudflare
@@ -394,7 +398,7 @@ npx wrangler tail --format pretty
 **Check usage:**
 
 ```bash
-npx wrangler metrics --worker figma-console-mcp
+npx wrangler metrics --worker figma-mcp-bridge
 ```
 
 **Reduce costs:**
@@ -436,16 +440,16 @@ npx wrangler deploy --env staging
 
 ```jsonc
 {
-  "name": "figma-console-mcp",
+  "name": "figma-mcp-bridge",
   "env": {
     "production": {
-      "name": "figma-console-mcp-prod",
+      "name": "figma-mcp-bridge-prod",
       "vars": {
         "ENVIRONMENT": "production"
       }
     },
     "staging": {
-      "name": "figma-console-mcp-staging",
+      "name": "figma-mcp-bridge-staging",
       "vars": {
         "ENVIRONMENT": "staging"
       }
@@ -466,7 +470,7 @@ For multi-user sessions, enable Durable Objects:
       {
         "name": "SESSIONS",
         "class_name": "BrowserSession",
-        "script_name": "figma-console-mcp"
+        "script_name": "figma-mcp-bridge"
       }
     ]
   },
@@ -523,9 +527,9 @@ Set secrets in GitHub:
 
 For self-hosting issues:
 
-- =Ö [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
-- =¬ [GitHub Discussions](https://github.com/southleft/figma-console-mcp/discussions)
-- = [Report Issues](https://github.com/southleft/figma-console-mcp/issues)
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [GitHub Discussions](https://github.com/atezer/figma-mcp-bridge/discussions)
+- [Report Issues](https://github.com/atezer/figma-mcp-bridge/issues)
 
 For Cloudflare-specific issues:
 - [Cloudflare Community](https://community.cloudflare.com/)
