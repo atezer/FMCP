@@ -187,6 +187,60 @@ export class PluginBridgeConnector {
 		return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" });
 	}
 
+	async getConsoleLogs(limit: number = 50): Promise<{ logs: Array<{ level: string; time: number; args: unknown[] }>; total: number }> {
+		const res = await this.bridge.request("getConsoleLogs", { limit });
+		return (res as any)?.data ?? { logs: [], total: 0 };
+	}
+
+	async clearConsole(): Promise<void> {
+		await this.bridge.request("clearConsole", {});
+	}
+
+	async batchCreateVariables(
+		items: Array<{
+			collectionId: string;
+			name: string;
+			resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN";
+			value?: unknown;
+			modeId?: string;
+			valuesByMode?: Record<string, unknown>;
+		}>
+	): Promise<{ created: Array<{ name: string; id: string }>; failed: Array<{ name: string; error: string }> }> {
+		const res = await this.bridge.request("batchCreateVariables", { items });
+		return (res as any) ?? { created: [], failed: [] };
+	}
+
+	async batchUpdateVariables(
+		items: Array<{ variableId: string; modeId: string; value: unknown }>
+	): Promise<{ updated: Array<{ variableId: string }>; failed: Array<{ variableId: string; error: string }> }> {
+		const res = await this.bridge.request("batchUpdateVariables", { items });
+		return (res as any) ?? { updated: [], failed: [] };
+	}
+
+	async setupDesignTokens(payload: {
+		collectionName: string;
+		modes: string[];
+		tokens: Array<{ name: string; type?: string; value?: unknown; values?: Record<string, unknown> }> | Record<string, unknown>;
+	}): Promise<any> {
+		const tokens = Array.isArray(payload.tokens)
+			? payload.tokens
+			: Object.entries(payload.tokens || {}).map(([name, v]) =>
+					typeof v === "object" && v !== null && "type" in (v as object)
+						? { name, ...(v as object) }
+						: { name, type: "STRING", value: v }
+				);
+		return this.bridge.request("setupDesignTokens", {
+			collectionName: payload.collectionName,
+			modes: payload.modes,
+			tokens,
+		});
+	}
+
+	async arrangeComponentSet(nodeIds: string[]): Promise<{ nodeId: string; name: string }> {
+		const res = (await this.bridge.request("arrangeComponentSet", { nodeIds })) as any;
+		return res?.data ?? res ?? { nodeId: "", name: "" };
+	}
+
 	async dispose(): Promise<void> {
 		logger.info("Plugin bridge connector disposed");
 	}

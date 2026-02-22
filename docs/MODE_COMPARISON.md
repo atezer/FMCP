@@ -199,7 +199,7 @@ Variables & Components Data
 **Setup Time:** 15 minutes
 
 **Steps:**
-1. Clone repository: `git clone https://github.com/atezer/figma-mcp-bridge.git` (or your fork as figma-mcp-bridge)
+1. Clone repository: `git clone https://github.com/atezer/FMCP.git` (or your fork)
 2. Run `npm install && npm run build:local`
 3. Get Figma Personal Access Token
 4. Configure MCP client JSON config with path to `dist/local.js`

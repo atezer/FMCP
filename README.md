@@ -19,15 +19,19 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 
 ## figma-mcp-bridge yetenekleri
 
+**32 araç** (config’te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md).
+
 | Kategori | Araçlar |
 |----------|--------|
 | **Dosya & yapı** | `figma_get_file_data` — Ağaç yapısı, layer hiyerarşisi (depth & verbosity: summary / standard / full) |
 | **Arama & keşif** | `figma_search_components`, `figma_get_design_system_summary` |
-| **Bileşen** | `figma_get_component`, `figma_instantiate_component`, `figma_set_instance_properties` |
-| **Token & değişken** | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables` |
+| **Bileşen** | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties`, `figma_arrange_component_set`, `figma_set_description` |
+| **Token & değişken** | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens` |
 | **Görsel & kod** | `figma_capture_screenshot`, `figma_execute` (Plugin API’de JavaScript çalıştırır) |
+| **Console** | `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console` — Plugin log okuma / izleme / temizleme |
 | **Durum** | `figma_get_status` — Plugin bağlantı kontrolü |
-
+| **Design–code parity** | `figma_check_design_parity` — Figma ile kod token'larını karşılaştırır (design-code gap) |
+| **Token Browser** | `figma_get_token_browser` — Değişken + stiller hiyerarşik tarama |’in
 **Yeni kullanıcılar:** Adım adım kurulum için **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)** — plugin yükleme, Node.js, MCP server, Claude config.
 
 ## Hızlı başlangıç
@@ -124,7 +128,7 @@ Config (macOS): **`~/Library/Application Support/Claude/claude_desktop_config.js
 
 ## Design / Dev Mode
 
-**Design seat olmayan, sadece Dev Mode erişimi olan kullanıcılar da bu MCP'yi kullanabilir.** Plugin hem Design hem Dev Mode'da çalışır (`editorType: ["figma", "dev"]`). MCP bağlantısı için mod farkı engel değildir.
+**Design seat olmayan, sadece Dev Mode erişimi olan kullanıcılar da bu MCP'yi kullanabilir.** Plugin hem Design hem Dev Mode'da çalışır (`editorType: ["figma", "dev"]`). MCP bağlantısı için mod farkı engel değildir. **Dev Mode kullanıcıları (SEM, PO, Dev):** Dosyayı Dev Mode'da açın → sağ panelde **Plugins** sekmesi → **F-MCP ATezer Bridge** ile çalıştırın. Detay: [ONBOARDING](docs/ONBOARDING.md#dev-seat-kullanıcıları-sem-po-dev--plugini-dev-modeda-açma).
 
 ## Plugin'in MCP'ye Bağlanması (Özet)
 
@@ -190,6 +194,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md) | Plugin Worker/UI akışı |
 | [MODE_COMPARISON.md](docs/MODE_COMPARISON.md) | Mod karşılaştırma |
 | [TOOLS.md](docs/TOOLS.md) | MCP araçları referansı |
+| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | **32 araç tam liste** (referans, Claude ile doğrulanmış) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Sorun giderme |
 | [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md) | NPX ile kurulum |
 | [OAUTH_SETUP.md](docs/OAUTH_SETUP.md) | OAuth (remote sunucu) |
@@ -198,8 +203,9 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
 | [USE_CASES.md](docs/USE_CASES.md) | Örnek kullanım senaryoları |
 | [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md) | Reconstruction format |
-| [ROADMAP.md](docs/ROADMAP.md) | Geliştirme yol haritası |
 | [BITBUCKET-README-Onerisi.md](docs/BITBUCKET-README-Onerisi.md) | Bitbucket README şablonu |
+| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md) | Port 5454 kapalı sorun giderme |
+| [GITHUB_YUKLEME.md](docs/GITHUB_YUKLEME.md) | GitHub’a yükleme |
 
 ## Yaygınlaştırma: Organization (private) plugin
 

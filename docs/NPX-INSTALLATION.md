@@ -1,5 +1,7 @@
 # NPX Installation Method
 
+> **Ne zaman gerekir?** Bu yöntem yalnızca paket **npm’e yayınlandıktan sonra** kullanılabilir. Şu an FMCP, Git clone + build ile kurulur; çoğu kullanıcı için **[ONBOARDING.md](ONBOARDING.md)** yeterlidir. npm’e publish etmeyi planlamıyorsanız bu dokümanı atlayabilirsiniz.
+
 After publishing to npm, users can install via `npx` without cloning the repository.
 
 ## Claude Desktop Configuration

@@ -1,5 +1,7 @@
 # Available Tools - Detailed Documentation
 
+Bu rehber her araç için **detaylı kullanım** (parametreler, örnekler, best practice) içerir. **Kısa liste (32 araç, tek sayfa):** [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
+
 This guide provides detailed documentation for each tool, including when to use them and best practices.
 
 ## Çalışma modları (debug portu gerekmez)
@@ -39,6 +41,8 @@ Araçlar **iki şekilde** kullanılabilir:
 | | `figma_delete_variable_collection` | Delete collections | Local |
 | | `figma_add_mode` | Add modes to collections | Local |
 | | `figma_rename_mode` | Rename modes | Local |
+| **Design–Code Parity** | `figma_check_design_parity` | Compare Figma vs code tokens (design-code gap) | All |
+| **Token Browser** | `figma_get_token_browser` | Hierarchical variables + styles browse | All |
 
 ---
 

@@ -104,8 +104,8 @@ Use **`dist/local.js`** in config. If you want **console log** tools, restart Fi
 
 ```bash
 # Clone the repository
-git clone https://github.com/atezer/figma-mcp-bridge.git
-cd figma-mcp-bridge
+git clone https://github.com/atezer/FMCP.git
+cd FMCP
 
 # Install dependencies
 npm install
@@ -284,6 +284,6 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 ## Support
 
 - 📖 [Full Documentation](../README.md)
-- 🐛 [Report Issues](https://github.com/atezer/figma-mcp-bridge/issues)
-- 💬 [Discussions](https://github.com/atezer/figma-mcp-bridge/discussions)
+- 🐛 [Report Issues](https://github.com/atezer/FMCP/issues)
+- 💬 [Discussions](https://github.com/atezer/FMCP/discussions)
 - 📊 [Mode Comparison](MODE_COMPARISON.md)

@@ -2,6 +2,60 @@
 
 ## Common Issues and Solutions
 
+### "Yeni araçlar entegre değil" / Araçlar listesinde görünmüyor
+
+Aşağıdaki araçlar **sadece plugin-only giriş noktasında** tanımlıdır:  
+`figma_get_component_for_development`, `figma_get_component_image`, `figma_set_description`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_arrange_component_set`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`.
+
+**Olası nedenler ve çözümler:**
+
+1. **Yanlış MCP giriş noktası**  
+   Claude config’te **mutlaka** `dist/local-plugin-only.js` kullanılmalı (tam mod için kullanılan `dist/local.js` değil).  
+   Örnek:
+   ```json
+   "figma-mcp-bridge": {
+     "command": "node",
+     "args": ["<PROJE-YOLU>/dist/local-plugin-only.js"]
+   }
+   ```
+   `<PROJE-YOLU>` yerine FMCP klasörünün tam yolunu yazın (örn. `/Users/.../FMCP`).
+
+2. **Eski build**  
+   Araçlar eklendikten sonra build alınmamış olabilir. Proje kökünde:
+   ```bash
+   npm run build:local
+   ```
+   Ardından Claude Desktop’u **tamamen kapatıp** tekrar açın.
+
+3. **Claude eski tool listesini kullanıyor**  
+   MCP sunucusu Claude açıldığında başlar; sunucu yeniden başlamazsa tool listesi güncellenmez.  
+   **Çözüm:** Claude Desktop’u tamamen kapatın, tekrar açın (ve gerekirse önce `npm run build:local` yapın).
+
+**Kontrol:** Claude’a “Figma MCP’de hangi araçlar var?” veya “figma_get_status çağır” dediğinizde bağlantı geliyorsa, aynı config’teki sunucu çalışıyordur. Araç listesinde yukarıdaki isimler yoksa config’te `local-plugin-only.js` kullanıldığını ve build’in güncel olduğunu tekrar kontrol edin.
+
+### Plugin Dev Mode'da görünmüyor
+
+**Dikkat:** Plugin'in **Dev Mode**'da da listelenmesi için `f-mcp-plugin/manifest.json` içinde şu tanım olmalı:
+
+```json
+"editorType": ["figma", "dev"]
+```
+
+Sadece `"figma"` yazıyorsa plugin Dev Mode'da görünmeyebilir. Bu repodaki manifest'te `["figma", "dev"]` tanımlı; fork veya kendi plugin'inizde Dev Mode kullanacaksanız kontrol edin.
+
+### "Claude's response could not be fully generated"
+
+Bu mesaj Claude Desktop’un yanıtı tamamlayamadığını gösterir. Sıklıkla MCP’den dönen **çok büyük** veya **çok uzun süren** yanıtlar tetikler.
+
+**Yapılacaklar:**
+
+1. **Önce hafif bir araçla deneyin** — Örn. sadece `figma_get_status` veya `figma_get_design_system_summary`. Kısa yanıt döner; hata devam ediyorsa sorun büyük ihtimalle başka (ağ, bellek, Claude limiti).
+2. **Büyük yanıt veren araçlar:** `figma_get_component_for_development` / `figma_get_component_image` base64 screenshot ile context’i şişirir. Önce `figma_get_component` (görsel olmadan) kullanın; gerekirse screenshot için `scale: 1` veya `format: "JPG"` deneyin. `figma_get_file_data` için `depth: 1`, `verbosity: "summary"` ile başlayın. `figma_watch_console` için `timeoutSeconds: 5` veya 10 deneyin.
+3. **Yeni konuşma açın** — Eski konuşmada context çok dolmuş olabilir.
+4. **Claude / internet** — Geçici sunucu veya ağ sorunları da bu hataya yol açabilir; bir süre sonra tekrar deneyin.
+
+**Özet:** Önce `figma_get_status` ile kısa yanıt alıp almadığınızı kontrol edin; hata orada da oluyorsa büyük/uzun yanıt vermeyen basit bir istekle (ve mümkünse yeni konuşmada) tekrar deneyin.
+
 ### Plugin Debugging: Simple Workflow ✅
 
 **For Plugin Developers in Local Mode:**
@@ -421,7 +475,7 @@ If you're still experiencing issues:
    - Browser Rendering API status
 
 4. **Report Issues**
-   - GitHub Issues: https://github.com/atezer/figma-mcp-bridge/issues
+   - GitHub Issues: https://github.com/atezer/FMCP/issues
    - Include error messages
    - Include steps to reproduce
    - Include figma_get_status output
