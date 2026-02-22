@@ -186,7 +186,7 @@ export class FigmaDesktopConnector {
   /**
    * Get component data by node ID from plugin UI window object
    * This bypasses the REST API bug where descriptions are missing
-   * by accessing data from the Desktop Bridge plugin via its UI iframe
+   * by accessing data from the F-MCP ATezer Bridge plugin via its UI iframe
    */
   async getComponentFromPluginUI(nodeId: string): Promise<any> {
     try {
@@ -259,7 +259,7 @@ export class FigmaDesktopConnector {
       }
 
       // If no frame found with function, throw error
-      throw new Error('No plugin UI found with requestComponentData function. Make sure the Desktop Bridge plugin is running.');
+      throw new Error('No plugin UI found with requestComponentData function. Make sure the F-MCP ATezer Bridge plugin is running.');
     } catch (error) {
       logger.error({ error, nodeId }, 'Failed to get component from plugin UI');
 
@@ -478,7 +478,7 @@ export class FigmaDesktopConnector {
   // ============================================================================
 
   /**
-   * Find the Desktop Bridge plugin UI iframe
+   * Find the F-MCP ATezer Bridge plugin UI iframe
    * Returns the frame that has the write operation functions
    * Handles detached frame errors gracefully
    */
@@ -486,7 +486,7 @@ export class FigmaDesktopConnector {
     // Get fresh frames - don't cache this
     const frames = this.page.frames();
 
-    logger.debug({ frameCount: frames.length }, 'Searching for Desktop Bridge plugin UI frame');
+    logger.debug({ frameCount: frames.length }, 'Searching for F-MCP ATezer Bridge plugin UI frame');
 
     for (const frame of frames) {
       try {
@@ -495,11 +495,11 @@ export class FigmaDesktopConnector {
           continue;
         }
 
-        // Check if this frame has the executeCode function (our Desktop Bridge plugin)
+        // Check if this frame has the executeCode function (our F-MCP ATezer Bridge plugin)
         const hasWriteOps = await frame.evaluate('typeof window.executeCode === "function"');
 
         if (hasWriteOps) {
-          logger.info({ frameUrl: frame.url() }, 'Found Desktop Bridge plugin UI frame');
+          logger.info({ frameUrl: frame.url() }, 'Found F-MCP ATezer Bridge plugin UI frame');
           return frame;
         }
       } catch (error) {
@@ -513,7 +513,7 @@ export class FigmaDesktopConnector {
     }
 
     throw new Error(
-      'Desktop Bridge plugin UI not found. Make sure the Desktop Bridge plugin is running in Figma. ' +
+      'F-MCP ATezer Bridge plugin UI not found. Make sure the F-MCP ATezer Bridge plugin is running in Figma. ' +
       'The plugin must be open for write operations to work.'
     );
   }
@@ -1329,6 +1329,44 @@ export class FigmaDesktopConnector {
       return result;
     } catch (error) {
       logger.error({ error, parentId, nodeType }, 'Create child node failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Capture screenshot via plugin UI (for visual validation)
+   */
+  async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number }): Promise<any> {
+    logger.info({ nodeId, options }, 'Capturing screenshot via plugin UI');
+
+    const frame = await this.findPluginUIFrame();
+
+    try {
+      const result = await frame.evaluate(
+        `window.captureScreenshot(${JSON.stringify(nodeId)}, ${JSON.stringify(options || {})})`
+      );
+      return result;
+    } catch (error) {
+      logger.error({ error, nodeId }, 'Capture screenshot failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Set instance properties via plugin UI
+   */
+  async setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<any> {
+    logger.info({ nodeId, properties }, 'Setting instance properties via plugin UI');
+
+    const frame = await this.findPluginUIFrame();
+
+    try {
+      const result = await frame.evaluate(
+        `window.setInstanceProperties(${JSON.stringify(nodeId)}, ${JSON.stringify(properties)})`
+      );
+      return result;
+    } catch (error) {
+      logger.error({ error, nodeId }, 'Set instance properties failed');
       throw error;
     }
   }

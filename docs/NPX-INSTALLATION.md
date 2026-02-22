@@ -9,10 +9,10 @@ Add this to your `.claude.json` (or `claude_desktop_config.json` on some systems
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "figma-console-mcp@latest"],
+      "args": ["-y", "figma-mcp-bridge@latest"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "your_figma_access_token_here"
       }
@@ -30,9 +30,7 @@ Replace `your_figma_access_token_here` with your actual Figma access token.
 ✅ Automatic updates when new versions are published
 ✅ Same functionality as Local Mode (uses `dist/local.js`)
 
-**Note:** NPX and Local Git modes have **identical authentication requirements**. Both require:
-- `FIGMA_ACCESS_TOKEN` environment variable
-- Figma Desktop restart with `--remote-debugging-port=9222`
+**Note:** If you use **plugin-only** (e.g. run the plugin and connect via WebSocket), you do **not** need `FIGMA_ACCESS_TOKEN` or a Figma debug port; use `local-plugin-only.js` (or equivalent) in your MCP config. The token and 9222 restart apply when using full `local.js` with REST/console features.
 
 For true zero-setup with OAuth authentication, use [Remote Mode](SETUP.md#remote-mode-setup-recommended) instead.
 
@@ -43,10 +41,10 @@ If you prefer version stability:
 ```json
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "figma-console-mcp@0.1.0"],
+      "args": ["-y", "figma-mcp-bridge@0.1.0"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "your_figma_access_token_here"
       }
@@ -57,7 +55,7 @@ If you prefer version stability:
 
 ## First-Time Setup
 
-The first time Claude Code runs `npx figma-console-mcp`, it will:
+The first time Claude Code runs `npx figma-mcp-bridge`, it will:
 1. Download the package from npm
 2. Cache it locally
 3. Start the MCP server
@@ -72,10 +70,9 @@ Subsequent runs will use the cached version unless you specify `@latest`.
 | **Local Git** | Source code path | Manual `git pull && npm run build` | Development/testing unreleased features |
 
 **Both methods:**
-- ✅ Use the same code (`dist/local.js`)
-- ✅ Require `FIGMA_ACCESS_TOKEN` (Personal Access Token)
-- ✅ Require Figma Desktop with `--remote-debugging-port=9222`
-- ✅ Support Desktop Bridge plugin
+- ✅ Can use **plugin-only** (`local-plugin-only.js`): no token, no debug port; plugin connects via WebSocket (5454)
+- ✅ Or use full `local.js` (optional token, optional `--remote-debugging-port=9222` for console logs)
+- ✅ Support F-MCP ATezer Bridge plugin
 
 **For most users:** [Remote Mode](SETUP.md#remote-mode-setup-recommended) offers zero-setup with OAuth authentication.
 
@@ -110,7 +107,7 @@ npm login
 npm publish
 
 # 3. Verify publication
-npm view figma-console-mcp
+npm view figma-mcp-bridge
 ```
 
 ## Updating the Package

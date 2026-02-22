@@ -1,5 +1,5 @@
 {
-  "name": "figma-console-mcp",
+  "name": "figma-mcp-bridge",
   "description": "MCP server for accessing Figma plugin console logs and screenshots",
   "version": "0.1.0",
   "projectType": "mcp-server",

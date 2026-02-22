@@ -1,8 +1,8 @@
-# Figma Console MCP - Project Context
+# F-MCP ATezer (Figma MCP Bridge) - Project Context
 
 ## Project Overview
 
-**Name:** Figma Console MCP
+**Name:** F-MCP ATezer (figma-mcp-bridge)
 **Type:** Model Context Protocol (MCP) Server
 **Language:** TypeScript
 **Runtime:** Node.js >= 18
@@ -80,6 +80,6 @@ try {
 
 ## References
 
-- [Product Plan](../PRODUCT_PLAN.md) - Complete requirements
-- [Architecture](../ARCHITECTURE.md) - Technical design
+- [Architecture](../docs/ARCHITECTURE.md) - Technical design
 - [README](../README.md) - User documentation
+- [Roadmap](../docs/ROADMAP.md) - Development plan

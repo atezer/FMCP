@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Launch Figma Desktop with Remote Debugging + Auto-start Desktop Bridge Plugin
-# This script starts Figma with debugging enabled and automatically runs the Desktop Bridge plugin
+# Launch Figma Desktop with Remote Debugging + Auto-start F-MCP ATezer Bridge Plugin
+# This script starts Figma with debugging enabled and automatically runs the F-MCP ATezer Bridge plugin
 #
 
 set -e
@@ -9,7 +9,7 @@ set -e
 # Configuration
 DEBUG_PORT="${FIGMA_DEBUG_PORT:-9222}"
 FIGMA_APP="/Applications/Figma.app"
-PLUGIN_NAME="Figma Desktop Bridge"
+PLUGIN_NAME="F-MCP ATezer Bridge"
 
 # Colors for output
 RED='\033[0;31m'
@@ -98,7 +98,7 @@ read -p ""
 
 # Auto-start plugin using AppleScript
 echo
-echo -e "${BLUE}→ Desktop Bridge plugin otomatik başlatılıyor...${NC}"
+echo -e "${BLUE}→ F-MCP ATezer Bridge plugin otomatik başlatılıyor...${NC}"
 echo
 
 # AppleScript to open plugin via menu
@@ -131,13 +131,13 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Plugin başlatma komutu gönderildi!${NC}"
     echo
     echo -e "${CYAN}Plugin penceresi açılmalı ve şunu göreceksiniz:${NC}"
-    echo -e "  ${GREEN}✓ Desktop Bridge active${NC}"
+    echo -e "  ${GREEN}✓ F-MCP ATezer Bridge active${NC}"
     echo -e "  ${GREEN}Variables: X in Y collections${NC}"
 else
     echo -e "${YELLOW}⚠ Plugin otomatik başlatılamadı${NC}"
     echo
     echo -e "${CYAN}Manuel olarak başlatın:${NC}"
-    echo "  Sağ tıklayın → Plugins → Development → Figma Desktop Bridge"
+    echo "  Sağ tıklayın → Plugins → Development → F-MCP ATezer Bridge"
 fi
 
 echo

@@ -1,39 +1,24 @@
-# Custom Figma MCP – Repo README Önerisi
+# Bitbucket / Özel Repo README Önerisi
 
-Aşağıdaki metni Bitbucket reponuzun (`custom-figma-mcp`) ana **README.md** dosyasına kopyalayabilir veya referans olarak kullanabilirsiniz.
+Bu dosya, **figma-mcp-bridge**’i fork’layıp kendi reponuzda (örn. Bitbucket `custom-figma-mcp`) kullanıyorsanız ana README için önerilen metindir. Aşağıdaki blokları kopyalayıp repo yolunuza göre düzenleyebilirsiniz.
 
 ---
 
 ```markdown
-# Custom Figma MCP
+# F-MCP ATezer (Figma MCP Bridge) – Özel Kurulum
 
-Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan plugin ve bağlantı rehberi.
+Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan plugin ve MCP sunucusu.
 
 ## Plugin'in MCP'ye Bağlanması (Özet)
 
-1. **Figma Desktop'ı remote debugging ile açın**
-   - macOS: `open -a "Figma" --args --remote-debugging-port=9222`
-   - Figma → Plugins → Development → **Use Developer VM** açık olsun.
+**Önerilen (plugin-only – debug portu yok, token yok):**
 
-2. **Plugin'i yükleyin ve çalıştırın**
-   - Plugins → Development → **Import plugin from manifest** → bu repodaki `figma-desktop-bridge/manifest.json`
-   - Açtığınız dosyada: Plugins → Development → **Figma Desktop Bridge** ile plugin'i açın; "Desktop Bridge active" görünene kadar bekleyin.
+1. **Plugin'i yükleyin:** Plugins → Development → **Import plugin from manifest** → `f-mcp-plugin/manifest.json`
+2. **MCP:** Config'te `args`: **`/ABSOLUTE/PATH/TO/REPO/dist/local-plugin-only.js`** kullanın; token eklemeyin.
+3. **Figma'yı normal açın**; Plugins → Development → **F-MCP ATezer Bridge** ile plugin'i çalıştırın; "ready" / "Bridge active" görünene kadar bekleyin.
+4. Claude'u yeniden başlatın; `figma_get_variables`, `figma_execute` vb. kullanın.
 
-3. **MCP sunucusunu başlatın**
-   - Bu repo veya [figma-console-mcp](https://github.com/southleft/figma-console-mcp) ile: `npm run dev:local` veya `node dist/local.js`
-   - MCP sunucusu, Figma Desktop'a port 9222 üzerinden (Puppeteer/CDP) bağlanır ve plugin UI iframe'inden veriyi okur.
-
-4. **Claude Desktop'ta kullanın**
-   - `~/Library/Application Support/Claude/claude_desktop_config.json` içine MCP sunucusunu ekleyin:
-   ```json
-   "mcpServers": {
-     "figma-console-mcp": {
-       "command": "node",
-       "args": ["/FULL/PATH/TO/figma-console-mcp/dist/local.js"]
-     }
-   }
-   ```
-   - Claude'u yeniden başlatın; artık `figma_get_variables`, `figma_execute` vb. araçları kullanabilirsiniz.
+**İsteğe bağlı (console log için CDP):** Figma'yı `open -a "Figma" --args --remote-debugging-port=9222` ile açın ve config'te `dist/local.js` kullanın.
 
 ## Detaylı Rehber
 
@@ -45,4 +30,3 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı ve sorun giderme için:
 ---
 
 Yukarıdaki blok Bitbucket README için önerilen içeriktir. `docs/PLUGIN-MCP-BAGLANTI.md` dosyasını da repoya ekleyip README’deki linki repo yoluna göre güncelleyebilirsiniz.
-```

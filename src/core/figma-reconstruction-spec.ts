@@ -323,7 +323,7 @@ export function extractNodeSpec(node: any): NodeSpecification {
   const skipDimensions = hasHugSizing && !isParentNode;
 
   if (!skipDimensions) {
-    // Check both direct properties (Desktop Bridge) and absoluteBoundingBox (REST API)
+    // Check both direct properties (F-MCP ATezer Bridge) and absoluteBoundingBox (REST API)
     if ('width' in node && typeof node.width === 'number') {
       spec.width = node.width;
     } else if ('absoluteBoundingBox' in node && node.absoluteBoundingBox && typeof node.absoluteBoundingBox.width === 'number') {

@@ -1,16 +1,16 @@
 {
-	"name": "figma-console-mcp",
+	"name": "figma-mcp-bridge",
 	"version": "1.1.1",
-	"description": "MCP server for accessing Figma plugin console logs and screenshots via Cloudflare Workers or local mode",
+	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
 	"main": "dist/local.js",
 	"types": "dist/local.d.ts",
 	"bin": {
-		"figma-console-mcp": "./dist/local.js"
+		"figma-mcp-bridge": "./dist/local.js"
 	},
 	"files": [
 		"dist",
-		"figma-desktop-bridge",
+		"f-mcp-plugin",
 		"README.md",
 		"LICENSE"
 	],
@@ -19,6 +19,8 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"dev:local": "tsx src/local.ts",
+		"dev:plugin-only": "node dist/local-plugin-only.js",
+		"build:run": "npm run build:local && node dist/local-plugin-only.js",
 		"figma:debug": "./scripts/auto-launch-figma-plugin.sh",
 		"build": "npm run build:local && npm run build:cloudflare",
 		"build:local": "tsc -p tsconfig.local.json",
@@ -44,11 +46,11 @@
 		"cloudflare",
 		"workers"
 	],
-	"author": "Your Name",
+	"author": "Abdussamed Tezer",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/southleft/figma-console-mcp.git"
+		"url": "https://github.com/atezer/figma-mcp-bridge.git"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -62,6 +64,7 @@
 		"pino-pretty": "^13.0.0",
 		"puppeteer-core": "^23.11.1",
 		"uuid": "^11.0.3",
+		"ws": "^8.19.0",
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
@@ -69,6 +72,7 @@
 		"@types/jest": "^29.5.14",
 		"@types/node": "^22.10.2",
 		"@types/uuid": "^10.0.0",
+		"@types/ws": "^8.18.1",
 		"jest": "^29.7.0",
 		"ts-jest": "^29.2.5",
 		"tsx": "^4.19.2",

@@ -20,6 +20,8 @@ export interface Env {
 	FIGMA_ACCESS_TOKEN?: string; // Optional Figma API token for data extraction (deprecated, use OAuth)
 	FIGMA_OAUTH_CLIENT_ID?: string; // OAuth client ID for user authentication
 	FIGMA_OAUTH_CLIENT_SECRET?: string; // OAuth client secret for token exchange
+	/** Base URL for OAuth (e.g. https://your-worker.workers.dev). Required for auth_url in errors when no request context. */
+	MCP_OAUTH_BASE_URL?: string;
 }
 
 /**

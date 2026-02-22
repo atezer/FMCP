@@ -1,8 +1,8 @@
-# Figma Console MCP - Development Roadmap
+# F-MCP ATezer (Figma MCP Bridge) - Development Roadmap
 
 ## Overview
 
-This roadmap outlines the development plan for the Figma Console MCP server, organized into 4 phases over 12 weeks.
+This roadmap outlines the development plan for the F-MCP ATezer server, organized into 4 phases over 12 weeks.
 
 ## Phase 1: MVP - Basic Console Log Capture (Weeks 1-4)
 

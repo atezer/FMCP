@@ -1,5 +1,5 @@
 #!/bin/bash
-# Çift tıkla: Figma açıksa Desktop Bridge plugin'ini açar
+# Çift tıkla: Figma açıksa F-MCP ATezer Bridge plugin'ini açar
 # İlk seferde: System Settings > Privacy > Accessibility → "Terminal" ekleyin
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -1,6 +1,6 @@
 # OAuth Setup Guide
 
-This guide explains how to set up OAuth authentication for the Figma Console MCP server, allowing users to authenticate with their own Figma accounts.
+This guide explains how to set up OAuth authentication for the F-MCP ATezer server, allowing users to authenticate with their own Figma accounts.
 
 ## Overview
 
@@ -32,16 +32,16 @@ User → Claude Code → Remote MCP Server
 1. Go to [Figma Developers](https://www.figma.com/developers)
 2. Click **"My Apps"** → **"Create new app"**
 3. Fill in app details:
-   - **App name**: `Figma Console MCP` (or your preferred name)
+   - **App name**: `F-MCP ATezer` (or your preferred name)
    - **App description**: `AI-powered Figma debugging and design system tools`
-   - **App website**: `https://github.com/southleft/figma-console-mcp`
+   - **App website**: `https://github.com/atezer/figma-mcp-bridge`
 
 4. Add **Redirect URL**:
    ```
-   https://figma-console-mcp.southleft.com/oauth/callback
+   https://your-worker.workers.dev/oauth/callback
    ```
 
-   Replace `figma-console-mcp.southleft.com` with your actual deployment URL.
+   Replace `your-worker.workers.dev` with your actual deployment URL.
 
 5. **Save** and copy:
    - ✅ **Client ID** (public)
@@ -70,7 +70,7 @@ npm run deploy
 ```
 
 Or via Cloudflare Dashboard:
-1. Go to **Workers & Pages** → **figma-console-mcp**
+1. Go to **Workers & Pages** → **figma-mcp-bridge**
 2. Navigate to **Settings** → **Variables**
 3. Add encrypted environment variables:
    - `FIGMA_OAUTH_CLIENT_ID`
@@ -81,7 +81,7 @@ Or via Cloudflare Dashboard:
 Check your deployment's health endpoint:
 
 ```bash
-curl https://figma-console-mcp.southleft.com/health
+curl https://your-worker.workers.dev/health
 ```
 
 Response should include:
@@ -102,7 +102,7 @@ Response should include:
 Users simply connect to your remote MCP server - no OAuth setup needed on their end!
 
 ```bash
-claude mcp add --transport sse figma-console https://figma-console-mcp.southleft.com/sse
+claude mcp add --transport sse figma-mcp https://your-worker.workers.dev/sse
 ```
 
 ### Authentication Flow
@@ -225,6 +225,6 @@ Future enhancement: Set up webhooks for token revocation notifications
 
 ## Support
 
-- **Documentation**: https://github.com/southleft/figma-console-mcp
-- **Issues**: https://github.com/southleft/figma-console-mcp/issues
+- **Documentation**: https://github.com/atezer/figma-mcp-bridge
+- **Issues**: https://github.com/atezer/figma-mcp-bridge/issues
 - **Figma OAuth Docs**: https://www.figma.com/developers/api#oauth2

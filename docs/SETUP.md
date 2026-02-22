@@ -1,6 +1,6 @@
-# Figma Console MCP - Setup Guide
+# F-MCP ATezer (Figma MCP Bridge) - Setup Guide
 
-Complete setup instructions for connecting Figma Console MCP to various AI clients (Claude Desktop, Cursor, Windsurf, etc.).
+Complete setup instructions for connecting F-MCP ATezer to various AI clients (Claude Desktop, Cursor, Windsurf, etc.).
 
 > **Quick Start:** For most users, we recommend [Remote Mode](#remote-mode-setup-recommended) with the UI-based setup method - just paste a URL, no config files needed.
 
@@ -29,12 +29,12 @@ This is the new, easier way to add MCP servers in Claude Desktop.
    - You'll see a dialog with two fields
 
 4. **Enter Connection Details**
-   - **Name:** `Figma Console` (or any name you prefer)
-   - **URL:** `https://figma-console-mcp.southleft.com/sse`
+   - **Name:** `F-MCP ATezer` (or any name you prefer)
+   - **URL:** Your deployment URL + `/sse` (e.g. `https://your-worker.workers.dev/sse`)
    - Click "Add"
 
 5. **Verify Connection**
-   - Look for "Figma Console" in your connectors list
+   - Look for "F-MCP ATezer" in your connectors list
    - Status should show "Connected" or "CUSTOM" badge
 
 **That's it!** ✅
@@ -57,9 +57,9 @@ The MCP server is now connected. All 14 Figma tools are available.
    ```json
    {
      "mcpServers": {
-       "figma-console": {
+       "figma-mcp-bridge": {
          "command": "npx",
-         "args": ["-y", "mcp-remote", "https://figma-console-mcp.southleft.com/sse"]
+         "args": ["-y", "mcp-remote", "https://your-worker.workers.dev/sse"]
        }
      }
    }
@@ -67,13 +67,30 @@ The MCP server is now connected. All 14 Figma tools are available.
 
 3. **Save and restart Claude Desktop**
 
-4. **Verify:** Look for 🔌 icon in bottom-right showing "figma-console: connected"
+4. **Verify:** Look for 🔌 icon in bottom-right showing "figma-mcp-bridge: connected"
 
 ---
 
 ## 🔧 Local Mode Setup (Advanced)
 
-> **⚠️ Important:** Local mode is for advanced users who need the Figma Desktop Bridge plugin or direct console debugging. Most users should use Remote Mode.
+Local mode offers two options: **Plugin-only** (no debug port, no token) or **Full local** (optional debug port for console logs).
+
+### Option A: Plugin-Only (recommended – no debug port, no token)
+
+1. **Install and build** (same as below): clone repo, `npm install`, `npm run build:local`.
+2. **Configure Claude** with **`dist/local-plugin-only.js`** (no `FIGMA_ACCESS_TOKEN`):
+   ```json
+   "figma-mcp-bridge": {
+     "command": "node",
+     "args": ["/absolute/path/to/figma-mcp-bridge/dist/local-plugin-only.js"]
+   }
+   ```
+3. **Open Figma normally** (no special launch). Run **Plugins → Development → F-MCP ATezer Bridge**; wait until the plugin shows "ready" / "Bridge active".
+4. Restart Claude; use tools. Data flows via WebSocket (port 5454); **debug port 9222 is not required.**
+
+### Option B: Full Local (optional debug port for console logs)
+
+Use **`dist/local.js`** in config. If you want **console log** tools, restart Figma with the debug flag (see Step 4 below). Otherwise you can still use plugin-only behavior with `local.js` (it will try WebSocket bridge first).
 
 ### Prerequisites
 - Node.js 18+ installed
@@ -87,8 +104,8 @@ The MCP server is now connected. All 14 Figma tools are available.
 
 ```bash
 # Clone the repository
-git clone https://github.com/southleft/figma-console-mcp.git
-cd figma-console-mcp
+git clone https://github.com/atezer/figma-mcp-bridge.git
+cd figma-mcp-bridge
 
 # Install dependencies
 npm install
@@ -97,47 +114,44 @@ npm install
 npm run build:local
 ```
 
-#### 2. Get Figma Personal Access Token
+#### 2. Figma Personal Access Token (optional for plugin-only)
 
-1. Visit https://www.figma.com/developers/api#access-tokens
-2. Click "Get personal access token"
-3. Enter description: "Figma Console MCP Local"
-4. Click "Generate token"
-5. **Copy the token** (you won't see it again!)
+**If using `local-plugin-only.js`:** Token is **not** required; skip to Step 3 and use the plugin-only config above.
+
+**If using `local.js` and REST fallback:** Get a token from https://www.figma.com/developers/api#access-tokens (description e.g. "F-MCP ATezer Local") and add it to `env.FIGMA_ACCESS_TOKEN` in config.
 
 #### 3. Configure Claude Desktop (JSON Method Only)
 
-> **Note:** Local mode MUST use JSON config method - UI method only works for remote URLs.
+> **Note:** Local mode uses JSON config; the UI method only works for remote URLs.
 
 1. **Locate config file:**
    - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-2. **Edit the file:**
+2. **Edit the file** – use **`local-plugin-only.js`** (no token) or **`local.js`** (token optional; see Step 2):
    ```json
    {
      "mcpServers": {
-       "figma-console-local": {
+       "figma-mcp-bridge-local": {
          "command": "node",
-         "args": ["/absolute/path/to/figma-console-mcp/dist/local.js"],
-         "env": {
-           "FIGMA_ACCESS_TOKEN": "figd_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-         }
+         "args": ["/absolute/path/to/figma-mcp-bridge/dist/local-plugin-only.js"]
        }
      }
    }
    ```
+   For full local with optional token/console: use `dist/local.js` and add `"env": { "FIGMA_ACCESS_TOKEN": "figd_..." }` if desired.
 
    **Important:**
-   - Replace `/absolute/path/to/figma-console-mcp` with actual absolute path
-   - Replace `figd_XXX...` with your actual Figma token
+   - Replace `/absolute/path/to/figma-mcp-bridge` with actual absolute path
    - Use forward slashes `/` even on Windows
 
 3. **Save the file**
 
-#### 4. Restart Figma Desktop with Remote Debugging
+#### 4. Figma: Normal or with debug port (optional)
 
-**⚠️ CRITICAL STEP:** You MUST restart Figma with the debug flag for local mode to work.
+**Plugin-only:** Open Figma **normally**; no debug port needed.
+
+**Console log tools:** Restart Figma with the debug flag so MCP can connect via CDP (port 9222):
 
 **macOS:**
 ```bash
@@ -155,17 +169,10 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 
 #### 5. Verify Setup
 
-1. **Check remote debugging is active:**
-   - Open Chrome browser
-   - Visit: http://localhost:9222
-   - You should see a list of inspectable Figma pages
-
-2. **Restart Claude Desktop**
-   - Quit completely and relaunch
-
-3. **Test the connection:**
-   - Ask Claude: "Check Figma status"
-   - Should show: "✅ Figma Desktop connected via port 9222"
+1. **Plugin-only:** Open Figma, run the plugin; status in Claude should show plugin/bridge connected (no 9222 check).
+2. **With debug port:** Open Chrome, visit http://localhost:9222; you should see inspectable Figma pages.
+3. **Restart Claude Desktop** (quit completely and relaunch).
+4. **Test:** Ask Claude "Check Figma status"; you should see connection OK (plugin bridge or Figma Desktop via 9222).
 
 ---
 
@@ -177,17 +184,16 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 - ✅ **Design system extraction** (variables*, components, styles)
 - ✅ **Console logs and screenshots**
 - ✅ **Zero maintenance**
-- ❌ **No Desktop Bridge plugin** (can't access local variables without Enterprise)
+- ❌ **No F-MCP ATezer Bridge plugin** (can't access local variables without Enterprise)
 
 *Variables require Figma Enterprise plan
 
 ### Local Mode (JSON Setup)
 - ✅ **All 14 MCP tools**
-- ✅ **Desktop Bridge plugin support** (access local variables, no Enterprise needed)
-- ✅ **Zero-latency console debugging**
+- ✅ **F-MCP ATezer Bridge plugin support** (access local variables, no Enterprise needed)
+- ✅ **Plugin-only option:** No debug port, no token; plugin connects via WebSocket (5454)
 - ✅ **Reliable component descriptions** (bypasses API bugs)
-- ⚠️ **Manual token management** (PAT required)
-- ⚠️ **Requires Figma restart** with debug flag
+- ✅ **Optional:** Debug port (9222) for console log tools; token optional when using plugin for variables
 
 **See [MODE_COMPARISON.md](MODE_COMPARISON.md) for detailed feature breakdown.**
 
@@ -209,20 +215,18 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 
 **"Variables API requires Enterprise" error:**
 - ✅ Expected if you don't have Enterprise plan
-- ✅ Solution: Switch to Local Mode + Desktop Bridge plugin
+- ✅ Solution: Switch to Local Mode + F-MCP ATezer Bridge plugin
 - ✅ See [MODE_COMPARISON.md](MODE_COMPARISON.md) for details
 
 ### Local Mode Issues
 
-**"Failed to connect to Figma Desktop":**
-- ✅ Verify Figma was restarted with `--remote-debugging-port=9222`
-- ✅ Visit http://localhost:9222 in Chrome - should show pages
-- ✅ If blank, quit Figma and relaunch with debug flag
+**"Failed to connect to Figma Desktop" / "Plugin not found":**
+- ✅ **Plugin-only:** Use `local-plugin-only.js`; open Figma normally and run the plugin; ensure nothing else uses port 5454.
+- ✅ **With console tools:** Verify Figma was restarted with `--remote-debugging-port=9222`; visit http://localhost:9222 in Chrome; if blank, quit Figma and relaunch with debug flag.
 
 **"FIGMA_ACCESS_TOKEN not configured":**
-- ✅ Check token is set in `claude_desktop_config.json`
-- ✅ Verify no typos in token (should start with `figd_`)
-- ✅ Token must be in `env` object as shown above
+- ✅ When using **plugin-only** (`local-plugin-only.js`), token is **not** required; omit `env.FIGMA_ACCESS_TOKEN`.
+- ✅ If using `local.js` and REST fallback, set token in `claude_desktop_config.json` under `env`; verify it starts with `figd_`.
 
 **"Command not found: node":**
 - ✅ Install Node.js 18+ from https://nodejs.org
@@ -230,7 +234,7 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 - ✅ Verify with: `node --version`
 
 **"Module not found" errors:**
-- ✅ Run `npm install` in the figma-console-mcp directory
+- ✅ Run `npm install` in the figma-mcp-bridge directory
 - ✅ Run `npm run build:local` again
 - ✅ Check that `dist/local.js` file exists
 
@@ -255,7 +259,7 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 2. Use UI method to add remote connector
 3. Restart Claude Desktop
 
-**You can have both configured simultaneously** (with different names like "figma-console-remote" and "figma-console-local"), but be aware they'll both appear in Claude's tool list.
+**You can have both configured simultaneously** (with different names like "figma-mcp-bridge-remote" and "figma-mcp-bridge-local"), but be aware they'll both appear in Claude's tool list.
 
 ---
 
@@ -267,8 +271,8 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
    - "Navigate to https://www.figma.com and check status"
    - "Get design variables from [your Figma file URL]"
 
-2. **For Local Mode users - Install Desktop Bridge plugin:**
-   - See [Figma Desktop Bridge README](../figma-desktop-bridge/README.md)
+2. **For Local Mode users - Install F-MCP ATezer Bridge plugin:**
+   - See [F-MCP ATezer Bridge README](../f-mcp-plugin/README.md)
    - Enables variables without Enterprise API
 
 3. **Read tool documentation:**
@@ -280,6 +284,6 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 ## Support
 
 - 📖 [Full Documentation](../README.md)
-- 🐛 [Report Issues](https://github.com/southleft/figma-console-mcp/issues)
-- 💬 [Discussions](https://github.com/southleft/figma-console-mcp/discussions)
+- 🐛 [Report Issues](https://github.com/atezer/figma-mcp-bridge/issues)
+- 💬 [Discussions](https://github.com/atezer/figma-mcp-bridge/discussions)
 - 📊 [Mode Comparison](MODE_COMPARISON.md)

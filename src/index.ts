@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Figma Console MCP Server
+ * F-MCP ATezer (Figma MCP Bridge) Server
  * Entry point for the MCP server that enables AI assistants to access
  * Figma plugin console logs and screenshots.
  *
@@ -23,12 +23,12 @@ import { registerFigmaAPITools } from "./core/figma-tools.js";
 const logger = createChildLogger({ component: "mcp-server" });
 
 /**
- * Figma Console MCP Agent
+ * F-MCP ATezer Agent
  * Extends McpAgent to provide Figma-specific debugging tools
  */
-export class FigmaConsoleMCPv3 extends McpAgent {
+export class FigmaMCP extends McpAgent {
 	server = new McpServer({
-		name: "Figma Console MCP",
+		name: "F-MCP ATezer",
 		version: "0.1.0",
 	});
 
@@ -120,7 +120,7 @@ export class FigmaConsoleMCPv3 extends McpAgent {
 		// IMPORTANT: Use a fixed session ID for all MCP connections
 		// This ensures OAuth tokens persist across MCP server reconnections
 		// Each user of this MCP server will share the same OAuth token
-		const FIXED_SESSION_ID = "figma-console-mcp-default-session";
+		const FIXED_SESSION_ID = "figma-mcp-bridge-default-session";
 
 		// Try to load from Durable Object storage
 		// @ts-ignore - this.ctx is available in Durable Object context
@@ -157,7 +157,7 @@ export class FigmaConsoleMCPv3 extends McpAgent {
 	public getSessionId(): string {
 		if (!this.sessionId) {
 			// This shouldn't happen if ensureSessionId() was called, but provide fallback
-			this.sessionId = FigmaConsoleMCPv3.generateStateToken();
+			this.sessionId = FigmaMCP.generateStateToken();
 			logger.warn({ sessionId: this.sessionId }, "Session ID not initialized, generated ephemeral ID");
 		}
 		return this.sessionId;
@@ -236,7 +236,8 @@ export class FigmaConsoleMCPv3 extends McpAgent {
 				logger.info({ sessionId }, "No OAuth token found - user needs to authenticate");
 
 				// No authentication available - direct user to OAuth flow
-				const authUrl = `https://figma-console-mcp.southleft.com/oauth/authorize?session_id=${sessionId}`;
+				const baseUrl = (this.env as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
+				const authUrl = `${baseUrl.replace(/\/$/, "")}/oauth/authorize?session_id=${sessionId}`;
 
 				// Only use PAT fallback if explicitly configured AND no OAuth token exists
 				if (env?.FIGMA_ACCESS_TOKEN) {
@@ -259,7 +260,8 @@ export class FigmaConsoleMCPv3 extends McpAgent {
 			// For other OAuth errors (expired token, refresh failed, etc.), do NOT fall back to PAT
 			logger.error({ error, sessionId }, "OAuth token retrieval failed - re-authentication required");
 
-			const authUrl = `https://figma-console-mcp.southleft.com/oauth/authorize?session_id=${sessionId}`;
+			const baseUrl = (this.env as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
+			const authUrl = `${baseUrl.replace(/\/$/, "")}/oauth/authorize?session_id=${sessionId}`;
 
 			throw new Error(
 				JSON.stringify({
@@ -680,7 +682,7 @@ export class FigmaConsoleMCPv3 extends McpAgent {
 										clearedCount,
 										timestamp: Date.now(),
 										ai_instruction:
-											"⚠️ CRITICAL: Console cleared successfully, but this operation disrupts the monitoring connection. You MUST reconnect the MCP server using `/mcp reconnect figma-console` before calling figma_get_console_logs again. Best practice: Avoid clearing console - filter/parse logs instead to maintain monitoring connection.",
+											"⚠️ CRITICAL: Console cleared successfully, but this operation disrupts the monitoring connection. You MUST reconnect the MCP server using `/mcp reconnect figma-mcp-bridge` before calling figma_get_console_logs again. Best practice: Avoid clearing console - filter/parse logs instead to maintain monitoring connection.",
 									},
 									null,
 									2,
@@ -859,12 +861,12 @@ export default {
 
 		// SSE endpoint for remote MCP clients
 		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
-			return FigmaConsoleMCPv3.serveSSE("/sse").fetch(request, env, ctx);
+			return FigmaMCP.serveSSE("/sse").fetch(request, env, ctx);
 		}
 
 		// HTTP endpoint for direct MCP communication
 		if (url.pathname === "/mcp") {
-			return FigmaConsoleMCPv3.serve("/mcp").fetch(request, env, ctx);
+			return FigmaMCP.serve("/mcp").fetch(request, env, ctx);
 		}
 
 		// OAuth authorization initiation
@@ -881,7 +883,7 @@ export default {
 					JSON.stringify({
 						error: "OAuth not configured",
 						message: "Server administrator needs to configure FIGMA_OAUTH_CLIENT_ID",
-						docs: "https://github.com/southleft/figma-console-mcp#oauth-setup"
+						docs: "https://github.com/atezer/figma-mcp-bridge#oauth-setup"
 					}),
 					{
 						status: 500,
@@ -891,7 +893,7 @@ export default {
 			}
 
 			// Generate cryptographically secure state token for CSRF protection
-			const stateToken = FigmaConsoleMCPv3.generateStateToken();
+			const stateToken = FigmaMCP.generateStateToken();
 
 			// Store state token with sessionId in KV (10 minute expiration)
 			await env.OAUTH_STATE.put(stateToken, sessionId, {
@@ -1100,7 +1102,7 @@ export default {
 	<div class="container">
 		<div class="icon">✓</div>
 		<h1>Authentication successful</h1>
-		<p>You've successfully connected Figma Console MCP to your Figma account. You can now close this window and return to Claude.</p>
+		<p>You've successfully connected F-MCP ATezer to your Figma account. You can now close this window and return to Claude.</p>
 		<button class="button" onclick="window.close()">Close this window</button>
 		<div class="footer">This window will automatically close in 5 seconds</div>
 	</div>
@@ -1136,7 +1138,7 @@ export default {
 			return new Response(
 				JSON.stringify({
 					status: "healthy",
-					service: "Figma Console MCP",
+					service: "F-MCP ATezer",
 					version: "0.1.0",
 					endpoints: ["/sse", "/mcp", "/test-browser", "/oauth/authorize", "/oauth/callback"],
 					oauth_configured: !!env.FIGMA_OAUTH_CLIENT_ID
@@ -1169,7 +1171,7 @@ export default {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Figma Console MCP</title>
+	<title>F-MCP ATezer</title>
 	<link rel="icon" type="image/jpeg" href="https://p198.p4.n0.cdn.zight.com/items/Qwu1Dywx/b61b7b8f-05dc-4063-8a40-53fa4f8e3e97.jpg">
 	<meta name="description" content="Model Context Protocol server for Figma debugging and design system extraction">
 	<style>
@@ -1266,14 +1268,14 @@ export default {
 <body>
 	<div class="header">
 		<div class="logo">
-			<img src="https://p198.p4.n0.cdn.zight.com/items/Qwu1Dywx/b61b7b8f-05dc-4063-8a40-53fa4f8e3e97.jpg" alt="Figma Console MCP">
-			Figma Console MCP
+			<img src="https://p198.p4.n0.cdn.zight.com/items/Qwu1Dywx/b61b7b8f-05dc-4063-8a40-53fa4f8e3e97.jpg" alt="F-MCP ATezer">
+			F-MCP ATezer
 		</div>
 	</div>
 	<div class="container">
 		<h1>Debug Figma plugins<br>with AI assistance</h1>
 		<p class="subtitle">Model Context Protocol server that gives AI assistants real-time access to Figma console logs, design system data, and visual debugging tools.</p>
-		<a href="https://github.com/southleft/figma-console-mcp" class="cta">
+		<a href="https://github.com/atezer/figma-mcp-bridge" class="cta">
 			<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
 				<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
 			</svg>
@@ -1295,7 +1297,7 @@ export default {
 		</div>
 	</div>
 	<div class="footer">
-		© 2025 Figma Console MCP · MIT License
+		© 2025 F-MCP ATezer · MIT License
 	</div>
 </body>
 </html>`,

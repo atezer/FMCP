@@ -1,5 +1,5 @@
 /**
- * Configuration management for Figma Console MCP server
+ * Configuration management for F-MCP ATezer (Figma MCP Bridge) server
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -52,11 +52,12 @@ const DEFAULT_CONFIG: ServerConfig = {
   screenshots: {
     defaultFormat: 'png',
     quality: 90,
-    storePath: join(process.env.TMPDIR || '/tmp', 'figma-console-mcp', 'screenshots'),
+    storePath: join(process.env.TMPDIR || '/tmp', 'figma-mcp-bridge', 'screenshots'),
   },
   local: {
     debugHost: process.env.FIGMA_DEBUG_HOST || 'localhost',
     debugPort: parseInt(process.env.FIGMA_DEBUG_PORT || '9222', 10),
+    pluginBridgePort: parseInt(process.env.FIGMA_PLUGIN_BRIDGE_PORT || '5454', 10),
   },
 };
 
@@ -67,11 +68,11 @@ const CONFIG_PATHS = [
   // Environment variable override
   process.env.FIGMA_CONSOLE_CONFIG,
   // Project-local config
-  join(process.cwd(), '.figma-console-mcp.json'),
-  join(process.cwd(), 'figma-console-mcp.json'),
+  join(process.cwd(), '.figma-mcp-bridge.json'),
+  join(process.cwd(), 'figma-mcp-bridge.json'),
   // User home config
-  join(homedir(), '.config', 'figma-console-mcp', 'config.json'),
-  join(homedir(), '.figma-console-mcp.json'),
+  join(homedir(), '.config', 'figma-mcp-bridge', 'config.json'),
+  join(homedir(), '.figma-mcp-bridge.json'),
 ].filter((path): path is string => path !== undefined);
 
 /**

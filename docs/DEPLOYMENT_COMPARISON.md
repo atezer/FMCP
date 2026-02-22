@@ -8,8 +8,8 @@ Quick reference guide to understand the differences between Local Mode (Figma De
 
 | If you need... | Use This Mode |
 |----------------|---------------|
-| **Component descriptions from local/unpublished components** | 🏠 Local (Desktop Bridge required) |
-| **Variables without Figma Enterprise plan** | 🏠 Local (Desktop Bridge required) |
+| **Component descriptions from local/unpublished components** | 🏠 Local (F-MCP ATezer Bridge required) |
+| **Variables without Figma Enterprise plan** | 🏠 Local (F-MCP ATezer Bridge required) |
 | **Plugin console debugging and logs** | Either mode works |
 | **Screenshots and visual debugging** | ☁️ Remote (better) or Local |
 | **Team-wide access without Figma Desktop** | ☁️ Remote only |
@@ -29,7 +29,7 @@ MCP Server (local Node.js process)
   ↓ Chrome DevTools Protocol (port 9222)
 Figma Desktop Application
   ↓ Plugin API
-Desktop Bridge Plugin (when needed)
+F-MCP ATezer Bridge Plugin (when needed)
   ↓ Direct access
 Figma Variables + Component Descriptions
 ```
@@ -63,10 +63,10 @@ Figma Cloud Data
 | Components metadata | ✅ | ✅ | Both use REST API |
 | Styles data | ✅ | ✅ | Both use REST API |
 | Variables (with Enterprise) | ✅ | ✅ | Requires Figma Enterprise plan |
-| **Desktop Bridge Features** ||||
-| Variables (NO Enterprise needed) | ✅ | ❌ | Local only - requires Desktop Bridge plugin |
+| **F-MCP ATezer Bridge Features** ||||
+| Variables (NO Enterprise needed) | ✅ | ❌ | Local only - requires F-MCP ATezer Bridge plugin |
 | Component descriptions (reliable) | ✅ | ❌ | Local only - bypasses REST API bug |
-| Local/unpublished components | ✅ | ❌ | Local only - Desktop Bridge access |
+| Local/unpublished components | ✅ | ❌ | Local only - F-MCP ATezer Bridge access |
 | **Console & Debugging** ||||
 | Plugin console logs | ✅ | ✅ | Both support console monitoring |
 | Real-time log streaming | ✅ | ✅ | Both can watch logs live |
@@ -86,7 +86,7 @@ Figma Cloud Data
 
 ## Key Differences Explained
 
-### 1. Desktop Bridge Plugin (Local Only)
+### 1. F-MCP ATezer Bridge Plugin (Local Only)
 
 **What it is:** A Figma plugin that runs in Figma Desktop and exposes data that's not available via REST API.
 
@@ -97,14 +97,14 @@ Figma Cloud Data
 
 **How it works:**
 ```javascript
-// Local Mode with Desktop Bridge
+// Local Mode with F-MCP ATezer Bridge
 Plugin Worker → postMessage → Plugin UI iframe → Puppeteer → MCP → AI
 
-// Remote Mode (no Desktop Bridge)
+// Remote Mode (no F-MCP ATezer Bridge)
 REST API only → MCP → AI  // Descriptions often missing
 ```
 
-**Limitation:** Desktop Bridge ONLY works in Local Mode because it requires:
+**Limitation:** F-MCP ATezer Bridge ONLY works in Local Mode because it requires:
 1. Figma Desktop application running
 2. Plugin installed and active
 3. Chrome DevTools Protocol connection (port 9222)
@@ -117,9 +117,9 @@ Remote Mode (Cloudflare) connects to Figma **web app** in a browser, which doesn
 
 **Local Mode:**
 - Uses your actual Figma Desktop application
-- Full Plugin API access when Desktop Bridge is running
+- Full Plugin API access when F-MCP ATezer Bridge is running
 - Direct access to design files on your machine
-- Requires `--remote-debugging-port=9222` flag
+- Optional: `--remote-debugging-port=9222` for console logs; **plugin-only** (WebSocket) needs no debug port
 
 **Remote Mode:**
 - Uses Cloudflare's Browser Rendering API (headless Chromium)
@@ -154,12 +154,12 @@ This is a common pain point that illustrates the difference perfectly.
 # 1. Launch Figma Desktop with debugging
 open -a "Figma" --args --remote-debugging-port=9222
 
-# 2. Run Desktop Bridge plugin in your file
+# 2. Run F-MCP ATezer Bridge plugin in your file
 
 # 3. Ask Claude:
 "What does the Button component description say?"
 
-# Result: Full description from Desktop Bridge ✅
+# Result: Full description from F-MCP ATezer Bridge ✅
 ```
 
 **Remote Mode:**
@@ -188,9 +188,9 @@ open -a "Figma" --args --remote-debugging-port=9222
 # 3. MCP configuration
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/path/to/figma-console-mcp/dist/local.js"],
+      "args": ["/path/to/figma-mcp-bridge/dist/local.js"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "figd_...",
         "FIGMA_MODE": "local"
@@ -199,12 +199,12 @@ open -a "Figma" --args --remote-debugging-port=9222
   }
 }
 
-# 4. Desktop Bridge plugin (optional but recommended)
+# 4. F-MCP ATezer Bridge plugin (optional but recommended)
 # Install via: Plugins → Development → Import plugin from manifest
 ```
 
 **Pros:**
-- ✅ Access to Desktop Bridge features
+- ✅ Access to F-MCP ATezer Bridge features
 - ✅ Full plugin development workflow
 - ✅ Reliable component descriptions
 - ✅ Variables without Enterprise plan
@@ -228,9 +228,9 @@ npm run deploy
 # 3. MCP configuration (points to your Cloudflare Worker URL)
 {
   "mcpServers": {
-    "figma-console": {
+    "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["-y", "@southleft/figma-console-mcp"],
+      "args": ["-y", "figma-mcp-bridge"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "figd_...",
         "CLOUDFLARE_WORKER_URL": "https://your-worker.workers.dev"
@@ -247,7 +247,7 @@ npm run deploy
 - ✅ Easier for remote teams
 
 **Cons:**
-- ❌ No Desktop Bridge (no variables without Enterprise)
+- ❌ No F-MCP ATezer Bridge (no variables without Enterprise)
 - ❌ Component descriptions may be missing
 - ❌ Can't debug local plugins
 - ❌ Cloudflare Browser Rendering costs
@@ -276,7 +276,7 @@ npm run deploy
 | Component query | ~100-500ms | ~200-800ms |
 | Screenshot | ~500ms-2s | ~1-3s |
 | Console monitoring | Real-time | Real-time |
-| Variables (Desktop Bridge) | ~200ms | N/A |
+| Variables (F-MCP ATezer Bridge) | ~200ms | N/A |
 
 **Network impact:** Remote mode requires internet for Cloudflare → Figma → Your MCP client round trip.
 
@@ -312,7 +312,7 @@ You can switch between modes easily:
 ### Local → Remote
 
 **What you'll lose:**
-- Desktop Bridge features (variables without Enterprise, reliable descriptions)
+- F-MCP ATezer Bridge features (variables without Enterprise, reliable descriptions)
 - Plugin console debugging capability
 
 **What you'll gain:**
@@ -327,7 +327,7 @@ You can switch between modes easily:
 - CI/CD automation
 
 **What you'll gain:**
-- Desktop Bridge features
+- F-MCP ATezer Bridge features
 - Plugin development workflow
 - Reliable component descriptions
 
@@ -341,22 +341,22 @@ A: Yes! Configure two separate MCP servers in your Claude Desktop config:
 {
   "mcpServers": {
     "figma-local": { "command": "node", "args": ["/path/to/local.js"], ... },
-    "figma-remote": { "command": "npx", "args": ["@southleft/figma-console-mcp"], ... }
+    "figma-remote": { "command": "npx", "args": ["figma-mcp-bridge"], ... }
   }
 }
 ```
 
 **Q: Does Remote Mode support variables?**
-A: Only if you have Figma Enterprise plan (REST API access). Local Mode with Desktop Bridge bypasses this requirement.
+A: Only if you have Figma Enterprise plan (REST API access). Local Mode with F-MCP ATezer Bridge bypasses this requirement.
 
 **Q: Can Remote Mode access my local Figma files?**
 A: No, Remote Mode only accesses files via Figma's cloud (figma.com). All files must be saved to Figma cloud.
 
 **Q: Which mode is better for component descriptions?**
-A: Local Mode with Desktop Bridge is FAR better for component descriptions, especially for local/unpublished components. Remote Mode often returns missing descriptions due to REST API limitations.
+A: Local Mode with F-MCP ATezer Bridge is FAR better for component descriptions, especially for local/unpublished components. Remote Mode often returns missing descriptions due to REST API limitations.
 
-**Q: Can Remote Mode run the Desktop Bridge plugin?**
-A: No. Desktop Bridge requires Figma Desktop application, which Remote Mode doesn't have access to (it uses web app in browser).
+**Q: Can Remote Mode run the F-MCP ATezer Bridge plugin?**
+A: No. F-MCP ATezer Bridge requires Figma Desktop application, which Remote Mode doesn't have access to (it uses web app in browser).
 
 **Q: Does Local Mode work offline?**
 A: Partially. You can access Figma Desktop features (plugin console, screenshots) offline, but REST API calls (file data, components, styles) require internet.
@@ -368,12 +368,12 @@ A: Partially. You can access Figma Desktop features (plugin console, screenshots
 | Aspect | Local Mode | Remote Mode |
 |--------|------------|-------------|
 | **Best for** | Plugin development, Design system work | Team collaboration, Automation |
-| **Key advantage** | Desktop Bridge access | Global accessibility |
+| **Key advantage** | F-MCP ATezer Bridge access | Global accessibility |
 | **Key limitation** | Requires local Figma Desktop | No plugin support |
 | **Setup effort** | Medium | High |
 | **Ongoing cost** | Free | Cloudflare usage fees |
-| **Component descriptions** | ✅ Reliable via Desktop Bridge | ⚠️ Often missing (REST API) |
-| **Variables (no Enterprise)** | ✅ Yes via Desktop Bridge | ❌ No |
+| **Component descriptions** | ✅ Reliable via F-MCP ATezer Bridge | ⚠️ Often missing (REST API) |
+| **Variables (no Enterprise)** | ✅ Yes via F-MCP ATezer Bridge | ❌ No |
 
 **Recommendation:** Start with **Local Mode** if you're working on design systems or need reliable component descriptions. Switch to **Remote Mode** when you need team-wide access or CI/CD integration.
 
@@ -381,8 +381,8 @@ A: Partially. You can access Figma Desktop features (plugin console, screenshots
 
 ## Getting Help
 
-- **Local Mode issues:** Check Figma Desktop is running with `--remote-debugging-port=9222`
+- **Local Mode issues:** For plugin-only, ensure plugin is running and port 5454 is free. For console tools, check Figma is running with `--remote-debugging-port=9222`
 - **Remote Mode issues:** Verify Cloudflare Browser Rendering API is enabled
-- **Desktop Bridge not working:** Ensure plugin is actively running in Figma Desktop
+- **F-MCP ATezer Bridge not working:** Ensure plugin is actively running in Figma Desktop
 
-For detailed setup instructions, see [README.md](README.md).
+For detailed setup instructions, see [README](../README.md) and [SETUP.md](SETUP.md).

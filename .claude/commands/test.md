@@ -1,6 +1,6 @@
 # Test Command
 
-Run tests and ensure code quality for the Figma Console MCP server.
+Run tests and ensure code quality for the F-MCP ATezer server.
 
 ## Instructions
 

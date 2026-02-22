@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Figma Desktop Bridge - Manuel plugin açıcı (izin testi için)
+F-MCP ATezer Bridge - Manuel plugin açıcı (izin testi için)
 Bu script'i çalıştırdığınızda:
 1. Figma öne getirilir
-2. Plugins → Development → Figma Desktop Bridge menüsü tıklanır
+2. Plugins → Development → F-MCP ATezer Bridge menüsü tıklanır
 3. İzin penceresi çıkarsa "Aç" / "Allow" deyin
 
 Kullanım: python3 plugin-ac.py
@@ -25,11 +25,11 @@ tell application "System Events"
         try
             click menu bar item "Plugins" of menu bar 1
             delay 0.8
-            click menu item "Figma Desktop Bridge" of menu "Development" of menu item "Development" of menu "Plugins" of menu bar 1
+            click menu item "F-MCP ATezer Bridge" of menu "Development" of menu item "Development" of menu "Plugins" of menu bar 1
         on error
             click menu bar item "Eklentiler" of menu bar 1
             delay 0.8
-            click menu item "Figma Desktop Bridge" of menu "Geliştirme" of menu item "Geliştirme" of menu "Eklentiler" of menu bar 1
+            click menu item "F-MCP ATezer Bridge" of menu "Geliştirme" of menu item "Geliştirme" of menu "Eklentiler" of menu bar 1
         end try
     end tell
 end tell

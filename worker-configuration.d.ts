@@ -3,7 +3,7 @@
 declare namespace Cloudflare {
 	interface Env {
 		OAUTH_KV: KVNamespace;
-		MCP_OBJECT: DurableObjectNamespace<import("./src/index").MyMCP>;
+		MCP_OBJECT: DurableObjectNamespace<import("./src/index").FigmaMCP>;
 		ASSETS: Fetcher;
 	}
 }

@@ -1,6 +1,6 @@
-# Figma Desktop Bridge Autorun Scripts
+# F-MCP ATezer Bridge Autorun Scripts
 
-Bu klasör, Figma Desktop Bridge plugin'inin Figma açıldığında otomatik çalışmasını sağlayan scriptleri içerir.
+Bu klasör, F-MCP ATezer Bridge plugin'inin Figma açıldığında otomatik çalışmasını sağlayan scriptleri içerir.
 
 ## 📋 İçerik
 
@@ -19,13 +19,13 @@ Bu klasör, Figma Desktop Bridge plugin'inin Figma açıldığında otomatik ça
 
 ```bash
 # Figma Desktop → Plugins → Development → Import plugin from manifest
-# Dosya: /Users/abdussamed.tezer/FCM/figma-console-mcp/figma-desktop-bridge/manifest.json
+# Dosya: /Users/abdussamed.tezer/FCM/f-mcp-bridge/f-mcp-plugin/manifest.json
 ```
 
 ### 2. Autorun'ı Kurun
 
 ```bash
-cd /Users/abdussamed.tezer/FCM/figma-console-mcp/scripts
+cd /Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts
 ./install-autorun.sh
 ```
 
@@ -37,7 +37,7 @@ cd /Users/abdussamed.tezer/FCM/figma-console-mcp/scripts
 
 ## ✅ Kurulum Sonrası
 
-Artık Figma Desktop Bridge plugin'i:
+Artık F-MCP ATezer Bridge plugin'i:
 - ✅ macOS'a her login yaptığınızda otomatik başlar
 - ✅ Figma açıldığında 10 saniye bekler (yüklenme için)
 - ✅ Otomatik olarak plugin'i çalıştırır

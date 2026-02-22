@@ -28,21 +28,21 @@ The MCP server has **two execution modes** but **three installation methods**:
 - ✅ **OAuth authentication** - Automatic browser flow, no manual tokens
 - ✅ Works without Figma Desktop restart
 - ✅ No local installation required
-- ❌ Cannot use Desktop Bridge plugin
+- ❌ Cannot use F-MCP ATezer Bridge plugin
 
 ### Use NPX (For Local Execution Without Source Code)
 - ✅ No git clone required (npm handles it)
 - ✅ Automatic updates with `@latest`
-- ✅ Desktop Bridge plugin support
-- ⚠️ Requires `FIGMA_ACCESS_TOKEN` (manual)
-- ⚠️ Requires Figma Desktop restart with `--remote-debugging-port=9222`
+- ✅ F-MCP ATezer Bridge plugin support
+- ✅ **Plugin-only:** Use `figma-mcp-bridge` with **`local-plugin-only.js`** (or equivalent); **no token, no debug port** – plugin connects via WebSocket (5454)
+- ⚠️ If using full `local.js` with REST/console: PAT and optional Figma restart with `--remote-debugging-port=9222`
 
 ### Use Local Git (For Development & Testing)
 - ✅ Full source code access
 - ✅ Modify and test changes
-- ✅ Desktop Bridge plugin support
-- ⚠️ Requires `FIGMA_ACCESS_TOKEN` (manual)
-- ⚠️ Requires Figma Desktop restart with `--remote-debugging-port=9222`
+- ✅ F-MCP ATezer Bridge plugin support
+- ✅ **Plugin-only:** Use **`dist/local-plugin-only.js`** in config; **no token, no debug port**
+- ⚠️ If using `local.js` with console tools: optional PAT, optional Figma restart with `--remote-debugging-port=9222`
 - ⚠️ Manual updates via `git pull && npm run build`
 
 ---
@@ -57,8 +57,8 @@ The MCP server has **two execution modes** but **three installation methods**:
 | **Setup Complexity** | ⭐ Zero-setup | ⚠️ Manual token + restart | ⚠️ Manual token + restart |
 | **Distribution** | URL only | npm package | git clone |
 | **Updates** | Automatic (server-side) | `@latest` auto-updates | Manual `git pull + build` |
-| **Figma Desktop** | Not required | Required with debug port | Required with debug port |
-| **Desktop Bridge** | ❌ Not available | ✅ Available | ✅ Available |
+| **Figma Desktop** | Not required | Required (normal open OK for plugin-only; debug port optional) | Required (normal open OK for plugin-only; debug port optional) |
+| **F-MCP ATezer Bridge** | ❌ Not available | ✅ Available | ✅ Available |
 | **Source Access** | No | No | Yes |
 | **Use Case** | Most users | Local execution users | Developers |
 
@@ -71,10 +71,10 @@ The MCP server has **two execution modes** but **three installation methods**:
 | **Console Logs** | ✅ | ✅ | Remote uses Browser Rendering API, Local uses Chrome DevTools Protocol |
 | **Screenshots** | ✅ | ✅ | Both use Figma REST API |
 | **Design System Extraction** | ✅ | ✅ | Variables, components, styles via Figma API |
-| **OAuth Authentication** | ✅ | ❌ | Remote has automatic OAuth, Local requires Personal Access Token |
-| **Zero Setup** | ✅ | ❌ | Remote: just paste URL. Local: requires Node.js, build, Figma restart |
-| **Figma Desktop Bridge Plugin** | ❌ | ✅ | **Plugin ONLY works in Local Mode** |
-| **Variables without Enterprise API** | ❌ | ✅ | Requires Desktop Bridge plugin (Local only) |
+| **OAuth Authentication** | ✅ | ❌ | Remote has automatic OAuth; Local can use plugin-only (no token) or PAT |
+| **Zero Setup** | ✅ | ⚠️ | Remote: just paste URL. Local plugin-only: Node.js, build, run plugin (no Figma restart, no token) |
+| **Figma F-MCP ATezer Bridge Plugin** | ❌ | ✅ | **Plugin ONLY works in Local Mode** |
+| **Variables without Enterprise API** | ❌ | ✅ | Requires F-MCP ATezer Bridge plugin (Local only) |
 | **Reliable Component Descriptions** | ⚠️ | ✅ | API has bugs, plugin method (Local) is reliable |
 | **Zero-Latency Console Logs** | ❌ | ✅ | Local connects directly to Figma Desktop via localhost:9222 |
 | **Works Behind Corporate Firewall** | ⚠️ | ✅ | Remote requires internet, Local works offline |
@@ -116,7 +116,7 @@ Local MCP Server (Node.js)
     ↓ (Chrome DevTools Protocol)
 Figma Desktop (localhost:9222)
     ↓ (Plugin API)
-Figma Desktop Bridge Plugin
+Figma F-MCP ATezer Bridge Plugin
     ↓ (Direct memory access)
 Variables & Components Data
 ```
@@ -142,7 +142,7 @@ Variables & Components Data
 | `figma_reload_plugin` | ✅ | ✅ | Reloads current page |
 | `figma_clear_console` | ✅ | ✅ | Clears log buffer |
 | `figma_get_status` | ✅ | ✅ | Check connection status |
-| `figma_get_variables` | ✅* | ✅** | *Enterprise API required. **Can use Desktop Bridge plugin |
+| `figma_get_variables` | ✅* | ✅** | *Enterprise API required. **Can use F-MCP ATezer Bridge plugin |
 | `figma_get_component` | ✅* | ✅** | *Descriptions may be missing. **Reliable via plugin |
 | `figma_get_styles` | ✅ | ✅ | Both use Figma REST API |
 | `figma_get_file_data` | ✅ | ✅ | Both use Figma REST API |
@@ -154,11 +154,11 @@ Variables & Components Data
 
 **Variables API:**
 - **Remote Mode:** Requires Figma Enterprise plan for Variables API
-- **Local Mode:** Can bypass Enterprise requirement using Desktop Bridge plugin
+- **Local Mode:** Can bypass Enterprise requirement using F-MCP ATezer Bridge plugin
 
 **Component Descriptions:**
 - **Remote Mode:** Figma REST API has known bugs (descriptions often missing)
-- **Local Mode:** Desktop Bridge plugin uses `figma.getNodeByIdAsync()` (reliable)
+- **Local Mode:** F-MCP ATezer Bridge plugin uses `figma.getNodeByIdAsync()` (reliable)
 
 ---
 
@@ -172,7 +172,7 @@ Variables & Components Data
 **Steps:**
 1. Open Claude Desktop → Settings → Connectors
 2. Click "Add Custom Connector"
-3. Paste URL: `https://figma-console-mcp.southleft.com/sse`
+3. Paste your MCP SSE URL (e.g. `https://your-worker.workers.dev/sse`)
 4. Done ✅ (OAuth happens automatically on first API use)
 
 ### NPX
@@ -199,7 +199,7 @@ Variables & Components Data
 **Setup Time:** 15 minutes
 
 **Steps:**
-1. Clone repository: `git clone https://github.com/southleft/figma-console-mcp.git`
+1. Clone repository: `git clone https://github.com/atezer/figma-mcp-bridge.git` (or your fork as figma-mcp-bridge)
 2. Run `npm install && npm run build:local`
 3. Get Figma Personal Access Token
 4. Configure MCP client JSON config with path to `dist/local.js`
@@ -257,13 +257,13 @@ Variables & Components Data
 
 ---
 
-## Figma Desktop Bridge Plugin
+## Figma F-MCP ATezer Bridge Plugin
 
 ### ⚠️ CRITICAL: Plugin Only Works in Local Mode
 
 **Why it doesn't work remotely:**
 
-The Desktop Bridge plugin requires:
+The F-MCP ATezer Bridge plugin requires:
 1. **Direct Chrome DevTools Protocol connection** to `localhost:9222`
 2. **Access to plugin UI iframe's `window` object** via Puppeteer
 3. **Local filesystem access** to read plugin code
@@ -285,7 +285,7 @@ Remote mode runs in Cloudflare Workers which:
 
 **Plugin Setup (Local Mode):**
 1. Install Local Mode MCP server
-2. Download `figma-desktop-bridge.zip` from releases
+2. Download `f-mcp-plugin.zip` from releases
 3. Import plugin in Figma: Plugins → Development → Import plugin from manifest
 4. Run plugin in your Figma file
 5. Query variables/components via MCP
@@ -299,14 +299,14 @@ Remote mode runs in Cloudflare Workers which:
 - ❌ Component descriptions are missing in API responses
 - ❌ You're developing Figma plugins (need console debugging)
 - ❌ You need instant console log feedback
-- ❌ You need Desktop Bridge plugin features
+- ❌ You need F-MCP ATezer Bridge plugin features
 
 ### Switch from NPX/Local Git → Remote SSE if:
 - ✅ You got Enterprise plan (Variables API now available)
 - ✅ You're no longer developing plugins
 - ✅ You want zero-maintenance OAuth setup
 - ✅ You want per-user authentication
-- ✅ You don't need Desktop Bridge plugin
+- ✅ You don't need F-MCP ATezer Bridge plugin
 
 ### Switch from NPX → Local Git if:
 - ✅ You want to modify source code
@@ -353,9 +353,9 @@ All three installation methods are completely free:
 
 ### Local Mode Common Issues
 - **"Failed to connect to Figma Desktop"** → Restart Figma with `--remote-debugging-port=9222`
-- **"No plugin UI found"** → Make sure Desktop Bridge plugin is running
+- **"No plugin UI found"** → Make sure F-MCP ATezer Bridge plugin is running
 - **"ECONNREFUSED localhost:9222"** → Verify http://localhost:9222 is accessible
-- **"Variables cache empty"** → Close and reopen Desktop Bridge plugin
+- **"Variables cache empty"** → Close and reopen F-MCP ATezer Bridge plugin
 
 ---
 
@@ -368,7 +368,7 @@ All three installation methods are completely free:
 - No Figma Desktop restart required
 
 **Use NPX when:**
-- You need Desktop Bridge plugin features
+- You need F-MCP ATezer Bridge plugin features
 - You want local execution without source code
 - You don't have Enterprise plan but need variables
 - You prefer npm distribution over git

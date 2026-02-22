@@ -4,39 +4,21 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "figma-console-mcp",
+	"name": "figma-mcp-bridge",
 	"account_id": "4718d49e576512c578ff94c6b1ba7d3f",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-03-10",
 	"compatibility_flags": ["nodejs_compat"],
 	"migrations": [
 		{
-			"new_sqlite_classes": ["MyMCP"],
+			"new_sqlite_classes": ["FigmaMCP"],
 			"tag": "v1"
-		},
-		{
-			"renamed_classes": [
-				{
-					"from": "MyMCP",
-					"to": "FigmaConsoleMCP"
-				}
-			],
-			"tag": "v2"
-		},
-		{
-			"renamed_classes": [
-				{
-					"from": "FigmaConsoleMCP",
-					"to": "FigmaConsoleMCPv3"
-				}
-			],
-			"tag": "v3"
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "FigmaConsoleMCPv3",
+				"class_name": "FigmaMCP",
 				"name": "MCP_OBJECT"
 			}
 		]

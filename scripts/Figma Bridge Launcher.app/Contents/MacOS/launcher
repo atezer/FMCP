@@ -1,5 +1,5 @@
 #!/bin/bash
-# Figma Desktop Bridge Launcher - runs the plugin via AppleScript
+# F-MCP ATezer Bridge Launcher - runs the plugin via AppleScript
 # Add this app to System Settings > Privacy & Security > Accessibility for autorun to work
 
 # From .app/Contents/MacOS, go up to scripts folder
@@ -10,7 +10,7 @@ if [ -f "$APPLESCRIPT" ]; then
     osascript "$APPLESCRIPT"
 else
     # Fallback if run from different location
-    osascript "/Users/abdussamed.tezer/FCM/figma-console-mcp/scripts/autorun-bridge.applescript"
+    osascript "/Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts/autorun-bridge.applescript"
 fi
 
 # Exit immediately so Launch Agent doesn't think we're still running

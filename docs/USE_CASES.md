@@ -1,6 +1,6 @@
 # Use Cases & Scenarios
 
-This guide shows real-world scenarios for using Figma Console MCP in your workflow.
+This guide shows real-world scenarios for using F-MCP ATezer (Figma MCP Bridge) in your workflow.
 
 ## 🐛 Plugin Development & Debugging
 
@@ -8,7 +8,7 @@ This guide shows real-world scenarios for using Figma Console MCP in your workfl
 
 **Your situation:** You're developing a Figma plugin and want to see console output.
 
-**One-time setup:** Quit Figma Desktop and relaunch with:
+**One-time setup (optional):** For **plugin-only** (variables, components, execute, screenshot), open Figma normally and run the F-MCP ATezer Bridge plugin; no debug port needed. For **console log** tools, quit Figma and relaunch with:
 - **macOS:** `open -a "Figma" --args --remote-debugging-port=9222`
 - **Windows:** `cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222`
 
@@ -361,16 +361,16 @@ Then run your plugin in Figma Desktop, and say:
 
 **Workflow:**
 1. Use Figma Dev Mode MCP to generate component code
-2. Use Figma Console MCP to get design token values
+2. Use F-MCP ATezer to get design token values
 3. Replace hardcoded values with tokens
-4. Use Console MCP to debug when integrated
+4. Use F-MCP ATezer to debug when integrated
 
 **Example:**
 ```
 // Step 1: Dev Mode MCP generates
 <Button className="bg-[#4375ff]">Click me</Button>
 
-// Step 2: Console MCP provides token
+// Step 2: F-MCP ATezer provides token
 --color-primary: #4375FF
 
 // Step 3: You refactor
@@ -383,5 +383,5 @@ Then run your plugin in Figma Desktop, and say:
 
 See also:
 - [Tool Documentation](TOOLS.md) - Complete API reference for all 14 tools
-- [Example Prompts](../README.md#example-prompts) - Quick prompt examples
+- [README](../README.md) - Quick start and plugin setup
 - [Troubleshooting](TROUBLESHOOTING.md) - Solutions to common issues
