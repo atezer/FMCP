@@ -82,4 +82,3 @@ try {
 
 - [Architecture](../docs/ARCHITECTURE.md) - Technical design
 - [README](../README.md) - User documentation
-- [Roadmap](../docs/ROADMAP.md) - Development plan
