@@ -98,7 +98,9 @@ class LocalFigmaMCP {
 		// Prefer plugin bridge when connected (no Figma debug port needed)
 		const bridgePort = this.config.local?.pluginBridgePort ?? 5454;
 		if (!this.pluginBridge) {
-			this.pluginBridge = new PluginBridgeServer(bridgePort);
+			this.pluginBridge = new PluginBridgeServer(bridgePort, {
+				auditLogPath: this.config.local?.auditLogPath,
+			});
 			this.pluginBridge.start();
 		}
 		if (this.pluginBridge.isConnected()) {
@@ -3000,7 +3002,9 @@ After instantiating components, use figma_take_screenshot to verify the result l
 
 			// Start plugin bridge server (plugin can connect without CDP)
 			const bridgePort = this.config.local?.pluginBridgePort ?? 5454;
-			this.pluginBridge = new PluginBridgeServer(bridgePort);
+			this.pluginBridge = new PluginBridgeServer(bridgePort, {
+				auditLogPath: this.config.local?.auditLogPath,
+			});
 			this.pluginBridge.start();
 			logger.info({ port: bridgePort }, "Plugin bridge: ws://127.0.0.1:%s (no debug port needed when plugin connects)", bridgePort);
 
