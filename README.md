@@ -28,6 +28,8 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 | **Görsel & kod** | `figma_capture_screenshot`, `figma_execute` (Plugin API’de JavaScript çalıştırır) |
 | **Durum** | `figma_get_status` — Plugin bağlantı kontrolü |
 
+**Yeni kullanıcılar:** Adım adım kurulum için **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)** — plugin yükleme, Node.js, MCP server, Claude config.
+
 ## Hızlı başlangıç
 
 Plugin'in "ready" olması için **önce** 5454 portunda bir sunucu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
@@ -182,6 +184,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 
 | Dosya | Açıklama |
 |-------|----------|
+| [ONBOARDING.md](docs/ONBOARDING.md) | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config |
 | [SETUP.md](docs/SETUP.md) | Kurulum (Remote / Local) |
 | [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md) | Plugin–MCP mimari ve kurulum |
 | [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md) | Plugin Worker/UI akışı |
