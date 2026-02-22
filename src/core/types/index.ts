@@ -94,6 +94,8 @@ export interface LocalModeConfig {
   debugPort: number;
   /** Plugin bridge WebSocket server port (no CDP needed when plugin connects) */
   pluginBridgePort?: number;
+  /** Optional audit log file path (enterprise); one JSON object per line (NDJSON) */
+  auditLogPath?: string;
 }
 
 /**

@@ -79,6 +79,31 @@
       margin-left: 4px;
     }
 
+    .bridge-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+    .bridge-port {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+    }
+    .bridge-port label {
+      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+    }
+    .bridge-port input {
+      width: 56px;
+      padding: 2px 4px;
+      background: var(--figma-color-bg-tertiary, #1e1e1e);
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      border-radius: 3px;
+      color: inherit;
+      font-size: 11px;
+    }
+
     /* Light theme support */
     @media (prefers-color-scheme: light) {
       body {
@@ -99,11 +124,17 @@
   </style>
 </head>
 <body>
-  <div class="bridge-status" id="status-container" title="When 'no server': run in terminal: cd f-mcp-bridge && npm run dev:local">
-    <div class="status-indicator loading" id="status-dot"></div>
-    <div class="status-text">
-      <span class="label">MCP</span>
-      <span class="state" id="status-state">connecting</span>
+  <div class="bridge-row">
+    <div class="bridge-status" id="status-container" title="When 'no server': run MCP server (e.g. npm run dev:local) or set correct port">
+      <div class="status-indicator loading" id="status-dot"></div>
+      <div class="status-text">
+        <span class="label">MCP</span>
+        <span class="state" id="status-state">connecting</span>
+      </div>
+    </div>
+    <div class="bridge-port" title="Port (multi-instance: her kullanici farkli port)">
+      <label for="mcp-port">Port</label>
+      <input type="number" id="mcp-port" min="5454" max="5470" value="5454" />
     </div>
   </div>
 
@@ -618,16 +649,48 @@
 
     // ============================================================================
     // MCP PLUGIN BRIDGE - WebSocket client (no Figma debug port needed)
-    // Tries ports 5454-5460 so it works when 5454 is in use
+    // Port configurable for multi-instance: her kullanici kendi portunu secer (5454-5470)
     // ============================================================================
-    var MCP_BRIDGE_PORTS = [5454, 5455, 5456, 5457, 5458, 5459, 5460];
+    var MCP_BRIDGE_STORAGE_KEY = 'f-mcp-bridge-port';
     var mcpBridgeWs = null;
     var mcpBridgeReconnectTimer = null;
-    var mcpBridgePortIndex = 0;
+
+    function getMcpBridgePort() {
+      var el = document.getElementById('mcp-port');
+      if (!el) return 5454;
+      var n = parseInt(el.value, 10);
+      if (isNaN(n) || n < 5454 || n > 5470) return 5454;
+      return n;
+    }
+
+    function initMcpPortInput() {
+      try {
+        var stored = localStorage.getItem(MCP_BRIDGE_STORAGE_KEY);
+        if (stored) {
+          var n = parseInt(stored, 10);
+          if (n >= 5454 && n <= 5470) {
+            var el = document.getElementById('mcp-port');
+            if (el) { el.value = n; }
+          }
+        }
+      } catch (e) {}
+      var el = document.getElementById('mcp-port');
+      if (el) {
+        el.addEventListener('change', function() {
+          var port = getMcpBridgePort();
+          try { localStorage.setItem(MCP_BRIDGE_STORAGE_KEY, String(port)); } catch (e) {}
+          if (mcpBridgeWs) {
+            mcpBridgeWs.close();
+            mcpBridgeWs = null;
+          }
+          connectMcpBridge();
+        });
+      }
+    }
 
     function connectMcpBridge() {
       if (mcpBridgeWs && mcpBridgeWs.readyState === 1) return;
-      var port = MCP_BRIDGE_PORTS[mcpBridgePortIndex];
+      var port = getMcpBridgePort();
       var url = 'ws://localhost:' + port;
       try {
         mcpBridgeWs = new WebSocket(url);
@@ -635,7 +698,6 @@
           console.log('[F-MCP ATezer Bridge] Connected to MCP server on port ' + port);
           updateStatus('ready', true, false);
           mcpBridgeWs.send(JSON.stringify({ type: 'ready' }));
-          mcpBridgePortIndex = 0;
         };
         mcpBridgeWs.onmessage = function(event) {
           try {
@@ -791,25 +853,23 @@
         mcpBridgeWs.onclose = function() {
           mcpBridgeWs = null;
           updateStatus('no server', false, true);
-          mcpBridgePortIndex = (mcpBridgePortIndex + 1) % MCP_BRIDGE_PORTS.length;
           if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 500);
+          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
         };
         mcpBridgeWs.onerror = function() {
           mcpBridgeWs = null;
           updateStatus('no server', false, true);
-          mcpBridgePortIndex = (mcpBridgePortIndex + 1) % MCP_BRIDGE_PORTS.length;
           if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 500);
+          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
         };
       } catch (e) {
         updateStatus('no server', false, true);
-        mcpBridgePortIndex = (mcpBridgePortIndex + 1) % MCP_BRIDGE_PORTS.length;
         if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-        mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 500);
+        mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
       }
     }
     if (typeof WebSocket !== 'undefined') {
+      initMcpPortInput();
       connectMcpBridge();
     }
   </script>

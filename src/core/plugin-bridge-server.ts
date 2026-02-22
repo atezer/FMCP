@@ -9,10 +9,11 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { createServer } from "http";
 import { logger } from "./logger.js";
+import { auditTool, auditPlugin } from "./audit-log.js";
 
 const PING_INTERVAL_MS = 15000;
 const MIN_PORT = 5454;
-const MAX_PORT = 5460;
+const MAX_PORT = 5470;
 
 export interface BridgeRequest {
 	id: string;
@@ -30,6 +31,8 @@ type Pending = {
 	resolve: (value: unknown) => void;
 	reject: (err: Error) => void;
 	timeout: ReturnType<typeof setTimeout>;
+	method: string;
+	startTime: number;
 };
 
 export class PluginBridgeServer {
@@ -39,11 +42,16 @@ export class PluginBridgeServer {
 	private pending = new Map<string, Pending>();
 	private requestTimeoutMs = 60000;
 	private pingTimer: ReturnType<typeof setInterval> | null = null;
+	private auditLogPath: string | undefined;
 
-	constructor(private port: number) {}
+	constructor(port: number, options?: { auditLogPath?: string }) {
+		this.port = port;
+		this.auditLogPath = options?.auditLogPath;
+	}
+	private port: number;
 
 	/**
-	 * Start the WebSocket server. Tries ports 5454–5460 if the preferred port is in use. Idempotent.
+	 * Start the WebSocket server. Tries ports 5454–5470 if the preferred port is in use (multi-instance). Idempotent.
 	 */
 	start(): void {
 		if (this.wss) {
@@ -55,7 +63,7 @@ export class PluginBridgeServer {
 
 	private tryListen(port: number): void {
 		if (port > MAX_PORT) {
-			console.error("\n❌ No free port in range %s–%s. Free one with: lsof -i :5454 then kill <PID>\n", MIN_PORT, MAX_PORT);
+			console.error("\n❌ No free port in range %s–%s. Free one with: lsof -i :5454 (or your port) then kill <PID>\n", MIN_PORT, MAX_PORT);
 			process.exit(1);
 		}
 
@@ -89,6 +97,7 @@ export class PluginBridgeServer {
 				}
 				this.client = ws;
 				logger.info({ port: this.port }, "Plugin bridge: plugin connected");
+				auditPlugin(this.auditLogPath, "plugin_connect");
 
 				ws.on("message", (data: Buffer | string) => {
 					try {
@@ -101,8 +110,14 @@ export class PluginBridgeServer {
 							const p = this.pending.get(msg.id)!;
 							this.pending.delete(msg.id);
 							clearTimeout(p.timeout);
-							if (msg.error) p.reject(new Error(msg.error));
-							else p.resolve(msg.result);
+							const durationMs = Date.now() - p.startTime;
+							if (msg.error) {
+								auditTool(this.auditLogPath, p.method, false, msg.error, durationMs);
+								p.reject(new Error(msg.error));
+							} else {
+								auditTool(this.auditLogPath, p.method, true, undefined, durationMs);
+								p.resolve(msg.result);
+							}
 						}
 					} catch (err) {
 						logger.warn({ err }, "Plugin bridge: invalid message from plugin");
@@ -112,6 +127,7 @@ export class PluginBridgeServer {
 				ws.on("close", () => {
 					if (this.client === ws) {
 						this.client = null;
+						auditPlugin(this.auditLogPath, "plugin_disconnect");
 						logger.info("Plugin bridge: plugin disconnected");
 					}
 				});
@@ -144,13 +160,21 @@ export class PluginBridgeServer {
 		const req: BridgeRequest = { id, method, params };
 
 		return new Promise<T>((resolve, reject) => {
+			const startTime = Date.now();
 			const timeout = setTimeout(() => {
 				if (this.pending.delete(id)) {
+					auditTool(this.auditLogPath, method, false, "timeout", Date.now() - startTime);
 					reject(new Error(`Plugin bridge request '${method}' timed out after ${this.requestTimeoutMs}ms`));
 				}
 			}, this.requestTimeoutMs);
 
-			this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timeout });
+			this.pending.set(id, {
+				resolve: resolve as (v: unknown) => void,
+				reject,
+				timeout,
+				method,
+				startTime,
+			});
 			this.client!.send(JSON.stringify(req));
 		});
 	}

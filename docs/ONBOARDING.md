@@ -87,6 +87,8 @@ Claude’u açtığınızda MCP sunucusu otomatik başlar (Claude config’te `n
 3. Figma’da plugin’i çalıştırın; “ready” görünmeli.
 4. Claude’u başlatın. (Config’te yine `local-plugin-only.js` kullanıyorsanız Claude kendi MCP sunucusunu açar ve 5454’ü kullanır; `dev:local` ile aynı portu paylaşır.)
 
+**Çoklu kullanıcı:** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) kullanmalı; plugin arayüzünde **Port** alanından aynı port seçilir. Detay: [MULTI_INSTANCE.md](MULTI_INSTANCE.md).
+
 ---
 
 ## 4. Claude config’i ayarla

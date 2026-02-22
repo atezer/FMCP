@@ -4,6 +4,8 @@
 
 After publishing to npm, users can install via `npx` without cloning the repository.
 
+**Plugin-only:** NPX ile çalıştırıldığında da plugin üzerinden WebSocket (port 5454) kullanılabilir; Figma token veya debug portu gerekmez. Paket plugin-only mod sunuyorsa config'te onu kullanın; aksi halde clone + `dist/local-plugin-only.js` ile kurulum yapın.
+
 ## Claude Desktop Configuration
 
 Add this to your `.claude.json` (or `claude_desktop_config.json` on some systems):

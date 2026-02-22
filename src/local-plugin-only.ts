@@ -54,8 +54,9 @@ function getConnector(bridge: PluginBridgeServer): PluginBridgeConnector {
 export async function main() {
 	const config = getConfig();
 	const port = config.local?.pluginBridgePort ?? 5454;
+	const auditLogPath = config.local?.auditLogPath;
 
-	const bridge = new PluginBridgeServer(port);
+	const bridge = new PluginBridgeServer(port, { auditLogPath });
 	bridge.start();
 
 	const server = new McpServer({
