@@ -1,43 +1,68 @@
-# F-MCP ATezer (Figma MCP Bridge)
+# F-MCP (Figma MCP Bridge)
 
-Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin’i. Bu repo hem sunucu hem **F-MCP ATezer Bridge** plugin kaynağını içerir.
+Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin’i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
 
-## Nasıl açar ve bağlarsınız?
+### Figma API token tüketmiyor
+
+figma-mcp-bridge, Figma'nın **REST API'sini kullanmıyor**. Akış:
+
+**Claude (MCP) → figma-mcp-bridge → Plugin → Figma Desktop (yerel)**
+
+Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzerinden gider. Bu sayede:
+
+- Figma API token tüketimi **yok** (REST API hiç çağrılmıyor)
+- Rate limit yok
+- Figma tarafında ücretlendirme yok
+- İnternet bağlantısı gerekmez (yerel plugin)
+
+**Ne tüketiliyor?** Sadece AI tarafı: bu konuşmadaki context token'ları. Her tool call'ın request/response'u context penceresine girer. Büyük dosyalarda çok derin sorgular (örn. `depth: 3`, `verbosity: full`) Claude context'ini hızlı doldurabilir; Figma tarafında ek maliyet oluşmaz.
+
+## figma-mcp-bridge yetenekleri
+
+| Kategori | Araçlar |
+|----------|--------|
+| **Dosya & yapı** | `figma_get_file_data` — Ağaç yapısı, layer hiyerarşisi (depth & verbosity: summary / standard / full) |
+| **Arama & keşif** | `figma_search_components`, `figma_get_design_system_summary` |
+| **Bileşen** | `figma_get_component`, `figma_instantiate_component`, `figma_set_instance_properties` |
+| **Token & değişken** | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables` |
+| **Görsel & kod** | `figma_capture_screenshot`, `figma_execute` (Plugin API’de JavaScript çalıştırır) |
+| **Durum** | `figma_get_status` — Plugin bağlantı kontrolü |
+
+## Hızlı başlangıç
 
 Plugin'in "ready" olması için **önce** 5454 portunda bir sunucu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
 
-### Adım 1: MCP bridge'i başlatın
+### 1. MCP bridge’i başlatın
 
-Terminalde proje klasörüne gidip şu komutu çalıştırın (penceresi açık kalsın):
+Proje klasöründe:
 
 ```bash
-cd /Users/abdussamed.tezer/FCM/f-mcp-bridge
+cd <bu-reponun-yolu>   # clone ettiğiniz FMCP klasörü
+npm install
 npm run dev:local
 ```
 
 Çıktıda `Plugin bridge server listening` veya `5454` geçen bir satır görünene kadar bekleyin. Bu, plugin'in bağlanacağı sunucudur.
 
-### Adım 2: Plugin'i Figma'da yükleyin (ilk seferde)
+### 2. Plugin’i Figma’da yükleyin (ilk seferde)
 
 1. Figma'yı açın.
 2. **Plugins** → **Development** → **Import plugin from manifest…**
-3. Şu dosyayı seçin: `f-mcp-bridge/f-mcp-plugin/manifest.json`
+3. Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin
 4. Plugin listede "F-MCP ATezer Bridge" olarak görünür.
 
-### Adım 3: Plugin'i çalıştırın
+### 3. Plugin’i çalıştırın
 
 1. **Plugins** → **Development** → **F-MCP ATezer Bridge**
-2. Plugin penceresi açılır. Birkaç saniye içinde:
-   - **Yeşil nokta + "ready"** → Bağlantı tamam, MCP kullanılabilir.
-   - **Kırmızı nokta + "no server"** → Adım 1'deki komut çalışmıyor; terminalde `npm run dev:local` ile bridge'i başlatıp tekrar deneyin.
+2. Birkaç saniye içinde:
+   - **Yeşil nokta + "ready"** → Bağlantı tamam.
+   - **Kırmızı + "no server"** → Bridge çalışmıyor; 1. adımda `npm run dev:local` ile başlatıp tekrar deneyin.
 
-### Özet sıra
-
-| Sıra | Ne yapılır |
-|------|------------|
-| 1 | Terminalde `cd f-mcp-bridge && npm run dev:local` (açık kalsın) |
-| 2 | Figma'da Plugins → Development → F-MCP ATezer Bridge |
-| 3 | Plugin'de "ready" görününce Cursor/Claude üzerinden MCP kullanılabilir |
+| Sıra | Yapılacak |
+|------|-----------|
+| 1 | `npm run dev:local` (terminal açık kalsın) |
+| 2 | Figma’da Plugins → Development → F-MCP ATezer Bridge |
+| 3 | "ready" görününce Cursor/Claude üzerinden MCP kullanılır |
 
 ---
 
@@ -46,48 +71,41 @@ npm run dev:local
 ### 1. Build (bir kez)
 
 ```bash
-cd /Users/abdussamed.tezer/FCM/f-mcp-bridge
 npm run build:local
 ```
 
 ### 2. Claude Desktop config
 
-Config dosyası (macOS): **`~/Library/Application Support/Claude/claude_desktop_config.json`**
+Config (macOS): **`~/Library/Application Support/Claude/claude_desktop_config.json`**
 
-**Plugin-only (önerilen – debug portu yok):**
+**Plugin-only (önerilen):**
 ```json
 {
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local-plugin-only.js"]
+      "args": ["<BU-REPONUN-TAM-YOLU>/dist/local-plugin-only.js"]
     }
   }
 }
 ```
 
-**Script "Permission denied" alıyorsanız** — proje dizininden çalıştırmak için `bash -c` kullanın:
+**Permission denied alırsanız** — `bash -c` ile proje dizininden çalıştırın:
 ```json
 "figma-mcp-bridge": {
   "command": "bash",
-  "args": ["-c", "cd /Users/abdussamed.tezer/FCM/f-mcp-bridge && exec node dist/local-plugin-only.js"]
+  "args": ["-c", "cd <BU-REPONUN-TAM-YOLU> && exec node dist/local-plugin-only.js"]
 }
 ```
-(Yolu kendi proje yolunuzla değiştirin.)
 
-**Tam mod (console log / screenshot için – Figma 9222 ile açılmalı):**
+**Tam mod (console/screenshot):**
 ```json
-{
-  "mcpServers": {
-    "figma-mcp-bridge": {
-      "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local.js"]
-    }
-  }
+"figma-mcp-bridge": {
+  "command": "node",
+  "args": ["<BU-REPONUN-TAM-YOLU>/dist/local.js"]
 }
 ```
-
-Yolu kendi proje klasörünüze göre değiştirin.
+`<BU-REPONUN-TAM-YOLU>` yerine clone ettiğiniz klasörün yolunu yazın (örn. `/Users/.../FMCP`).
 
 ### 3. Sıra
 
@@ -198,5 +216,4 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 ## Lisans ve Destek
 
 - **Lisans:** MIT (bkz. [LICENSE](LICENSE))
-- **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/figma-mcp-bridge/issues)
-# FMCP
+- **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/FMCP/issues)
