@@ -560,6 +560,24 @@
         case 'GET_LOCAL_STYLES_RESULT':
           handleResult('GET_LOCAL_STYLES', null);
           break;
+        case 'CONSOLE_LOGS_RESULT':
+          handleResult('GET_CONSOLE_LOGS', 'data');
+          break;
+        case 'CLEAR_CONSOLE_RESULT':
+          handleResult('CLEAR_CONSOLE', null);
+          break;
+        case 'BATCH_CREATE_VARIABLES_RESULT':
+          handleResult('BATCH_CREATE_VARIABLES', 'data');
+          break;
+        case 'BATCH_UPDATE_VARIABLES_RESULT':
+          handleResult('BATCH_UPDATE_VARIABLES', 'data');
+          break;
+        case 'SETUP_DESIGN_TOKENS_RESULT':
+          handleResult('SETUP_DESIGN_TOKENS', 'data');
+          break;
+        case 'ARRANGE_COMPONENT_SET_RESULT':
+          handleResult('ARRANGE_COMPONENT_SET', 'data');
+          break;
       }
     };
 
@@ -571,6 +589,31 @@
     };
     window.getLocalStyles = (verbosity) => {
       return window.sendPluginCommand('GET_LOCAL_STYLES', { verbosity: verbosity || 'summary' }, 15000).then(function(r) { return r.data; });
+    };
+    window.getConsoleLogs = (limit) => {
+      return window.sendPluginCommand('GET_CONSOLE_LOGS', { limit: limit || 50 }, 5000).then(function(r) {
+        if (r && r.success === false) return r;
+        return r && r.data ? r.data : { logs: [], total: 0 };
+      });
+    };
+    window.clearConsole = () => {
+      return window.sendPluginCommand('CLEAR_CONSOLE', {}, 3000).then(function(r) { return r || { success: true }; });
+    };
+    window.batchCreateVariables = (items) => {
+      return window.sendPluginCommand('BATCH_CREATE_VARIABLES', { items: items || [] }, 60000).then(function(r) { return r && r.data ? r.data : r; });
+    };
+    window.batchUpdateVariables = (items) => {
+      return window.sendPluginCommand('BATCH_UPDATE_VARIABLES', { items: items || [] }, 60000).then(function(r) { return r && r.data ? r.data : r; });
+    };
+    window.setupDesignTokens = (payload) => {
+      return window.sendPluginCommand('SETUP_DESIGN_TOKENS', {
+        collectionName: payload.collectionName,
+        modes: payload.modes,
+        tokens: payload.tokens
+      }, 30000).then(function(r) { return r; });
+    };
+    window.arrangeComponentSet = (nodeIds) => {
+      return window.sendPluginCommand('ARRANGE_COMPONENT_SET', { nodeIds: nodeIds || [] }, 15000).then(function(r) { return r && r.data ? r.data : r; });
     };
 
     // ============================================================================
@@ -714,6 +757,24 @@
               }
               if (method === 'getLocalStyles') {
                 return window.getLocalStyles(params.verbosity);
+              }
+              if (method === 'getConsoleLogs') {
+                return window.getConsoleLogs(params.limit);
+              }
+              if (method === 'clearConsole') {
+                return window.clearConsole();
+              }
+              if (method === 'batchCreateVariables') {
+                return window.batchCreateVariables(params.items);
+              }
+              if (method === 'batchUpdateVariables') {
+                return window.batchUpdateVariables(params.items);
+              }
+              if (method === 'setupDesignTokens') {
+                return window.setupDesignTokens(params);
+              }
+              if (method === 'arrangeComponentSet') {
+                return window.arrangeComponentSet(params.nodeIds);
               }
               return { success: false, error: 'Unknown method: ' + method };
             };

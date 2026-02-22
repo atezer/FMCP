@@ -50,7 +50,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/atezer/figma-mcp-bridge.git"
+		"url": "https://github.com/atezer/FMCP.git"
 	},
 	"engines": {
 		"node": ">=18.0.0"

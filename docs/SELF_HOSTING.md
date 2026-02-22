@@ -15,13 +15,13 @@ Deploy your own instance of F-MCP ATezer (Figma MCP Bridge) on Cloudflare Worker
 
 ## Quick Deploy
 
-[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/atezer/figma-mcp-bridge)
+[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/atezer/FMCP)
 
 Or via CLI:
 
 ```bash
-git clone https://github.com/atezer/figma-mcp-bridge.git
-cd figma-mcp-bridge
+git clone https://github.com/atezer/FMCP.git
+cd FMCP
 npm install
 npm run deploy
 ```
@@ -44,8 +44,8 @@ npm run deploy
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/atezer/figma-mcp-bridge.git
-cd figma-mcp-bridge
+git clone https://github.com/atezer/FMCP.git
+cd FMCP
 npm install
 ```
 
@@ -287,7 +287,7 @@ View analytics in Cloudflare Dashboard:
 ### Update Code
 
 ```bash
-cd figma-mcp-bridge
+cd FMCP
 git pull origin main
 npm install
 npm run build:cloudflare
@@ -528,8 +528,8 @@ Set secrets in GitHub:
 For self-hosting issues:
 
 - [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
-- [GitHub Discussions](https://github.com/atezer/figma-mcp-bridge/discussions)
-- [Report Issues](https://github.com/atezer/figma-mcp-bridge/issues)
+- [GitHub Discussions](https://github.com/atezer/FMCP/discussions)
+- [Report Issues](https://github.com/atezer/FMCP/issues)
 
 For Cloudflare-specific issues:
 - [Cloudflare Community](https://community.cloudflare.com/)

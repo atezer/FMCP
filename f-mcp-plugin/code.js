@@ -4,6 +4,19 @@
 // Uses postMessage to communicate with UI, bypassing worker sandbox limitations
 // Puppeteer can access UI iframe's window context to retrieve data
 
+// Console log buffer for figma_get_console_logs (no CDP)
+var __consoleLogBuffer = [];
+var __consoleLogLimit = 200;
+var _origLog = console.log, _origWarn = console.warn, _origError = console.error;
+function _pushLog(level, args) {
+  var arr = Array.prototype.slice.call(args);
+  __consoleLogBuffer.push({ level: level, time: Date.now(), args: arr });
+  if (__consoleLogBuffer.length > __consoleLogLimit) __consoleLogBuffer.shift();
+}
+console.log = function() { _pushLog('log', arguments); _origLog.apply(console, arguments); };
+console.warn = function() { _pushLog('warn', arguments); _origWarn.apply(console, arguments); };
+console.error = function() { _pushLog('error', arguments); _origError.apply(console, arguments); };
+
 console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 
 // Show minimal UI - compact status indicator
@@ -2000,6 +2013,163 @@ figma.ui.onmessage = async (msg) => {
   }
 
   // ============================================================================
+  // GET_CONSOLE_LOGS - Plugin console buffer (no CDP)
+  else if (msg.type === 'GET_CONSOLE_LOGS') {
+    var limit = Math.min(Math.max(1, parseInt(msg.limit, 10) || 50), 200);
+    var slice = __consoleLogBuffer.slice(-limit);
+    figma.ui.postMessage({
+      type: 'CONSOLE_LOGS_RESULT',
+      requestId: msg.requestId,
+      success: true,
+      data: { logs: slice, total: __consoleLogBuffer.length }
+    });
+  }
+  else if (msg.type === 'CLEAR_CONSOLE') {
+    __consoleLogBuffer.length = 0;
+    figma.ui.postMessage({
+      type: 'CLEAR_CONSOLE_RESULT',
+      requestId: msg.requestId,
+      success: true
+    });
+  }
+
+  // BATCH_CREATE_VARIABLES - Up to 100 variables, partial success
+  else if (msg.type === 'BATCH_CREATE_VARIABLES') {
+    var items = msg.items || [];
+    if (items.length > 100) items = items.slice(0, 100);
+    var created = [], failed = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      try {
+        var coll = await figma.variables.getVariableCollectionByIdAsync(it.collectionId);
+        if (!coll) throw new Error('Collection not found');
+        var valuesByMode = {};
+        if (it.modeId != null && it.value !== undefined) valuesByMode[it.modeId] = it.value;
+        else if (it.valuesByMode) valuesByMode = it.valuesByMode;
+        var v = figma.variables.createVariable(it.name, coll, it.resolvedType);
+        if (Object.keys(valuesByMode).length) {
+          var modeId = it.modeId || Object.keys(valuesByMode)[0];
+          if (modeId) v.setValueForMode(modeId, valuesByMode[modeId]);
+        }
+        created.push({ name: it.name, id: v.id });
+      } catch (e) {
+        failed.push({ name: it.name, error: e.message || String(e) });
+      }
+    }
+    figma.ui.postMessage({
+      type: 'BATCH_CREATE_VARIABLES_RESULT',
+      requestId: msg.requestId,
+      success: true,
+      data: { created, failed }
+    });
+  }
+
+  // BATCH_UPDATE_VARIABLES - Up to 100 updates, partial success
+  else if (msg.type === 'BATCH_UPDATE_VARIABLES') {
+    var updates = msg.items || [];
+    if (updates.length > 100) updates = updates.slice(0, 100);
+    var updated = [], failed = [];
+    for (var j = 0; j < updates.length; j++) {
+      var u = updates[j];
+      try {
+        var variable = await figma.variables.getVariableByIdAsync(u.variableId);
+        if (!variable) throw new Error('Variable not found');
+        variable.setValueForMode(u.modeId, u.value);
+        updated.push({ variableId: u.variableId });
+      } catch (e) {
+        failed.push({ variableId: u.variableId, error: e.message || String(e) });
+      }
+    }
+    figma.ui.postMessage({
+      type: 'BATCH_UPDATE_VARIABLES_RESULT',
+      requestId: msg.requestId,
+      success: true,
+      data: { updated, failed }
+    });
+  }
+
+  // SETUP_DESIGN_TOKENS - Atomic: collection + modes + variables; rollback on error
+  else if (msg.type === 'SETUP_DESIGN_TOKENS') {
+    var collectionName = msg.collectionName || 'Design Tokens';
+    var modes = msg.modes || ['Default'];
+    var tokens = msg.tokens || [];
+    var createdVarIds = [];
+    var collection = null;
+    try {
+      collection = figma.variables.createVariableCollection(collectionName);
+      if (modes.length > 1) {
+        for (var m = 1; m < modes.length; m++) collection.addMode(modes[m]);
+      }
+      var defaultModeId = collection.modes[0].modeId;
+      for (var t = 0; t < tokens.length; t++) {
+        var tok = tokens[t];
+        var name = typeof tok === 'object' ? tok.name : String(tok);
+        var type = (typeof tok === 'object' ? tok.type : null) || 'STRING';
+        var values = (typeof tok === 'object' && tok.values) ? tok.values : (typeof tok === 'object' ? tok.value : undefined);
+        var valsByMode = typeof values === 'object' && !Array.isArray(values) ? values : { [defaultModeId]: values };
+        var variable = figma.variables.createVariable(name, collection, type);
+        for (var mid in valsByMode) variable.setValueForMode(mid, valsByMode[mid]);
+        createdVarIds.push(variable.id);
+      }
+      figma.ui.postMessage({
+        type: 'SETUP_DESIGN_TOKENS_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: { collectionId: collection.id, collectionName: collection.name, variableIds: createdVarIds, modeCount: modes.length }
+      });
+    } catch (err) {
+      if (collection) {
+        for (var d = 0; d < createdVarIds.length; d++) {
+          try {
+            var vv = await figma.variables.getVariableByIdAsync(createdVarIds[d]);
+            if (vv) vv.remove();
+          } catch (ignore) {}
+        }
+        try { collection.remove(); } catch (ignore) {}
+      }
+      figma.ui.postMessage({
+        type: 'SETUP_DESIGN_TOKENS_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: err.message || String(err)
+      });
+    }
+  }
+
+  // ARRANGE_COMPONENT_SET - combineAsVariants
+  else if (msg.type === 'ARRANGE_COMPONENT_SET') {
+    try {
+      var nodeIds = msg.nodeIds || [];
+      if (nodeIds.length < 2) {
+        throw new Error('At least 2 component node IDs required');
+      }
+      var nodes = [];
+      var parent = null;
+      for (var n = 0; n < nodeIds.length; n++) {
+        var nd = figma.getNodeById(nodeIds[n]);
+        if (!nd) throw new Error('Node not found: ' + nodeIds[n]);
+        if (nd.type !== 'COMPONENT') throw new Error('Node is not a COMPONENT: ' + nodeIds[n]);
+        nodes.push(nd);
+        if (!parent) parent = nd.parent;
+      }
+      if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
+      var componentSet = figma.combineAsVariants(nodes, parent);
+      figma.ui.postMessage({
+        type: 'ARRANGE_COMPONENT_SET_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: { nodeId: componentSet.id, name: componentSet.name }
+      });
+    } catch (err) {
+      figma.ui.postMessage({
+        type: 'ARRANGE_COMPONENT_SET_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: err.message || String(err)
+      });
+    }
+  }
+
   // GET_LOCAL_STYLES - Paint, text, effect styles without REST API
   // ============================================================================
   else if (msg.type === 'GET_LOCAL_STYLES') {

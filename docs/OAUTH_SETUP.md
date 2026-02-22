@@ -34,7 +34,7 @@ User → Claude Code → Remote MCP Server
 3. Fill in app details:
    - **App name**: `F-MCP ATezer` (or your preferred name)
    - **App description**: `AI-powered Figma debugging and design system tools`
-   - **App website**: `https://github.com/atezer/figma-mcp-bridge`
+   - **App website**: `https://github.com/atezer/FMCP`
 
 4. Add **Redirect URL**:
    ```
@@ -225,6 +225,6 @@ Future enhancement: Set up webhooks for token revocation notifications
 
 ## Support
 
-- **Documentation**: https://github.com/atezer/figma-mcp-bridge
-- **Issues**: https://github.com/atezer/figma-mcp-bridge/issues
+- **Documentation**: https://github.com/atezer/FMCP
+   - **Issues**: https://github.com/atezer/FMCP/issues
 - **Figma OAuth Docs**: https://www.figma.com/developers/api#oauth2
