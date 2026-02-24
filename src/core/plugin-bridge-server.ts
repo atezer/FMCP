@@ -40,7 +40,7 @@ export class PluginBridgeServer {
 	private httpServer: ReturnType<typeof createServer> | null = null;
 	private client: WebSocket | null = null;
 	private pending = new Map<string, Pending>();
-	private requestTimeoutMs = 60000;
+	private requestTimeoutMs = 120000;
 	private pingTimer: ReturnType<typeof setInterval> | null = null;
 	private auditLogPath: string | undefined;
 

@@ -50,7 +50,7 @@ Bu mesaj Claude Desktop’un yanıtı tamamlayamadığını gösterir. Sıklıkl
 **Yapılacaklar:**
 
 1. **Önce hafif bir araçla deneyin** — Örn. sadece `figma_get_status` veya `figma_get_design_system_summary`. Kısa yanıt döner; hata devam ediyorsa sorun büyük ihtimalle başka (ağ, bellek, Claude limiti).
-2. **Büyük yanıt veren araçlar:** `figma_get_component_for_development` / `figma_get_component_image` base64 screenshot ile context’i şişirir. Önce `figma_get_component` (görsel olmadan) kullanın; gerekirse screenshot için `scale: 1` veya `format: "JPG"` deneyin. `figma_get_file_data` için `depth: 1`, `verbosity: "summary"` ile başlayın. `figma_watch_console` için `timeoutSeconds: 5` veya 10 deneyin.
+2. **Büyük yanıt veren araçlar:** `figma_get_component_for_development` / `figma_get_component_image` base64 screenshot ile context’i şişirir. Önce `figma_get_component` (görsel olmadan) kullanın; gerekirse screenshot için `scale: 1` veya `format: "JPG"` deneyin. `figma_get_file_data` için `depth: 1`, `verbosity: "summary"` ile başlayın. SUI gibi çok büyük dosyalarda "Plugin bridge request timed out" alırsanız: bridge 2 dk, getDocumentStructure/getLocalComponents 90 sn; variable adı sadece `verbosity: "full"` ile çözülür, `summary`/`standard` hızlı döner. `figma_watch_console` için `timeoutSeconds: 5` veya 10 deneyin.
 3. **Yeni konuşma açın** — Eski konuşmada context çok dolmuş olabilir.
 4. **Claude / internet** — Geçici sunucu veya ağ sorunları da bu hataya yol açabilir; bir süre sonra tekrar deneyin.
 
