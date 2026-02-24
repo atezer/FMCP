@@ -21,7 +21,7 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 
 Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma Desktop (yerel). REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
 
-### Kurumlar için özet
+### Kurumlar için özet (C-level / sunum)
 
 - **Debug modu kapalı.** Figma’yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
 - **Kendi plugin story’nizde yayınlama.** Plugin’i Figma Organization (veya Enterprise) altında kendi plugin story’nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; “manifest import” zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
@@ -214,6 +214,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)           | Port 5454 kapalı sorun giderme                                                      |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)               | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                  |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                       | **Enterprise** — Audit log, air-gap, Organization plugin                            |
+| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)               | **Publish plugin** — Figma’da yayınlama: Data security cevapları, final details, Plugin ID |
 |                                                           |                                                                                     |
 
 
@@ -236,6 +237,6 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 
 ## Lisans ve Destek
 
-- **Lisans:** MIT (bkz. [LICENSE](LICENSE))
+- **Lisans:** MIT — **ücretsiz (free)** ve açık kaynak. Ticari ve kişisel kullanım serbesttir (bkz. [LICENSE](LICENSE))
 - **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/FMCP/issues)
 
