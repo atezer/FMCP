@@ -750,9 +750,12 @@
             var params = msg.params || {};
             var run = function() {
               if (method === 'getVariablesFromPluginUI') {
-                if (!window.__figmaVariablesReady || !window.__figmaVariablesData)
-                  return { success: false, error: 'Variables not loaded yet' };
-                return { success: true, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
+                // Always refresh first (async API) so variables work in dynamic-page context
+                return window.refreshVariables().then(function(r) {
+                  if (r && r.success === false) return { success: false, error: r.error || 'Variables refresh failed' };
+                  if (!window.__figmaVariablesData) return { success: false, error: 'Variables not loaded' };
+                  return { success: true, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
+                });
               }
               if (method === 'getComponentFromPluginUI') {
                 return window.requestComponentData(params.nodeId).then(function(data) {
