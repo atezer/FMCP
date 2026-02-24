@@ -183,6 +183,14 @@ export class PluginBridgeConnector {
 		return this.bridge.request("getDocumentStructure", { depth: depth ?? 1, verbosity: verbosity ?? "summary" });
 	}
 
+	async getNodeContext(nodeId: string, depth?: number, verbosity?: string): Promise<any> {
+		return this.bridge.request("getNodeContext", {
+			nodeId,
+			depth: depth ?? 2,
+			verbosity: verbosity ?? "standard",
+		});
+	}
+
 	async getLocalStyles(verbosity?: string): Promise<any> {
 		return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" });
 	}

@@ -23,6 +23,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_get_component_image` | Sadece node screenshot’ı (base64) |
 | `figma_get_console_logs` | Plugin console log’larını getir (limit parametresi) |
 | `figma_get_design_system_summary` | Hızlı genel bakış (koleksiyonlar, bileşen sayıları) |
+| `figma_get_design_context` | Belirli node veya dosya için yapı + metin (TEXT `characters`); get_design_context tarzı isteklerde **token tasarruflu**, Figma token/screenshot yok |
 | `figma_get_file_data` | Dosya hiyerarşisi, sayfalar, katmanlar (depth / verbosity) |
 | `figma_get_status` | Plugin bağlantısını kontrol et |
 | `figma_get_styles` | Paint, Text, Effect stilleri |
@@ -39,7 +40,9 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_update_variable` | Değişken değerini güncelle |
 | `figma_watch_console` | Yeni console log’ları timeout’a kadar stream et |
 
-**Toplam: 32 araç.** (Claude ile test edilmiş; plugin-only bağlantıda tamamı sorunsuz çalışır.)  
+**Toplam: 33 araç.** (Claude ile test edilmiş; plugin-only bağlantıda tamamı sorunsuz çalışır.)  
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
+
+**Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
 
 **Detaylı kullanım (parametreler, örnekler):** [TOOLS.md](TOOLS.md)

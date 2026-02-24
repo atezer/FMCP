@@ -702,12 +702,12 @@ figma.ui.onmessage = async (msg) => {
           componentPropertyDefinitions: (node.type === 'COMPONENT_SET' || (node.type === 'COMPONENT' && !isVariant))
             ? node.componentPropertyDefinitions
             : undefined,
-          // Get children info (lightweight)
-          children: node.children ? node.children.map(child => ({
-            id: child.id,
-            name: child.name,
-            type: child.type
-          })) : undefined
+          // Get children info (include text content for TEXT nodes)
+          children: node.children ? node.children.map(child => {
+            var c = { id: child.id, name: child.name, type: child.type };
+            if (child.type === 'TEXT' && child.characters !== undefined) c.characters = child.characters;
+            return c;
+          }) : undefined
         }
       };
 
@@ -1979,6 +1979,7 @@ figma.ui.onmessage = async (msg) => {
           }
           if (node.width !== undefined) out.width = node.width;
           if (node.height !== undefined) out.height = node.height;
+          if (node.type === 'TEXT' && node.characters !== undefined) out.characters = node.characters;
         }
         if (node.children && node.children.length > 0 && currentDepth < depth) {
           out.children = node.children.map(function(c) { return walkNode(c, currentDepth + 1); }).filter(Boolean);
@@ -2005,6 +2006,72 @@ figma.ui.onmessage = async (msg) => {
       var errMsg = error && error.message ? error.message : String(error);
       figma.ui.postMessage({
         type: 'GET_DOCUMENT_STRUCTURE_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errMsg
+      });
+    }
+  }
+
+  // ============================================================================
+  // GET_NODE_CONTEXT - Subtree for one node with text content (token-efficient design context)
+  // ============================================================================
+  else if (msg.type === 'GET_NODE_CONTEXT') {
+    try {
+      var nodeId = msg.nodeId;
+      if (!nodeId) {
+        figma.ui.postMessage({
+          type: 'GET_NODE_CONTEXT_RESULT',
+          requestId: msg.requestId,
+          success: false,
+          error: 'nodeId is required'
+        });
+      } else {
+        var targetNode = await figma.getNodeByIdAsync(nodeId);
+        if (!targetNode) {
+          figma.ui.postMessage({
+            type: 'GET_NODE_CONTEXT_RESULT',
+            requestId: msg.requestId,
+            success: false,
+            error: 'Node not found: ' + nodeId
+          });
+        } else {
+          var depthNode = Math.min(Math.max(msg.depth || 2, 0), 3);
+          var verbosityNode = msg.verbosity || 'standard';
+
+          function walkNodeContext(node, currentDepth) {
+            if (currentDepth > depthNode) return null;
+            var out = { id: node.id, name: node.name, type: node.type };
+            if (verbosityNode !== 'inventory' && verbosityNode !== 'summary') {
+              if (node.absoluteBoundingBox) out.absoluteBoundingBox = node.absoluteBoundingBox;
+              if (node.width !== undefined) out.width = node.width;
+              if (node.height !== undefined) out.height = node.height;
+              if (node.type === 'TEXT' && node.characters !== undefined) out.characters = node.characters;
+            }
+            if (node.children && node.children.length > 0 && currentDepth < depthNode) {
+              out.children = node.children.map(function(c) { return walkNodeContext(c, currentDepth + 1); }).filter(Boolean);
+              if (verbosityNode === 'summary' || verbosityNode === 'inventory') out.childCount = node.children.length;
+            }
+            return out;
+          }
+
+          var nodeTree = walkNodeContext(targetNode, 0);
+          figma.ui.postMessage({
+            type: 'GET_NODE_CONTEXT_RESULT',
+            requestId: msg.requestId,
+            success: true,
+            data: {
+              node: nodeTree,
+              fileKey: figma.fileKey || null,
+              fileName: figma.root.name
+            }
+          });
+        }
+      }
+    } catch (error) {
+      var errMsg = error && error.message ? error.message : String(error);
+      figma.ui.postMessage({
+        type: 'GET_NODE_CONTEXT_RESULT',
         requestId: msg.requestId,
         success: false,
         error: errMsg
