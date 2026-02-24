@@ -49,7 +49,7 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | Bileşen ve implementasyon | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties` | Metadata, screenshot, instance oluşturma ve property güncelleme  |
 | Token ve stil kodu        | `figma_get_variables`, `figma_get_styles`                                                                                                                 | Değişkenler ve stiller (CSS/Tailwind/TS export)                  |
-| Dosya yapısı / design context | `figma_get_file_data`, `figma_get_design_context`                                                                             | Layer hiyerarşisi; belirli node için yapı+metin (get_design_context tarzı, token tasarruflu) |
+| Dosya yapısı / design context | `figma_get_file_data`, `figma_get_design_context`                                                                             | Yapı, metin, layout, renk, font; SUI bileşen/token adı, layoutSummary, colorHex, fillVariableNames; outputHint: react/tailwind |
 | Çalıştırma ve doğrulama   | `figma_execute`, `figma_capture_screenshot`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`                                       | Plugin API'de JS, screenshot, console log okuma/izleme/temizleme |
 
 
@@ -202,6 +202,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)             | Mod karşılaştırma                                                                   |
 | [TOOLS.md](docs/TOOLS.md)                                 | MCP araçları referansı                                                              |
 | [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)             | **33 araç tam liste** (referans, Claude ile doğrulanmış)                            |
+| [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Sorun giderme                                                                       |
 | [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)           | NPX ile kurulum                                                                     |
 | [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                     | OAuth (remote sunucu)                                                               |

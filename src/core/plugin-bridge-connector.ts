@@ -179,16 +179,49 @@ export class PluginBridgeConnector {
 		return this.bridge.request("setInstanceProperties", { nodeId, properties });
 	}
 
-	async getDocumentStructure(depth?: number, verbosity?: string): Promise<any> {
-		return this.bridge.request("getDocumentStructure", { depth: depth ?? 1, verbosity: verbosity ?? "summary" });
+	async getDocumentStructure(
+		depth?: number,
+		verbosity?: string,
+		opts?: {
+			includeLayout?: boolean;
+			includeVisual?: boolean;
+			includeTypography?: boolean;
+			includeCodeReady?: boolean;
+			outputHint?: "react" | "tailwind";
+		}
+	): Promise<any> {
+		const params: Record<string, unknown> = { depth: depth ?? 1, verbosity: verbosity ?? "summary" };
+		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;
+		if (opts?.includeVisual !== undefined) params.includeVisual = opts.includeVisual;
+		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;
+		if (opts?.includeCodeReady !== undefined) params.includeCodeReady = opts.includeCodeReady;
+		if (opts?.outputHint !== undefined) params.outputHint = opts.outputHint;
+		return this.bridge.request("getDocumentStructure", params);
 	}
 
-	async getNodeContext(nodeId: string, depth?: number, verbosity?: string): Promise<any> {
-		return this.bridge.request("getNodeContext", {
+	async getNodeContext(
+		nodeId: string,
+		depth?: number,
+		verbosity?: string,
+		opts?: {
+			includeLayout?: boolean;
+			includeVisual?: boolean;
+			includeTypography?: boolean;
+			includeCodeReady?: boolean;
+			outputHint?: "react" | "tailwind";
+		}
+	): Promise<any> {
+		const params: Record<string, unknown> = {
 			nodeId,
 			depth: depth ?? 2,
 			verbosity: verbosity ?? "standard",
-		});
+		};
+		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;
+		if (opts?.includeVisual !== undefined) params.includeVisual = opts.includeVisual;
+		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;
+		if (opts?.includeCodeReady !== undefined) params.includeCodeReady = opts.includeCodeReady;
+		if (opts?.outputHint !== undefined) params.outputHint = opts.outputHint;
+		return this.bridge.request("getNodeContext", params);
 	}
 
 	async getLocalStyles(verbosity?: string): Promise<any> {
