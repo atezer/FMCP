@@ -21,7 +21,7 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 
 Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma Desktop (yerel). REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
 
-### Kurumlar için özet (C-level / sunum)
+### Kurumlar için özet
 
 - **Debug modu kapalı.** Figma’yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
 - **Kendi plugin story’nizde yayınlama.** Plugin’i Figma Organization (veya Enterprise) altında kendi plugin story’nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; “manifest import” zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
