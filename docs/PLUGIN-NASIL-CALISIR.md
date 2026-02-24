@@ -95,6 +95,51 @@ Yani component akışı: **MCP isteği → UI (requestComponentData) → postMes
 
 ---
 
+## 6. FigJam’da çizim rehberi
+
+FigJam’da plugin akışını çizmek için aşağıdaki kutuları ve okları kullanın.
+
+### Adımlar
+
+1. **En üst:** Bir dikdörtgen → **"Claude / MCP client"**. Altına ok aşağı.
+2. **Ortada:** Bir dikdörtgen → **"MCP server"** (local.js veya local-plugin-only.js). Altına iki dal çıkacak.
+3. **İki dal:**
+   - Sol: **"CDP · port 9222"** (Puppeteer).
+   - Sağ: **"WebSocket · port 5454"**.
+4. **İkisi de** aynı kutuya gelsin: **"Plugin UI (ui.html)"**. İçine kısa not:
+   - `window.__figmaVariablesData`
+   - `requestComponentData()`
+   - RPC: getVariables, getComponent, execute…
+5. **Plugin UI’dan** aşağı ok → **"Plugin Worker (code.js)"**. İçine:
+   - `figma.variables`, `getNodeByIdAsync`
+   - `figma.ui.postMessage`
+6. **Worker’dan** geri ok (yukarı) → **Plugin UI**, etiket: **postMessage** (veri Worker → UI).
+7. **CDP** ve **WebSocket** oklarını Plugin UI kutusuna net çizin; CDP “Puppeteer evaluate”, WebSocket “ws RPC” olarak etiketlenebilir.
+
+### Mermaid (kopyalayıp FigJam’da metin olarak bırakabilir veya mermaid.live’da açıp ekran görüntüsü alıp FigJam’a yapıştırabilirsiniz)
+
+```mermaid
+flowchart TB
+  subgraph Client[" "]
+    A[Claude / MCP client]
+  end
+  B[MCP server\nlocal.js / local-plugin-only.js]
+  C[CDP · port 9222\nPuppeteer]
+  D[WebSocket · port 5454]
+  E[Plugin UI · ui.html\nwindow.__figmaVariablesData\nrequestComponentData\nRPC: getVariables, getComponent, execute]
+  F[Plugin Worker · code.js\nfigma.variables\ngetNodeByIdAsync\nfigma.ui.postMessage]
+
+  A --> B
+  B --> C
+  B --> D
+  C --> E
+  D --> E
+  E --> F
+  F -->|postMessage| E
+```
+
+---
+
 ## Kısa özet
 
 Plugin, Figma API'ye sadece Worker'dan erişir; veriyi postMessage ile UI'a taşır. UI hem `window` hem WebSocket (5454) ile MCP'ye açar. Variables açılışta yüklenir, components her istekte Worker'da `getNodeByIdAsync` ile alınır. Debug portu (9222) olmadan da WebSocket ile çalışır; token'sız "plugin-only" mod tamamen bu WebSocket köprüsüne dayanır.
