@@ -337,15 +337,22 @@ export async function main() {
 	// ---- Design system summary (minimal tokens) ----
 	server.tool(
 		"figma_get_design_system_summary",
-		"Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API.",
-		{},
-		async () => {
+		"Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file.",
+		{
+			currentPageOnly: z.boolean().optional().default(true),
+			limit: z.number().min(0).optional(),
+		},
+		async ({ currentPageOnly, limit }) => {
 			const conn = getConnector(bridge);
-			const [vars, components] = await Promise.all([conn.getVariablesFromPluginUI(), conn.getLocalComponents()]);
+			const [vars, components] = await Promise.all([
+				conn.getVariablesFromPluginUI(),
+				conn.getLocalComponents({ currentPageOnly, limit }),
+			]);
 			const compData = (components as any)?.data;
 			const out = {
 				success: true,
 				source: "plugin",
+				currentPageOnly: currentPageOnly,
 				variableCollections: (vars?.variableCollections || []).map((c: any) => ({ id: c.id, name: c.name, variableCount: c.variableIds?.length || 0 })),
 				components: compData?.totalComponents ?? 0,
 				componentSets: compData?.totalComponentSets ?? 0,
@@ -357,11 +364,15 @@ export async function main() {
 	// ---- figma_search_components ----
 	server.tool(
 		"figma_search_components",
-		"Search local components by name. Returns nodeIds and names. No REST API.",
-		{ query: z.string().optional() },
-		async ({ query }) => {
+		"Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file.",
+		{
+			query: z.string().optional(),
+			currentPageOnly: z.boolean().optional().default(true),
+			limit: z.number().min(0).optional(),
+		},
+		async ({ query, currentPageOnly, limit }) => {
 			const conn = getConnector(bridge);
-			const result = (await conn.getLocalComponents()) as any;
+			const result = (await conn.getLocalComponents({ currentPageOnly, limit })) as any;
 			const data = result?.data;
 			if (!data) {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "No component data" }) }] };

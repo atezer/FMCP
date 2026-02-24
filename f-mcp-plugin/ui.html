@@ -275,8 +275,11 @@
     // COMPONENT OPERATIONS
     // ============================================================================
 
-    window.getLocalComponents = () => {
-      return window.sendPluginCommand('GET_LOCAL_COMPONENTS', {}, 120000)
+    window.getLocalComponents = (currentPageOnly, limit) => {
+      var params = {};
+      if (currentPageOnly === true) params.currentPageOnly = true;
+      if (limit != null && limit > 0) params.limit = limit;
+      return window.sendPluginCommand('GET_LOCAL_COMPONENTS', params, 120000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
@@ -797,7 +800,7 @@
                 return window.refreshVariables();
               }
               if (method === 'getLocalComponents') {
-                return window.getLocalComponents();
+                return window.getLocalComponents(params.currentPageOnly, params.limit);
               }
               if (method === 'instantiateComponent') {
                 return window.instantiateComponent(params.componentKey, params.options);

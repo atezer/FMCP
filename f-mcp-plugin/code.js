@@ -934,11 +934,14 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'GET_LOCAL_COMPONENTS') {
     try {
-      console.log('🌉 [F-MCP ATezer Bridge] Fetching all local components for manifest...');
+      var currentPageOnly = msg.currentPageOnly === true;
+      var limit = msg.limit != null ? Math.max(0, parseInt(msg.limit, 10) || 0) : 0;
+      console.log('🌉 [F-MCP ATezer Bridge] Fetching local components (currentPageOnly:', currentPageOnly, ', limit:', limit || 'none', ')...');
 
       // Find all component sets and standalone components in the file
       var components = [];
       var componentSets = [];
+      var hitLimit = false;
 
       // Helper to extract component data
       function extractComponentData(node, isPartOfSet) {
@@ -1044,9 +1047,13 @@ figma.ui.onmessage = async (msg) => {
         };
       }
 
-      // Recursively search for components
+      // Recursively search for components (stop when limit reached if set)
       function findComponents(node) {
-        if (!node) return;
+        if (!node || hitLimit) return;
+        if (limit > 0 && components.length + componentSets.length >= limit) {
+          hitLimit = true;
+          return;
+        }
 
         if (node.type === 'COMPONENT_SET') {
           componentSets.push(extractComponentSetData(node));
@@ -1058,23 +1065,30 @@ figma.ui.onmessage = async (msg) => {
         }
 
         // Recurse into children
-        if (node.children) {
+        if (node.children && !hitLimit) {
           node.children.forEach(function(child) {
             findComponents(child);
           });
         }
       }
 
-      // Load all pages first (required before accessing children)
-      console.log('🌉 [F-MCP ATezer Bridge] Loading all pages...');
-      await figma.loadAllPagesAsync();
-      console.log('🌉 [F-MCP ATezer Bridge] All pages loaded, searching for components...');
-
-      // Search through all pages
-      var pages = figma.root.children;
-      pages.forEach(function(page) {
-        findComponents(page);
-      });
+      if (currentPageOnly) {
+        // Only current page — fast path for large files (SUI)
+        var page = figma.currentPage;
+        if (page) {
+          await page.loadAsync && page.loadAsync();
+          findComponents(page);
+        }
+      } else {
+        // Load all pages first (required before accessing children)
+        console.log('🌉 [F-MCP ATezer Bridge] Loading all pages...');
+        await figma.loadAllPagesAsync();
+        console.log('🌉 [F-MCP ATezer Bridge] All pages loaded, searching for components...');
+        var pages = figma.root.children;
+        pages.forEach(function(page) {
+          findComponents(page);
+        });
+      }
 
       console.log('🌉 [F-MCP ATezer Bridge] Found ' + components.length + ' components and ' + componentSets.length + ' component sets');
 
@@ -1087,7 +1101,8 @@ figma.ui.onmessage = async (msg) => {
           componentSets: componentSets,
           totalComponents: components.length,
           totalComponentSets: componentSets.length,
-          // Include file metadata for context verification
+          currentPageOnly: currentPageOnly,
+          truncatedByLimit: hitLimit && limit > 0,
           fileName: figma.root.name,
           fileKey: figma.fileKey || null,
           timestamp: Date.now()
