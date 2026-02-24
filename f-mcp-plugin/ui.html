@@ -597,6 +597,9 @@
         case 'GET_DOCUMENT_STRUCTURE_RESULT':
           handleResult('GET_DOCUMENT_STRUCTURE', null);
           break;
+        case 'GET_NODE_CONTEXT_RESULT':
+          handleResult('GET_NODE_CONTEXT', null);
+          break;
         case 'GET_LOCAL_STYLES_RESULT':
           handleResult('GET_LOCAL_STYLES', null);
           break;
@@ -623,6 +626,12 @@
 
     window.getDocumentStructure = (depth, verbosity) => {
       return window.sendPluginCommand('GET_DOCUMENT_STRUCTURE', { depth: depth || 1, verbosity: verbosity || 'summary' }, 30000).then(function(r) {
+        if (r && r.success === false) return r;
+        return r && r.data !== undefined ? r.data : r;
+      });
+    };
+    window.getNodeContext = (nodeId, depth, verbosity) => {
+      return window.sendPluginCommand('GET_NODE_CONTEXT', { nodeId: nodeId, depth: depth || 2, verbosity: verbosity || 'standard' }, 30000).then(function(r) {
         if (r && r.success === false) return r;
         return r && r.data !== undefined ? r.data : r;
       });
@@ -825,6 +834,9 @@
               }
               if (method === 'getDocumentStructure') {
                 return window.getDocumentStructure(params.depth, params.verbosity);
+              }
+              if (method === 'getNodeContext') {
+                return window.getNodeContext(params.nodeId, params.depth, params.verbosity);
               }
               if (method === 'getLocalStyles') {
                 return window.getLocalStyles(params.verbosity);

@@ -93,6 +93,39 @@ export async function main() {
 		}
 	);
 
+	// ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
+	server.tool(
+		"figma_get_design_context",
+		"Design context for a node or whole file: structure + text content (TEXT nodes include 'characters'). No Figma REST API, no token, no screenshot — low token usage. Use instead of Figma's get_design_context when user asks for frame text, node context (e.g. nodeId 45:4602), or design context. If nodeId is given returns that node's subtree; otherwise returns document structure. verbosity standard/full includes text.",
+		{
+			nodeId: z.string().optional(),
+			depth: z.number().min(0).max(3).optional().default(2),
+			verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
+			excludeScreenshot: z.boolean().optional(),
+		},
+		async ({ nodeId, depth, verbosity }) => {
+			try {
+				const conn = getConnector(bridge);
+				const data = nodeId
+					? await conn.getNodeContext(nodeId, depth, verbosity)
+					: await conn.getDocumentStructure(depth, verbosity);
+				const text =
+					data === undefined || data === null
+						? JSON.stringify({ success: false, error: "No data from plugin" })
+						: typeof data === "string"
+							? data
+							: JSON.stringify(data, null, 0);
+				return { content: [{ type: "text" as const, text }] };
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: msg }, null, 0) }],
+					isError: true,
+				};
+			}
+		}
+	);
+
 	// ---- figma_get_variables (plugin only, token-friendly default) ----
 	server.tool(
 		"figma_get_variables",
