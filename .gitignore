@@ -1,6 +1,7 @@
 # Logs
 git-push-result.txt
 .git-sync-result.txt
+.npmrc
 
 logs
 _.log

@@ -1,5 +1,39 @@
 # NPX Installation Method
 
+**NPM hazır mı?** Evet. Paket **@atezer/figma-mcp-bridge** adıyla npm'de yayınlı. Kurulum: `npx @atezer/figma-mcp-bridge@latest` veya Git clone + build; detay: [ONBOARDING.md](ONBOARDING.md).
+
+---
+
+## Paketi npm'e yayınlamak için yapılacaklar
+
+1. **npm hesabı**
+   - [npmjs.com](https://www.npmjs.com) üzerinden hesap oluşturun (yoksa).
+   - Terminalde: `npm login` — kullanıcı adı, şifre ve e-posta ile giriş yapın.
+
+2. **İsim kontrolü**
+   - Paket adı `figma-mcp-bridge` (package.json). Bu isim npm'de başkasına aitse yayınlayamazsınız; scoped kullanın: `@kullaniciadi/figma-mcp-bridge` ve package.json içinde `"name": "@kullaniciadi/figma-mcp-bridge"` yapın. Scoped paket ilk yayında: `npm publish --access public`.
+
+3. **Build**
+   - `prepublishOnly` script'i `npm run build` çalıştırır (build:local + build:cloudflare). Sadece MCP için yayınlayacaksanız Cloudflare build'i atlayabilirsiniz:
+   - `npm run build:local` — sadece `dist/` (local + local-plugin-only) oluşturur.
+   - Yayına girecek dosyalar: `dist/`, `f-mcp-plugin/`, `README.md`, `LICENSE` (package.json `files` alanında).
+
+4. **Yayınlama**
+   ```bash
+   npm run build:local    # isteğe bağlı; prepublishOnly zaten build çalıştırır
+   npm publish           # veya scoped ise: npm publish --access public
+   ```
+
+5. **Doğrulama**
+   ```bash
+   npm view @atezer/figma-mcp-bridge
+   ```
+   Sonrasında kullanıcılar `npx @atezer/figma-mcp-bridge@latest` ile kullanabilir.
+
+**Not:** Güncelleme için `npm version patch` (veya minor/major) ardından `npm publish` yeterli.
+
+---
+
 > **Ne zaman gerekir?** Bu yöntem yalnızca paket **npm’e yayınlandıktan sonra** kullanılabilir. Şu an FMCP, Git clone + build ile kurulur; çoğu kullanıcı için **[ONBOARDING.md](ONBOARDING.md)** yeterlidir. npm’e publish etmeyi planlamıyorsanız bu dokümanı atlayabilirsiniz.
 
 After publishing to npm, users can install via `npx` without cloning the repository.
@@ -16,7 +50,7 @@ Add this to your `.claude.json` (or `claude_desktop_config.json` on some systems
     "figma-mcp-bridge": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "figma-mcp-bridge@latest"],
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "your_figma_access_token_here"
       }
@@ -48,7 +82,7 @@ If you prefer version stability:
     "figma-mcp-bridge": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "figma-mcp-bridge@0.1.0"],
+      "args": ["-y", "@atezer/figma-mcp-bridge@1.1.1"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "your_figma_access_token_here"
       }
@@ -59,7 +93,7 @@ If you prefer version stability:
 
 ## First-Time Setup
 
-The first time Claude Code runs `npx figma-mcp-bridge`, it will:
+The first time Claude Code runs `npx @atezer/figma-mcp-bridge`, it will:
 1. Download the package from npm
 2. Cache it locally
 3. Start the MCP server
@@ -111,7 +145,7 @@ npm login
 npm publish
 
 # 3. Verify publication
-npm view figma-mcp-bridge
+npm view @atezer/figma-mcp-bridge
 ```
 
 ## Updating the Package

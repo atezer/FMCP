@@ -1,6 +1,6 @@
 # F-MCP (Figma MCP Bridge)
 
-Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin’i. Bu repo MCP sunucusu ve **F-MCP ATezer Bridge** Figma plugin kaynağını içerir.
+Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin’i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
 
 ### Figma API token tüketmiyor
 
@@ -21,24 +21,49 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 
 Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma Desktop (yerel). REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
 
+### Kurumlar için özet (C-level / sunum)
+
+- **Debug modu kapalı.** Figma’yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
+- **Kendi plugin story’nizde yayınlama.** Plugin’i Figma Organization (veya Enterprise) altında kendi plugin story’nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; “manifest import” zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
+- **KVKK / GDPR uyumu.** Tasarım verisi yalnızca kullanıcının makinesinde (MCP + Plugin + Figma Desktop) kalır; Figma bulutuna veya üçüncü tarafa MCP üzerinden gönderilmez. Veri minimizasyonu ve yerelde işleme, hassas kurumsal ekipler ve denetim gereksinimleri için uygun bir model sunar.
+
 ## F-MCP yetenekleri
 
-**32 araç** (config’te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md).
+**32 araç** (config’te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
+
+### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
 
 
-| Kategori                                                                                                                                                   | Araçlar                                                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Dosya & yapı**                                                                                                                                           | `figma_get_file_data` — Ağaç yapısı, layer hiyerarşisi (depth & verbosity: summary / standard / full)                                                                                                                                                                                                                                                                                |
-| **Arama & keşif**                                                                                                                                          | `figma_search_components`, `figma_get_design_system_summary`                                                                                                                                                                                                                                                                                                                         |
-| **Bileşen**                                                                                                                                                | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                                    |
-| **Token & değişken**                                                                                                                                       | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens` |
-| **Görsel & kod**                                                                                                                                           | `figma_capture_screenshot`, `figma_execute` (Plugin API’de JavaScript çalıştırır)                                                                                                                                                                                                                                                                                                    |
-| **Console**                                                                                                                                                | `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console` — Plugin log okuma / izleme / temizleme                                                                                                                                                                                                                                                                       |
-| **Durum**                                                                                                                                                  | `figma_get_status` — Plugin bağlantı kontrolü                                                                                                                                                                                                                                                                                                                                        |
-| **Design–code parity**                                                                                                                                     | `figma_check_design_parity` — Figma ile kod token'larını karşılaştırır (design-code gap)                                                                                                                                                                                                                                                                                             |
-| **Token Browser**                                                                                                                                          | `figma_get_token_browser` — Değişken + stiller hiyerarşik tarama                                                                                                                                                                                                                                                                                                                     |
-| **Yeni kullanıcılar:** Adım adım kurulum için **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)** — plugin yükleme, Node.js, MCP server, Claude config. |                                                                                                                                                                                                                                                                                                                                                                                      |
+| Kullanım                          | Araçlar                                                           | Açıklama                                                                                   |
+| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Sayfa/yapı özeti, bileşen sayıları, token koleksiyonları                                   |
+| Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                         |
+| Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri |
+| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama, bağlantı kontrolü                                                           |
 
+
+### Geliştiriciler
+
+
+| Kullanım                  | Araçlar                                                                                                                                                   | Açıklama                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Bileşen ve implementasyon | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties` | Metadata, screenshot, instance oluşturma ve property güncelleme  |
+| Token ve stil kodu        | `figma_get_variables`, `figma_get_styles`                                                                                                                 | Değişkenler ve stiller (CSS/Tailwind/TS export)                  |
+| Dosya yapısı              | `figma_get_file_data`                                                                                                                                     | Layer hiyerarşisi (depth/verbosity)                              |
+| Çalıştırma ve doğrulama   | `figma_execute`, `figma_capture_screenshot`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`                                       | Plugin API'de JS, screenshot, console log okuma/izleme/temizleme |
+
+
+### DesignOps ve tasarımcılar
+
+
+| Kullanım                  | Araçlar                                                                                                                                                                                                                                                                        | Açıklama                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| DesignOps (kritik)        | `figma_check_design_parity`, `figma_setup_design_tokens`, `figma_batch_create_variables`, `figma_batch_update_variables`                                                                                                                                                       | Design–code gap, koleksiyon+modlar+variable (rollback), toplu token yönetimi |
+| Değişken ve stil yönetimi | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_get_token_browser` | Tüm variable/stil CRUD ve Token Browser                                      |
+| Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet, arama, variant set düzeni, dokümantasyon                               |
+
+
+Kurulum: **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)**.
 
 ## Hızlı başlangıç
 
@@ -125,7 +150,7 @@ Config (macOS): `**~/Library/Application Support/Claude/claude_desktop_config.js
 
 `<BU-REPONUN-TAM-YOLU>` yerine proje klasörünün tam yolunu yazın (örn. `/Users/.../f-mcp-bridge`).
 
-**NPX (npm'de yayınlandıktan sonra):** Paket npm'de yayınlandığında `npx figma-mcp-bridge` ile clone yapmadan çalıştırılabilir. Config'te `**@latest`** kullanırsanız siz `npm publish` yaptığınızda kullanıcılar (Claude'u yeniden açtıklarında) güncellemeyi **otomatik** alır; kullanıcı tarafında ek işlem gerekmez. Detay: [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md). *(Git clone ile kurulumda otomatik güncelleme yok; `git pull && npm run build:local` gerekir.)*
+**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. `npx @atezer/figma-mcp-bridge@latest` ile clone yapmadan kullanılabilir. Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md). Alternatif: Git clone + `npm run build:local`.
 
 ### 3. Sıra
 
@@ -185,7 +210,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md)                   | Teknik mimari                                                                       |
 | [USE_CASES.md](docs/USE_CASES.md)                         | Örnek kullanım senaryoları                                                          |
 | [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md) | Reconstruction format                                                               |
-| [BITBUCKET-README.md](docs/BITBUCKET-README.md)   | Bitbucket README şablonu                                                            |
+| [BITBUCKET-README.md](docs/BITBUCKET-README.md)           | Bitbucket README şablonu                                                            |
 | [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)           | Port 5454 kapalı sorun giderme                                                      |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)               | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                  |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                       | **Enterprise** — Audit log, air-gap, Organization plugin                            |
