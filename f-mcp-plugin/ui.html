@@ -10,7 +10,15 @@
     }
 
     html, body {
-      overflow: hidden;
+      overflow: hidden !important;
+      overflow-x: hidden !important;
+      overflow-y: hidden !important;
+      /* Scrollbar'ları gizle; içerik ne ise öyle görünsün (taşma yok) */
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar {
+      display: none;
     }
 
     body {
@@ -93,6 +101,7 @@
       width: fit-content;
       min-width: 0;
       max-width: 100%;
+      overflow: hidden;
     }
     .bridge-port {
       display: flex;
@@ -267,7 +276,7 @@
     // ============================================================================
 
     window.getLocalComponents = () => {
-      return window.sendPluginCommand('GET_LOCAL_COMPONENTS', {}, 300000)
+      return window.sendPluginCommand('GET_LOCAL_COMPONENTS', {}, 120000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
@@ -631,7 +640,7 @@
       if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;
       if (includeCodeReady !== undefined) payload.includeCodeReady = !!includeCodeReady;
       if (outputHint !== undefined && outputHint != null) payload.outputHint = outputHint;
-      return window.sendPluginCommand('GET_DOCUMENT_STRUCTURE', payload, 30000).then(function(r) {
+      return window.sendPluginCommand('GET_DOCUMENT_STRUCTURE', payload, 90000).then(function(r) {
         if (r && r.success === false) return r;
         return r && r.data !== undefined ? r.data : r;
       });
@@ -643,7 +652,7 @@
       if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;
       if (includeCodeReady !== undefined) payload.includeCodeReady = !!includeCodeReady;
       if (outputHint !== undefined && outputHint != null) payload.outputHint = outputHint;
-      return window.sendPluginCommand('GET_NODE_CONTEXT', payload, 30000).then(function(r) {
+      return window.sendPluginCommand('GET_NODE_CONTEXT', payload, 90000).then(function(r) {
         if (r && r.success === false) return r;
         return r && r.data !== undefined ? r.data : r;
       });

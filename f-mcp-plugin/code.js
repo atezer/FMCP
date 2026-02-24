@@ -20,7 +20,7 @@ console.error = function() { _pushLog('error', arguments); _origError.apply(cons
 console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 
 // Show minimal UI - compact status indicator
-figma.showUI(__html__, { width: 120, height: 36, visible: true, themeColors: true });
+figma.showUI(__html__, { width: 200, height: 56, visible: true, themeColors: true });
 
 // Immediately fetch and send variables data to UI
 (async () => {
@@ -316,7 +316,8 @@ figma.ui.onmessage = async (msg) => {
       if ('cornerRadius' in node && node.cornerRadius !== undefined && !isMixed(node.cornerRadius)) out.cornerRadius = node.cornerRadius;
       if ('strokeWeight' in node && node.strokeWeight !== undefined && !isMixed(node.strokeWeight)) out.strokeWeight = node.strokeWeight;
       if ('strokeAlign' in node) out.strokeAlign = node.strokeAlign;
-      if ('boundVariables' in node && node.boundVariables) {
+      /* Variable adı çözümlemesi sadece verbosity full'da (büyük dosyada binlerce getVariableByIdAsync timeout'a yol açar) */
+      if (verbosity === 'full' && 'boundVariables' in node && node.boundVariables) {
         var bv = node.boundVariables;
         if (bv.fills && (Array.isArray(bv.fills) ? bv.fills.length : (bv.fills && bv.fills.id))) {
           var fillNames = await resolveVariableNames(bv.fills);
