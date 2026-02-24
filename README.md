@@ -36,10 +36,10 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 
 | Kullanım                          | Araçlar                                                           | Açıklama                                                                                   |
 | --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Sayfa/yapı özeti, bileşen sayıları, token koleksiyonları                                   |
+| Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Özet, bileşen sayıları, token koleksiyonları; büyük dosyada varsayılan **currentPageOnly** (timeout önlemi) |
 | Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                         |
 | Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri |
-| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama, bağlantı kontrolü                                                           |
+| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama (varsayılan currentPageOnly), bağlantı kontrolü                             |
 
 
 ### Geliştiriciler
@@ -60,7 +60,7 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | DesignOps (kritik)        | `figma_check_design_parity`, `figma_setup_design_tokens`, `figma_batch_create_variables`, `figma_batch_update_variables`                                                                                                                                                       | Design–code gap, koleksiyon+modlar+variable (rollback), toplu token yönetimi |
 | Değişken ve stil yönetimi | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_get_token_browser` | Tüm variable/stil CRUD ve Token Browser                                      |
-| Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet, arama, variant set düzeni, dokümantasyon                               |
+| Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet/arama (currentPageOnly varsayılan; SUI/büyük dosyada timeout önlemi), variant set, dokümantasyon |
 
 
 Kurulum: **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)**.

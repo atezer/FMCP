@@ -22,7 +22,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_get_component_for_development` | Component metadata + base64 screenshot (tek çağrı) |
 | `figma_get_component_image` | Sadece node screenshot’ı (base64) |
 | `figma_get_console_logs` | Plugin console log’larını getir (limit parametresi) |
-| `figma_get_design_system_summary` | Hızlı genel bakış (koleksiyonlar, bileşen sayıları) |
+| `figma_get_design_system_summary` | Hızlı genel bakış (koleksiyonlar, bileşen sayıları); varsayılan currentPageOnly (büyük dosyada timeout önlemi) |
 | `figma_get_design_context` | Belirli node veya dosya için yapı + metin (TEXT `characters`); get_design_context tarzı isteklerde **token tasarruflu**, Figma token/screenshot yok |
 | `figma_get_file_data` | Dosya hiyerarşisi, sayfalar, katmanlar (depth / verbosity) |
 | `figma_get_status` | Plugin bağlantısını kontrol et |
@@ -33,7 +33,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_refresh_variables` | Değişkenleri yenile |
 | `figma_rename_mode` | Modu yeniden adlandır |
 | `figma_rename_variable` | Değişkeni yeniden adlandır |
-| `figma_search_components` | İsimle bileşen arama |
+| `figma_search_components` | İsimle bileşen arama; varsayılan currentPageOnly (büyük dosyada timeout önlemi) |
 | `figma_set_description` | Component/set/style node’a description (markdown destekli) |
 | `figma_set_instance_properties` | Instance özelliklerini değiştir (TEXT, BOOLEAN, VARIANT) |
 | `figma_setup_design_tokens` | Atomik: koleksiyon + modlar + variable’lar (rollback destekli) |

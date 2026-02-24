@@ -79,8 +79,11 @@ export class PluginBridgeConnector {
 		return this.bridge.request("refreshVariables", {});
 	}
 
-	async getLocalComponents(): Promise<any> {
-		return this.bridge.request("getLocalComponents", {});
+	async getLocalComponents(opts?: { currentPageOnly?: boolean; limit?: number }): Promise<any> {
+		const params: Record<string, unknown> = {};
+		if (opts?.currentPageOnly === true) params.currentPageOnly = true;
+		if (opts?.limit != null && opts.limit > 0) params.limit = opts.limit;
+		return this.bridge.request("getLocalComponents", params);
 	}
 
 	async instantiateComponent(
