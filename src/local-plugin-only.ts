@@ -67,15 +67,28 @@ export async function main() {
 	// ---- figma_get_file_data_plugin (no REST, no token) ----
 	server.tool(
 		"figma_get_file_data",
-		"Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens.",
+		"Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography).",
 		{
 			depth: z.number().min(0).max(3).optional().default(1),
 			verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
+			includeLayout: z.boolean().optional(),
+			includeVisual: z.boolean().optional(),
+			includeTypography: z.boolean().optional(),
+			includeCodeReady: z.boolean().optional(),
+			outputHint: z.enum(["react", "tailwind"]).optional(),
 		},
-		async ({ depth, verbosity }) => {
+		async ({ depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
 			try {
 				const conn = getConnector(bridge);
-				const data = await conn.getDocumentStructure(depth, verbosity);
+				const opts =
+					includeLayout !== undefined ||
+					includeVisual !== undefined ||
+					includeTypography !== undefined ||
+					includeCodeReady !== undefined ||
+					outputHint !== undefined
+						? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+						: undefined;
+				const data = await conn.getDocumentStructure(depth, verbosity, opts);
 				const text =
 					data === undefined || data === null
 						? JSON.stringify({ success: false, error: "No data from plugin" })
@@ -96,19 +109,32 @@ export async function main() {
 	// ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
 	server.tool(
 		"figma_get_design_context",
-		"Design context for a node or whole file: structure + text content (TEXT nodes include 'characters'). No Figma REST API, no token, no screenshot — low token usage. Use instead of Figma's get_design_context when user asks for frame text, node context (e.g. nodeId 45:4602), or design context. If nodeId is given returns that node's subtree; otherwise returns document structure. verbosity standard/full includes text.",
+		"Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token.",
 		{
 			nodeId: z.string().optional(),
 			depth: z.number().min(0).max(3).optional().default(2),
 			verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
 			excludeScreenshot: z.boolean().optional(),
+			includeLayout: z.boolean().optional(),
+			includeVisual: z.boolean().optional(),
+			includeTypography: z.boolean().optional(),
+			includeCodeReady: z.boolean().optional(),
+			outputHint: z.enum(["react", "tailwind"]).optional(),
 		},
-		async ({ nodeId, depth, verbosity }) => {
+		async ({ nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
 			try {
 				const conn = getConnector(bridge);
+				const opts =
+					includeLayout !== undefined ||
+					includeVisual !== undefined ||
+					includeTypography !== undefined ||
+					includeCodeReady !== undefined ||
+					outputHint !== undefined
+						? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+						: undefined;
 				const data = nodeId
-					? await conn.getNodeContext(nodeId, depth, verbosity)
-					: await conn.getDocumentStructure(depth, verbosity);
+					? await conn.getNodeContext(nodeId, depth, verbosity, opts)
+					: await conn.getDocumentStructure(depth, verbosity, opts);
 				const text =
 					data === undefined || data === null
 						? JSON.stringify({ success: false, error: "No data from plugin" })

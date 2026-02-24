@@ -149,6 +149,204 @@ function hexToFigmaRGB(hex) {
 // Listen for requests from UI (e.g., component data requests, write operations)
 figma.ui.onmessage = async (msg) => {
 
+  function rgbaToHex(color) {
+    if (!color || typeof color !== 'object') return null;
+    var r = Math.round((Number(color.r) !== undefined ? Number(color.r) : 0) * 255);
+    var g = Math.round((Number(color.g) !== undefined ? Number(color.g) : 0) * 255);
+    var b = Math.round((Number(color.b) !== undefined ? Number(color.b) : 0) * 255);
+    return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  function nameToSuiComponent(name, description) {
+    var raw = (name || '') + (description ? ' ' + description : '');
+    raw = raw.replace(/[0-9_\-\s]+/g, ' ').trim().split(/\s+/);
+    if (raw.length === 0 || (raw.length === 1 && !raw[0])) return null;
+    return raw.map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join('');
+  }
+
+  function buildLayoutSummary(layout, outputHint) {
+    if (!layout || !layout.layoutMode) return null;
+    var parts = [];
+    var dir = layout.layoutMode === 'HORIZONTAL' ? 'row' : layout.layoutMode === 'VERTICAL' ? 'col' : 'grid';
+    if (outputHint === 'tailwind') {
+      parts.push('flex' + (dir === 'row' ? '' : '-col'));
+      if (layout.itemSpacing != null) parts.push('gap-' + Math.round(layout.itemSpacing));
+      var p = layout.paddingLeft || layout.paddingRight || layout.paddingTop || layout.paddingBottom;
+      if (p != null) parts.push('p-' + Math.round(p));
+    } else if (outputHint === 'react') {
+      parts.push('flex ' + dir);
+      if (layout.itemSpacing != null) parts.push('gap ' + layout.itemSpacing);
+      if (layout.paddingLeft != null) parts.push('paddingLeft ' + layout.paddingLeft);
+      if (layout.paddingTop != null) parts.push('paddingTop ' + layout.paddingTop);
+    } else {
+      parts.push(dir === 'grid' ? 'grid' : 'flex ' + dir);
+      if (layout.itemSpacing != null) parts.push('gap ' + layout.itemSpacing);
+      if (layout.paddingLeft != null || layout.paddingTop != null) parts.push('padding ' + (layout.paddingLeft || 0) + '/' + (layout.paddingTop || 0));
+    }
+    return parts.join(', ');
+  }
+
+  // Resolve variable alias(es) to names (SUI token reference — 2.3)
+  async function resolveVariableNames(aliases) {
+    if (!aliases) return [];
+    var list = Array.isArray(aliases) ? aliases : (aliases.id ? [aliases] : []);
+    var names = [];
+    for (var i = 0; i < list.length; i++) {
+      var alias = list[i];
+      if (alias && alias.id) {
+        try {
+          var v = await figma.variables.getVariableByIdAsync(alias.id);
+          if (v && v.name) names.push(v.name);
+        } catch (e) { /* skip */ }
+      }
+    }
+    return names;
+  }
+
+  // Build node payload for GET_DOCUMENT_STRUCTURE / GET_NODE_CONTEXT (layout, constraints, visual, typography, code-ready, SUI)
+  async function buildNodePayload(node, currentDepth, maxDepth, opts) {
+    if (currentDepth > maxDepth) return null;
+    var verbosity = opts.verbosity || 'summary';
+    var includeLayout = opts.includeLayout === true || verbosity === 'full';
+    var includeVisual = opts.includeVisual === true || verbosity === 'full';
+    var includeTypography = opts.includeTypography === true || verbosity === 'full';
+    var includeCodeReady = opts.includeCodeReady !== false && (includeLayout || includeVisual);
+    var outputHint = opts.outputHint || null;
+
+    var out = { id: node.id, name: node.name, type: node.type };
+
+    if (verbosity !== 'inventory' && verbosity !== 'summary') {
+      if (node.absoluteBoundingBox) out.absoluteBoundingBox = node.absoluteBoundingBox;
+      if (node.width !== undefined) out.width = node.width;
+      if (node.height !== undefined) out.height = node.height;
+      if (node.type === 'TEXT' && node.characters !== undefined) out.characters = node.characters;
+    }
+
+    var incompleteReasons = [];
+    if (node.description !== undefined && node.description !== '') out.description = node.description;
+    var suiName = nameToSuiComponent(node.name, node.description);
+    if (suiName) { out.roleHint = suiName; out.suiComponent = suiName; }
+
+    if (node.type === 'INSTANCE' && 'componentProperties' in node && node.componentProperties) {
+      var props = node.componentProperties;
+      var propNames = Object.keys(props);
+      if (propNames.length > 0) {
+        out.suggestedProps = {};
+        var summaryParts = [];
+        for (var i = 0; i < propNames.length; i++) {
+          var pn = propNames[i];
+          var v = props[pn];
+          out.suggestedProps[pn] = v;
+          summaryParts.push(pn + '=' + (typeof v === 'string' ? v : String(v)));
+        }
+        out.variantSummary = summaryParts.join(', ');
+      }
+    }
+
+    if (includeLayout) {
+      if ('constraints' in node && node.constraints) {
+        out.constraints = { horizontal: node.constraints.horizontal, vertical: node.constraints.vertical };
+      }
+      if ('layoutMode' in node && node.layoutMode && node.layoutMode !== 'NONE') {
+        var layout = { layoutMode: node.layoutMode };
+        if (node.paddingLeft !== undefined) layout.paddingLeft = node.paddingLeft;
+        if (node.paddingRight !== undefined) layout.paddingRight = node.paddingRight;
+        if (node.paddingTop !== undefined) layout.paddingTop = node.paddingTop;
+        if (node.paddingBottom !== undefined) layout.paddingBottom = node.paddingBottom;
+        if (node.itemSpacing !== undefined) layout.itemSpacing = node.itemSpacing;
+        if (node.primaryAxisAlignItems !== undefined) layout.primaryAxisAlignItems = node.primaryAxisAlignItems;
+        if (node.counterAxisAlignItems !== undefined) layout.counterAxisAlignItems = node.counterAxisAlignItems;
+        if (node.primaryAxisSizingMode !== undefined) layout.primaryAxisSizingMode = node.primaryAxisSizingMode;
+        if (node.counterAxisSizingMode !== undefined) layout.counterAxisSizingMode = node.counterAxisSizingMode;
+        if (node.layoutWrap !== undefined) layout.layoutWrap = node.layoutWrap;
+        if (node.counterAxisSpacing != null) layout.counterAxisSpacing = node.counterAxisSpacing;
+        if (node.layoutMode === 'GRID') {
+          if (node.gridRowCount !== undefined) layout.gridRowCount = node.gridRowCount;
+          if (node.gridColumnCount !== undefined) layout.gridColumnCount = node.gridColumnCount;
+          if (node.gridRowGap !== undefined) layout.gridRowGap = node.gridRowGap;
+          if (node.gridColumnGap !== undefined) layout.gridColumnGap = node.gridColumnGap;
+        }
+        out.layout = layout;
+        if (includeCodeReady) out.layoutSummary = buildLayoutSummary(layout, outputHint);
+      }
+      if ('layoutAlign' in node) out.layoutAlign = node.layoutAlign;
+      if ('layoutGrow' in node) out.layoutGrow = node.layoutGrow;
+      if ('layoutPositioning' in node) out.layoutPositioning = node.layoutPositioning;
+      if ('layoutSizingHorizontal' in node) out.layoutSizingHorizontal = node.layoutSizingHorizontal;
+      if ('layoutSizingVertical' in node) out.layoutSizingVertical = node.layoutSizingVertical;
+      if (node.minWidth != null) out.minWidth = node.minWidth;
+      if (node.maxWidth != null) out.maxWidth = node.maxWidth;
+      if (node.minHeight != null) out.minHeight = node.minHeight;
+      if (node.maxHeight != null) out.maxHeight = node.maxHeight;
+    }
+
+    var isMixed = typeof figma !== 'undefined' && figma.mixed !== undefined ? function(v) { return v === figma.mixed; } : function() { return false; };
+    if (includeVisual) {
+      var hasImageFill = false;
+      if ('fills' in node && node.fills !== undefined && !isMixed(node.fills)) {
+        try {
+          var fillsCopy = JSON.parse(JSON.stringify(node.fills));
+          out.fills = fillsCopy;
+          if (Array.isArray(fillsCopy) && fillsCopy.length > 0) {
+            var first = fillsCopy[0];
+            if (first && first.type === 'SOLID' && first.color) {
+              var hex = rgbaToHex(first.color);
+              if (hex) { out.colorHex = hex; out.primaryColorHex = hex; }
+            }
+            for (var f = 0; f < fillsCopy.length; f++) {
+              if (fillsCopy[f].type === 'IMAGE' || fillsCopy[f].imageRef) hasImageFill = true;
+            }
+          }
+        } catch (e) { out.fills = []; }
+      } else if ('fills' in node && node.fills !== undefined) {
+        out.fills = 'mixed';
+        incompleteReasons.push('mixed fills');
+      }
+      if (hasImageFill) { out.hasImageFill = true; incompleteReasons.push('image fill'); }
+      if ('strokes' in node && node.strokes !== undefined && !isMixed(node.strokes)) {
+        try { out.strokes = JSON.parse(JSON.stringify(node.strokes)); } catch (e) { out.strokes = []; }
+      } else if ('strokes' in node && node.strokes !== undefined) {
+        out.strokes = 'mixed';
+        incompleteReasons.push('mixed stroke');
+      }
+      if ('effects' in node && node.effects && node.effects.length > 0) {
+        try { out.effects = JSON.parse(JSON.stringify(node.effects)); } catch (e) { out.effects = []; }
+      }
+      if ('opacity' in node && node.opacity !== undefined) out.opacity = node.opacity;
+      if ('cornerRadius' in node && node.cornerRadius !== undefined && !isMixed(node.cornerRadius)) out.cornerRadius = node.cornerRadius;
+      if ('strokeWeight' in node && node.strokeWeight !== undefined && !isMixed(node.strokeWeight)) out.strokeWeight = node.strokeWeight;
+      if ('strokeAlign' in node) out.strokeAlign = node.strokeAlign;
+      if ('boundVariables' in node && node.boundVariables) {
+        var bv = node.boundVariables;
+        if (bv.fills && (Array.isArray(bv.fills) ? bv.fills.length : (bv.fills && bv.fills.id))) {
+          var fillNames = await resolveVariableNames(bv.fills);
+          if (fillNames.length) out.fillVariableNames = fillNames;
+        }
+        if (bv.strokes && (Array.isArray(bv.strokes) ? bv.strokes.length : (bv.strokes && bv.strokes.id))) {
+          var strokeNames = await resolveVariableNames(bv.strokes);
+          if (strokeNames.length) out.strokeVariableNames = strokeNames;
+        }
+      }
+    }
+
+    if (includeTypography && node.type === 'TEXT') {
+      if (node.fontName !== undefined && !isMixed(node.fontName)) out.fontName = node.fontName;
+      else if (node.type === 'TEXT') incompleteReasons.push('font not loaded');
+      if (node.fontSize !== undefined && !isMixed(node.fontSize)) out.fontSize = node.fontSize;
+      if (node.lineHeight !== undefined && !isMixed(node.lineHeight)) out.lineHeight = node.lineHeight;
+      if (node.textStyleId !== undefined && !isMixed(node.textStyleId) && node.textStyleId) out.textStyleId = node.textStyleId;
+    }
+
+    if (incompleteReasons.length > 0) out.incompleteReasons = incompleteReasons;
+
+    if (node.children && node.children.length > 0 && currentDepth < maxDepth) {
+      var childPayloads = await Promise.all(node.children.map(function(c) { return buildNodePayload(c, currentDepth + 1, maxDepth, opts); }));
+      out.children = childPayloads.filter(Boolean);
+      if (verbosity === 'summary' || verbosity === 'inventory') out.childCount = node.children.length;
+    }
+    return out;
+  }
+
   // ============================================================================
   // EXECUTE_CODE - Arbitrary code execution (Power Tool)
   // ============================================================================
@@ -1969,31 +2167,21 @@ figma.ui.onmessage = async (msg) => {
 
       var depth = Math.min(Math.max(msg.depth || 1, 0), 3);
       var verbosity = msg.verbosity || 'summary';
-
-      function walkNode(node, currentDepth) {
-        if (currentDepth > depth) return null;
-        var out = { id: node.id, name: node.name, type: node.type };
-        if (verbosity !== 'inventory' && verbosity !== 'summary') {
-          if (node.absoluteBoundingBox) {
-            out.absoluteBoundingBox = node.absoluteBoundingBox;
-          }
-          if (node.width !== undefined) out.width = node.width;
-          if (node.height !== undefined) out.height = node.height;
-          if (node.type === 'TEXT' && node.characters !== undefined) out.characters = node.characters;
-        }
-        if (node.children && node.children.length > 0 && currentDepth < depth) {
-          out.children = node.children.map(function(c) { return walkNode(c, currentDepth + 1); }).filter(Boolean);
-          if (verbosity === 'summary' || verbosity === 'inventory') out.childCount = node.children.length;
-        }
-        return out;
-      }
+      var opts = {
+        verbosity: verbosity,
+        includeLayout: msg.includeLayout === true,
+        includeVisual: msg.includeVisual === true,
+        includeTypography: msg.includeTypography === true,
+        includeCodeReady: msg.includeCodeReady !== false,
+        outputHint: msg.outputHint || null
+      };
 
       var document = {
         name: figma.root.name,
         id: figma.root.id,
         type: 'DOCUMENT',
         fileKey: figma.fileKey || null,
-        children: figma.root.children ? figma.root.children.map(function(p) { return walkNode(p, 1); }).filter(Boolean) : []
+        children: figma.root.children ? (await Promise.all(figma.root.children.map(function(p) { return buildNodePayload(p, 1, depth, opts); }))).filter(Boolean) : []
       };
 
       figma.ui.postMessage({
@@ -2038,24 +2226,16 @@ figma.ui.onmessage = async (msg) => {
         } else {
           var depthNode = Math.min(Math.max(msg.depth || 2, 0), 3);
           var verbosityNode = msg.verbosity || 'standard';
+          var optsNode = {
+            verbosity: verbosityNode,
+            includeLayout: msg.includeLayout === true,
+            includeVisual: msg.includeVisual === true,
+            includeTypography: msg.includeTypography === true,
+            includeCodeReady: msg.includeCodeReady !== false,
+            outputHint: msg.outputHint || null
+          };
 
-          function walkNodeContext(node, currentDepth) {
-            if (currentDepth > depthNode) return null;
-            var out = { id: node.id, name: node.name, type: node.type };
-            if (verbosityNode !== 'inventory' && verbosityNode !== 'summary') {
-              if (node.absoluteBoundingBox) out.absoluteBoundingBox = node.absoluteBoundingBox;
-              if (node.width !== undefined) out.width = node.width;
-              if (node.height !== undefined) out.height = node.height;
-              if (node.type === 'TEXT' && node.characters !== undefined) out.characters = node.characters;
-            }
-            if (node.children && node.children.length > 0 && currentDepth < depthNode) {
-              out.children = node.children.map(function(c) { return walkNodeContext(c, currentDepth + 1); }).filter(Boolean);
-              if (verbosityNode === 'summary' || verbosityNode === 'inventory') out.childCount = node.children.length;
-            }
-            return out;
-          }
-
-          var nodeTree = walkNodeContext(targetNode, 0);
+          var nodeTree = await buildNodePayload(targetNode, 0, depthNode, optsNode);
           figma.ui.postMessage({
             type: 'GET_NODE_CONTEXT_RESULT',
             requestId: msg.requestId,

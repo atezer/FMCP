@@ -624,14 +624,26 @@
       }
     };
 
-    window.getDocumentStructure = (depth, verbosity) => {
-      return window.sendPluginCommand('GET_DOCUMENT_STRUCTURE', { depth: depth || 1, verbosity: verbosity || 'summary' }, 30000).then(function(r) {
+    window.getDocumentStructure = (depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint) => {
+      var payload = { depth: depth || 1, verbosity: verbosity || 'summary' };
+      if (includeLayout !== undefined) payload.includeLayout = !!includeLayout;
+      if (includeVisual !== undefined) payload.includeVisual = !!includeVisual;
+      if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;
+      if (includeCodeReady !== undefined) payload.includeCodeReady = !!includeCodeReady;
+      if (outputHint !== undefined && outputHint != null) payload.outputHint = outputHint;
+      return window.sendPluginCommand('GET_DOCUMENT_STRUCTURE', payload, 30000).then(function(r) {
         if (r && r.success === false) return r;
         return r && r.data !== undefined ? r.data : r;
       });
     };
-    window.getNodeContext = (nodeId, depth, verbosity) => {
-      return window.sendPluginCommand('GET_NODE_CONTEXT', { nodeId: nodeId, depth: depth || 2, verbosity: verbosity || 'standard' }, 30000).then(function(r) {
+    window.getNodeContext = (nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint) => {
+      var payload = { nodeId: nodeId, depth: depth || 2, verbosity: verbosity || 'standard' };
+      if (includeLayout !== undefined) payload.includeLayout = !!includeLayout;
+      if (includeVisual !== undefined) payload.includeVisual = !!includeVisual;
+      if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;
+      if (includeCodeReady !== undefined) payload.includeCodeReady = !!includeCodeReady;
+      if (outputHint !== undefined && outputHint != null) payload.outputHint = outputHint;
+      return window.sendPluginCommand('GET_NODE_CONTEXT', payload, 30000).then(function(r) {
         if (r && r.success === false) return r;
         return r && r.data !== undefined ? r.data : r;
       });
@@ -833,10 +845,10 @@
                 return window.setInstanceProperties(params.nodeId, params.properties);
               }
               if (method === 'getDocumentStructure') {
-                return window.getDocumentStructure(params.depth, params.verbosity);
+                return window.getDocumentStructure(params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
               }
               if (method === 'getNodeContext') {
-                return window.getNodeContext(params.nodeId, params.depth, params.verbosity);
+                return window.getNodeContext(params.nodeId, params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
               }
               if (method === 'getLocalStyles') {
                 return window.getLocalStyles(params.verbosity);
