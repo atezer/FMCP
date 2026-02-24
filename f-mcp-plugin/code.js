@@ -934,7 +934,8 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'GET_LOCAL_COMPONENTS') {
     try {
-      var currentPageOnly = msg.currentPageOnly === true;
+      // Default true: avoid full-doc scan (timeout on large files). Only scan all pages when explicitly false.
+      var currentPageOnly = msg.currentPageOnly !== false;
       var limit = msg.limit != null ? Math.max(0, parseInt(msg.limit, 10) || 0) : 0;
       console.log('🌉 [F-MCP ATezer Bridge] Fetching local components (currentPageOnly:', currentPageOnly, ', limit:', limit || 'none', ')...');
 

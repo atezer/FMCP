@@ -277,7 +277,7 @@
 
     window.getLocalComponents = (currentPageOnly, limit) => {
       var params = {};
-      if (currentPageOnly === true) params.currentPageOnly = true;
+      params.currentPageOnly = currentPageOnly !== false;
       if (limit != null && limit > 0) params.limit = limit;
       return window.sendPluginCommand('GET_LOCAL_COMPONENTS', params, 120000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });

@@ -81,7 +81,7 @@ export class PluginBridgeConnector {
 
 	async getLocalComponents(opts?: { currentPageOnly?: boolean; limit?: number }): Promise<any> {
 		const params: Record<string, unknown> = {};
-		if (opts?.currentPageOnly === true) params.currentPageOnly = true;
+		if (opts?.currentPageOnly !== undefined) params.currentPageOnly = opts.currentPageOnly;
 		if (opts?.limit != null && opts.limit > 0) params.limit = opts.limit;
 		return this.bridge.request("getLocalComponents", params);
 	}
