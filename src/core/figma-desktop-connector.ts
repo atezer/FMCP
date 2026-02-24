@@ -129,22 +129,33 @@ export class FigmaDesktopConnector {
             console.log(`[DESKTOP_CONNECTOR] Checking frame: ${url}`);
           }, frameUrl);
 
-          // Check if this frame has our variables data
+          // Check if this frame is our plugin UI (cached data or refreshVariables for dynamic-page)
           const hasData = await frame.evaluate('typeof window.__figmaVariablesData !== "undefined" && window.__figmaVariablesReady === true');
+          const hasRefresh = await frame.evaluate('typeof window.refreshVariables === "function"');
 
-          await this.page.evaluate((url, has) => {
-            console.log(`[DESKTOP_CONNECTOR] Frame ${url} has variables data: ${has}`);
-          }, frameUrl, hasData);
+          await this.page.evaluate((url, has, hasRef) => {
+            console.log(`[DESKTOP_CONNECTOR] Frame ${url} has variables data: ${has}, refreshVariables: ${hasRef}`);
+          }, frameUrl, hasData, hasRefresh);
 
-          if (hasData) {
+          if (hasData || hasRefresh) {
             logger.info({ frameUrl }, 'Found frame with variables data');
 
             await this.page.evaluate((url) => {
               console.log(`[DESKTOP_CONNECTOR] ✅ SUCCESS! Found plugin UI with variables data: ${url}`);
             }, frameUrl);
 
-            // Get the data from window object
-            const result = await frame.evaluate('window.__figmaVariablesData') as any;
+            // Refresh first (async API in plugin) so variables work in dynamic-page context, then get data
+            const result = (await frame.evaluate(
+              () =>
+                new Promise<unknown>((resolve, reject) => {
+                  const win = globalThis as unknown as { refreshVariables?: () => Promise<unknown>; __figmaVariablesData?: unknown };
+                  if (typeof win.refreshVariables === 'function') {
+                    win.refreshVariables().then(() => resolve(win.__figmaVariablesData)).catch(reject);
+                  } else {
+                    resolve(win.__figmaVariablesData);
+                  }
+                })
+            )) as any;
 
             logger.info(
               {
@@ -170,8 +181,7 @@ export class FigmaDesktopConnector {
         }
       }
 
-      // If no frame found with data, throw error
-      throw new Error('No plugin UI found with variables data. Make sure the Variables Exporter (Persistent) plugin is running.');
+      throw new Error('No plugin UI found with variables data. Make sure the F-MCP ATezer Bridge plugin is running.');
     } catch (error) {
       logger.error({ error }, 'Failed to get variables from plugin UI');
 
@@ -891,9 +901,10 @@ export class FigmaDesktopConnector {
   }
 
   /**
-   * Get all local components for design system manifest generation
+   * Get all local components for design system manifest generation.
+   * Defaults to currentPageOnly: true to avoid timeout on large files (dynamic-page).
    */
-  async getLocalComponents(): Promise<{
+  async getLocalComponents(opts?: { currentPageOnly?: boolean; limit?: number }): Promise<{
     success: boolean;
     data?: {
       components: any[];
@@ -905,16 +916,24 @@ export class FigmaDesktopConnector {
     };
     error?: string;
   }> {
-    await this.page.evaluate(() => {
-      console.log('[DESKTOP_CONNECTOR] getLocalComponents() called');
-    });
+    const currentPageOnly = opts?.currentPageOnly !== false;
+    const limit = opts?.limit ?? 0;
 
-    logger.info('Getting local components via plugin UI');
+    await this.page.evaluate((cp, lim) => {
+      console.log('[DESKTOP_CONNECTOR] getLocalComponents() called, currentPageOnly:', cp, 'limit:', lim);
+    }, currentPageOnly, limit);
+
+    logger.info({ currentPageOnly, limit }, 'Getting local components via plugin UI');
 
     const frame = await this.findPluginUIFrame();
 
     try {
-      const result = await frame.evaluate('window.getLocalComponents()');
+      // Runs in browser iframe; globalThis is the window there
+      const result = await frame.evaluate(
+        (cp: boolean, lim: number) => (globalThis as unknown as { getLocalComponents: (a: boolean, b: number) => Promise<unknown> }).getLocalComponents(cp, lim),
+        currentPageOnly,
+        limit
+      );
 
       logger.info(
         {
