@@ -1,0 +1,20 @@
+# Dependencies & build
+node_modules/
+*.tsbuildinfo
+
+
+# Environment & secrets
+.env
+.env.*
+.dev.vars
+
+# Wrangler / Cloudflare
+.wrangler/
+
+# Logs & system
+*.log
+.DS_Store
+.serena/
+
+# Release
+*.zip
