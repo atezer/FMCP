@@ -98,7 +98,7 @@ Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir.
 ### Config dosyası konumu
 
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json` — Windows kullanıcıları için ayrı rehber: [WINDOWS-INSTALLATION.md](WINDOWS-INSTALLATION.md).
 
 ### Örnek config (plugin-only, önerilen)
 
