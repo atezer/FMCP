@@ -21,7 +21,7 @@ Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzeri
 
 Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma Desktop (yerel). REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
 
-### Kurumlar için özet (C-level / sunum)
+### Kurumlar için özet
 
 - **Debug modu kapalı.** Figma’yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
 - **Kendi plugin story’nizde yayınlama.** Plugin’i Figma Organization (veya Enterprise) altında kendi plugin story’nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; “manifest import” zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
@@ -34,32 +34,32 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 ### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
 
 
-| Kullanım                          | Araçlar                                                           | Açıklama                                                                                   |
-| --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Kullanım                          | Araçlar                                                           | Açıklama                                                                                                    |
+| --------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Özet, bileşen sayıları, token koleksiyonları; büyük dosyada varsayılan **currentPageOnly** (timeout önlemi) |
-| Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                         |
-| Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri |
-| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama (varsayılan currentPageOnly), bağlantı kontrolü                             |
+| Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                                          |
+| Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri                  |
+| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama (varsayılan currentPageOnly), bağlantı kontrolü                                               |
 
 
 ### Geliştiriciler
 
 
-| Kullanım                  | Araçlar                                                                                                                                                   | Açıklama                                                         |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Bileşen ve implementasyon | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties` | Metadata, screenshot, instance oluşturma ve property güncelleme  |
-| Token ve stil kodu        | `figma_get_variables`, `figma_get_styles`                                                                                                                 | Değişkenler ve stiller (CSS/Tailwind/TS export)                  |
-| Dosya yapısı / design context | `figma_get_file_data`, `figma_get_design_context`                                                                             | Yapı, metin, layout, renk, font; SUI bileşen/token adı, layoutSummary, colorHex, fillVariableNames; outputHint: react/tailwind |
-| Çalıştırma ve doğrulama   | `figma_execute`, `figma_capture_screenshot`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`                                       | Plugin API'de JS, screenshot, console log okuma/izleme/temizleme |
+| Kullanım                      | Araçlar                                                                                                                                                   | Açıklama                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Bileşen ve implementasyon     | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties` | Metadata, screenshot, instance oluşturma ve property güncelleme                                                                |
+| Token ve stil kodu            | `figma_get_variables`, `figma_get_styles`                                                                                                                 | Değişkenler ve stiller (CSS/Tailwind/TS export)                                                                                |
+| Dosya yapısı / design context | `figma_get_file_data`, `figma_get_design_context`                                                                                                         | Yapı, metin, layout, renk, font; SUI bileşen/token adı, layoutSummary, colorHex, fillVariableNames; outputHint: react/tailwind |
+| Çalıştırma ve doğrulama       | `figma_execute`, `figma_capture_screenshot`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`                                       | Plugin API'de JS, screenshot, console log okuma/izleme/temizleme                                                               |
 
 
 ### DesignOps ve tasarımcılar
 
 
-| Kullanım                  | Araçlar                                                                                                                                                                                                                                                                        | Açıklama                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| DesignOps (kritik)        | `figma_check_design_parity`, `figma_setup_design_tokens`, `figma_batch_create_variables`, `figma_batch_update_variables`                                                                                                                                                       | Design–code gap, koleksiyon+modlar+variable (rollback), toplu token yönetimi |
-| Değişken ve stil yönetimi | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_get_token_browser` | Tüm variable/stil CRUD ve Token Browser                                      |
+| Kullanım                  | Araçlar                                                                                                                                                                                                                                                                        | Açıklama                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| DesignOps (kritik)        | `figma_check_design_parity`, `figma_setup_design_tokens`, `figma_batch_create_variables`, `figma_batch_update_variables`                                                                                                                                                       | Design–code gap, koleksiyon+modlar+variable (rollback), toplu token yönetimi                          |
+| Değişken ve stil yönetimi | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_get_token_browser` | Tüm variable/stil CRUD ve Token Browser                                                               |
 | Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet/arama (currentPageOnly varsayılan; SUI/büyük dosyada timeout önlemi), variant set, dokümantasyon |
 
 
@@ -193,30 +193,30 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 ### Tüm dokümanlar (docs/)
 
 
-| Dosya                                                     | Açıklama                                                                            |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [ONBOARDING.md](docs/ONBOARDING.md)                       | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config |
-| [SETUP.md](docs/SETUP.md)                                 | Kurulum (Remote / Local)                                                            |
-| [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)     | Plugin–MCP mimari ve kurulum                                                        |
-| [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)   | Plugin Worker/UI akışı                                                              |
-| [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)             | Mod karşılaştırma                                                                   |
-| [TOOLS.md](docs/TOOLS.md)                                 | MCP araçları referansı                                                              |
-| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)             | **33 araç tam liste** (referans, Claude ile doğrulanmış)                            |
+| Dosya                                                                   | Açıklama                                                                                       |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config            |
+| [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                       |
+| [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)                   | Plugin–MCP mimari ve kurulum                                                                   |
+| [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)                 | Plugin Worker/UI akışı                                                                         |
+| [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)                           | Mod karşılaştırma                                                                              |
+| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları referansı                                                                         |
+| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **33 araç tam liste** (referans, Claude ile doğrulanmış)                                       |
 | [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Sorun giderme                                                                       |
-| [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)           | NPX ile kurulum                                                                     |
-| [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                     | OAuth (remote sunucu)                                                               |
-| [SELF_HOSTING.md](docs/SELF_HOSTING.md)                   | Kendi sunucunda host                                                                |
-| [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md) | Dağıtım karşılaştırma                                                               |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                   | Teknik mimari                                                                       |
-| [USE_CASES.md](docs/USE_CASES.md)                         | Örnek kullanım senaryoları                                                          |
-| [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md) | Reconstruction format                                                               |
-| [BITBUCKET-README.md](docs/BITBUCKET-README.md)           | Bitbucket README şablonu                                                            |
-| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)           | Port 5454 kapalı sorun giderme                                                      |
-| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)               | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                  |
-| [ENTERPRISE.md](docs/ENTERPRISE.md)                       | **Enterprise** — Audit log, air-gap, Organization plugin                            |
-| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)               | **Publish plugin** — Figma’da yayınlama: Data security cevapları, final details, Plugin ID |
-|                                                           |                                                                                     |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                  |
+| [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                |
+| [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                          |
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md)                                 | Kendi sunucunda host                                                                           |
+| [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)               | Dağıtım karşılaştırma                                                                          |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                  |
+| [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                     |
+| [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                          |
+| [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                       |
+| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                 |
+| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                             |
+| [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                       |
+| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma’da yayınlama: Data security cevapları, final details, Plugin ID     |
+|                                                                         |                                                                                                |
 
 
 ## Yaygınlaştırma: Organization (private) plugin
