@@ -63,7 +63,7 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 | Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet/arama (currentPageOnly varsayılan; SUI/büyük dosyada timeout önlemi), variant set, dokümantasyon |
 
 
-Kurulum: **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)**.
+Kurulum: **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)**. **Windows** için adım adım: [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) (Node veya Node kurulamıyorsa Python bridge).
 
 ## Hızlı başlangıç
 
@@ -181,6 +181,7 @@ Config (macOS): `**~/Library/Application Support/Claude/claude_desktop_config.js
 
 Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun giderme için:
 
+- **[Windows kurulum rehberi](docs/WINDOWS-INSTALLATION.md)** — Windows 10/11, Node veya Python bridge, Claude config, port, sorun giderme
 - **[Plugin–MCP Bağlantı Rehberi](docs/PLUGIN-MCP-BAGLANTI.md)** (mimari, kurulum, sözleşmeler)
 - **[Plugin Nasıl Çalışır?](docs/PLUGIN-NASIL-CALISIR.md)** (Worker/UI akışı, WebSocket vs CDP)
 
@@ -189,6 +190,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 - `f-mcp-plugin/` – F-MCP ATezer Bridge plugin kaynağı (manifest, code.js, ui.html)
 - `docs/` – Kurulum, mod karşılaştırma, [Plugin nasıl çalışır](docs/PLUGIN-NASIL-CALISIR.md), sorun giderme
 - `src/` – MCP sunucusu (local, plugin-only, Cloudflare Worker)
+- `python-bridge/` – **Python MCP bridge** (Node.js kurulumu olmayan ortamlar için); aynı WebSocket protokolü, port 5454
 
 ### Tüm dokümanlar (docs/)
 
@@ -196,6 +198,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | Dosya                                                                   | Açıklama                                                                                       |
 | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config            |
+| [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md)                 | **Windows kurulum** — Node veya Python bridge, Claude config (Windows yolu), port, sorun giderme |
 | [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                       |
 | [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)                   | Plugin–MCP mimari ve kurulum                                                                   |
 | [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)                 | Plugin Worker/UI akışı                                                                         |
