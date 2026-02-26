@@ -272,6 +272,6 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 
 ## Lisans ve Destek
 
-- **Lisans:** MIT — Ticari amaçlı kullanılmaz; sadece kişisel kullanım içindir (bkz. [LICENSE](LICENSE))
+- **Lisans:** MIT tabanlı, ek kısıt: ticari amaçlı kullanılmaz; sadece kişisel kullanım içindir (bkz. [LICENSE](LICENSE))
 - **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/FMCP/issues)
 
