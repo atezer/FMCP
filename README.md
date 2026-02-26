@@ -1,35 +1,37 @@
 # F-MCP (Figma MCP Bridge)
 
-Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin’i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
+Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin'i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
 
 ### Figma API token tüketmiyor
 
 figma-mcp-bridge, Figma'nın **REST API'sini kullanmıyor**. Akış:
 
-**Claude (MCP) → figma-mcp-bridge → Plugin → Figma Desktop (yerel)**
+**Claude (MCP) → figma-mcp-bridge → Plugin → Figma (Desktop veya Tarayıcı)**
 
-Sorgular doğrudan Figma masaüstü uygulaması içinde çalışan plugin üzerinden gider. Bu sayede:
+Sorgular doğrudan Figma içinde çalışan plugin üzerinden gider — hem masaüstü uygulaması hem tarayıcı sürümü (figma.com) desteklenir. Bu sayede:
 
 - Figma API token tüketimi **yok** (REST API hiç çağrılmıyor)
 - Rate limit yok
 - Figma tarafında ücretlendirme yok
-- İnternet bağlantısı gerekmez (yerel plugin)
+- Desktop'ta internet bağlantısı gerekmez; tarayıcı Figma'da yalnızca figma.com erişimi yeterli
 
 **Ne tüketiliyor?** Sadece AI tarafı: bu konuşmadaki context token'ları. Her tool call'ın request/response'u context penceresine girer. Büyük dosyalarda çok derin sorgular (örn. `depth: 3`, `verbosity: full`) Claude context'ini hızlı doldurabilir; Figma tarafında ek maliyet oluşmaz.
 
 ### Zero Trust
 
-Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma Desktop (yerel). REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
+Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma (Desktop veya Tarayıcı). 
+
+REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
 
 ### Kurumlar için özet
 
-- **Debug modu kapalı.** Figma’yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
-- **Kendi plugin story’nizde yayınlama.** Plugin’i Figma Organization (veya Enterprise) altında kendi plugin story’nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; “manifest import” zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
+- **Debug modu kapalı.** Figma'yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
+- **Kendi plugin story'nizde yayınlama.** Plugin'i Figma Organization (veya Enterprise) altında kendi plugin story'nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; "manifest import" zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
 - **KVKK / GDPR uyumu.** Tasarım verisi yalnızca kullanıcının makinesinde (MCP + Plugin + Figma Desktop) kalır; Figma bulutuna veya üçüncü tarafa MCP üzerinden gönderilmez. Veri minimizasyonu ve yerelde işleme, hassas kurumsal ekipler ve denetim gereksinimleri için uygun bir model sunar.
 
 ## F-MCP yetenekleri
 
-**33 araç** (config’te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
+**33 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
 
 ### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
 
@@ -63,122 +65,132 @@ Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna
 | Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet/arama (currentPageOnly varsayılan; SUI/büyük dosyada timeout önlemi), variant set, dokümantasyon |
 
 
-Kurulum: **[Kurulum rehberi (Onboarding)](docs/ONBOARDING.md)**. **Windows** için adım adım: [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) (Node veya Node kurulamıyorsa Python bridge).
+Kurulum: **En basit (repo indirmeden):** aşağıdaki [En basit kurulum](#en-basit-kurulum-npx--repo-indirmeden) adımları. **Detaylı:** [Kurulum rehberi (Onboarding)](docs/ONBOARDING.md). **Windows:** [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) (Node veya Python bridge).
 
 ## Hızlı başlangıç
 
-Plugin'in "ready" olması için **önce** MCP bridge sunucusu (varsayılan port 5454) çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız. Çoklu kullanıcı için port 5454–5470 arası seçilebilir; bkz. [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
+Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
 
-### 1. MCP bridge’i başlatın
+> **⚠️ Önemli:** Cursor veya Claude Desktop kullanıyorsanız `npm run dev:local` **çalıştırMAYIN**. MCP sunucusu bu uygulamalar tarafından otomatik başlatılır. İki sunucu aynı anda çalışırsa port çatışması oluşur ve plugin yanlış sunucuya bağlanabilir.
 
-Proje klasöründe:
+### En basit kurulum (NPX — repo indirmeden)
 
-```bash
-cd <proje-yolu>   # clone ettiğiniz proje klasörü (örn. f-mcp-bridge)
-npm install
-npm run dev:local
-```
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek için paket otomatik güncellenir (`@latest`).
 
-Çıktıda `Plugin bridge server listening` veya `5454` geçen bir satır görünene kadar bekleyin. Bu, plugin'in bağlanacağı sunucudur.
+| Adım | Yapılacak |
+|------|------------|
+| 1 | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin. |
+| 2 | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin. |
+| 3 | **Cursor veya Claude'u yeniden başlatın** — MCP sunucusu port 5454'te otomatik başlar. |
+| 4 | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
 
-### 2. Plugin’i Figma’da yükleyin (ilk seferde)
-
-1. Figma'yı açın.
-2. **Plugins** → **Development** → **Import plugin from manifest…**
-3. Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin
-4. Plugin listede "F-MCP ATezer Bridge" olarak görünür.
-
-### 3. Plugin’i çalıştırın
-
-1. **Plugins** → **Development** → **F-MCP ATezer Bridge**
-2. Birkaç saniye içinde:
-  - **Yeşil nokta + "ready"** → Bağlantı tamam.
-  - **Kırmızı + "no server"** → Bridge çalışmıyor; 1. adımda `npm run dev:local` ile başlatıp tekrar deneyin.
-
-
-| Sıra | Yapılacak                                                |
-| ---- | -------------------------------------------------------- |
-| 1    | `npm run dev:local` (terminal açık kalsın)               |
-| 2    | Figma’da Plugins → Development → F-MCP ATezer Bridge     |
-| 3    | "ready" görününce Cursor/Claude üzerinden MCP kullanılır |
-
-
----
-
-## Claude ile bağlama
-
-### 1. Build (bir kez)
-
-```bash
-npm run build:local
-```
-
-### 2. Claude Desktop config
-
-Config (macOS): `**~/Library/Application Support/Claude/claude_desktop_config.json**`
-
-**Plugin-only (önerilen):**
+**Cursor** — Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "figma-mcp-bridge": {
-      "command": "node",
-      "args": ["<BU-REPONUN-TAM-YOLU>/dist/local-plugin-only.js"]
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
     }
   }
 }
 ```
 
-**Permission denied alırsanız** — `bash -c` ile proje dizininden çalıştırın:
+**Claude Desktop** — macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` | Windows: `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ```json
-"figma-mcp-bridge": {
-  "command": "bash",
-  "args": ["-c", "cd <BU-REPONUN-TAM-YOLU> && exec node dist/local-plugin-only.js"]
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
+    }
+  }
 }
 ```
 
-**Tam mod (console/screenshot):**
+İlk çalıştırmada `npx` paketi indirir; sonraki açılışlarda cache'den çalışır. **Plugin'i Figma'da ilk kez kullanıyorsanız** [Plugin'i Figma'ya yükleyin](#plugini-figmaya-yükleyin-ilk-seferde) adımına bakın.
 
-```json
-"figma-mcp-bridge": {
-  "command": "node",
-  "args": ["<BU-REPONUN-TAM-YOLU>/dist/local.js"]
-}
+### A) Clone + build ile (Cursor / Claude)
+
+Repo'yu indirip kendi makinenizde build etmek isterseniz (ör. ağ erişimi kısıtlı ortam):
+
+**1. Build (bir kez):**
+
+```bash
+cd <proje-yolu>
+npm install
+npm run build:local
 ```
 
-`<BU-REPONUN-TAM-YOLU>` yerine proje klasörünün tam yolunu yazın (örn. `/Users/.../f-mcp-bridge`).
+**2. MCP config** — `command`: `"node"`, `args`: `["<PROJE-YOLU>/dist/local-plugin-only.js"]` (tam yolu yazın).
 
-**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. `npx @atezer/figma-mcp-bridge@latest` ile clone yapmadan kullanılabilir. Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md). Alternatif: Git clone + `npm run build:local`.
+**Cursor** — `.cursor/mcp.json` | **Claude** — `claude_desktop_config.json` (yolu yukarıdaki gibi).
 
-### 3. Sıra
+**3. Cursor/Claude'u yeniden başlatın.**  
+**4. Figma'da plugini çalıştırın** → **"ready (:5454)"** bekleyin.
+
+> **Permission denied?** `"command": "bash"`, `"args": ["-c", "cd <PROJE-YOLU> && exec node dist/local-plugin-only.js"]` kullanın.
+
+### B) Manuel geliştirme / debug
+
+> **Bu yöntem sadece bridge/plugin geliştirmesi veya debug içindir.** Cursor/Claude Desktop ile aynı anda **kullanmayın**.
+
+```bash
+cd <proje-yolu>
+npm install
+npm run dev:local
+```
+
+Çıktıda `Plugin bridge server listening` geçen satırı görünce Figma'da plugin'i açın.
+
+> **Port çatışması:** Aynı porta iki F-MCP bridge bağlanamaz. Port meşgulse sunucu açık hata mesajı verir ve durur (sessiz port değiştirme yoktur). `lsof -i :5454` (macOS/Linux) veya `netstat -ano | findstr :5454` (Windows) ile mevcut process'i bulun ve kapatın.
+
+### Plugin'i Figma'ya yükleyin (ilk seferde)
+
+1. Figma'yı açın.
+2. **Plugins** → **Development** → **Import plugin from manifest…**
+3. Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin.
+4. Plugin listede "F-MCP ATezer Bridge" olarak görünür.
+
+### Plugin durum göstergeleri
 
 
-| Plugin-only                                                        | Tam mod                                             |
-| ------------------------------------------------------------------ | --------------------------------------------------- |
-| 1. Claude’u başlatın (MCP sunucusu 5454’ü açar)                    | 1. Terminalde `npm run dev:local` (açık kalsın)     |
-| 2. Figma’yı normal açın                                            | 2. Figma’yı `--remote-debugging-port=9222` ile açın |
-| 3. Figma’da Plugins → Development → **F-MCP ATezer Bridge**        | 3. Figma’da plugini çalıştırın                      |
-| 4. Plugin’de “ready” görününce Claude’da Figma araçlarını kullanın | 4. Claude’u başlatın; araçları kullanın             |
+| Durum           | Anlam                                                                   |
+| --------------- | ----------------------------------------------------------------------- |
+| `connecting...` | WebSocket açıldı, sunucudan handshake bekleniyor                        |
+| `ready (:5454)` | F-MCP bridge'e başarıyla bağlandı (port numarası gösterilir)            |
+| `wrong server`  | Bağlantı kuruldu ama karşıdaki F-MCP bridge değil (eski/yanlış process) |
+| `no server`     | Sunucu kapalı veya erişilemiyor                                         |
 
 
-**"Server disconnected"** olursa: (1) Port 5454 kapalı olmalı — `lsof -i :5454` ile bakın, `kill <PID>` ile kapatın. (2) **"Permission denied"** script için: config'te script yerine `bash -c` kullanın (aşağıdaki örnek). (3) Build: `npm run build:local`.
+---
 
-**Çoklu kullanıcı (multi-instance):** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) kullanır; MCP için `FIGMA_PLUGIN_BRIDGE_PORT=5455` vb., plugin’de ise Port alanından aynı port seçilir. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
+## Claude / Cursor ile bağlama (detay)
+
+**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. `npx @atezer/figma-mcp-bridge@latest` ile clone yapmadan kullanılabilir. Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md).
+
+**Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
+
+**Çoklu kullanıcı (multi-instance):** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) seçer; MCP config'e `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin, plugin'de aynı portu girin. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
 
 **Enterprise:** Audit log (`FIGMA_MCP_AUDIT_LOG_PATH`), air-gap kurulum ve Organization plugin: [ENTERPRISE.md](docs/ENTERPRISE.md).
+
+**"Server disconnected" / "wrong server"?** (1) Port 5454'te başka bir process var mı kontrol edin: `lsof -i :5454`. (2) Cursor/Claude Desktop kullanıyorsanız `npm run dev:local` çalışmıyor olmalı. (3) Build güncel mi: `npm run build:local`.
 
 ### Browser Figma desteği
 
 Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Desktop uygulaması zorunlu değildir.
 
 **Aynı makinede (tarayıcı + MCP bridge aynı bilgisayarda):**
-1. MCP bridge sunucusunu başlatın (`npm run dev:local` veya Claude Desktop açın).
+
+1. MCP bridge sunucusunu başlatın (Cursor/Claude Desktop açın veya `npm run dev:local`).
 2. Figma'yı tarayıcıda açın → Plugin'i çalıştırın.
-3. Plugin UI'da Host: `localhost`, Port: `5454` → yeşil "ready" göründüğünde hazır.
+3. Plugin UI'da Host: `localhost`, Port: `5454` → **"ready (:5454)"** göründüğünde hazır.
 
 **Uzak makinede (tarayıcı bir bilgisayarda, MCP bridge başka bir makinede):**
+
 1. MCP bridge makinesinde `FIGMA_BRIDGE_HOST=0.0.0.0` env var ile sunucuyu başlatın (tüm ağ arayüzlerinden erişim açılır).
 2. Plugin UI'da Host alanına MCP bridge makinesinin IP adresini girin (örn. `192.168.1.50`), Port: `5454`.
 3. **Manifest güncellemesi gerekir:** Uzak IP'yi `manifest.json` dosyasındaki `networkAccess.allowedDomains` dizisine ekleyin (örn. `"ws://192.168.1.50:5454"`). Organization plugin olarak dağıtıldığında admin bunu yapılandırır.
@@ -212,31 +224,31 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 ### Tüm dokümanlar (docs/)
 
 
-| Dosya                                                                   | Açıklama                                                                                       |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config            |
+| Dosya                                                                   | Açıklama                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config              |
 | [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md)                 | **Windows kurulum** — Node veya Python bridge, Claude config (Windows yolu), port, sorun giderme |
-| [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                       |
-| [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)                   | Plugin–MCP mimari ve kurulum                                                                   |
-| [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)                 | Plugin Worker/UI akışı                                                                         |
-| [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)                           | Mod karşılaştırma                                                                              |
-| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları referansı                                                                         |
-| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **33 araç tam liste** (referans, Claude ile doğrulanmış)                                       |
-| [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                  |
-| [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                |
-| [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                          |
-| [SELF_HOSTING.md](docs/SELF_HOSTING.md)                                 | Kendi sunucunda host                                                                           |
-| [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)               | Dağıtım karşılaştırma                                                                          |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                  |
-| [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                     |
-| [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                          |
-| [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                       |
-| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                 |
-| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                             |
-| [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                       |
-| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma’da yayınlama: Data security cevapları, final details, Plugin ID     |
-|                                                                         |                                                                                                |
+| [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                         |
+| [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)                   | Plugin–MCP mimari ve kurulum                                                                     |
+| [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)                 | Plugin Worker/UI akışı                                                                           |
+| [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)                           | Mod karşılaştırma                                                                                |
+| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları referansı                                                                           |
+| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **33 araç tam liste** (referans, Claude ile doğrulanmış)                                         |
+| [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
+| [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                  |
+| [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                            |
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md)                                 | Kendi sunucunda host                                                                             |
+| [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)               | Dağıtım karşılaştırma                                                                            |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                    |
+| [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                       |
+| [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                            |
+| [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                         |
+| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                   |
+| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                               |
+| [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
+| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma'da yayınlama: Data security cevapları, final details, Plugin ID       |
+|                                                                         |                                                                                                  |
 
 
 ## Yaygınlaştırma: Organization (private) plugin
@@ -246,15 +258,15 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 **Avantajlar:**
 
 - Herkesin "Import plugin from manifest" yapması gerekmez; plugin organizasyonun plugin listesinde görünür.
-- Sadece **Plugins** menüsünden (veya Resources → Plugins) ekleyip çalıştırırlar; MCP bridge’i (Claude config veya `npm run dev:local`) kendi makinede kurmaları yeterli.
+- Sadece **Plugins** menüsünden (veya Resources → Plugins) ekleyip çalıştırırlar; MCP bridge'i (Claude config) kendi makinede kurmaları yeterli.
 - Review süreci yok (private plugin); yayınladıktan kısa süre sonra kullanılabilir.
 
 **Gereksinimler:**
 
 - Figma **Organization** veya **Enterprise** planı ([Figma: Create private organization plugins](https://help.figma.com/hc/en-us/articles/4404228629655-Create-private-organization-plugins)).
-- Yayınlama: [Publish plugins](https://help.figma.com/hc/en-us/articles/360042293394) adımlarını izleyin; **Publish to** kısmında **organization**’ı seçin (Community değil).
+- Yayınlama: [Publish plugins](https://help.figma.com/hc/en-us/articles/360042293394) adımlarını izleyin; **Publish to** kısmında **organization**'ı seçin (Community değil).
 
-**Özet:** Önce organization private plugin yapmak, "plugin’i herkese tek tıkla ulaştırma" adımını çözer; MCP tarafında (Claude config, build, port) kurulum aynı kalır. Sonrasında isteğe bağlı olarak Community’e açmak veya self-host MCP ile tam entegrasyon düşünülebilir.
+**Özet:** Önce organization private plugin yapmak, "plugin'i herkese tek tıkla ulaştırma" adımını çözer; MCP tarafında (Claude config, build, port) kurulum aynı kalır. Sonrasında isteğe bağlı olarak Community'e açmak veya self-host MCP ile tam entegrasyon düşünülebilir.
 
 ## Lisans ve Destek
 
