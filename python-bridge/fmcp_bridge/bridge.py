@@ -5,9 +5,12 @@ Plugin connects to ws://127.0.0.1:port; MCP tools call request(method, params) a
 import asyncio
 import json
 import os
+import socket
 import sys
 import time
 import uuid
+from urllib.request import urlopen
+from urllib.error import URLError
 
 try:
     import websockets
@@ -31,6 +34,7 @@ class BridgeClient:
         self._pending: dict[str, asyncio.Future] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
         self._ws = None
+        self._port: int = PORT_MIN
 
     def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
@@ -86,7 +90,10 @@ class BridgeClient:
         except json.JSONDecodeError:
             return
         if msg.get("type") == "ready":
-            _log("Plugin sent ready")
+            _log("Plugin sent ready — sending welcome handshake")
+            if self._ws and self._ws.open:
+                welcome = json.dumps({"type": "welcome", "bridgeVersion": "1.0.0", "port": self._port})
+                asyncio.ensure_future(self._ws.send(welcome))
             return
         req_id = msg.get("id")
         if not req_id:
@@ -99,8 +106,48 @@ class BridgeClient:
                 fut.set_result(msg.get("result"))
 
 
+def _check_port_conflict(port: int) -> None:
+    """Check if port is already in use; fail loudly with helpful message."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    try:
+        sock.connect(("127.0.0.1", port))
+        sock.close()
+    except (ConnectionRefusedError, OSError):
+        return
+
+    is_fmcp = False
+    try:
+        resp = urlopen(f"http://127.0.0.1:{port}", timeout=2)
+        body = resp.read().decode("utf-8", errors="replace")
+        is_fmcp = "F-MCP" in body
+    except (URLError, OSError):
+        pass
+
+    hint = f"netstat -ano | findstr :{port}" if sys.platform == "win32" else f"lsof -i :{port}"
+    if is_fmcp:
+        print(
+            f"\n❌ Port {port} is already used by another F-MCP bridge instance.\n"
+            f"   Find it: {hint}\n"
+            f"   Kill it and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n"
+            f"   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev:local'.\n",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"\n❌ Port {port} is already in use by another application.\n"
+            f"   Find it: {hint}\n"
+            f"   Free the port and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n",
+            file=sys.stderr,
+        )
+    sys.exit(1)
+
+
 async def run_websocket_server(port: int, bridge: BridgeClient, host: str = "127.0.0.1") -> None:
     """Run WebSocket server on host:port; accept single plugin client; handle messages."""
+    _check_port_conflict(port)
+
+    bridge._port = port
     loop = asyncio.get_event_loop()
     bridge.set_loop(loop)
 

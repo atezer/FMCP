@@ -7,7 +7,7 @@
  */
 
 import { WebSocketServer, type WebSocket } from "ws";
-import { createServer } from "http";
+import { createServer, get as httpGet } from "http";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 
@@ -51,7 +51,7 @@ export class PluginBridgeServer {
 	private port: number;
 
 	/**
-	 * Start the WebSocket server. Tries ports 5454–5470 if the preferred port is in use (multi-instance). Idempotent.
+	 * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
 	 */
 	start(): void {
 		if (this.wss) {
@@ -61,12 +61,19 @@ export class PluginBridgeServer {
 		this.tryListen(this.port);
 	}
 
-	private tryListen(port: number): void {
-		if (port > MAX_PORT) {
-			console.error("\n❌ No free port in range %s–%s. Free one with: lsof -i :5454 (or your port) then kill <PID>\n", MIN_PORT, MAX_PORT);
-			process.exit(1);
-		}
+	private checkPortConflict(port: number): Promise<string | null> {
+		return new Promise((resolve) => {
+			const req = httpGet(`http://127.0.0.1:${port}`, (res) => {
+				let body = "";
+				res.on("data", (c: Buffer) => { body += c.toString(); });
+				res.on("end", () => resolve(body));
+			});
+			req.on("error", () => resolve(null));
+			req.setTimeout(2000, () => { req.destroy(); resolve(null); });
+		});
+	}
 
+	private tryListen(port: number): void {
 		const server = createServer((_req, res) => {
 			res.writeHead(200, {
 				"Content-Type": "text/plain",
@@ -78,9 +85,28 @@ export class PluginBridgeServer {
 
 		server.on("error", (err: NodeJS.ErrnoException) => {
 			if (err.code === "EADDRINUSE") {
-				logger.warn({ port }, "Port in use, trying next...");
+				this.checkPortConflict(port).then((body) => {
+					const isFmcp = body !== null && body.includes("F-MCP");
+					const hint = process.platform === "win32"
+						? `netstat -ano | findstr :${port}`
+						: `lsof -i :${port}`;
+					if (isFmcp) {
+						console.error(
+							`\n❌ Port ${port} is already used by another F-MCP bridge instance.\n` +
+							`   Find it: ${hint}\n` +
+							`   Kill it and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n` +
+							`   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev:local'.\n`
+						);
+					} else {
+						console.error(
+							`\n❌ Port ${port} is already in use by another application.\n` +
+							`   Find it: ${hint}\n` +
+							`   Free the port and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n`
+						);
+					}
+					process.exit(1);
+				});
 				server.close();
-				this.tryListen(port + 1);
 				return;
 			}
 			logger.error({ err }, "Plugin bridge server error");
@@ -108,7 +134,8 @@ export class PluginBridgeServer {
 					try {
 						const msg = JSON.parse(data.toString()) as BridgeResponse & { type?: string };
 						if (msg.type === "ready") {
-							logger.info("Plugin bridge: plugin sent ready");
+							logger.info("Plugin bridge: plugin sent ready, sending welcome");
+							ws.send(JSON.stringify({ type: "welcome", bridgeVersion: "1.0.0", port: this.port }));
 							return;
 						}
 						if (msg.id && this.pending.has(msg.id)) {

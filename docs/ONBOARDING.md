@@ -1,17 +1,52 @@
 # F-MCP Bridge — Kurulum Rehberi (Onboarding)
 
-Bu rehber, **figma-mcp-bridge** ile Claude’u Figma’ya bağlamak için gereken 4 adımı anlatır. Plugin’i private (organization) yayınladıysanız 1. adım sadece Figma’dan eklemek; yoksa manifest ile geliştirme plugin’i yüklersiniz.
+Bu rehber, **figma-mcp-bridge** ile Claude/Cursor’u Figma’ya bağlamak için iki yol sunar: **en basit (NPX, repo indirmeden)** ve **detaylı (clone + build)**.
 
 ---
 
-## Özet: 4 adım
+## En basit kurulum (NPX — repo indirmeden)
+
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemeler `@latest` ile otomatik alınır.
+
+| Adım | Yapılacak |
+|------|------------|
+| 1 | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin. |
+| 2 | **MCP config ekle** — Cursor için `.cursor/mcp.json` veya Claude için `claude_desktop_config.json` dosyasına aşağıdaki bloğu ekleyin. |
+| 3 | **Cursor veya Claude’u yeniden başlatın** — MCP sunucusu port 5454’te otomatik başlar. |
+| 4 | **Figma’da plugini açın** — Plugins → F-MCP ATezer Bridge → **"ready (:5454)"** görünene kadar bekleyin. |
+
+**Config örneği (Cursor veya Claude):**
+
+```json
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
+    }
+  }
+}
+```
+
+- **Cursor config:** Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`
+- **Claude config:** macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` | Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Plugin’i Figma’da ilk kez kullanıyorsanız aşağıdaki [1. Plugin’i Figma’da yükle](#1-plugini-figmada-yükle) adımına geçin. Detaylı kurulum (clone, build, tam yol) için aşağıdaki bölümlere bakın.
+
+---
+
+## Detaylı kurulum (clone + build)
+
+Repo’yu indirip kendi makinenizde build etmek isterseniz (ör. ağ kısıtlı ortam) aşağıdaki 4 adımı uygulayın.
+
+### Özet: 4 adım
 
 | # | Adım | Ne yapılır |
 |---|------|------------|
 | 1 | **Plugin’i yükle** | Figma’da F-MCP Bridge plugin’ini ekle (organization listesinden veya manifest ile) |
 | 2 | **Node.js kur** | Bilgisayarda Node.js (LTS) yüklü olsun |
-| 3 | **MCP server’ı başlat** | Projeyi clone edip `npm run build:local` + Claude config ile sunucuyu çalıştır |
-| 4 | **Claude config’i ayarla** | Claude Desktop config’e figma-mcp-bridge MCP sunucusunu ekle |
+| 3 | **MCP server’ı başlat** | Projeyi clone edip `npm run build:local` + config’te tam yol ile sunucuyu çalıştır |
+| 4 | **Config’i ayarla** | Cursor/Claude config’e `figma-mcp-bridge` ekle (node + tam yol veya npx) |
 
 ---
 
@@ -91,18 +126,19 @@ Claude’u açtığınızda MCP sunucusu otomatik başlar (Claude config’te `n
 
 ---
 
-## 4. Claude config’i ayarla
+## 4. Cursor / Claude config’i ayarla
 
-Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir.
+Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir. **En basit:** [En basit kurulum](#en-basit-kurulum-npx--repo-indirmeden) bölümündeki npx config'i kullanın (repo gerekmez).
 
 ### Config dosyası konumu
 
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json` — Windows kullanıcıları için ayrı rehber: [WINDOWS-INSTALLATION.md](WINDOWS-INSTALLATION.md).
+- **Cursor:** `.cursor/mcp.json` (proje kökü veya kullanıcı dizini)
+- **Claude — macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Claude — Windows:** `%APPDATA%\Claude\claude_desktop_config.json` — ayrı rehber: [WINDOWS-INSTALLATION.md](WINDOWS-INSTALLATION.md).
 
-### Örnek config (plugin-only, önerilen)
+### Örnek config (clone ile — tam yol)
 
-`<PROJE-YOLU>` yerine FMCP klasörünün **tam yolunu** yazın (örn. `/Users/adiniz/FMCP` veya `C:\Users\adiniz\FMCP`).
+Repo'yu clone ettiyseniz `<PROJE-YOLU>` yerine FMCP klasörünün **tam yolunu** yazın (örn. `/Users/adiniz/f-mcp-bridge` veya `C:\Users\adiniz\f-mcp-bridge`).
 
 ```json
 {
@@ -115,7 +151,7 @@ Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir.
 }
 ```
 
-**“Permission denied”** alırsanız (özellikle script/executable kullanıyorsanız), şu şekilde deneyin:
+**“Permission denied”** alırsanız:
 
 ```json
 "figma-mcp-bridge": {
@@ -124,7 +160,7 @@ Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir.
 }
 ```
 
-Config’i kaydettikten sonra **Claude Desktop’u yeniden başlatın**.
+Config’i kaydettikten sonra **Cursor veya Claude’u yeniden başlatın**.
 
 ---
 
@@ -134,7 +170,7 @@ Config’i kaydettikten sonra **Claude Desktop’u yeniden başlatın**.
 - [ ] Node.js yüklü (`node -v` çalışıyor).
 - [ ] FMCP projesi clone edildi, `npm install` ve `npm run build:local` çalıştırıldı.
 - [ ] Claude config’e `figma-mcp-bridge` eklendi; `<PROJE-YOLU>` kendi bilgisayarınızdaki FMCP yolu ile değiştirildi.
-- [ ] Claude Desktop yeniden başlatıldı.
+- [ ] Cursor veya Claude yeniden başlatıldı.
 - [ ] Figma’da plugin penceresinde **yeşil nokta + “ready”** görünüyor.
 - [ ] Claude’da Figma ile ilgili bir soru sorup (örn. “Figma’daki değişkenleri listele”) MCP’nin yanıt verdiğini doğruladınız.
 

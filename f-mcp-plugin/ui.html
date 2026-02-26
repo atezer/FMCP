@@ -773,21 +773,40 @@
       }
     }
 
+    var mcpHandshakeTimer = null;
+    var mcpHandshakeDone = false;
+
     function connectMcpBridge() {
       if (mcpBridgeWs && mcpBridgeWs.readyState === 1) return;
       var host = getMcpBridgeHost();
       var port = getMcpBridgePort();
       var url = 'ws://' + host + ':' + port;
+      mcpHandshakeDone = false;
       try {
         mcpBridgeWs = new WebSocket(url);
         mcpBridgeWs.onopen = function() {
-          console.log('[F-MCP ATezer Bridge] Connected to MCP server at ' + url);
-          updateStatus('ready', true, false);
+          console.log('[F-MCP ATezer Bridge] WebSocket opened to ' + url + ', waiting for handshake...');
+          updateStatus('connecting...', false, false);
           mcpBridgeWs.send(JSON.stringify({ type: 'ready' }));
+          if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
+          mcpHandshakeTimer = setTimeout(function() {
+            if (!mcpHandshakeDone && mcpBridgeWs) {
+              console.warn('[F-MCP ATezer Bridge] No welcome from server — wrong server or outdated bridge');
+              updateStatus('wrong server', false, true);
+            }
+          }, 5000);
         };
         mcpBridgeWs.onmessage = function(event) {
           try {
             var msg = JSON.parse(event.data);
+            if (msg.type === 'welcome') {
+              mcpHandshakeDone = true;
+              if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
+              var connectedPort = msg.port || port;
+              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + connectedPort);
+              updateStatus('ready (:' + connectedPort + ')', true, false);
+              return;
+            }
             if (!msg.id || !msg.method) return;
             var id = msg.id;
             var method = msg.method;

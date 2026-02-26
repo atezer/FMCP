@@ -67,7 +67,7 @@ Paket npm’de **@atezer/figma-mcp-bridge** adıyla yayınlı. İlk çalıştır
 npx -y @atezer/figma-mcp-bridge@latest
 ```
 
-Claude config’te NPX cache yolundaki `dist/local-plugin-only.js` kullanılabilir; yol platforma göre değişir. Windows’ta yol net olsun diye **Seçenek A (clone + build)** önerilir.
+Claude config’te NPX cache yolundaki `dist/local-plugin-only.js` kullanılabilir; yol platforma göre değişir. Windows’ta yol net olsun diye Bölüm 3'teki **En basit config (NPX)** ile proje yolu gerekmez.
 
 ---
 
@@ -82,7 +82,18 @@ Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i çalıştırması g
 
 Dosyayı Not Defteri veya VS Code ile açabilirsiniz.
 
-### Örnek config (plugin-only, Node)
+### En basit config (NPX — proje yolu gerekmez)
+
+Repo klonlamadan kullanım. Config'e ekleyin:
+
+```json
+"figma-mcp-bridge": {
+  "command": "npx",
+  "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
+}
+```
+
+### Örnek config (clone ile — tam yol)
 
 `<PROJE-YOLU>` yerine FMCP klasörünüzün **tam yolunu** yazın. Windows’ta backslash’leri **çift** yazın veya tek slash kullanın:
 
