@@ -99,13 +99,13 @@ class BridgeClient:
                 fut.set_result(msg.get("result"))
 
 
-async def run_websocket_server(port: int, bridge: BridgeClient) -> None:
-    """Run WebSocket server on port; accept single plugin client; handle messages."""
+async def run_websocket_server(port: int, bridge: BridgeClient, host: str = "127.0.0.1") -> None:
+    """Run WebSocket server on host:port; accept single plugin client; handle messages."""
     loop = asyncio.get_event_loop()
     bridge.set_loop(loop)
 
     async def handler(ws) -> None:
-        _log(f"Plugin connected (port {port})")
+        _log(f"Plugin connected ({host}:{port})")
         bridge.set_ws(ws)
         try:
             async for raw in ws:
@@ -119,15 +119,19 @@ async def run_websocket_server(port: int, bridge: BridgeClient) -> None:
     async def serve() -> None:
         async with websockets.serve(
             handler,
-            "127.0.0.1",
+            host,
             port,
             ping_interval=15,
             ping_timeout=10,
         ) as server:
-            _log(f"Plugin bridge server listening on ws://127.0.0.1:{port}")
+            _log(f"Plugin bridge server listening on ws://{host}:{port}")
             await asyncio.Future()
 
     await serve()
+
+
+def get_host() -> str:
+    return os.environ.get("FIGMA_BRIDGE_HOST", "127.0.0.1")
 
 
 def get_port() -> int:

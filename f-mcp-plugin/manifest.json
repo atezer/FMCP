@@ -8,7 +8,26 @@
   "capabilities": ["inspect"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["http://localhost", "http://localhost:5454", "ws://localhost:5454", "http://localhost:5455", "ws://localhost:5455", "http://localhost:5456", "ws://localhost:5456", "http://localhost:5457", "ws://localhost:5457", "http://localhost:5458", "ws://localhost:5458", "http://localhost:5459", "ws://localhost:5459", "http://localhost:5460", "ws://localhost:5460", "http://localhost:5461", "ws://localhost:5461", "http://localhost:5462", "ws://localhost:5462", "http://localhost:5463", "ws://localhost:5463", "http://localhost:5464", "ws://localhost:5464", "http://localhost:5465", "ws://localhost:5465", "http://localhost:5466", "ws://localhost:5466", "http://localhost:5467", "ws://localhost:5467", "http://localhost:5468", "ws://localhost:5468", "http://localhost:5469", "ws://localhost:5469", "http://localhost:5470", "ws://localhost:5470"],
+    "allowedDomains": [
+      "http://localhost",
+      "http://localhost:5454", "ws://localhost:5454",
+      "http://localhost:5455", "ws://localhost:5455",
+      "http://localhost:5456", "ws://localhost:5456",
+      "http://localhost:5457", "ws://localhost:5457",
+      "http://localhost:5458", "ws://localhost:5458",
+      "http://localhost:5459", "ws://localhost:5459",
+      "http://localhost:5460", "ws://localhost:5460",
+      "http://localhost:5461", "ws://localhost:5461",
+      "http://localhost:5462", "ws://localhost:5462",
+      "http://localhost:5463", "ws://localhost:5463",
+      "http://localhost:5464", "ws://localhost:5464",
+      "http://localhost:5465", "ws://localhost:5465",
+      "http://localhost:5466", "ws://localhost:5466",
+      "http://localhost:5467", "ws://localhost:5467",
+      "http://localhost:5468", "ws://localhost:5468",
+      "http://localhost:5469", "ws://localhost:5469",
+      "http://localhost:5470", "ws://localhost:5470"
+    ],
     "reasoning": "Connect to local MCP server (no Figma debug port needed)"
   }
 }

@@ -68,7 +68,11 @@ export class PluginBridgeServer {
 		}
 
 		const server = createServer((_req, res) => {
-			res.writeHead(200, { "Content-Type": "text/plain" });
+			res.writeHead(200, {
+				"Content-Type": "text/plain",
+				"Access-Control-Allow-Origin": "*",
+				"Access-Control-Allow-Methods": "GET, OPTIONS",
+			});
 			res.end("F-MCP ATezer Bridge (connect via WebSocket)\n");
 		});
 
@@ -82,7 +86,8 @@ export class PluginBridgeServer {
 			logger.error({ err }, "Plugin bridge server error");
 		});
 
-		server.listen(port, "127.0.0.1", () => {
+		const bindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
+		server.listen(port, bindHost, () => {
 			this.port = port;
 			this.httpServer = server;
 			this.wss = new WebSocketServer({ server });
@@ -137,7 +142,7 @@ export class PluginBridgeServer {
 				});
 			});
 
-			logger.info({ port: this.port }, "Plugin bridge server listening (ws://127.0.0.1:%s)", this.port);
+			logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s)", bindHost, this.port);
 			this.pingTimer = setInterval(() => {
 				if (this.client && this.client.readyState === 1) {
 					this.client.ping();

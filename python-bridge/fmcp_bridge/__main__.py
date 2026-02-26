@@ -11,14 +11,15 @@ def _log(msg: str) -> None:
 
 
 def main() -> None:
-    from .bridge import BridgeClient, get_port, run_websocket_server
+    from .bridge import BridgeClient, get_host, get_port, run_websocket_server
 
+    host = get_host()
     port = get_port()
     bridge = BridgeClient()
 
     def run_ws() -> None:
         import asyncio
-        asyncio.run(run_websocket_server(port, bridge))
+        asyncio.run(run_websocket_server(port, bridge, host))
 
     ws_thread = threading.Thread(target=run_ws, daemon=True)
     ws_thread.start()
@@ -129,7 +130,7 @@ def main() -> None:
         r = _req("captureScreenshot", {"nodeId": node_id, "options": {"format": format, "scale": scale}})
         return str(r) if r is not None else "{}"
 
-    _log(f"Starting MCP stdio server (plugin bridge on port {port})")
+    _log(f"Starting MCP stdio server (plugin bridge on {host}:{port})")
     mcp.run()
 
 

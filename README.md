@@ -169,6 +169,23 @@ Config (macOS): `**~/Library/Application Support/Claude/claude_desktop_config.js
 
 **Enterprise:** Audit log (`FIGMA_MCP_AUDIT_LOG_PATH`), air-gap kurulum ve Organization plugin: [ENTERPRISE.md](docs/ENTERPRISE.md).
 
+### Browser Figma desteği
+
+Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Desktop uygulaması zorunlu değildir.
+
+**Aynı makinede (tarayıcı + MCP bridge aynı bilgisayarda):**
+1. MCP bridge sunucusunu başlatın (`npm run dev:local` veya Claude Desktop açın).
+2. Figma'yı tarayıcıda açın → Plugin'i çalıştırın.
+3. Plugin UI'da Host: `localhost`, Port: `5454` → yeşil "ready" göründüğünde hazır.
+
+**Uzak makinede (tarayıcı bir bilgisayarda, MCP bridge başka bir makinede):**
+1. MCP bridge makinesinde `FIGMA_BRIDGE_HOST=0.0.0.0` env var ile sunucuyu başlatın (tüm ağ arayüzlerinden erişim açılır).
+2. Plugin UI'da Host alanına MCP bridge makinesinin IP adresini girin (örn. `192.168.1.50`), Port: `5454`.
+3. **Manifest güncellemesi gerekir:** Uzak IP'yi `manifest.json` dosyasındaki `networkAccess.allowedDomains` dizisine ekleyin (örn. `"ws://192.168.1.50:5454"`). Organization plugin olarak dağıtıldığında admin bunu yapılandırır.
+4. Firewall'da port 5454'ün açık olduğundan emin olun.
+
+> **Güvenlik:** Default olarak sunucu yalnızca `127.0.0.1`'de dinler (Zero Trust). Uzak erişim için `FIGMA_BRIDGE_HOST=0.0.0.0` **bilinçli olarak** ayarlanmalı ve firewall ile korunmalıdır.
+
 ---
 
 ## Design / Dev Mode
