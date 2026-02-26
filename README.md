@@ -77,12 +77,14 @@ Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalı
 
 Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek için paket otomatik güncellenir (`@latest`).
 
-| Adım | Yapılacak |
-|------|------------|
-| 1 | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin. |
-| 2 | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin. |
-| 3 | **Cursor veya Claude'u yeniden başlatın** — MCP sunucusu port 5454'te otomatik başlar. |
-| 4 | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
+
+| Adım | Yapılacak                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------ |
+| 1    | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin.               |
+| 2    | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin.                    |
+| 3    | **Cursor veya Claude'u yeniden başlatın** — MCP sunucusu port 5454'te otomatik başlar.                       |
+| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
+
 
 **Cursor** — Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`:
 
@@ -270,6 +272,6 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 
 ## Lisans ve Destek
 
-- **Lisans:** MIT — **ücretsiz (free)** ve açık kaynak. Ticari ve kişisel kullanım serbesttir (bkz. [LICENSE](LICENSE))
+- **Lisans:** MIT — Ticari amaçlı kullanılmaz; sadece kişisel kullanım içindir (bkz. [LICENSE](LICENSE))
 - **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/FMCP/issues)
 
