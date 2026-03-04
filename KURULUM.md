@@ -141,4 +141,4 @@ npm run build:local
 
 ---
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)  
-**Sürüm:** 1.1.1
+**Sürüm:** 1.1.2
