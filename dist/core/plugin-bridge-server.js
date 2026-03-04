@@ -6,7 +6,7 @@
  * responses (variables, execute, component, etc.).
  */
 import { WebSocketServer } from "ws";
-import { createServer, get as httpGet } from "http";
+import { createServer } from "http";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 const PING_INTERVAL_MS = 15000;
@@ -24,7 +24,7 @@ export class PluginBridgeServer {
         this.auditLogPath = options?.auditLogPath;
     }
     /**
-     * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
+     * Start the WebSocket server. Tries ports 5454–5470 if the preferred port is in use (multi-instance). Idempotent.
      */
     start() {
         if (this.wss) {
@@ -33,53 +33,25 @@ export class PluginBridgeServer {
         }
         this.tryListen(this.port);
     }
-    checkPortConflict(port) {
-        return new Promise((resolve) => {
-            const req = httpGet(`http://127.0.0.1:${port}`, (res) => {
-                let body = "";
-                res.on("data", (c) => { body += c.toString(); });
-                res.on("end", () => resolve(body));
-            });
-            req.on("error", () => resolve(null));
-            req.setTimeout(2000, () => { req.destroy(); resolve(null); });
-        });
-    }
     tryListen(port) {
+        if (port > MAX_PORT) {
+            console.error("\n❌ No free port in range %s–%s. Free one with: lsof -i :5454 (or your port) then kill <PID>\n", MIN_PORT, MAX_PORT);
+            process.exit(1);
+        }
         const server = createServer((_req, res) => {
-            res.writeHead(200, {
-                "Content-Type": "text/plain",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-            });
+            res.writeHead(200, { "Content-Type": "text/plain" });
             res.end("F-MCP ATezer Bridge (connect via WebSocket)\n");
         });
         server.on("error", (err) => {
             if (err.code === "EADDRINUSE") {
-                this.checkPortConflict(port).then((body) => {
-                    const isFmcp = body !== null && body.includes("F-MCP");
-                    const hint = process.platform === "win32"
-                        ? `netstat -ano | findstr :${port}`
-                        : `lsof -i :${port}`;
-                    if (isFmcp) {
-                        console.error(`\n❌ Port ${port} is already used by another F-MCP bridge instance.\n` +
-                            `   Find it: ${hint}\n` +
-                            `   Kill it and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n` +
-                            `   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev:local'.\n`);
-                    }
-                    else {
-                        console.error(`\n❌ Port ${port} is already in use by another application.\n` +
-                            `   Find it: ${hint}\n` +
-                            `   Free the port and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n`);
-                    }
-                    process.exit(1);
-                });
+                logger.warn({ port }, "Port in use, trying next...");
                 server.close();
+                this.tryListen(port + 1);
                 return;
             }
             logger.error({ err }, "Plugin bridge server error");
         });
-        const bindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
-        server.listen(port, bindHost, () => {
+        server.listen(port, "127.0.0.1", () => {
             this.port = port;
             this.httpServer = server;
             this.wss = new WebSocketServer({ server });
@@ -99,8 +71,7 @@ export class PluginBridgeServer {
                     try {
                         const msg = JSON.parse(data.toString());
                         if (msg.type === "ready") {
-                            logger.info("Plugin bridge: plugin sent ready, sending welcome");
-                            ws.send(JSON.stringify({ type: "welcome", bridgeVersion: "1.0.0", port: this.port }));
+                            logger.info("Plugin bridge: plugin sent ready");
                             return;
                         }
                         if (msg.id && this.pending.has(msg.id)) {
@@ -133,7 +104,7 @@ export class PluginBridgeServer {
                     logger.warn({ err }, "Plugin bridge: client error");
                 });
             });
-            logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s)", bindHost, this.port);
+            logger.info({ port: this.port }, "Plugin bridge server listening (ws://127.0.0.1:%s)", this.port);
             this.pingTimer = setInterval(() => {
                 if (this.client && this.client.readyState === 1) {
                     this.client.ping();
