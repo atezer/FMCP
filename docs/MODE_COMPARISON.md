@@ -52,9 +52,9 @@ The MCP server has **two execution modes** but **three installation methods**:
 | Aspect | Remote SSE | NPX | Local Git |
 |--------|-----------|-----|-----------|
 | **Execution** | Cloudflare Workers | Local Node.js | Local Node.js |
-| **Code** | `src/index.ts` | `dist/local-plugin-only.js` (varsayılan) | `dist/local-plugin-only.js` (varsayılan) |
-| **Authentication** | OAuth (automatic) | Plugin-only: yok / Full: PAT | Plugin-only: yok / Full: PAT |
-| **Setup Complexity** | ⭐ Zero-setup | ⭐ Plugin-only: Node.js + config | ⭐ Plugin-only: clone + build + config |
+| **Code** | `src/index.ts` | `dist/local.js` (npm) | `dist/local.js` (source) |
+| **Authentication** | OAuth (automatic) | PAT (manual) | PAT (manual) |
+| **Setup Complexity** | ⭐ Zero-setup | ⚠️ Manual token + restart | ⚠️ Manual token + restart |
 | **Distribution** | URL only | npm package | git clone |
 | **Updates** | Automatic (server-side) | `@latest` auto-updates | Manual `git pull + build` |
 | **Figma Desktop** | Not required | Required (normal open OK for plugin-only; debug port optional) | Required (normal open OK for plugin-only; debug port optional) |
@@ -131,7 +131,7 @@ Variables & Components Data
 
 ## Tool Availability by Mode
 
-### Tools Available in Both Modes (plugin-only: 33 araç, remote: 14 araç)
+### All 14 Tools Available in Both Modes
 
 | Tool | Remote | Local | Notes |
 |------|--------|-------|-------|
@@ -175,36 +175,37 @@ Variables & Components Data
 3. Paste your MCP SSE URL (e.g. `https://your-worker.workers.dev/sse`)
 4. Done ✅ (OAuth happens automatically on first API use)
 
-### NPX (Plugin-only — varsayılan)
+### NPX
 **Prerequisites:**
 - Node.js 18+
-- Figma Desktop veya tarayıcı Figma
-
-**Setup Time:** 5 minutes
-
-**Steps:**
-1. MCP config'e NPX komutunu ekleyin (`npx -y @atezer/figma-mcp-bridge@latest`)
-2. Cursor/Claude'u yeniden başlatın
-3. Figma'da F-MCP ATezer Bridge plugin'ini çalıştırın → "ready (:5454)"
-
-> **Tam mod (isteğe bağlı):** `figma-mcp-bridge-full` komutuyla çalıştırın; Figma PAT ve `--remote-debugging-port=9222` gerekir.
-
-### Local Git (Plugin-only — varsayılan)
-**Prerequisites:**
-- Node.js 18+
-- Git
-- Figma Desktop veya tarayıcı Figma
+- Figma Desktop installed
+- Figma Personal Access Token ([get one](https://www.figma.com/developers/api#access-tokens))
 
 **Setup Time:** 10 minutes
 
 **Steps:**
-1. Clone: `git clone https://github.com/atezer/FMCP.git && cd FMCP`
-2. Build: `npm install && npm run build:local`
-3. MCP config'e `dist/local-plugin-only.js` yolunu ekleyin
-4. Cursor/Claude'u yeniden başlatın
-5. Figma'da F-MCP ATezer Bridge plugin'ini çalıştırın → "ready (:5454)"
+1. Get Figma Personal Access Token
+2. Add to MCP config with `FIGMA_ACCESS_TOKEN` env var
+3. Quit and restart Figma with `--remote-debugging-port=9222`
+4. Verify http://localhost:9222 is accessible
 
-> **Tam mod (isteğe bağlı):** Config'te `dist/local.js` kullanın; Figma PAT ve `--remote-debugging-port=9222` gerekir.
+### Local Git
+**Prerequisites:**
+- Node.js 18+
+- Git
+- Figma Desktop installed
+- Figma Personal Access Token ([get one](https://www.figma.com/developers/api#access-tokens))
+
+**Setup Time:** 15 minutes
+
+**Steps:**
+1. Clone repository: `git clone https://github.com/atezer/FMCP.git` (or your fork)
+2. Run `npm install && npm run build:local`
+3. Get Figma Personal Access Token
+4. Configure MCP client JSON config with path to `dist/local.js`
+5. Set `FIGMA_ACCESS_TOKEN` environment variable
+6. Quit and restart Figma with `--remote-debugging-port=9222`
+7. Verify http://localhost:9222 is accessible
 
 ---
 
@@ -378,7 +379,7 @@ All three installation methods are completely free:
 - You need unreleased features
 - You're testing changes before contributing
 
-**Key Takeaway:** Plugin-only mod 33 araç sunar; remote mod 14 araç sunar. Fark:
+**Key Takeaway:** All three methods provide the same 14 MCP tools. The difference is in:
 - **Authentication**: OAuth (Remote SSE) vs PAT (NPX + Local Git)
 - **Distribution**: URL (Remote SSE) vs npm (NPX) vs git (Local Git)
 - **Execution**: Cloud (Remote SSE) vs Local (NPX + Local Git)

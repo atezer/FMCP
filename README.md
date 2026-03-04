@@ -173,7 +173,7 @@ npm run dev:local
 
 **NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. `npx @atezer/figma-mcp-bridge@latest` ile clone yapmadan kullanılabilir. Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md).
 
-**Tam mod (console/screenshot):** Clone + build ile: config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın. NPX ile: `"args": ["-p", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-full"]`. Her iki durumda da Figma'yı `--remote-debugging-port=9222` ile açın ve `FIGMA_ACCESS_TOKEN` env var ekleyin.
+**Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
 
 **Çoklu kullanıcı (multi-instance):** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) seçer; MCP config'e `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin, plugin'de aynı portu girin. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
 

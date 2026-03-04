@@ -8,7 +8,7 @@ Bu dosya, repoyu fork’layıp kendi reponuzda (örn. Bitbucket) kullanırken **
 
 Figma tasarım verilerini MCP ile AI asistanlarına (Claude, Cursor) açan MCP sunucusu ve Figma plugin’i. **Figma REST API kullanılmaz** — akış yerel: Claude → MCP → Plugin → Figma Desktop. Zero Trust; veri buluta gönderilmez.
 
-**33 araç** (config’te `dist/local-plugin-only.js`). Tam liste: [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
+**32 araç** (config’te `dist/local-plugin-only.js`). Tam liste: [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
 
 ## Hızlı başlangıç
 

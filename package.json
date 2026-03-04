@@ -3,8 +3,8 @@
 	"version": "1.1.2",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
-	"main": "dist/local-plugin-only.js",
-	"types": "dist/local-plugin-only.d.ts",
+	"main": "dist/local.js",
+	"types": "dist/local.d.ts",
 	"bin": {
 		"figma-mcp-bridge": "./dist/local-plugin-only.js",
 		"figma-mcp-bridge-full": "./dist/local.js"
@@ -22,7 +22,7 @@
 		"dev:local": "tsx src/local.ts",
 		"dev:plugin-only": "node dist/local-plugin-only.js",
 		"build:run": "npm run build:local && node dist/local-plugin-only.js",
-		"figma:debug": "echo 'Figma debug: Figma Desktop'u --remote-debugging-port=9222 ile açın'",
+		"figma:debug": "./scripts/auto-launch-figma-plugin.sh",
 		"build": "npm run build:local && npm run build:cloudflare",
 		"build:local": "tsc -p tsconfig.local.json",
 		"build:cloudflare": "tsc -p tsconfig.cloudflare.json",
