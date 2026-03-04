@@ -110,9 +110,9 @@ Claude’u açtığınızda MCP sunucusu otomatik başlar (Claude config’te `n
    ```
 3. **4. adımda** Claude config’te bu klasörün **tam yolu** ile `dist/local-plugin-only.js` çalıştırılacak; böylece Claude her açılışta MCP server’ı kendisi başlatır.
 
-### Yol 2: Ayrı terminalde bridge (isteğe bağlı)
+### Yol 2: Ayrı terminalde bridge (sadece debug / geliştirme)
 
-Önce bridge’i sonra Claude’u açmak isterseniz:
+> **⚠️ Dikkat:** Bu yöntem sadece bridge/plugin geliştirmesi veya debug içindir. Cursor/Claude Desktop ile **aynı anda kullanmayın** — ikisi de aynı portu (5454) kullanacağı için port çakışması oluşur.
 
 1. Aynı proje klasöründe:
    ```bash
@@ -120,8 +120,7 @@ Claude’u açtığınızda MCP sunucusu otomatik başlar (Claude config’te `n
    ```
 2. Çıktıda `Plugin bridge server listening` veya `5454` geçene kadar bekleyin.
 3. Figma’da plugin’i çalıştırın; “ready” görünmeli.
-4. Claude’u başlatın. (Config’te yine `local-plugin-only.js` kullanıyorsanız Claude kendi MCP sunucusunu açar ve 5454’ü kullanır; `dev:local` ile aynı portu paylaşır.)
-
+4. Bu yöntemi kullanırken Cursor/Claude config’indeki `figma-mcp-bridge` girişini geçici olarak kaldırın veya Cursor/Claude’u kapatın.
 **Çoklu kullanıcı:** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) kullanmalı; plugin arayüzünde **Port** alanından aynı port seçilir. Detay: [MULTI_INSTANCE.md](MULTI_INSTANCE.md).
 
 ---
