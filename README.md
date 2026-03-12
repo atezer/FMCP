@@ -116,6 +116,23 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek iç
 }
 ```
 
+**Cursor ve Claude aynı makinede:** İkisi de varsayılan 5454’ü kullandığı için “Port 5454 is already used” / “Server disconnected” alırsınız. Claude tarafında **ayrı port** kullanın; Figma plugin’de de aynı portu seçin.
+
+- **Cursor:** Config’e dokunmayın (5454 kalır).
+- **Claude:** Config’te `figma-mcp-bridge` için `env` ekleyin; plugin’de Port’u **5455** yapın.
+
+```json
+"figma-mcp-bridge": {
+  "command": "npx",
+  "args": ["-y", "@atezer/figma-mcp-bridge@latest"],
+  "env": {
+    "FIGMA_PLUGIN_BRIDGE_PORT": "5455"
+  }
+}
+```
+
+Repo ile (clone + build) kullanıyorsanız: `"command": "node"`, `"args": ["<PROJE-YOLU>/dist/local-plugin-only.js"]` ile aynı `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin. Claude’u yeniden başlatın; Figma’da plugini açıp Port alanına **5455** yazın → **"ready (:5455)"** görünmeli.
+
 İlk çalıştırmada `npx` paketi indirir; sonraki açılışlarda cache'den çalışır. **Plugin'i Figma'da ilk kez kullanıyorsanız** [Plugin'i Figma'ya yükleyin](#plugini-figmaya-yükleyin-ilk-seferde) adımına bakın.
 
 ### A) Clone + build ile (Cursor / Claude)
@@ -185,6 +202,10 @@ npm run dev:local
 
 **"Server disconnected" / "wrong server"?** (1) Port 5454'te başka bir process var mı kontrol edin: `lsof -i :5454`. (2) Cursor/Claude Desktop kullanıyorsanız `npm run dev:local` çalışmıyor olmalı. (3) Build güncel mi: `npm run build:local`.
 
+**Claude'da "connectedClients: 0" / "Plugin Figma Desktop'ta çalışmıyor"?** Claude, Cursor ile aynı anda kullanılıyorsa 5455 portunda çalışır. Plugin ise varsayılan 5454'e bağlanır (Cursor’un bridge’i). Bu yüzden Claude tarafında 0 bağlantı görünür. **Çözüm:** Figma’da plugini açın → **Port** alanına **5455** yazın → Bağlan’a tıklayın. "ready (:5455)" görününce Claude’daki araçlar çalışır. Sadece Claude kullanıyorsanız ve port 5454 ise, pluginde Port’un **5454** olduğundan emin olun.
+
+**Birden fazla dosya/board açık, hepsi "ready" ama link verince hep aynı dosya dönüyor?** Plugin'in `fileKey` gönderebilmesi için manifest'te `enablePrivatePluginApi: true` gerekir (bu repoda ekli). Plugin'i **Development → Import plugin from manifest** ile yeniden seçin; sonra her iki sekmede de plugini tekrar çalıştırıp "ready" yapın. Böylece board ve design dosyası ayrı fileKey ile kaydedilir, URL ile doğru dosyaya yönlenir.
+
 ### Browser Figma desteği
 
 Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Desktop uygulaması zorunlu değildir.
@@ -217,25 +238,32 @@ Detay: [ONBOARDING.md](docs/ONBOARDING.md) (Dev Mode bölümü).
 
 ### Multi-client: Aynı anda birden fazla dosya
 
-F-MCP Bridge **aynı anda birden fazla Figma/FigJam plugin bağlantısını** destekler. Örneğin:
+F-MCP Bridge **aynı anda birden fazla Figma/FigJam plugin bağlantısını** destekler. Üç ortam birlikte kullanılabilir:
 
-- Figma Desktop'ta bir design dosyasında plugin açık
-- Tarayıcıda FigJam board'unda plugin açık
-- Claude/Cursor her iki dosyaya da **aynı bridge üzerinden** erişebilir
+- **Figma Desktop** — bir veya daha fazla design dosyasında plugin açık
+- **FigJam browser** — tarayıcıda FigJam board'unda plugin açık
+- **Figma browser** — tarayıcıda figma.com design dosyasında plugin açık
 
-Her plugin bağlantısı kendini `fileKey` ile tanıtır. MCP tool'larındaki opsiyonel `fileKey` parametresi ile istekler doğru dosyaya yönlendirilir. `fileKey` belirtilmezse en son bağlanan dosyaya gider (geriye uyumlu).
+Hangi **linki** verirseniz, istek o linkteki dosyaya yönlendirilir; diğer pencereler etkilenmez. **Çoklu ajan:** Farklı dosya linkleri kullanarak birden fazla ajan veya oturum aynı anda farklı dosyalarda çalışabilir.
+
+**Link ile kullanım:** Verdiğiniz Figma veya FigJam linki, ilgili tool çağrılarında `figmaUrl` parametresi olarak verilebilir; bridge linkten dosyayı tespit edip o dosyadaki plugin'e yönlendirir. Örneğin: "Bu FigJam linkine bak: https://figma.com/board/XYZ/..." → AI `figma_get_design_context({ figmaUrl: "https://..." })` ile çağırır.
+
+**Manuel fileKey:** Her plugin bağlantısı kendini `fileKey` ile tanıtır. `figma_list_connected_files` ile bağlı dosyaları listeleyip, diğer tool'larda `fileKey` parametresi ile hedef dosyayı belirtebilirsiniz. `fileKey` ve `figmaUrl` belirtilmezse en son bağlanan dosyaya gider (geriye uyumlu).
 
 **Kullanım:**
 
-1. Birden fazla Figma/FigJam dosyasında plugin'i açın → her biri **"ready (:5454)"** gösterir.
-2. `figma_list_connected_files` tool'u ile bağlı dosyaları listeleyin.
-3. Diğer tool'larda `fileKey` parametresi ile hedef dosyayı belirtin.
+1. Birden fazla Figma/FigJam dosyasında (Desktop veya tarayıcı) plugin'i açın → her biri **"ready (:5454)"** gösterir.
+2. İstediğiniz dosyanın linkini Claude/Cursor'a verin veya `figma_list_connected_files` ile bağlı dosyaları listeleyin.
+3. Tool çağrılarında `figmaUrl` (link) veya `fileKey` ile hedef dosyayı belirtin.
 
 ```
 // Bağlı dosyaları listele
 figma_list_connected_files
 
-// Belirli bir dosyadaki design context'i al
+// Link ile: belirli dosyadaki design context
+figma_get_design_context { "figmaUrl": "https://www.figma.com/board/XYZ/...", "depth": 2 }
+
+// veya fileKey ile
 figma_get_design_context { "fileKey": "abc123...", "depth": 2 }
 ```
 
