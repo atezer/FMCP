@@ -7,6 +7,7 @@
   "editorType": ["figma", "figjam", "dev"],
   "capabilities": ["inspect"],
   "documentAccess": "dynamic-page",
+  "enablePrivatePluginApi": true,
   "networkAccess": {
     "allowedDomains": [
       "http://localhost",

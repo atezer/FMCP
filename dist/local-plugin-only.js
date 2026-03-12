@@ -16,7 +16,30 @@ import { getConfig } from "./core/config.js";
 import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
+import { parseFigmaUrl } from "./core/figma-url.js";
 const logger = createChildLogger({ component: "plugin-only-mcp" });
+/** Resolve fileKey from figmaUrl (parse) or explicit fileKey. Returns undefined if neither yields a key. */
+function resolveFileKey(figmaUrl, explicitFileKey) {
+    if (explicitFileKey && explicitFileKey.trim())
+        return explicitFileKey.trim();
+    if (figmaUrl) {
+        const parsed = parseFigmaUrl(figmaUrl);
+        if (parsed?.fileKey)
+            return parsed.fileKey;
+    }
+    return undefined;
+}
+/** For figma_get_design_context: resolve fileKey and nodeId from figmaUrl or explicit params. */
+function resolveDesignContextParams(params) {
+    const fileKey = resolveFileKey(params.figmaUrl, params.fileKey);
+    let nodeId = params.nodeId?.trim();
+    if (!nodeId && params.figmaUrl) {
+        const parsed = parseFigmaUrl(params.figmaUrl);
+        if (parsed?.nodeId)
+            nodeId = parsed.nodeId;
+    }
+    return { fileKey, nodeId: nodeId || undefined };
+}
 function rgbaToHex(color) {
     if (!color || typeof color !== "object")
         return "";
@@ -69,7 +92,7 @@ export async function main() {
     });
     // ---- figma_list_connected_files (multi-client discovery) ----
     server.registerTool("figma_list_connected_files", {
-        description: "List all currently connected Figma/FigJam plugin instances. Returns fileKey, fileName, and connection time for each. Use this to discover available files when multiple plugins are running (e.g. Figma Desktop + FigJam browser). Then pass the fileKey to other tools to target a specific file.",
+        description: "List all currently connected Figma/FigJam plugin instances (Figma Desktop, FigJam browser, Figma browser). Returns fileKey, fileName, and connection time for each. Use when multiple windows or agents are active. Pass the returned fileKey (or a Figma/FigJam URL via figmaUrl) to other tools to target a specific file.",
         inputSchema: {},
         annotations: { readOnlyHint: true },
     }, async () => {
@@ -90,8 +113,9 @@ export async function main() {
     });
     // ---- figma_get_file_data_plugin (no REST, no token) ----
     server.registerTool("figma_get_file_data", {
-        description: "Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography). Use fileKey to target a specific file when multiple plugins are connected.",
+        description: "Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected (Figma Desktop, FigJam browser, Figma browser). Pass a Figma/FigJam URL in figmaUrl to route by link.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey is extracted from the link for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
             depth: z.number().min(0).max(3).optional().default(1),
             verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
@@ -102,9 +126,16 @@ export async function main() {
             outputHint: z.enum(["react", "tailwind"]).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+    }, async ({ figmaUrl, fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
-            const conn = getConnector(bridge, fileKey);
+            const resolvedKey = resolveFileKey(figmaUrl, fileKey);
+            if (figmaUrl && !resolvedKey) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }, null, 0) }],
+                    isError: true,
+                };
+            }
+            const conn = getConnector(bridge, resolvedKey);
             const opts = includeLayout !== undefined ||
                 includeVisual !== undefined ||
                 includeTypography !== undefined ||
@@ -130,9 +161,10 @@ export async function main() {
     });
     // ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
     server.registerTool("figma_get_design_context", {
-        description: "Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token. Use fileKey to target a specific file when multiple plugins are connected.",
+        description: "Design context for a node or whole file: structure + text, layout/visual/typography. Use fileKey or figmaUrl to target a file when multiple plugins are connected. Pass a Figma/FigJam URL in figmaUrl; fileKey and node-id (if present in the link) are extracted automatically.",
         inputSchema: {
-            fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey and optional node-id are extracted for routing."),
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string().optional(),
             depth: z.number().min(0).max(3).optional().default(2),
             verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
@@ -144,9 +176,16 @@ export async function main() {
             outputHint: z.enum(["react", "tailwind"]).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+    }, async ({ figmaUrl, fileKey, nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
-            const conn = getConnector(bridge, fileKey);
+            const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
+            if (figmaUrl && !resolvedKey) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }, null, 0) }],
+                    isError: true,
+                };
+            }
+            const conn = getConnector(bridge, resolvedKey);
             const opts = includeLayout !== undefined ||
                 includeVisual !== undefined ||
                 includeTypography !== undefined ||
@@ -154,8 +193,9 @@ export async function main() {
                 outputHint !== undefined
                 ? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
                 : undefined;
-            const data = nodeId
-                ? await conn.getNodeContext(nodeId, depth, verbosity, opts)
+            const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
+            const data = effectiveNodeId
+                ? await conn.getNodeContext(effectiveNodeId, depth, verbosity, opts)
                 : await conn.getDocumentStructure(depth, verbosity, opts);
             const text = data === undefined || data === null
                 ? JSON.stringify({ success: false, error: "No data from plugin" })
@@ -174,14 +214,15 @@ export async function main() {
     });
     // ---- figma_get_variables (plugin only, token-friendly default) ----
     server.registerTool("figma_get_variables", {
-        description: "Get design tokens and variables from the open Figma file. No REST API or token. Returns summary by default to save tokens. Use fileKey to target a specific file when multiple plugins are connected.",
+        description: "Get design tokens and variables from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, verbosity }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, verbosity }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const raw = await conn.getVariablesFromPluginUI();
         if (!raw || !raw.variables) {
             return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Variables not loaded" }) }] };
@@ -208,70 +249,75 @@ export async function main() {
     });
     // ---- figma_get_component ----
     server.registerTool("figma_get_component", {
-        description: "Get component metadata by node ID from the open Figma file. No REST API. Use figma_get_file_data or figma_search_components to find nodeIds. Use fileKey to target a specific file.",
+        description: "Get component metadata by node ID from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, nodeId }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, nodeId }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.getComponentFromPluginUI(nodeId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_get_styles (plugin only) ----
     server.registerTool("figma_get_styles", {
-        description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Default verbosity=summary for token saving. Use fileKey to target a specific file.",
+        description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             verbosity: z.enum(["summary", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, verbosity }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, verbosity }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const data = await conn.getLocalStyles(verbosity);
         return { content: [{ type: "text", text: JSON.stringify(data || {}, null, 0) }] };
     });
     // ---- figma_execute ----
     server.registerTool("figma_execute", {
-        description: "Run JavaScript in the Figma plugin context. Full Plugin API available (figma.root, figma.createFrame, etc.). No token needed. Use fileKey to target a specific file.",
+        description: "Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             code: z.string(),
             timeout: z.number().optional().default(5000),
         },
         annotations: { destructiveHint: true },
-    }, async ({ fileKey, code, timeout }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, code, timeout }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.executeCodeViaUI(code, timeout);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_capture_screenshot ----
     server.registerTool("figma_capture_screenshot", {
-        description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey to target a specific file.",
+        description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string().optional(),
             format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
             scale: z.number().optional().default(2),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, nodeId, format, scale }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, nodeId, format, scale }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.captureScreenshot(nodeId ?? null, { format, scale });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_set_instance_properties ----
     server.registerTool("figma_set_instance_properties", {
-        description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.). Use fileKey to target a specific file.",
+        description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.). Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string(),
             properties: z.record(z.union([z.string(), z.boolean()])),
         },
         annotations: { destructiveHint: true },
-    }, async ({ fileKey, nodeId, properties }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, nodeId, properties }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.setInstanceProperties(nodeId, properties);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
@@ -359,15 +405,16 @@ export async function main() {
     });
     // ---- Design system summary (minimal tokens) ----
     server.registerTool("figma_get_design_system_summary", {
-        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file. Use fileKey to target a specific file.",
+        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, currentPageOnly, limit }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, currentPageOnly, limit }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const [vars, components] = await Promise.all([
             conn.getVariablesFromPluginUI(),
             conn.getLocalComponents({ currentPageOnly, limit }),
@@ -385,16 +432,17 @@ export async function main() {
     });
     // ---- figma_search_components ----
     server.registerTool("figma_search_components", {
-        description: "Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file. Use fileKey to target a specific file.",
+        description: "Search local components by name. Returns nodeIds and names. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
             query: z.string().optional(),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ fileKey, query, currentPageOnly, limit }) => {
-        const conn = getConnector(bridge, fileKey);
+    }, async ({ figmaUrl, fileKey, query, currentPageOnly, limit }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = (await conn.getLocalComponents({ currentPageOnly, limit }));
         const data = result?.data;
         if (!data) {
@@ -794,6 +842,9 @@ export async function main() {
         const msg = connected
             ? `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected. You can use all figma_* tools.`
             : PLUGIN_NOT_CONNECTED;
+        const portHint = clientCount === 0
+            ? `Bu uygulama (Claude/Cursor) bridge'i port ${port}'ta dinliyor. Figma'da plugini açıp Port alanına ${port} yazın → "ready (:${port})" görünmeli. Claude ile 5455 kullanıyorsanız plugin'de Port: 5455 olmalı.`
+            : undefined;
         return {
             content: [{
                     type: "text",
@@ -801,7 +852,9 @@ export async function main() {
                         pluginConnected: connected,
                         connectedClients: clientCount,
                         connectedFiles,
+                        bridgePort: port,
                         message: msg,
+                        ...(portHint && { portHint }),
                     }, null, 0),
                 }],
         };
