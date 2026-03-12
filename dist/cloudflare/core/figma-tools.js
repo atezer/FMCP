@@ -579,32 +579,36 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
     // NOTE: For specific use cases, consider using specialized tools:
     // - figma_get_component_for_development: For UI component implementation
     // - figma_get_file_for_plugin: For plugin development
-    server.tool("figma_get_file_data", "Get full file structure and document tree. WARNING: Can consume large amounts of tokens. NOT recommended for component descriptions (use figma_get_component instead). Best for understanding file structure or finding component nodeIds. Start with verbosity='summary' and depth=1 for initial exploration.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
-        depth: z
-            .number()
-            .min(0)
-            .max(3)
-            .optional()
-            .default(1)
-            .describe("How many levels of children to include (default: 1, max: 3). Start with 1 to prevent context exhaustion. Use 0 for full tree only when absolutely necessary."),
-        verbosity: z
-            .enum(["summary", "standard", "full"])
-            .optional()
-            .default("summary")
-            .describe("Controls payload size: 'summary' (IDs/names/types only, ~90% smaller - RECOMMENDED), 'standard' (essential properties, ~50% smaller), 'full' (everything). Default: summary for token efficiency."),
-        nodeIds: z
-            .array(z.string())
-            .optional()
-            .describe("Specific node IDs to retrieve (optional)"),
-        enrich: z
-            .boolean()
-            .optional()
-            .describe("Set to true when user asks for: file statistics, health metrics, design system audit, or quality analysis. Adds statistics, health scores, and audit summaries. Default: false"),
+    server.registerTool("figma_get_file_data", {
+        description: "Get full file structure and document tree. WARNING: Can consume large amounts of tokens. NOT recommended for component descriptions (use figma_get_component instead). Best for understanding file structure or finding component nodeIds. Start with verbosity='summary' and depth=1 for initial exploration.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
+            depth: z
+                .number()
+                .min(0)
+                .max(3)
+                .optional()
+                .default(1)
+                .describe("How many levels of children to include (default: 1, max: 3). Start with 1 to prevent context exhaustion. Use 0 for full tree only when absolutely necessary."),
+            verbosity: z
+                .enum(["summary", "standard", "full"])
+                .optional()
+                .default("summary")
+                .describe("Controls payload size: 'summary' (IDs/names/types only, ~90% smaller - RECOMMENDED), 'standard' (essential properties, ~50% smaller), 'full' (everything). Default: summary for token efficiency."),
+            nodeIds: z
+                .array(z.string())
+                .optional()
+                .describe("Specific node IDs to retrieve (optional)"),
+            enrich: z
+                .boolean()
+                .optional()
+                .describe("Set to true when user asks for: file statistics, health metrics, design system audit, or quality analysis. Adds statistics, health scores, and audit summaries. Default: false"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, depth, nodeIds, enrich, verbosity }) => {
         try {
             // Initialize API client (required for file data - no F-MCP ATezer Bridge alternative)
@@ -780,111 +784,115 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
      *
      * IMPORTANT: Snippet requires Figma Plugin API context, not browser DevTools console.
      */
-    server.tool("figma_get_variables", "Extract design tokens and variables from a Figma file with code export support (CSS, Tailwind, TypeScript, Sass). Use when user asks for: design system tokens, variables, color/spacing values, theme data, or code exports. Handles multi-mode variables (Light/Dark themes). NOT for component metadata (use figma_get_component). Supports filtering by collection/mode/name and verbosity control to prevent token exhaustion. Enterprise plan required for Variables API; automatically falls back to Styles API or console-based extraction if unavailable.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
-        includePublished: z
-            .boolean()
-            .optional()
-            .default(true)
-            .describe("Include published variables from libraries"),
-        verbosity: z
-            .enum(["inventory", "summary", "standard", "full"])
-            .optional()
-            .default("standard")
-            .describe("Controls payload size: 'inventory' (names/IDs only, ~95% smaller, use with filtered), 'summary' (names/values only, ~80% smaller), 'standard' (essential properties, ~45% smaller), 'full' (everything). Default: standard"),
-        enrich: z
-            .boolean()
-            .optional()
-            .describe("Set to true when user asks for: CSS/Sass/Tailwind exports, code examples, design tokens, usage information, dependencies, or any export format. Adds resolved values, dependency graphs, and usage analysis. Default: false"),
-        include_usage: z
-            .boolean()
-            .optional()
-            .describe("Include usage in styles and components (requires enrich=true)"),
-        include_dependencies: z
-            .boolean()
-            .optional()
-            .describe("Include variable dependency graph (requires enrich=true)"),
-        include_exports: z
-            .boolean()
-            .optional()
-            .describe("Include export format examples (requires enrich=true)"),
-        export_formats: z
-            .array(z.enum(["css", "sass", "tailwind", "typescript", "json"]))
-            .optional()
-            .describe("Which code formats to generate examples for. Use when user mentions specific formats like 'CSS', 'Tailwind', 'SCSS', 'TypeScript', etc. Automatically enables enrichment."),
-        format: z
-            .enum(["summary", "filtered", "full"])
-            .optional()
-            .default("full")
-            .describe("Response format: 'summary' (~2K tokens with overview and names only), 'filtered' (apply collection/name/mode filters), 'full' (complete dataset from cache or fetch). " +
-            "Summary is recommended for initial exploration. Full format returns all data but may be auto-summarized if >25K tokens. Default: full"),
-        collection: z
-            .string()
-            .optional()
-            .describe("Filter variables by collection name or ID. Case-insensitive substring match. Only applies when format='filtered'. Example: 'Primitives' or 'VariableCollectionId:123'"),
-        namePattern: z
-            .string()
-            .optional()
-            .describe("Filter variables by name using regex pattern or substring. Case-insensitive. Only applies when format='filtered'. Example: 'color/brand' or '^typography'"),
-        mode: z
-            .string()
-            .optional()
-            .describe("Filter variables by mode name or ID. Only returns variables that have values for this mode. Only applies when format='filtered'. Example: 'Light' or 'Dark'"),
-        returnAsLinks: z
-            .boolean()
-            .optional()
-            .default(false)
-            .describe("Return variables as resource_link references instead of full data. Drastically reduces payload size (100+ variables = ~20KB vs >1MB). Use with figma_get_variable_by_id to fetch specific variables. Recommended for large variable sets. Default: false"),
-        refreshCache: z
-            .boolean()
-            .optional()
-            .default(false)
-            .describe("Force refresh cache by fetching fresh data from Figma. Use when data may have changed since last fetch. Default: false (use cached data if available and fresh)"),
-        useConsoleFallback: z
-            .boolean()
-            .optional()
-            .default(true)
-            .describe("Enable automatic fallback to console-based extraction when REST API returns 403 (Figma Enterprise plan required). " +
-            "When enabled, provides a JavaScript snippet that users run in Figma's plugin console. " +
-            "This is STEP 1 of a two-call workflow. After receiving the snippet, instruct the user to run it, then call this tool again with parseFromConsole=true. " +
-            "Default: true. Set to false only to disable the fallback entirely."),
-        parseFromConsole: z
-            .boolean()
-            .optional()
-            .default(false)
-            .describe("Parse variables from console logs after user has executed the snippet. " +
-            "This is STEP 2 of the two-call workflow. Set to true ONLY after: " +
-            "(1) you received a console snippet from the first call, " +
-            "(2) instructed the user to run it in Figma's PLUGIN console (Plugins → Development → Open Console or existing plugin), " +
-            "(3) user confirmed they ran the snippet and saw '✅ Variables data captured!' message. " +
-            "Default: false. Never set to true on the first call."),
-        page: z
-            .number()
-            .int()
-            .min(1)
-            .optional()
-            .default(1)
-            .describe("Page number for paginated results (1-based). Use when response is too large (>1MB). Each page returns up to 50 variables."),
-        pageSize: z
-            .number()
-            .int()
-            .min(1)
-            .max(100)
-            .optional()
-            .default(50)
-            .describe("Number of variables per page (1-100). Default: 50. Smaller values reduce response size."),
-        resolveAliases: z
-            .boolean()
-            .optional()
-            .default(false)
-            .describe("Automatically resolve variable aliases to their final values (hex colors, numbers, etc.). " +
-            "When true, each variable will include a 'resolvedValuesByMode' field with the actual values " +
-            "instead of just alias references. Useful for getting color hex values without manual resolution. " +
-            "Default: false."),
+    server.registerTool("figma_get_variables", {
+        description: "Extract design tokens and variables from a Figma file with code export support (CSS, Tailwind, TypeScript, Sass). Use when user asks for: design system tokens, variables, color/spacing values, theme data, or code exports. Handles multi-mode variables (Light/Dark themes). NOT for component metadata (use figma_get_component). Supports filtering by collection/mode/name and verbosity control to prevent token exhaustion. Enterprise plan required for Variables API; automatically falls back to Styles API or console-based extraction if unavailable.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
+            includePublished: z
+                .boolean()
+                .optional()
+                .default(true)
+                .describe("Include published variables from libraries"),
+            verbosity: z
+                .enum(["inventory", "summary", "standard", "full"])
+                .optional()
+                .default("standard")
+                .describe("Controls payload size: 'inventory' (names/IDs only, ~95% smaller, use with filtered), 'summary' (names/values only, ~80% smaller), 'standard' (essential properties, ~45% smaller), 'full' (everything). Default: standard"),
+            enrich: z
+                .boolean()
+                .optional()
+                .describe("Set to true when user asks for: CSS/Sass/Tailwind exports, code examples, design tokens, usage information, dependencies, or any export format. Adds resolved values, dependency graphs, and usage analysis. Default: false"),
+            include_usage: z
+                .boolean()
+                .optional()
+                .describe("Include usage in styles and components (requires enrich=true)"),
+            include_dependencies: z
+                .boolean()
+                .optional()
+                .describe("Include variable dependency graph (requires enrich=true)"),
+            include_exports: z
+                .boolean()
+                .optional()
+                .describe("Include export format examples (requires enrich=true)"),
+            export_formats: z
+                .array(z.enum(["css", "sass", "tailwind", "typescript", "json"]))
+                .optional()
+                .describe("Which code formats to generate examples for. Use when user mentions specific formats like 'CSS', 'Tailwind', 'SCSS', 'TypeScript', etc. Automatically enables enrichment."),
+            format: z
+                .enum(["summary", "filtered", "full"])
+                .optional()
+                .default("full")
+                .describe("Response format: 'summary' (~2K tokens with overview and names only), 'filtered' (apply collection/name/mode filters), 'full' (complete dataset from cache or fetch). " +
+                "Summary is recommended for initial exploration. Full format returns all data but may be auto-summarized if >25K tokens. Default: full"),
+            collection: z
+                .string()
+                .optional()
+                .describe("Filter variables by collection name or ID. Case-insensitive substring match. Only applies when format='filtered'. Example: 'Primitives' or 'VariableCollectionId:123'"),
+            namePattern: z
+                .string()
+                .optional()
+                .describe("Filter variables by name using regex pattern or substring. Case-insensitive. Only applies when format='filtered'. Example: 'color/brand' or '^typography'"),
+            mode: z
+                .string()
+                .optional()
+                .describe("Filter variables by mode name or ID. Only returns variables that have values for this mode. Only applies when format='filtered'. Example: 'Light' or 'Dark'"),
+            returnAsLinks: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Return variables as resource_link references instead of full data. Drastically reduces payload size (100+ variables = ~20KB vs >1MB). Use with figma_get_variable_by_id to fetch specific variables. Recommended for large variable sets. Default: false"),
+            refreshCache: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Force refresh cache by fetching fresh data from Figma. Use when data may have changed since last fetch. Default: false (use cached data if available and fresh)"),
+            useConsoleFallback: z
+                .boolean()
+                .optional()
+                .default(true)
+                .describe("Enable automatic fallback to console-based extraction when REST API returns 403 (Figma Enterprise plan required). " +
+                "When enabled, provides a JavaScript snippet that users run in Figma's plugin console. " +
+                "This is STEP 1 of a two-call workflow. After receiving the snippet, instruct the user to run it, then call this tool again with parseFromConsole=true. " +
+                "Default: true. Set to false only to disable the fallback entirely."),
+            parseFromConsole: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Parse variables from console logs after user has executed the snippet. " +
+                "This is STEP 2 of the two-call workflow. Set to true ONLY after: " +
+                "(1) you received a console snippet from the first call, " +
+                "(2) instructed the user to run it in Figma's PLUGIN console (Plugins → Development → Open Console or existing plugin), " +
+                "(3) user confirmed they ran the snippet and saw '✅ Variables data captured!' message. " +
+                "Default: false. Never set to true on the first call."),
+            page: z
+                .number()
+                .int()
+                .min(1)
+                .optional()
+                .default(1)
+                .describe("Page number for paginated results (1-based). Use when response is too large (>1MB). Each page returns up to 50 variables."),
+            pageSize: z
+                .number()
+                .int()
+                .min(1)
+                .max(100)
+                .optional()
+                .default(50)
+                .describe("Number of variables per page (1-100). Default: 50. Smaller values reduce response size."),
+            resolveAliases: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Automatically resolve variable aliases to their final values (hex colors, numbers, etc.). " +
+                "When true, each variable will include a 'resolvedValuesByMode' field with the actual values " +
+                "instead of just alias references. Useful for getting color hex values without manual resolution. " +
+                "Default: false."),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, includePublished, verbosity, enrich, include_usage, include_dependencies, include_exports, export_formats, format, collection, namePattern, mode, returnAsLinks, refreshCache, useConsoleFallback, parseFromConsole, page, pageSize, resolveAliases }) => {
         // Extract fileKey outside try block so it's available in catch block
         const url = fileUrl || getCurrentUrl();
@@ -1802,24 +1810,28 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
         }
     });
     // Tool 10: Get Component Data
-    server.tool("figma_get_component", "Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the F-MCP ATezer Bridge is running (Right-click in Figma → Plugins → Development → F-MCP ATezer Bridge) to get complete description data.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
-        nodeId: z
-            .string()
-            .describe("Component node ID (e.g., '123:456')"),
-        format: z
-            .enum(["metadata", "reconstruction"])
-            .optional()
-            .default("metadata")
-            .describe("Export format: 'metadata' (default) for comprehensive documentation, 'reconstruction' for node tree specification compatible with Figma Component Reconstructor plugin"),
-        enrich: z
-            .boolean()
-            .optional()
-            .describe("Set to true when user asks for: design token coverage, hardcoded value analysis, or component quality metrics. Adds token coverage analysis and hardcoded value detection. Default: false. Only applicable for metadata format."),
+    server.registerTool("figma_get_component", {
+        description: "Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the F-MCP ATezer Bridge is running (Right-click in Figma → Plugins → Development → F-MCP ATezer Bridge) to get complete description data.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
+            nodeId: z
+                .string()
+                .describe("Component node ID (e.g., '123:456')"),
+            format: z
+                .enum(["metadata", "reconstruction"])
+                .optional()
+                .default("metadata")
+                .describe("Export format: 'metadata' (default) for comprehensive documentation, 'reconstruction' for node tree specification compatible with Figma Component Reconstructor plugin"),
+            enrich: z
+                .boolean()
+                .optional()
+                .describe("Set to true when user asks for: design token coverage, hardcoded value analysis, or component quality metrics. Adds token coverage analysis and hardcoded value detection. Default: false. Only applicable for metadata format."),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, nodeId, format = "metadata", enrich }) => {
         try {
             const url = fileUrl || getCurrentUrl();
@@ -2034,33 +2046,37 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
         }
     });
     // Tool 11: Get Styles
-    server.tool("figma_get_styles", "Get all styles (color, text, effects, grids) from a Figma file with optional code exports. Use when user asks for: text styles, color palette, design system styles, typography, or style documentation. Returns organized style definitions with resolved values. NOT for design tokens/variables (use figma_get_variables). Set enrich=true for CSS/Tailwind/Sass code examples. Supports verbosity control to manage payload size.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
-        verbosity: z
-            .enum(["summary", "standard", "full"])
-            .optional()
-            .default("standard")
-            .describe("Controls payload size: 'summary' (names/types only, ~85% smaller), 'standard' (essential properties, ~40% smaller), 'full' (everything). Default: standard"),
-        enrich: z
-            .boolean()
-            .optional()
-            .describe("Set to true when user asks for: CSS/Sass/Tailwind code, export formats, usage information, code examples, or design system exports. Adds resolved values, usage analysis, and export format examples. Default: false for backward compatibility"),
-        include_usage: z
-            .boolean()
-            .optional()
-            .describe("Include component usage information (requires enrich=true)"),
-        include_exports: z
-            .boolean()
-            .optional()
-            .describe("Include export format examples (requires enrich=true)"),
-        export_formats: z
-            .array(z.enum(["css", "sass", "tailwind", "typescript", "json"]))
-            .optional()
-            .describe("Which code formats to generate examples for. Use when user mentions specific formats like 'CSS', 'Tailwind', 'SCSS', 'TypeScript', etc. Automatically enables enrichment. Default: all formats"),
+    server.registerTool("figma_get_styles", {
+        description: "Get all styles (color, text, effects, grids) from a Figma file with optional code exports. Use when user asks for: text styles, color palette, design system styles, typography, or style documentation. Returns organized style definitions with resolved values. NOT for design tokens/variables (use figma_get_variables). Set enrich=true for CSS/Tailwind/Sass code examples. Supports verbosity control to manage payload size.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
+            verbosity: z
+                .enum(["summary", "standard", "full"])
+                .optional()
+                .default("standard")
+                .describe("Controls payload size: 'summary' (names/types only, ~85% smaller), 'standard' (essential properties, ~40% smaller), 'full' (everything). Default: standard"),
+            enrich: z
+                .boolean()
+                .optional()
+                .describe("Set to true when user asks for: CSS/Sass/Tailwind code, export formats, usage information, code examples, or design system exports. Adds resolved values, usage analysis, and export format examples. Default: false for backward compatibility"),
+            include_usage: z
+                .boolean()
+                .optional()
+                .describe("Include component usage information (requires enrich=true)"),
+            include_exports: z
+                .boolean()
+                .optional()
+                .describe("Include export format examples (requires enrich=true)"),
+            export_formats: z
+                .array(z.enum(["css", "sass", "tailwind", "typescript", "json"]))
+                .optional()
+                .describe("Which code formats to generate examples for. Use when user mentions specific formats like 'CSS', 'Tailwind', 'SCSS', 'TypeScript', etc. Automatically enables enrichment. Default: all formats"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, verbosity, enrich, include_usage, include_exports, export_formats }) => {
         try {
             let api;
@@ -2179,27 +2195,31 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
         }
     });
     // Tool 12: Get Component Image (Visual Reference)
-    server.tool("figma_get_component_image", "Render a specific component or node as an image (PNG, JPG, SVG, PDF). Returns image URL valid for 30 days. Use when user asks for: component screenshot, visual preview, rendered output, or 'show me'. NOT for component metadata/properties (use figma_get_component). NOT for getting code/layout data (use figma_get_component_for_development). Best for: visual references, design review, documentation.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
-        nodeId: z
-            .string()
-            .describe("Component node ID to render as image (e.g., '695:313')"),
-        scale: z
-            .number()
-            .min(0.01)
-            .max(4)
-            .optional()
-            .default(2)
-            .describe("Image scale factor (0.01-4, default: 2 for high quality)"),
-        format: z
-            .enum(["png", "jpg", "svg", "pdf"])
-            .optional()
-            .default("png")
-            .describe("Image format (default: png)"),
+    server.registerTool("figma_get_component_image", {
+        description: "Render a specific component or node as an image (PNG, JPG, SVG, PDF). Returns image URL valid for 30 days. Use when user asks for: component screenshot, visual preview, rendered output, or 'show me'. NOT for component metadata/properties (use figma_get_component). NOT for getting code/layout data (use figma_get_component_for_development). Best for: visual references, design review, documentation.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called. If not provided, ask the user to share their Figma file URL (they can copy it from Figma Desktop via right-click → 'Copy link')."),
+            nodeId: z
+                .string()
+                .describe("Component node ID to render as image (e.g., '695:313')"),
+            scale: z
+                .number()
+                .min(0.01)
+                .max(4)
+                .optional()
+                .default(2)
+                .describe("Image scale factor (0.01-4, default: 2 for high quality)"),
+            format: z
+                .enum(["png", "jpg", "svg", "pdf"])
+                .optional()
+                .default("png")
+                .describe("Image format (default: png)"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, nodeId, scale, format }) => {
         try {
             let api;
@@ -2301,20 +2321,24 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
         }
     });
     // Tool 13: Get Component for Development (UI Implementation)
-    server.tool("figma_get_component_for_development", "Get component data optimized for UI implementation, includes rendered image + filtered implementation context (layout, typography, visual properties). Use when user asks to: 'build this component', 'implement this in React/Vue', 'generate code for', or needs both visual reference and technical specs. Automatically includes 2x scale image unless includeImage=false. Best for: UI development, code generation, design-to-code workflows. For just metadata, use figma_get_component; for just image, use figma_get_component_image.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called."),
-        nodeId: z
-            .string()
-            .describe("Component node ID to get data for (e.g., '695:313')"),
-        includeImage: z
-            .boolean()
-            .optional()
-            .default(true)
-            .describe("Include rendered image for visual reference (default: true)"),
+    server.registerTool("figma_get_component_for_development", {
+        description: "Get component data optimized for UI implementation, includes rendered image + filtered implementation context (layout, typography, visual properties). Use when user asks to: 'build this component', 'implement this in React/Vue', 'generate code for', or needs both visual reference and technical specs. Automatically includes 2x scale image unless includeImage=false. Best for: UI development, code generation, design-to-code workflows. For just metadata, use figma_get_component; for just image, use figma_get_component_image.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called."),
+            nodeId: z
+                .string()
+                .describe("Component node ID to get data for (e.g., '695:313')"),
+            includeImage: z
+                .boolean()
+                .optional()
+                .default(true)
+                .describe("Include rendered image for visual reference (default: true)"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, nodeId, includeImage }) => {
         try {
             let api;
@@ -2510,23 +2534,27 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
         }
     });
     // Tool 14: Get File for Plugin Development
-    server.tool("figma_get_file_for_plugin", "Get file data optimized for plugin development with filtered properties (IDs, structure, plugin data, component relationships). Excludes visual properties (fills, strokes, effects) to reduce payload. Use when user asks for: plugin development, file structure for manipulation, node IDs for plugin API. NOT for component descriptions (use figma_get_component). NOT for visual/styling data (use figma_get_component_for_development). Supports deeper tree traversal (max depth=5) than figma_get_file_data.", {
-        fileUrl: z
-            .string()
-            .url()
-            .optional()
-            .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called."),
-        depth: z
-            .number()
-            .min(0)
-            .max(5)
-            .optional()
-            .default(2)
-            .describe("How many levels of children to include (default: 2, max: 5). Higher depths are safe here due to filtering."),
-        nodeIds: z
-            .array(z.string())
-            .optional()
-            .describe("Specific node IDs to retrieve (optional)"),
+    server.registerTool("figma_get_file_for_plugin", {
+        description: "Get file data optimized for plugin development with filtered properties (IDs, structure, plugin data, component relationships). Excludes visual properties (fills, strokes, effects) to reduce payload. Use when user asks for: plugin development, file structure for manipulation, node IDs for plugin API. NOT for component descriptions (use figma_get_component). NOT for visual/styling data (use figma_get_component_for_development). Supports deeper tree traversal (max depth=5) than figma_get_file_data.",
+        inputSchema: {
+            fileUrl: z
+                .string()
+                .url()
+                .optional()
+                .describe("Figma file URL (e.g., https://figma.com/design/abc123). REQUIRED unless figma_navigate was already called."),
+            depth: z
+                .number()
+                .min(0)
+                .max(5)
+                .optional()
+                .default(2)
+                .describe("How many levels of children to include (default: 2, max: 5). Higher depths are safe here due to filtering."),
+            nodeIds: z
+                .array(z.string())
+                .optional()
+                .describe("Specific node IDs to retrieve (optional)"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ fileUrl, depth, nodeIds }) => {
         try {
             let api;
@@ -2699,23 +2727,27 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
     // Tool 15: Capture Screenshot via Plugin (F-MCP ATezer Bridge)
     // This uses exportAsync() which reads the current plugin runtime state, not the cloud state
     // Solves race condition where REST API screenshots show stale data after changes
-    server.tool("figma_capture_screenshot", "Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires F-MCP ATezer Bridge connection (Figma Desktop with plugin running).", {
-        nodeId: z
-            .string()
-            .optional()
-            .describe("ID of the node to capture (e.g., '1:234'). If not provided, captures the current page."),
-        format: z
-            .enum(["PNG", "JPG", "SVG"])
-            .optional()
-            .default("PNG")
-            .describe("Image format (default: PNG)"),
-        scale: z
-            .number()
-            .min(0.5)
-            .max(4)
-            .optional()
-            .default(2)
-            .describe("Scale factor (default: 2 for 2x resolution)"),
+    server.registerTool("figma_capture_screenshot", {
+        description: "Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires F-MCP ATezer Bridge connection (Figma Desktop with plugin running).",
+        inputSchema: {
+            nodeId: z
+                .string()
+                .optional()
+                .describe("ID of the node to capture (e.g., '1:234'). If not provided, captures the current page."),
+            format: z
+                .enum(["PNG", "JPG", "SVG"])
+                .optional()
+                .default("PNG")
+                .describe("Image format (default: PNG)"),
+            scale: z
+                .number()
+                .min(0.5)
+                .max(4)
+                .optional()
+                .default(2)
+                .describe("Scale factor (default: 2 for 2x resolution)"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ nodeId, format, scale }) => {
         try {
             // Prefer connector (works with Plugin Bridge WebSocket, no CDP needed)
@@ -2798,15 +2830,19 @@ export function registerFigmaAPITools(server, getFigmaAPI, getCurrentUrl, getCon
     // Tool 16: Set Instance Properties (F-MCP ATezer Bridge)
     // Updates component properties on an instance using setProperties()
     // This is the correct way to update TEXT/BOOLEAN/VARIANT properties on component instances
-    server.tool("figma_set_instance_properties", "Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires F-MCP ATezer Bridge connection.", {
-        nodeId: z
-            .string()
-            .describe("ID of the INSTANCE node to update (e.g., '1:234'). Must be a component instance, not a regular frame."),
-        properties: z
-            .record(z.string(), z.union([z.string(), z.boolean()]))
-            .describe("Properties to set. Keys are property names (e.g., 'Label', 'Show Icon', 'Size'). " +
-            "Values are strings for TEXT/VARIANT properties, booleans for BOOLEAN properties. " +
-            "The tool automatically handles the #nodeId suffix for TEXT/BOOLEAN/INSTANCE_SWAP properties."),
+    server.registerTool("figma_set_instance_properties", {
+        description: "Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires F-MCP ATezer Bridge connection.",
+        inputSchema: {
+            nodeId: z
+                .string()
+                .describe("ID of the INSTANCE node to update (e.g., '1:234'). Must be a component instance, not a regular frame."),
+            properties: z
+                .record(z.string(), z.union([z.string(), z.boolean()]))
+                .describe("Properties to set. Keys are property names (e.g., 'Label', 'Show Icon', 'Size'). " +
+                "Values are strings for TEXT/VARIANT properties, booleans for BOOLEAN properties. " +
+                "The tool automatically handles the #nodeId suffix for TEXT/BOOLEAN/INSTANCE_SWAP properties."),
+        },
+        annotations: { destructiveHint: true },
     }, async ({ nodeId, properties }) => {
         try {
             let result = null;

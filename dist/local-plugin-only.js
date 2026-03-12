@@ -56,17 +56,21 @@ export async function main() {
     bridge.start();
     const server = new McpServer({
         name: "F-MCP ATezer Bridge (Plugin-only)",
-        version: "1.0.0",
+        version: "1.1.2",
     });
     // ---- figma_get_file_data_plugin (no REST, no token) ----
-    server.tool("figma_get_file_data", "Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography).", {
-        depth: z.number().min(0).max(3).optional().default(1),
-        verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
-        includeLayout: z.boolean().optional(),
-        includeVisual: z.boolean().optional(),
-        includeTypography: z.boolean().optional(),
-        includeCodeReady: z.boolean().optional(),
-        outputHint: z.enum(["react", "tailwind"]).optional(),
+    server.registerTool("figma_get_file_data", {
+        description: "Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography).",
+        inputSchema: {
+            depth: z.number().min(0).max(3).optional().default(1),
+            verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
+            includeLayout: z.boolean().optional(),
+            includeVisual: z.boolean().optional(),
+            includeTypography: z.boolean().optional(),
+            includeCodeReady: z.boolean().optional(),
+            outputHint: z.enum(["react", "tailwind"]).optional(),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
             const conn = getConnector(bridge);
@@ -94,16 +98,20 @@ export async function main() {
         }
     });
     // ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
-    server.tool("figma_get_design_context", "Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token.", {
-        nodeId: z.string().optional(),
-        depth: z.number().min(0).max(3).optional().default(2),
-        verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
-        excludeScreenshot: z.boolean().optional(),
-        includeLayout: z.boolean().optional(),
-        includeVisual: z.boolean().optional(),
-        includeTypography: z.boolean().optional(),
-        includeCodeReady: z.boolean().optional(),
-        outputHint: z.enum(["react", "tailwind"]).optional(),
+    server.registerTool("figma_get_design_context", {
+        description: "Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token.",
+        inputSchema: {
+            nodeId: z.string().optional(),
+            depth: z.number().min(0).max(3).optional().default(2),
+            verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
+            excludeScreenshot: z.boolean().optional(),
+            includeLayout: z.boolean().optional(),
+            includeVisual: z.boolean().optional(),
+            includeTypography: z.boolean().optional(),
+            includeCodeReady: z.boolean().optional(),
+            outputHint: z.enum(["react", "tailwind"]).optional(),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
             const conn = getConnector(bridge);
@@ -133,8 +141,12 @@ export async function main() {
         }
     });
     // ---- figma_get_variables (plugin only, token-friendly default) ----
-    server.tool("figma_get_variables", "Get design tokens and variables from the open Figma file. No REST API or token. Returns summary by default to save tokens.", {
-        verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
+    server.registerTool("figma_get_variables", {
+        description: "Get design tokens and variables from the open Figma file. No REST API or token. Returns summary by default to save tokens.",
+        inputSchema: {
+            verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ verbosity }) => {
         const conn = getConnector(bridge);
         const raw = await conn.getVariablesFromPluginUI();
@@ -162,99 +174,155 @@ export async function main() {
         return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
     });
     // ---- figma_get_component ----
-    server.tool("figma_get_component", "Get component metadata by node ID from the open Figma file. No REST API. Use figma_get_file_data or figma_search_components to find nodeIds.", { nodeId: z.string() }, async ({ nodeId }) => {
+    server.registerTool("figma_get_component", {
+        description: "Get component metadata by node ID from the open Figma file. No REST API. Use figma_get_file_data or figma_search_components to find nodeIds.",
+        inputSchema: { nodeId: z.string() },
+        annotations: { readOnlyHint: true },
+    }, async ({ nodeId }) => {
         const conn = getConnector(bridge);
         const result = await conn.getComponentFromPluginUI(nodeId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_get_styles (plugin only) ----
-    server.tool("figma_get_styles", "Get local paint, text, and effect styles from the open Figma file. No REST API. Default verbosity=summary for token saving.", { verbosity: z.enum(["summary", "full"]).optional().default("summary") }, async ({ verbosity }) => {
+    server.registerTool("figma_get_styles", {
+        description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Default verbosity=summary for token saving.",
+        inputSchema: { verbosity: z.enum(["summary", "full"]).optional().default("summary") },
+        annotations: { readOnlyHint: true },
+    }, async ({ verbosity }) => {
         const conn = getConnector(bridge);
         const data = await conn.getLocalStyles(verbosity);
         return { content: [{ type: "text", text: JSON.stringify(data || {}, null, 0) }] };
     });
     // ---- figma_execute ----
-    server.tool("figma_execute", "Run JavaScript in the Figma plugin context. Full Plugin API available (figma.root, figma.createFrame, etc.). No token needed.", {
-        code: z.string(),
-        timeout: z.number().optional().default(5000),
+    server.registerTool("figma_execute", {
+        description: "Run JavaScript in the Figma plugin context. Full Plugin API available (figma.root, figma.createFrame, etc.). No token needed.",
+        inputSchema: {
+            code: z.string(),
+            timeout: z.number().optional().default(5000),
+        },
+        annotations: { destructiveHint: true },
     }, async ({ code, timeout }) => {
         const conn = getConnector(bridge);
         const result = await conn.executeCodeViaUI(code, timeout);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_capture_screenshot ----
-    server.tool("figma_capture_screenshot", "Capture screenshot of a node or current view from the plugin. No REST API.", {
-        nodeId: z.string().optional(),
-        format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
-        scale: z.number().optional().default(2),
+    server.registerTool("figma_capture_screenshot", {
+        description: "Capture screenshot of a node or current view from the plugin. No REST API.",
+        inputSchema: {
+            nodeId: z.string().optional(),
+            format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+            scale: z.number().optional().default(2),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ nodeId, format, scale }) => {
         const conn = getConnector(bridge);
         const result = await conn.captureScreenshot(nodeId ?? null, { format, scale });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_set_instance_properties ----
-    server.tool("figma_set_instance_properties", "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.).", {
-        nodeId: z.string(),
-        properties: z.record(z.union([z.string(), z.boolean()])),
+    server.registerTool("figma_set_instance_properties", {
+        description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.).",
+        inputSchema: {
+            nodeId: z.string(),
+            properties: z.record(z.union([z.string(), z.boolean()])),
+        },
+        annotations: { destructiveHint: true },
     }, async ({ nodeId, properties }) => {
         const conn = getConnector(bridge);
         const result = await conn.setInstanceProperties(nodeId, properties);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- Variable CRUD ----
-    server.tool("figma_update_variable", "Update a variable value in a mode. Get IDs from figma_get_variables.", {
-        variableId: z.string(),
-        modeId: z.string(),
-        value: z.union([z.string(), z.number(), z.boolean()]),
+    server.registerTool("figma_update_variable", {
+        description: "Update a variable value in a mode. Get IDs from figma_get_variables.",
+        inputSchema: {
+            variableId: z.string(),
+            modeId: z.string(),
+            value: z.union([z.string(), z.number(), z.boolean()]),
+        },
+        annotations: { destructiveHint: true },
     }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.updateVariable(p.variableId, p.modeId, p.value);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_create_variable", "Create a variable in a collection. Get collectionId from figma_get_variables.", {
-        name: z.string(),
-        collectionId: z.string(),
-        resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
-        options: z.record(z.any()).optional(),
+    server.registerTool("figma_create_variable", {
+        description: "Create a variable in a collection. Get collectionId from figma_get_variables.",
+        inputSchema: {
+            name: z.string(),
+            collectionId: z.string(),
+            resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
+            options: z.record(z.any()).optional(),
+        },
+        annotations: { destructiveHint: true },
     }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.createVariable(p.name, p.collectionId, p.resolvedType, p.options);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_create_variable_collection", "Create a variable collection.", { name: z.string(), options: z.record(z.any()).optional() }, async (p) => {
+    server.registerTool("figma_create_variable_collection", {
+        description: "Create a variable collection.",
+        inputSchema: { name: z.string(), options: z.record(z.any()).optional() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.createVariableCollection(p.name, p.options);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_delete_variable", "Delete a variable.", { variableId: z.string() }, async (p) => {
+    server.registerTool("figma_delete_variable", {
+        description: "Delete a variable.",
+        inputSchema: { variableId: z.string() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.deleteVariable(p.variableId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_delete_variable_collection", "Delete a variable collection.", { collectionId: z.string() }, async (p) => {
+    server.registerTool("figma_delete_variable_collection", {
+        description: "Delete a variable collection.",
+        inputSchema: { collectionId: z.string() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.deleteVariableCollection(p.collectionId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_rename_variable", "Rename a variable.", { variableId: z.string(), newName: z.string() }, async (p) => {
+    server.registerTool("figma_rename_variable", {
+        description: "Rename a variable.",
+        inputSchema: { variableId: z.string(), newName: z.string() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.renameVariable(p.variableId, p.newName);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_add_mode", "Add a mode to a collection.", { collectionId: z.string(), modeName: z.string() }, async (p) => {
+    server.registerTool("figma_add_mode", {
+        description: "Add a mode to a collection.",
+        inputSchema: { collectionId: z.string(), modeName: z.string() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.addMode(p.collectionId, p.modeName);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_rename_mode", "Rename a mode in a collection.", { collectionId: z.string(), modeId: z.string(), newName: z.string() }, async (p) => {
+    server.registerTool("figma_rename_mode", {
+        description: "Rename a mode in a collection.",
+        inputSchema: { collectionId: z.string(), modeId: z.string(), newName: z.string() },
+        annotations: { destructiveHint: true },
+    }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.renameMode(p.collectionId, p.modeId, p.newName);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- Design system summary (minimal tokens) ----
-    server.tool("figma_get_design_system_summary", "Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file.", {
-        currentPageOnly: z.boolean().optional().default(true),
-        limit: z.number().min(0).optional(),
+    server.registerTool("figma_get_design_system_summary", {
+        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file.",
+        inputSchema: {
+            currentPageOnly: z.boolean().optional().default(true),
+            limit: z.number().min(0).optional(),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ currentPageOnly, limit }) => {
         const conn = getConnector(bridge);
         const [vars, components] = await Promise.all([
@@ -273,10 +341,14 @@ export async function main() {
         return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
     });
     // ---- figma_search_components ----
-    server.tool("figma_search_components", "Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file.", {
-        query: z.string().optional(),
-        currentPageOnly: z.boolean().optional().default(true),
-        limit: z.number().min(0).optional(),
+    server.registerTool("figma_search_components", {
+        description: "Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file.",
+        inputSchema: {
+            query: z.string().optional(),
+            currentPageOnly: z.boolean().optional().default(true),
+            limit: z.number().min(0).optional(),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ query, currentPageOnly, limit }) => {
         const conn = getConnector(bridge);
         const result = (await conn.getLocalComponents({ currentPageOnly, limit }));
@@ -293,33 +365,49 @@ export async function main() {
         return { content: [{ type: "text", text: JSON.stringify({ success: true, components: summary }, null, 0) }] };
     });
     // ---- Node operations (short list) ----
-    server.tool("figma_instantiate_component", "Create a component instance. Use componentKey from figma_search_components or nodeId for local components.", {
-        componentKey: z.string(),
-        options: z
-            .object({
-            nodeId: z.string().optional(),
-            position: z.object({ x: z.number(), y: z.number() }).optional(),
-            parentId: z.string().optional(),
-            overrides: z.record(z.any()).optional(),
-        })
-            .optional(),
+    server.registerTool("figma_instantiate_component", {
+        description: "Create a component instance. Use componentKey from figma_search_components or nodeId for local components.",
+        inputSchema: {
+            componentKey: z.string(),
+            options: z
+                .object({
+                nodeId: z.string().optional(),
+                position: z.object({ x: z.number(), y: z.number() }).optional(),
+                parentId: z.string().optional(),
+                overrides: z.record(z.any()).optional(),
+            })
+                .optional(),
+        },
+        annotations: { destructiveHint: true },
     }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.instantiateComponent(p.componentKey, p.options || {});
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_refresh_variables", "Refresh variables from the file.", {}, async () => {
+    server.registerTool("figma_refresh_variables", {
+        description: "Refresh variables from the file.",
+        inputSchema: {},
+        annotations: { readOnlyHint: false, destructiveHint: false },
+    }, async () => {
         const conn = getConnector(bridge);
         const result = await conn.refreshVariables();
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- Console (plugin buffer, no CDP) ----
-    server.tool("figma_get_console_logs", "Get plugin console logs (log/warn/error) from the F-MCP plugin buffer. No CDP. Limit default 50.", { limit: z.number().min(1).max(200).optional().default(50) }, async ({ limit }) => {
+    server.registerTool("figma_get_console_logs", {
+        description: "Get plugin console logs (log/warn/error) from the F-MCP plugin buffer. No CDP. Limit default 50.",
+        inputSchema: { limit: z.number().min(1).max(200).optional().default(50) },
+        annotations: { readOnlyHint: true },
+    }, async ({ limit }) => {
         const conn = getConnector(bridge);
         const data = await conn.getConsoleLogs(limit);
         return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }, null, 0) }] };
     });
-    server.tool("figma_watch_console", "Stream new plugin console logs until timeout. Polls the plugin buffer. Timeout default 30s.", { timeoutSeconds: z.number().min(1).max(120).optional().default(30) }, async ({ timeoutSeconds }) => {
+    server.registerTool("figma_watch_console", {
+        description: "Stream new plugin console logs until timeout. Polls the plugin buffer. Timeout default 30s.",
+        inputSchema: { timeoutSeconds: z.number().min(1).max(120).optional().default(30) },
+        annotations: { readOnlyHint: true },
+    }, async ({ timeoutSeconds }) => {
         const conn = getConnector(bridge);
         const deadline = Date.now() + timeoutSeconds * 1000;
         const seen = new Set();
@@ -339,34 +427,50 @@ export async function main() {
             content: [{ type: "text", text: JSON.stringify({ success: true, stream, count: stream.length }, null, 0) }],
         };
     });
-    server.tool("figma_clear_console", "Clear the plugin console log buffer.", {}, async () => {
+    server.registerTool("figma_clear_console", {
+        description: "Clear the plugin console log buffer.",
+        inputSchema: {},
+        annotations: { destructiveHint: true },
+    }, async () => {
         const conn = getConnector(bridge);
         await conn.clearConsole();
         return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Console cleared" }, null, 0) }] };
     });
     // ---- set_description, get_component_image, get_component_for_development ----
-    server.tool("figma_set_description", "Set description on a component, component set, or style node. Supports markdown (descriptionMarkdown).", {
-        nodeId: z.string(),
-        description: z.string(),
-        descriptionMarkdown: z.string().optional(),
+    server.registerTool("figma_set_description", {
+        description: "Set description on a component, component set, or style node. Supports markdown (descriptionMarkdown).",
+        inputSchema: {
+            nodeId: z.string(),
+            description: z.string(),
+            descriptionMarkdown: z.string().optional(),
+        },
+        annotations: { destructiveHint: true },
     }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.setNodeDescription(p.nodeId, p.description, p.descriptionMarkdown);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_get_component_image", "Get screenshot of a node (component/frame). Returns base64 image. No REST API.", {
-        nodeId: z.string(),
-        scale: z.number().min(0.5).max(4).optional().default(2),
-        format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+    server.registerTool("figma_get_component_image", {
+        description: "Get screenshot of a node (component/frame). Returns base64 image. No REST API.",
+        inputSchema: {
+            nodeId: z.string(),
+            scale: z.number().min(0.5).max(4).optional().default(2),
+            format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ nodeId, scale, format }) => {
         const conn = getConnector(bridge);
         const result = await conn.captureScreenshot(nodeId, { scale, format });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_get_component_for_development", "Get component metadata plus base64 screenshot in one call. For design-to-code workflows.", {
-        nodeId: z.string(),
-        scale: z.number().min(0.5).max(4).optional().default(2),
-        format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+    server.registerTool("figma_get_component_for_development", {
+        description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows.",
+        inputSchema: {
+            nodeId: z.string(),
+            scale: z.number().min(0.5).max(4).optional().default(2),
+            format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ nodeId, scale, format }) => {
         const conn = getConnector(bridge);
         const [component, screenshot] = await Promise.all([
@@ -378,53 +482,73 @@ export async function main() {
         return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
     });
     // ---- Batch variables & setup_design_tokens & arrange_component_set ----
-    server.tool("figma_batch_create_variables", "Create up to 100 variables in one call. Each item: collectionId, name, resolvedType (COLOR/FLOAT/STRING/BOOLEAN), value, modeId. Returns created and failed lists.", {
-        items: z.array(z.object({
-            collectionId: z.string(),
-            name: z.string(),
-            resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
-            value: z.unknown().optional(),
-            modeId: z.string().optional(),
-            valuesByMode: z.record(z.unknown()).optional(),
-        })).max(100),
+    server.registerTool("figma_batch_create_variables", {
+        description: "Create up to 100 variables in one call. Each item: collectionId, name, resolvedType (COLOR/FLOAT/STRING/BOOLEAN), value, modeId. Returns created and failed lists.",
+        inputSchema: {
+            items: z.array(z.object({
+                collectionId: z.string(),
+                name: z.string(),
+                resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
+                value: z.unknown().optional(),
+                modeId: z.string().optional(),
+                valuesByMode: z.record(z.unknown()).optional(),
+            })).max(100),
+        },
+        annotations: { destructiveHint: true },
     }, async ({ items }) => {
         const conn = getConnector(bridge);
         const result = await conn.batchCreateVariables(items);
         return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
     });
-    server.tool("figma_batch_update_variables", "Update up to 100 variables. Each item: variableId, modeId, value. Returns updated and failed lists.", {
-        items: z.array(z.object({
-            variableId: z.string(),
-            modeId: z.string(),
-            value: z.union([z.string(), z.number(), z.boolean()]),
-        })).max(100),
+    server.registerTool("figma_batch_update_variables", {
+        description: "Update up to 100 variables. Each item: variableId, modeId, value. Returns updated and failed lists.",
+        inputSchema: {
+            items: z.array(z.object({
+                variableId: z.string(),
+                modeId: z.string(),
+                value: z.union([z.string(), z.number(), z.boolean()]),
+            })).max(100),
+        },
+        annotations: { destructiveHint: true },
     }, async ({ items }) => {
         const conn = getConnector(bridge);
         const result = await conn.batchUpdateVariables(items);
         return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
     });
-    server.tool("figma_setup_design_tokens", "Atomically create a variable collection + modes + variables. Rollback on any error. Params: collectionName, modes (array), tokens (array of { name, type?, value? or values? }).", {
-        collectionName: z.string(),
-        modes: z.array(z.string()).min(1),
-        tokens: z.array(z.object({
-            name: z.string(),
-            type: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]).optional(),
-            value: z.unknown().optional(),
-            values: z.record(z.unknown()).optional(),
-        })),
+    server.registerTool("figma_setup_design_tokens", {
+        description: "Atomically create a variable collection + modes + variables. Rollback on any error. Params: collectionName, modes (array), tokens (array of { name, type?, value? or values? }).",
+        inputSchema: {
+            collectionName: z.string(),
+            modes: z.array(z.string()).min(1),
+            tokens: z.array(z.object({
+                name: z.string(),
+                type: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]).optional(),
+                value: z.unknown().optional(),
+                values: z.record(z.unknown()).optional(),
+            })),
+        },
+        annotations: { destructiveHint: true },
     }, async (p) => {
         const conn = getConnector(bridge);
         const result = await conn.setupDesignTokens(p);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
-    server.tool("figma_arrange_component_set", "Combine multiple component nodes into one Figma component set (combineAsVariants). Params: nodeIds (array of at least 2 component node IDs). Returns new component set nodeId.", { nodeIds: z.array(z.string()).min(2) }, async ({ nodeIds }) => {
+    server.registerTool("figma_arrange_component_set", {
+        description: "Combine multiple component nodes into one Figma component set (combineAsVariants). Params: nodeIds (array of at least 2 component node IDs). Returns new component set nodeId.",
+        inputSchema: { nodeIds: z.array(z.string()).min(2) },
+        annotations: { destructiveHint: true },
+    }, async ({ nodeIds }) => {
         const conn = getConnector(bridge);
         const result = await conn.arrangeComponentSet(nodeIds);
         return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
     });
     // ---- figma_check_design_parity (design–code gap analysis) ----
-    server.tool("figma_check_design_parity", "Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {\"primary\": \"#0066cc\", \"spacing.md\": 16} or {\"primary\": {\"value\": \"#0066cc\"}}.", {
-        codeTokens: z.string().optional(),
+    server.registerTool("figma_check_design_parity", {
+        description: "Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {\"primary\": \"#0066cc\", \"spacing.md\": 16} or {\"primary\": {\"value\": \"#0066cc\"}}.",
+        inputSchema: {
+            codeTokens: z.string().optional(),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ codeTokens }) => {
         try {
             const conn = getConnector(bridge);
@@ -546,8 +670,12 @@ export async function main() {
         }
     });
     // ---- figma_get_token_browser (Token Browser – kurulum özel MCP App) ----
-    server.tool("figma_get_token_browser", "Token Browser: hierarchical view of design tokens for browsing. Returns variable collections with variables and modes, plus paint and text styles. Use for exploring and auditing tokens in the open Figma file. No REST API.", {
-        verbosity: z.enum(["summary", "full"]).optional().default("summary"),
+    server.registerTool("figma_get_token_browser", {
+        description: "Token Browser: hierarchical view of design tokens for browsing. Returns variable collections with variables and modes, plus paint and text styles. Use for exploring and auditing tokens in the open Figma file. No REST API.",
+        inputSchema: {
+            verbosity: z.enum(["summary", "full"]).optional().default("summary"),
+        },
+        annotations: { readOnlyHint: true },
     }, async ({ verbosity }) => {
         try {
             const conn = getConnector(bridge);
@@ -611,7 +739,11 @@ export async function main() {
         }
     });
     // ---- figma_get_status (plugin-only) ----
-    server.tool("figma_get_status", "Check if F-MCP ATezer Bridge plugin is connected. No REST API or token.", {}, async () => {
+    server.registerTool("figma_get_status", {
+        description: "Check if F-MCP ATezer Bridge plugin is connected. No REST API or token.",
+        inputSchema: {},
+        annotations: { readOnlyHint: true },
+    }, async () => {
         const connected = bridge.isConnected();
         const msg = connected
             ? "F-MCP ATezer Bridge plugin is connected. You can use all figma_* tools."
