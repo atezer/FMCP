@@ -2,8 +2,8 @@
  * Plugin Bridge WebSocket Server
  *
  * Listens for connections from the F-MCP ATezer Bridge plugin (no CDP needed).
- * When the plugin connects, MCP tools can send JSON-RPC style requests and get
- * responses (variables, execute, component, etc.).
+ * Supports MULTIPLE simultaneous plugin connections (e.g. Figma Desktop + FigJam browser).
+ * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  */
 
 import { WebSocketServer, type WebSocket } from "ws";
@@ -33,18 +33,35 @@ type Pending = {
 	timeout: ReturnType<typeof setTimeout>;
 	method: string;
 	startTime: number;
+	clientId: string;
 };
+
+export interface ClientInfo {
+	ws: WebSocket;
+	clientId: string;
+	fileKey: string | null;
+	fileName: string | null;
+	alive: boolean;
+	missedHeartbeats: number;
+	connectedAt: number;
+}
+
+export interface ConnectedFileInfo {
+	clientId: string;
+	fileKey: string | null;
+	fileName: string | null;
+	connectedAt: number;
+}
 
 export class PluginBridgeServer {
 	private wss: WebSocketServer | null = null;
 	private httpServer: ReturnType<typeof createServer> | null = null;
-	private client: WebSocket | null = null;
-	private clientAlive = false;
-	private missedHeartbeats = 0;
+	private clients = new Map<string, ClientInfo>();
 	private pending = new Map<string, Pending>();
 	private requestTimeoutMs = 120000;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private auditLogPath: string | undefined;
+	private clientIdCounter = 0;
 
 	constructor(port: number, options?: { auditLogPath?: string }) {
 		this.port = port;
@@ -52,9 +69,6 @@ export class PluginBridgeServer {
 	}
 	private port: number;
 
-	/**
-	 * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
-	 */
 	start(): void {
 		if (this.wss) {
 			logger.debug({ port: this.port }, "Plugin bridge server already running");
@@ -73,6 +87,46 @@ export class PluginBridgeServer {
 			req.on("error", () => resolve(null));
 			req.setTimeout(2000, () => { req.destroy(); resolve(null); });
 		});
+	}
+
+	private generateClientId(): string {
+		return `client_${Date.now()}_${++this.clientIdCounter}`;
+	}
+
+	private findClientByFileKey(fileKey: string): ClientInfo | undefined {
+		for (const client of this.clients.values()) {
+			if (client.fileKey === fileKey && client.ws.readyState === 1) {
+				return client;
+			}
+		}
+		return undefined;
+	}
+
+	private getDefaultClient(): ClientInfo | undefined {
+		let latest: ClientInfo | undefined;
+		for (const client of this.clients.values()) {
+			if (client.ws.readyState !== 1) continue;
+			if (!latest || client.connectedAt > latest.connectedAt) {
+				latest = client;
+			}
+		}
+		return latest;
+	}
+
+	private resolveClient(fileKey?: string): ClientInfo | undefined {
+		if (fileKey) {
+			return this.findClientByFileKey(fileKey) ?? this.getDefaultClient();
+		}
+		return this.getDefaultClient();
+	}
+
+	private removeClient(clientId: string, reason: string): void {
+		const info = this.clients.get(clientId);
+		if (!info) return;
+		this.clients.delete(clientId);
+		this.rejectPendingForClient(clientId, reason);
+		auditPlugin(this.auditLogPath, "plugin_disconnect");
+		logger.info({ clientId, fileKey: info.fileKey, fileName: info.fileName }, "Plugin bridge: client disconnected (%s)", reason);
 	}
 
 	private tryListen(port: number): void {
@@ -121,28 +175,67 @@ export class PluginBridgeServer {
 			this.wss = new WebSocketServer({ server });
 
 			this.wss.on("connection", (ws: WebSocket) => {
-				if (this.client && this.client !== ws) {
-					this.rejectAllPending("Replaced by new plugin connection");
-					logger.info("Plugin bridge: new connection arrived, switching to it");
-				}
-				this.client = ws;
-				this.clientAlive = true;
-				this.missedHeartbeats = 0;
-				logger.info({ port: this.port }, "Plugin bridge: plugin connected");
+				const clientId = this.generateClientId();
+				const clientInfo: ClientInfo = {
+					ws,
+					clientId,
+					fileKey: null,
+					fileName: null,
+					alive: true,
+					missedHeartbeats: 0,
+					connectedAt: Date.now(),
+				};
+				this.clients.set(clientId, clientInfo);
+				logger.info({ port: this.port, clientId, totalClients: this.clients.size }, "Plugin bridge: new plugin connected");
 				auditPlugin(this.auditLogPath, "plugin_connect");
 
 				ws.on("message", (data: Buffer | string) => {
-					this.clientAlive = true;
+					clientInfo.alive = true;
 					try {
-						const msg = JSON.parse(data.toString()) as BridgeResponse & { type?: string };
+						const msg = JSON.parse(data.toString()) as BridgeResponse & {
+							type?: string;
+							fileKey?: string;
+							fileName?: string;
+						};
+
 						if (msg.type === "ready") {
-							logger.info("Plugin bridge: plugin sent ready, sending welcome");
-							ws.send(JSON.stringify({ type: "welcome", bridgeVersion: "1.0.0", port: this.port }));
+							const incomingFileKey = msg.fileKey || null;
+							const incomingFileName = msg.fileName || null;
+
+							if (incomingFileKey) {
+								const existing = this.findClientByFileKey(incomingFileKey);
+								if (existing && existing.clientId !== clientId) {
+									logger.info(
+										{ oldClientId: existing.clientId, newClientId: clientId, fileKey: incomingFileKey },
+										"Plugin bridge: replacing existing client for same fileKey"
+									);
+									this.removeClient(existing.clientId, "Replaced by new connection for same file");
+									try { existing.ws.close(); } catch { /* ignore */ }
+								}
+							}
+
+							clientInfo.fileKey = incomingFileKey;
+							clientInfo.fileName = incomingFileName;
+							logger.info(
+								{ clientId, fileKey: incomingFileKey, fileName: incomingFileName },
+								"Plugin bridge: client registered (fileKey=%s, fileName=%s)",
+								incomingFileKey, incomingFileName
+							);
+
+							ws.send(JSON.stringify({
+								type: "welcome",
+								bridgeVersion: "1.1.0",
+								port: this.port,
+								clientId,
+								multiClient: true,
+							}));
 							return;
 						}
-					if (msg.type === "pong" || msg.type === "keepalive") {
-						return;
-					}
+
+						if (msg.type === "pong" || msg.type === "keepalive") {
+							return;
+						}
+
 						if (msg.id && this.pending.has(msg.id)) {
 							const p = this.pending.get(msg.id)!;
 							this.pending.delete(msg.id);
@@ -162,41 +255,36 @@ export class PluginBridgeServer {
 				});
 
 				ws.on("close", () => {
-					if (this.client === ws) {
-						this.client = null;
-						this.clientAlive = false;
-						this.clearHeartbeatTimers();
-						this.rejectAllPending("Plugin disconnected");
-						auditPlugin(this.auditLogPath, "plugin_disconnect");
-						logger.info("Plugin bridge: plugin disconnected");
-					}
+					this.removeClient(clientId, "WebSocket closed");
 				});
 
 				ws.on("error", (err) => {
-					logger.warn({ err }, "Plugin bridge: client error");
+					logger.warn({ err, clientId }, "Plugin bridge: client error");
 				});
 			});
 
-			logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s)", bindHost, this.port);
+			logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s) — multi-client enabled", bindHost, this.port);
 
 			this.heartbeatTimer = setInterval(() => {
-				if (this.client && this.client.readyState === 1) {
-					if (!this.clientAlive) {
-						this.missedHeartbeats++;
-						if (this.missedHeartbeats >= 3) {
-							logger.warn("Plugin bridge: client not responding to heartbeat, terminating connection");
-							try { this.client.terminate(); } catch { /* ignore */ }
-							this.client = null;
-							this.clientAlive = false;
-							this.missedHeartbeats = 0;
-							return;
+				for (const [clientId, info] of this.clients) {
+					if (info.ws.readyState !== 1) {
+						this.removeClient(clientId, "WebSocket not open");
+						continue;
+					}
+					if (!info.alive) {
+						info.missedHeartbeats++;
+						if (info.missedHeartbeats >= 3) {
+							logger.warn({ clientId, fileKey: info.fileKey }, "Plugin bridge: client not responding to heartbeat, terminating");
+							try { info.ws.terminate(); } catch { /* ignore */ }
+							this.removeClient(clientId, "Heartbeat timeout");
+							continue;
 						}
 					} else {
-						this.missedHeartbeats = 0;
-						this.clientAlive = false;
+						info.missedHeartbeats = 0;
+						info.alive = false;
 					}
 					try {
-						this.client.send(JSON.stringify({ type: "ping" }));
+						info.ws.send(JSON.stringify({ type: "ping" }));
 					} catch { /* ignore */ }
 				}
 			}, HEARTBEAT_INTERVAL_MS);
@@ -204,10 +292,23 @@ export class PluginBridgeServer {
 	}
 
 	/**
-	 * Send a request to the plugin and wait for the response.
+	 * Send a request to a plugin and wait for the response.
+	 * If fileKey is specified, routes to the client serving that file.
+	 * Otherwise routes to the most recently connected client.
 	 */
-	async request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
-		if (!this.client || this.client.readyState !== 1) {
+	async request<T = unknown>(method: string, params?: Record<string, unknown>, fileKey?: string): Promise<T> {
+		const client = this.resolveClient(fileKey);
+		if (!client || client.ws.readyState !== 1) {
+			if (fileKey) {
+				const available = this.listConnectedFiles();
+				const fileList = available.length > 0
+					? ` Connected files: ${available.map(f => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
+					: "";
+				throw new Error(
+					`No plugin connected for fileKey "${fileKey}".${fileList} ` +
+					"Open the target file in Figma and run the F-MCP ATezer Bridge plugin."
+				);
+			}
 			throw new Error(
 				"F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'Bridge active' (no debug port needed)."
 			);
@@ -231,9 +332,10 @@ export class PluginBridgeServer {
 				timeout,
 				method,
 				startTime,
+				clientId: client.clientId,
 			});
 			try {
-				this.client!.send(JSON.stringify(req));
+				client.ws.send(JSON.stringify(req));
 			} catch (err) {
 				this.pending.delete(id);
 				clearTimeout(timeout);
@@ -243,12 +345,50 @@ export class PluginBridgeServer {
 		});
 	}
 
-	isConnected(): boolean {
-		return !!this.client && this.client.readyState === 1;
+	isConnected(fileKey?: string): boolean {
+		if (fileKey) {
+			const client = this.findClientByFileKey(fileKey);
+			return !!client && client.ws.readyState === 1;
+		}
+		for (const client of this.clients.values()) {
+			if (client.ws.readyState === 1) return true;
+		}
+		return false;
 	}
 
-	private clearHeartbeatTimers(): void {
-		// placeholder for future timers
+	listConnectedFiles(): ConnectedFileInfo[] {
+		const result: ConnectedFileInfo[] = [];
+		for (const client of this.clients.values()) {
+			if (client.ws.readyState === 1) {
+				result.push({
+					clientId: client.clientId,
+					fileKey: client.fileKey,
+					fileName: client.fileName,
+					connectedAt: client.connectedAt,
+				});
+			}
+		}
+		return result.sort((a, b) => b.connectedAt - a.connectedAt);
+	}
+
+	connectedClientCount(): number {
+		let count = 0;
+		for (const client of this.clients.values()) {
+			if (client.ws.readyState === 1) count++;
+		}
+		return count;
+	}
+
+	private rejectPendingForClient(clientId: string, reason: string): void {
+		for (const [id, p] of this.pending) {
+			if (p.clientId === clientId) {
+				clearTimeout(p.timeout);
+				const durationMs = Date.now() - p.startTime;
+				auditTool(this.auditLogPath, p.method, false, reason, durationMs);
+				p.reject(new Error(`Plugin bridge request '${p.method}' failed: ${reason}`));
+				this.pending.delete(id);
+			}
+		}
 	}
 
 	private rejectAllPending(reason: string): void {
@@ -266,19 +406,11 @@ export class PluginBridgeServer {
 			clearInterval(this.heartbeatTimer);
 			this.heartbeatTimer = null;
 		}
-		for (const p of this.pending.values()) {
-			clearTimeout(p.timeout);
-			p.reject(new Error("Plugin bridge server stopped"));
+		this.rejectAllPending("Plugin bridge server stopped");
+		for (const client of this.clients.values()) {
+			try { client.ws.close(); } catch { /* ignore */ }
 		}
-		this.pending.clear();
-		if (this.client) {
-			try {
-				this.client.close();
-			} catch {
-				// ignore
-			}
-			this.client = null;
-		}
+		this.clients.clear();
 		if (this.wss) {
 			this.wss.close();
 			this.wss = null;

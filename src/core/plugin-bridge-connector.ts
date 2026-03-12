@@ -3,40 +3,49 @@
  *
  * Implements the same interface as FigmaDesktopConnector but talks to the
  * Figma plugin over WebSocket (PluginBridgeServer). No CDP / debug port needed.
+ * Supports optional fileKey routing for multi-client scenarios.
  */
 
 import type { PluginBridgeServer } from "./plugin-bridge-server.js";
 import { logger } from "./logger.js";
 
 export class PluginBridgeConnector {
-	constructor(private bridge: PluginBridgeServer) {}
+	private fileKey?: string;
+
+	constructor(private bridge: PluginBridgeServer, fileKey?: string) {
+		this.fileKey = fileKey;
+	}
+
+	setFileKey(fileKey: string | undefined): void {
+		this.fileKey = fileKey;
+	}
 
 	async initialize(): Promise<void> {
 		logger.info("Plugin bridge connector initialized (no CDP)");
 	}
 
 	async getVariablesFromPluginUI(fileKey?: string): Promise<any> {
-		return this.bridge.request("getVariablesFromPluginUI", { fileKey });
+		return this.bridge.request("getVariablesFromPluginUI", { fileKey }, this.fileKey ?? fileKey);
 	}
 
 	async getComponentFromPluginUI(nodeId: string): Promise<any> {
-		return this.bridge.request("getComponentFromPluginUI", { nodeId });
+		return this.bridge.request("getComponentFromPluginUI", { nodeId }, this.fileKey);
 	}
 
 	async getVariables(fileKey?: string): Promise<any> {
-		return this.bridge.request("getVariables", { fileKey });
+		return this.bridge.request("getVariables", { fileKey }, this.fileKey ?? fileKey);
 	}
 
 	async getComponentByNodeId(nodeId: string): Promise<any> {
-		return this.bridge.request("getComponentByNodeId", { nodeId });
+		return this.bridge.request("getComponentByNodeId", { nodeId }, this.fileKey);
 	}
 
 	async executeCodeViaUI(code: string, timeout: number = 5000): Promise<any> {
-		return this.bridge.request("executeCodeViaUI", { code, timeout });
+		return this.bridge.request("executeCodeViaUI", { code, timeout }, this.fileKey);
 	}
 
 	async updateVariable(variableId: string, modeId: string, value: any): Promise<any> {
-		return this.bridge.request("updateVariable", { variableId, modeId, value });
+		return this.bridge.request("updateVariable", { variableId, modeId, value }, this.fileKey);
 	}
 
 	async createVariable(
@@ -45,45 +54,45 @@ export class PluginBridgeConnector {
 		resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN",
 		options?: { valuesByMode?: Record<string, any>; description?: string; scopes?: string[] }
 	): Promise<any> {
-		return this.bridge.request("createVariable", { name, collectionId, resolvedType, options });
+		return this.bridge.request("createVariable", { name, collectionId, resolvedType, options }, this.fileKey);
 	}
 
 	async createVariableCollection(
 		name: string,
 		options?: { initialModeName?: string; additionalModes?: string[] }
 	): Promise<any> {
-		return this.bridge.request("createVariableCollection", { name, options });
+		return this.bridge.request("createVariableCollection", { name, options }, this.fileKey);
 	}
 
 	async deleteVariable(variableId: string): Promise<any> {
-		return this.bridge.request("deleteVariable", { variableId });
+		return this.bridge.request("deleteVariable", { variableId }, this.fileKey);
 	}
 
 	async deleteVariableCollection(collectionId: string): Promise<any> {
-		return this.bridge.request("deleteVariableCollection", { collectionId });
+		return this.bridge.request("deleteVariableCollection", { collectionId }, this.fileKey);
 	}
 
 	async renameVariable(variableId: string, newName: string): Promise<any> {
-		return this.bridge.request("renameVariable", { variableId, newName });
+		return this.bridge.request("renameVariable", { variableId, newName }, this.fileKey);
 	}
 
 	async addMode(collectionId: string, modeName: string): Promise<any> {
-		return this.bridge.request("addMode", { collectionId, modeName });
+		return this.bridge.request("addMode", { collectionId, modeName }, this.fileKey);
 	}
 
 	async renameMode(collectionId: string, modeId: string, newName: string): Promise<any> {
-		return this.bridge.request("renameMode", { collectionId, modeId, newName });
+		return this.bridge.request("renameMode", { collectionId, modeId, newName }, this.fileKey);
 	}
 
 	async refreshVariables(): Promise<any> {
-		return this.bridge.request("refreshVariables", {});
+		return this.bridge.request("refreshVariables", {}, this.fileKey);
 	}
 
 	async getLocalComponents(opts?: { currentPageOnly?: boolean; limit?: number }): Promise<any> {
 		const params: Record<string, unknown> = {};
 		if (opts?.currentPageOnly !== undefined) params.currentPageOnly = opts.currentPageOnly;
 		if (opts?.limit != null && opts.limit > 0) params.limit = opts.limit;
-		return this.bridge.request("getLocalComponents", params);
+		return this.bridge.request("getLocalComponents", params, this.fileKey);
 	}
 
 	async instantiateComponent(
@@ -97,11 +106,11 @@ export class PluginBridgeConnector {
 			parentId?: string;
 		}
 	): Promise<any> {
-		return this.bridge.request("instantiateComponent", { componentKey, options });
+		return this.bridge.request("instantiateComponent", { componentKey, options }, this.fileKey);
 	}
 
 	async setNodeDescription(nodeId: string, description: string, descriptionMarkdown?: string): Promise<any> {
-		return this.bridge.request("setNodeDescription", { nodeId, description, descriptionMarkdown });
+		return this.bridge.request("setNodeDescription", { nodeId, description, descriptionMarkdown }, this.fileKey);
 	}
 
 	async addComponentProperty(
@@ -111,7 +120,7 @@ export class PluginBridgeConnector {
 		defaultValue: any,
 		options?: { preferredValues?: any[] }
 	): Promise<any> {
-		return this.bridge.request("addComponentProperty", { nodeId, propertyName, type, defaultValue, options });
+		return this.bridge.request("addComponentProperty", { nodeId, propertyName, type, defaultValue, options }, this.fileKey);
 	}
 
 	async editComponentProperty(
@@ -119,51 +128,51 @@ export class PluginBridgeConnector {
 		propertyName: string,
 		newValue: { name?: string; defaultValue?: any; preferredValues?: any[] }
 	): Promise<any> {
-		return this.bridge.request("editComponentProperty", { nodeId, propertyName, newValue });
+		return this.bridge.request("editComponentProperty", { nodeId, propertyName, newValue }, this.fileKey);
 	}
 
 	async deleteComponentProperty(nodeId: string, propertyName: string): Promise<any> {
-		return this.bridge.request("deleteComponentProperty", { nodeId, propertyName });
+		return this.bridge.request("deleteComponentProperty", { nodeId, propertyName }, this.fileKey);
 	}
 
 	async resizeNode(nodeId: string, width: number, height: number, withConstraints: boolean = true): Promise<any> {
-		return this.bridge.request("resizeNode", { nodeId, width, height, withConstraints });
+		return this.bridge.request("resizeNode", { nodeId, width, height, withConstraints }, this.fileKey);
 	}
 
 	async moveNode(nodeId: string, x: number, y: number): Promise<any> {
-		return this.bridge.request("moveNode", { nodeId, x, y });
+		return this.bridge.request("moveNode", { nodeId, x, y }, this.fileKey);
 	}
 
 	async setNodeFills(nodeId: string, fills: any[]): Promise<any> {
-		return this.bridge.request("setNodeFills", { nodeId, fills });
+		return this.bridge.request("setNodeFills", { nodeId, fills }, this.fileKey);
 	}
 
 	async setNodeStrokes(nodeId: string, strokes: any[], strokeWeight?: number): Promise<any> {
-		return this.bridge.request("setNodeStrokes", { nodeId, strokes, strokeWeight });
+		return this.bridge.request("setNodeStrokes", { nodeId, strokes, strokeWeight }, this.fileKey);
 	}
 
 	async setNodeOpacity(nodeId: string, opacity: number): Promise<any> {
-		return this.bridge.request("setNodeOpacity", { nodeId, opacity });
+		return this.bridge.request("setNodeOpacity", { nodeId, opacity }, this.fileKey);
 	}
 
 	async setNodeCornerRadius(nodeId: string, radius: number): Promise<any> {
-		return this.bridge.request("setNodeCornerRadius", { nodeId, radius });
+		return this.bridge.request("setNodeCornerRadius", { nodeId, radius }, this.fileKey);
 	}
 
 	async cloneNode(nodeId: string): Promise<any> {
-		return this.bridge.request("cloneNode", { nodeId });
+		return this.bridge.request("cloneNode", { nodeId }, this.fileKey);
 	}
 
 	async deleteNode(nodeId: string): Promise<any> {
-		return this.bridge.request("deleteNode", { nodeId });
+		return this.bridge.request("deleteNode", { nodeId }, this.fileKey);
 	}
 
 	async renameNode(nodeId: string, newName: string): Promise<any> {
-		return this.bridge.request("renameNode", { nodeId, newName });
+		return this.bridge.request("renameNode", { nodeId, newName }, this.fileKey);
 	}
 
 	async setTextContent(nodeId: string, text: string, options?: { fontSize?: number }): Promise<any> {
-		return this.bridge.request("setTextContent", { nodeId, text, options });
+		return this.bridge.request("setTextContent", { nodeId, text, options }, this.fileKey);
 	}
 
 	async createChildNode(
@@ -171,15 +180,15 @@ export class PluginBridgeConnector {
 		nodeType: "RECTANGLE" | "ELLIPSE" | "FRAME" | "TEXT" | "LINE" | "POLYGON" | "STAR" | "VECTOR",
 		properties?: Record<string, unknown>
 	): Promise<any> {
-		return this.bridge.request("createChildNode", { parentId, nodeType, properties });
+		return this.bridge.request("createChildNode", { parentId, nodeType, properties }, this.fileKey);
 	}
 
 	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number }): Promise<any> {
-		return this.bridge.request("captureScreenshot", { nodeId, options });
+		return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
 	}
 
 	async setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<any> {
-		return this.bridge.request("setInstanceProperties", { nodeId, properties });
+		return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
 	}
 
 	async getDocumentStructure(
@@ -199,7 +208,7 @@ export class PluginBridgeConnector {
 		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;
 		if (opts?.includeCodeReady !== undefined) params.includeCodeReady = opts.includeCodeReady;
 		if (opts?.outputHint !== undefined) params.outputHint = opts.outputHint;
-		return this.bridge.request("getDocumentStructure", params);
+		return this.bridge.request("getDocumentStructure", params, this.fileKey);
 	}
 
 	async getNodeContext(
@@ -224,20 +233,20 @@ export class PluginBridgeConnector {
 		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;
 		if (opts?.includeCodeReady !== undefined) params.includeCodeReady = opts.includeCodeReady;
 		if (opts?.outputHint !== undefined) params.outputHint = opts.outputHint;
-		return this.bridge.request("getNodeContext", params);
+		return this.bridge.request("getNodeContext", params, this.fileKey);
 	}
 
 	async getLocalStyles(verbosity?: string): Promise<any> {
-		return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" });
+		return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" }, this.fileKey);
 	}
 
 	async getConsoleLogs(limit: number = 50): Promise<{ logs: Array<{ level: string; time: number; args: unknown[] }>; total: number }> {
-		const res = await this.bridge.request("getConsoleLogs", { limit });
+		const res = await this.bridge.request("getConsoleLogs", { limit }, this.fileKey);
 		return (res as any)?.data ?? { logs: [], total: 0 };
 	}
 
 	async clearConsole(): Promise<void> {
-		await this.bridge.request("clearConsole", {});
+		await this.bridge.request("clearConsole", {}, this.fileKey);
 	}
 
 	async batchCreateVariables(
@@ -250,14 +259,14 @@ export class PluginBridgeConnector {
 			valuesByMode?: Record<string, unknown>;
 		}>
 	): Promise<{ created: Array<{ name: string; id: string }>; failed: Array<{ name: string; error: string }> }> {
-		const res = await this.bridge.request("batchCreateVariables", { items });
+		const res = await this.bridge.request("batchCreateVariables", { items }, this.fileKey);
 		return (res as any) ?? { created: [], failed: [] };
 	}
 
 	async batchUpdateVariables(
 		items: Array<{ variableId: string; modeId: string; value: unknown }>
 	): Promise<{ updated: Array<{ variableId: string }>; failed: Array<{ variableId: string; error: string }> }> {
-		const res = await this.bridge.request("batchUpdateVariables", { items });
+		const res = await this.bridge.request("batchUpdateVariables", { items }, this.fileKey);
 		return (res as any) ?? { updated: [], failed: [] };
 	}
 
@@ -277,11 +286,11 @@ export class PluginBridgeConnector {
 			collectionName: payload.collectionName,
 			modes: payload.modes,
 			tokens,
-		});
+		}, this.fileKey);
 	}
 
 	async arrangeComponentSet(nodeIds: string[]): Promise<{ nodeId: string; name: string }> {
-		const res = (await this.bridge.request("arrangeComponentSet", { nodeIds })) as any;
+		const res = (await this.bridge.request("arrangeComponentSet", { nodeIds }, this.fileKey)) as any;
 		return res?.data ?? res ?? { nodeId: "", name: "" };
 	}
 

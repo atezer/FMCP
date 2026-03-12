@@ -22,6 +22,13 @@ console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 // Show minimal UI - compact status indicator
 figma.showUI(__html__, { width: 200, height: 56, visible: true, themeColors: true });
 
+// Send file identity to UI so it can include it in the WebSocket handshake
+figma.ui.postMessage({
+  type: 'FILE_IDENTITY',
+  fileKey: figma.fileKey || null,
+  fileName: figma.root.name || null
+});
+
 // Immediately fetch and send variables data to UI
 (async () => {
   try {
