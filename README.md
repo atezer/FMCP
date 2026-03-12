@@ -45,7 +45,7 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 | Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Özet, bileşen sayıları, token koleksiyonları; büyük dosyada varsayılan **currentPageOnly** (timeout önlemi) |
 | Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                                          |
 | Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri                  |
-| Keşif ve durum                    | `figma_search_components`, `figma_get_status`                     | Bileşen arama (varsayılan currentPageOnly), bağlantı kontrolü                                               |
+| Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client)                                       |
 
 
 ### Geliştiriciler
@@ -214,6 +214,30 @@ Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Deskt
 - **FigJam kullanıcıları:** FigJam dosyasını açın → **Plugins** → **F-MCP ATezer Bridge** ile çalıştırın. FigJam'de brainstorm, flow ve diyagram verilerine MCP üzerinden erişebilirsiniz.
 
 Detay: [ONBOARDING.md](docs/ONBOARDING.md) (Dev Mode bölümü).
+
+### Multi-client: Aynı anda birden fazla dosya
+
+F-MCP Bridge **aynı anda birden fazla Figma/FigJam plugin bağlantısını** destekler. Örneğin:
+
+- Figma Desktop'ta bir design dosyasında plugin açık
+- Tarayıcıda FigJam board'unda plugin açık
+- Claude/Cursor her iki dosyaya da **aynı bridge üzerinden** erişebilir
+
+Her plugin bağlantısı kendini `fileKey` ile tanıtır. MCP tool'larındaki opsiyonel `fileKey` parametresi ile istekler doğru dosyaya yönlendirilir. `fileKey` belirtilmezse en son bağlanan dosyaya gider (geriye uyumlu).
+
+**Kullanım:**
+
+1. Birden fazla Figma/FigJam dosyasında plugin'i açın → her biri **"ready (:5454)"** gösterir.
+2. `figma_list_connected_files` tool'u ile bağlı dosyaları listeleyin.
+3. Diğer tool'larda `fileKey` parametresi ile hedef dosyayı belirtin.
+
+```
+// Bağlı dosyaları listele
+figma_list_connected_files
+
+// Belirli bir dosyadaki design context'i al
+figma_get_design_context { "fileKey": "abc123...", "depth": 2 }
+```
 
 **Plugin–MCP bağlantı özeti:** İki mod var; debug portu zorunlu değil. **Plugin-only (önerilen):** Config'te `dist/local-plugin-only.js`, Figma normal açılır, token yok. **Tam mod:** Config'te `dist/local.js`, Figma `--remote-debugging-port=9222` ile açılır (console/screenshot için). Ayrıntı: [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md).
 
