@@ -27,6 +27,23 @@ figma.showUI(__html__, { width: 200, height: 56, visible: true, themeColors: tru
   try {
     console.log('🌉 [F-MCP ATezer Bridge] Fetching variables...');
 
+    // FigJam does not support figma.variables API
+    if (!figma.variables || typeof figma.variables.getLocalVariablesAsync !== 'function') {
+      console.log('🌉 [F-MCP ATezer Bridge] Variables API not available (FigJam or limited editor), skipping variable load');
+      figma.ui.postMessage({
+        type: 'VARIABLES_DATA',
+        data: {
+          success: true,
+          timestamp: Date.now(),
+          fileKey: figma.fileKey || null,
+          variables: [],
+          variableCollections: [],
+          _note: 'Variables API not available in this editor type'
+        }
+      });
+      return;
+    }
+
     // Get all local variables and collections
     const variables = await figma.variables.getLocalVariablesAsync();
     const collections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -819,6 +836,16 @@ figma.ui.onmessage = async (msg) => {
   else if (msg.type === 'REFRESH_VARIABLES') {
     try {
       console.log('🌉 [F-MCP ATezer Bridge] Refreshing variables data...');
+
+      if (!figma.variables || typeof figma.variables.getLocalVariablesAsync !== 'function') {
+        figma.ui.postMessage({
+          type: 'REFRESH_VARIABLES_RESULT',
+          requestId: msg.requestId,
+          success: true,
+          data: { success: true, timestamp: Date.now(), fileKey: figma.fileKey || null, variables: [], variableCollections: [] }
+        });
+        return;
+      }
 
       var variables = await figma.variables.getLocalVariablesAsync();
       var collections = await figma.variables.getLocalVariableCollectionsAsync();

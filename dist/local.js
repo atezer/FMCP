@@ -48,7 +48,7 @@ class LocalFigmaMCP {
         this.variablesCache = new Map();
         this.server = new McpServer({
             name: "F-MCP ATezer (Local)",
-            version: "0.1.0",
+            version: "1.1.2",
         });
     }
     /**
@@ -263,17 +263,21 @@ class LocalFigmaMCP {
      */
     registerTools() {
         // Tool 1: Get Console Logs
-        this.server.tool("figma_get_console_logs", "Retrieve console logs from Figma Desktop. FOR PLUGIN DEVELOPERS: This works immediately - no navigation needed! Just check logs, run your plugin in Figma Desktop, check logs again. All plugin logs ([Main], [Swapper], etc.) appear instantly.", {
-            count: z.number().optional().default(100).describe("Number of recent logs to retrieve"),
-            level: z
-                .enum(["log", "info", "warn", "error", "debug", "all"])
-                .optional()
-                .default("all")
-                .describe("Filter by log level"),
-            since: z
-                .number()
-                .optional()
-                .describe("Only logs after this timestamp (Unix ms)"),
+        this.server.registerTool("figma_get_console_logs", {
+            description: "Retrieve console logs from Figma Desktop. FOR PLUGIN DEVELOPERS: This works immediately - no navigation needed! Just check logs, run your plugin in Figma Desktop, check logs again. All plugin logs ([Main], [Swapper], etc.) appear instantly.",
+            inputSchema: {
+                count: z.number().optional().default(100).describe("Number of recent logs to retrieve"),
+                level: z
+                    .enum(["log", "info", "warn", "error", "debug", "all"])
+                    .optional()
+                    .default("all")
+                    .describe("Filter by log level"),
+                since: z
+                    .number()
+                    .optional()
+                    .describe("Only logs after this timestamp (Unix ms)"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ count, level, since }) => {
             try {
                 await this.ensureInitialized();
@@ -355,7 +359,8 @@ class LocalFigmaMCP {
         });
         // Tool 2: Take Screenshot (using Figma REST API)
         // Note: For screenshots of specific components, use figma_get_component_image instead
-        this.server.tool("figma_take_screenshot", `Export an image of the currently viewed Figma page or specific node using Figma's REST API. Returns an image URL (valid for 30 days). For specific components, use figma_get_component_image instead.
+        this.server.registerTool("figma_take_screenshot", {
+            description: `Export an image of the currently viewed Figma page or specific node using Figma's REST API. Returns an image URL (valid for 30 days). For specific components, use figma_get_component_image instead.
 
 **CRITICAL: Use this tool for visual validation after ANY design creation or modification.**
 This is an essential part of the visual validation workflow:
@@ -365,23 +370,26 @@ This is an essential part of the visual validation workflow:
 4. If issues are found, iterate with fixes and take another screenshot
 5. Continue until the design looks correct (max 3 iterations)
 
-Pass a nodeId to screenshot specific frames/elements, or omit to capture the current view.`, {
-            nodeId: z
-                .string()
-                .optional()
-                .describe("Optional node ID to screenshot. If not provided, uses the currently viewed page/frame from the browser URL."),
-            scale: z
-                .number()
-                .min(0.01)
-                .max(4)
-                .optional()
-                .default(2)
-                .describe("Image scale factor (0.01-4, default: 2 for high quality)"),
-            format: z
-                .enum(["png", "jpg", "svg", "pdf"])
-                .optional()
-                .default("png")
-                .describe("Image format (default: png)"),
+Pass a nodeId to screenshot specific frames/elements, or omit to capture the current view.`,
+            inputSchema: {
+                nodeId: z
+                    .string()
+                    .optional()
+                    .describe("Optional node ID to screenshot. If not provided, uses the currently viewed page/frame from the browser URL."),
+                scale: z
+                    .number()
+                    .min(0.01)
+                    .max(4)
+                    .optional()
+                    .default(2)
+                    .describe("Image scale factor (0.01-4, default: 2 for high quality)"),
+                format: z
+                    .enum(["png", "jpg", "svg", "pdf"])
+                    .optional()
+                    .default("png")
+                    .describe("Image format (default: png)"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ nodeId, scale, format }) => {
             try {
                 const api = await this.getFigmaAPI();
@@ -454,17 +462,21 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
             }
         });
         // Tool 3: Watch Console (Real-time streaming)
-        this.server.tool("figma_watch_console", "Stream console logs in real-time for a specified duration (max 5 minutes). Use for monitoring plugin execution while user tests manually. Returns all logs captured during watch period with summary statistics. NOT for retrieving past logs (use figma_get_console_logs). Best for: watching plugin output during manual testing, debugging race conditions, monitoring async operations.", {
-            duration: z
-                .number()
-                .optional()
-                .default(30)
-                .describe("How long to watch in seconds"),
-            level: z
-                .enum(["log", "info", "warn", "error", "debug", "all"])
-                .optional()
-                .default("all")
-                .describe("Filter by log level"),
+        this.server.registerTool("figma_watch_console", {
+            description: "Stream console logs in real-time for a specified duration (max 5 minutes). Use for monitoring plugin execution while user tests manually. Returns all logs captured during watch period with summary statistics. NOT for retrieving past logs (use figma_get_console_logs). Best for: watching plugin output during manual testing, debugging race conditions, monitoring async operations.",
+            inputSchema: {
+                duration: z
+                    .number()
+                    .optional()
+                    .default(30)
+                    .describe("How long to watch in seconds"),
+                level: z
+                    .enum(["log", "info", "warn", "error", "debug", "all"])
+                    .optional()
+                    .default("all")
+                    .describe("Filter by log level"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ duration, level }) => {
             if (!this.browserManager || !this.consoleMonitor) {
                 throw new Error("Browser not connected. Ensure Figma Desktop is running with --remote-debugging-port=9222");
@@ -507,12 +519,16 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
             };
         });
         // Tool 4: Reload Plugin
-        this.server.tool("figma_reload_plugin", "Reload the current Figma page/plugin to test code changes. Optionally clears console logs before reload. Use when user says: 'reload plugin', 'refresh page', 'restart plugin', 'test my changes'. Returns reload confirmation and current URL. Best for rapid iteration during plugin development.", {
-            clearConsole: z
-                .boolean()
-                .optional()
-                .default(true)
-                .describe("Clear console logs before reload"),
+        this.server.registerTool("figma_reload_plugin", {
+            description: "Reload the current Figma page/plugin to test code changes. Optionally clears console logs before reload. Use when user says: 'reload plugin', 'refresh page', 'restart plugin', 'test my changes'. Returns reload confirmation and current URL. Best for rapid iteration during plugin development.",
+            inputSchema: {
+                clearConsole: z
+                    .boolean()
+                    .optional()
+                    .default(true)
+                    .describe("Clear console logs before reload"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ clearConsole: clearConsoleBefore }) => {
             try {
                 await this.ensureInitialized();
@@ -574,7 +590,11 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
             }
         });
         // Tool 5: Clear Console
-        this.server.tool("figma_clear_console", "Clear the console log buffer. ⚠️ WARNING: Disrupts monitoring connection - requires MCP reconnect afterward. AVOID using this - prefer filtering logs with figma_get_console_logs instead. Only use if user explicitly requests clearing logs. Returns number of logs cleared.", {}, async () => {
+        this.server.registerTool("figma_clear_console", {
+            description: "Clear the console log buffer. ⚠️ WARNING: Disrupts monitoring connection - requires MCP reconnect afterward. AVOID using this - prefer filtering logs with figma_get_console_logs instead. Only use if user explicitly requests clearing logs. Returns number of logs cleared.",
+            inputSchema: {},
+            annotations: { destructiveHint: true },
+        }, async () => {
             try {
                 await this.ensureInitialized();
                 if (!this.consoleMonitor) {
@@ -612,11 +632,15 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
             }
         });
         // Tool 6: Navigate to Figma
-        this.server.tool("figma_navigate", "Navigate browser to a Figma URL and start console monitoring. ALWAYS use this first when starting a new debugging session or switching files. Initializes browser connection and begins capturing console logs. Use when user provides a Figma URL or says: 'open this file', 'debug this design', 'switch to'. Returns navigation status and current URL.", {
-            url: z
-                .string()
-                .url()
-                .describe("Figma URL to navigate to (e.g., https://www.figma.com/design/abc123)"),
+        this.server.registerTool("figma_navigate", {
+            description: "Navigate browser to a Figma URL and start console monitoring. ALWAYS use this first when starting a new debugging session or switching files. Initializes browser connection and begins capturing console logs. Use when user provides a Figma URL or says: 'open this file', 'debug this design', 'switch to'. Returns navigation status and current URL.",
+            inputSchema: {
+                url: z
+                    .string()
+                    .url()
+                    .describe("Figma URL to navigate to (e.g., https://www.figma.com/design/abc123)"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ url }) => {
             try {
                 await this.ensureInitialized();
@@ -665,7 +689,11 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
             }
         });
         // Tool 7: Get Status (with setup validation)
-        this.server.tool("figma_get_status", "Check browser and monitoring status. Also validates if Figma Desktop is running with the required --remote-debugging-port=9222 flag. Automatically initializes connection if needed.", {}, async () => {
+        this.server.registerTool("figma_get_status", {
+            description: "Check browser and monitoring status. Also validates if Figma Desktop is running with the required --remote-debugging-port=9222 flag. Automatically initializes connection if needed.",
+            inputSchema: {},
+            annotations: { readOnlyHint: true },
+        }, async () => {
             try {
                 // Ensure initialized (connects to Figma Desktop if not already connected)
                 await this.ensureInitialized();
@@ -784,7 +812,11 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
         // CONNECTION MANAGEMENT TOOLS
         // ============================================================================
         // Tool: Force reconnect to Figma Desktop
-        this.server.tool("figma_reconnect", "Force a complete reconnection to Figma Desktop. Use this when you get 'detached Frame' errors or when the connection seems stale. This will disconnect and reconnect to Figma, getting fresh page and frame references.", {}, async () => {
+        this.server.registerTool("figma_reconnect", {
+            description: "Force a complete reconnection to Figma Desktop. Use this when you get 'detached Frame' errors or when the connection seems stale. This will disconnect and reconnect to Figma, getting fresh page and frame references.",
+            inputSchema: {},
+            annotations: { destructiveHint: true },
+        }, async () => {
             try {
                 if (!this.browserManager) {
                     throw new Error("Browser manager not initialized. Run any tool first to initialize.");
@@ -851,7 +883,8 @@ Pass a nodeId to screenshot specific frames/elements, or omit to capture the cur
         // WRITE OPERATION TOOLS - Figma Design Manipulation
         // ============================================================================
         // Tool: Execute arbitrary code in Figma plugin context (Power Tool)
-        this.server.tool("figma_execute", `Execute arbitrary JavaScript code in Figma's plugin context. This is a POWER TOOL that can run any Figma Plugin API code. Use for complex operations not covered by other tools. Requires the F-MCP ATezer Bridge plugin to be running in Figma. Returns the result of the code execution. CAUTION: Can modify your Figma document - use carefully.
+        this.server.registerTool("figma_execute", {
+            description: `Execute arbitrary JavaScript code in Figma's plugin context. This is a POWER TOOL that can run any Figma Plugin API code. Use for complex operations not covered by other tools. Requires the F-MCP ATezer Bridge plugin to be running in Figma. Returns the result of the code execution. CAUTION: Can modify your Figma document - use carefully.
 
 **IMPORTANT: COMPONENT INSTANCES vs DIRECT NODE EDITING**
 When working with component instances (node.type === 'INSTANCE'), you must use the correct approach:
@@ -885,10 +918,13 @@ Common issues to check:
 - Inconsistent padding (elements not visually balanced)
 - Text/inputs not filling available width
 - Component text not changing (use figma_set_instance_properties instead)
-- Duplicate pages created (check before creating new pages)`, {
-            code: z.string().describe("JavaScript code to execute. Has access to the 'figma' global object. " +
-                "Example: 'const rect = figma.createRectangle(); rect.resize(100, 100); return { id: rect.id };'"),
-            timeout: z.number().optional().default(5000).describe("Execution timeout in milliseconds (default: 5000, max: 30000)"),
+- Duplicate pages created (check before creating new pages)`,
+            inputSchema: {
+                code: z.string().describe("JavaScript code to execute. Has access to the 'figma' global object. " +
+                    "Example: 'const rect = figma.createRectangle(); rect.resize(100, 100); return { id: rect.id };'"),
+                timeout: z.number().optional().default(5000).describe("Execution timeout in milliseconds (default: 5000, max: 30000)"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ code, timeout }) => {
             const maxRetries = 2;
             let lastError = null;
@@ -963,10 +999,14 @@ Common issues to check:
             };
         });
         // Tool: Update a variable's value
-        this.server.tool("figma_update_variable", "Update a Figma variable's value in a specific mode. Use figma_get_variables first to get variable IDs and mode IDs. Supports COLOR (hex string like '#FF0000'), FLOAT (number), STRING (text), and BOOLEAN values. Requires the F-MCP ATezer Bridge plugin to be running.", {
-            variableId: z.string().describe("The variable ID to update (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
-            modeId: z.string().describe("The mode ID to update the value in (e.g., '1:0'). Get this from the variable's collection modes."),
-            value: z.any().describe("The new value. For COLOR: hex string like '#FF0000'. For FLOAT: number. For STRING: text. For BOOLEAN: true/false."),
+        this.server.registerTool("figma_update_variable", {
+            description: "Update a Figma variable's value in a specific mode. Use figma_get_variables first to get variable IDs and mode IDs. Supports COLOR (hex string like '#FF0000'), FLOAT (number), STRING (text), and BOOLEAN values. Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                variableId: z.string().describe("The variable ID to update (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
+                modeId: z.string().describe("The mode ID to update the value in (e.g., '1:0'). Get this from the variable's collection modes."),
+                value: z.any().describe("The new value. For COLOR: hex string like '#FF0000'. For FLOAT: number. For STRING: text. For BOOLEAN: true/false."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ variableId, modeId, value }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1003,12 +1043,16 @@ Common issues to check:
             }
         });
         // Tool: Create a new variable
-        this.server.tool("figma_create_variable", "Create a new Figma variable in an existing collection. Use figma_get_variables first to get collection IDs. Supports COLOR, FLOAT, STRING, and BOOLEAN types. Requires the F-MCP ATezer Bridge plugin to be running.", {
-            name: z.string().describe("Name for the new variable (e.g., 'primary-blue')"),
-            collectionId: z.string().describe("The collection ID to create the variable in (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
-            resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]).describe("The variable type: COLOR, FLOAT, STRING, or BOOLEAN"),
-            description: z.string().optional().describe("Optional description for the variable"),
-            valuesByMode: z.record(z.any()).optional().describe("Optional initial values by mode ID. Example: { '1:0': '#FF0000', '1:1': '#0000FF' }"),
+        this.server.registerTool("figma_create_variable", {
+            description: "Create a new Figma variable in an existing collection. Use figma_get_variables first to get collection IDs. Supports COLOR, FLOAT, STRING, and BOOLEAN types. Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                name: z.string().describe("Name for the new variable (e.g., 'primary-blue')"),
+                collectionId: z.string().describe("The collection ID to create the variable in (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
+                resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]).describe("The variable type: COLOR, FLOAT, STRING, or BOOLEAN"),
+                description: z.string().optional().describe("Optional description for the variable"),
+                valuesByMode: z.record(z.any()).optional().describe("Optional initial values by mode ID. Example: { '1:0': '#FF0000', '1:1': '#0000FF' }"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ name, collectionId, resolvedType, description, valuesByMode }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1048,10 +1092,14 @@ Common issues to check:
             }
         });
         // Tool: Create a new variable collection
-        this.server.tool("figma_create_variable_collection", "Create a new Figma variable collection. Collections organize variables and define modes (like Light/Dark themes). Requires the F-MCP ATezer Bridge plugin to be running.", {
-            name: z.string().describe("Name for the new collection (e.g., 'Brand Colors')"),
-            initialModeName: z.string().optional().describe("Name for the initial mode (default mode is created automatically). Example: 'Light'"),
-            additionalModes: z.array(z.string()).optional().describe("Additional mode names to create. Example: ['Dark', 'High Contrast']"),
+        this.server.registerTool("figma_create_variable_collection", {
+            description: "Create a new Figma variable collection. Collections organize variables and define modes (like Light/Dark themes). Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                name: z.string().describe("Name for the new collection (e.g., 'Brand Colors')"),
+                initialModeName: z.string().optional().describe("Name for the initial mode (default mode is created automatically). Example: 'Light'"),
+                additionalModes: z.array(z.string()).optional().describe("Additional mode names to create. Example: ['Dark', 'High Contrast']"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ name, initialModeName, additionalModes }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1091,8 +1139,12 @@ Common issues to check:
             }
         });
         // Tool: Delete a variable
-        this.server.tool("figma_delete_variable", "Delete a Figma variable. WARNING: This is a destructive operation that cannot be undone (except with Figma's undo). Use figma_get_variables first to get variable IDs. Requires the F-MCP ATezer Bridge plugin to be running.", {
-            variableId: z.string().describe("The variable ID to delete (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
+        this.server.registerTool("figma_delete_variable", {
+            description: "Delete a Figma variable. WARNING: This is a destructive operation that cannot be undone (except with Figma's undo). Use figma_get_variables first to get variable IDs. Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                variableId: z.string().describe("The variable ID to delete (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ variableId }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1130,8 +1182,12 @@ Common issues to check:
             }
         });
         // Tool: Delete a variable collection
-        this.server.tool("figma_delete_variable_collection", "Delete a Figma variable collection and ALL its variables. WARNING: This is a destructive operation that deletes all variables in the collection and cannot be undone (except with Figma's undo). Requires the F-MCP ATezer Bridge plugin to be running.", {
-            collectionId: z.string().describe("The collection ID to delete (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
+        this.server.registerTool("figma_delete_variable_collection", {
+            description: "Delete a Figma variable collection and ALL its variables. WARNING: This is a destructive operation that deletes all variables in the collection and cannot be undone (except with Figma's undo). Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                collectionId: z.string().describe("The collection ID to delete (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ collectionId }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1169,9 +1225,13 @@ Common issues to check:
             }
         });
         // Tool: Rename a variable
-        this.server.tool("figma_rename_variable", "Rename an existing Figma variable. This updates the variable's name while preserving all its values and settings. Requires the F-MCP ATezer Bridge plugin to be running.", {
-            variableId: z.string().describe("The variable ID to rename (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
-            newName: z.string().describe("The new name for the variable. Can include slashes for grouping (e.g., 'colors/primary/background')."),
+        this.server.registerTool("figma_rename_variable", {
+            description: "Rename an existing Figma variable. This updates the variable's name while preserving all its values and settings. Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                variableId: z.string().describe("The variable ID to rename (e.g., 'VariableID:123:456'). Get this from figma_get_variables."),
+                newName: z.string().describe("The new name for the variable. Can include slashes for grouping (e.g., 'colors/primary/background')."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ variableId, newName }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1209,9 +1269,13 @@ Common issues to check:
             }
         });
         // Tool: Add a mode to a collection
-        this.server.tool("figma_add_mode", "Add a new mode to an existing Figma variable collection. Modes allow variables to have different values for different contexts (e.g., Light/Dark themes, device sizes). Requires the F-MCP ATezer Bridge plugin to be running.", {
-            collectionId: z.string().describe("The collection ID to add the mode to (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
-            modeName: z.string().describe("The name for the new mode (e.g., 'Dark', 'Mobile', 'High Contrast')."),
+        this.server.registerTool("figma_add_mode", {
+            description: "Add a new mode to an existing Figma variable collection. Modes allow variables to have different values for different contexts (e.g., Light/Dark themes, device sizes). Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                collectionId: z.string().describe("The collection ID to add the mode to (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
+                modeName: z.string().describe("The name for the new mode (e.g., 'Dark', 'Mobile', 'High Contrast')."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ collectionId, modeName }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1249,10 +1313,14 @@ Common issues to check:
             }
         });
         // Tool: Rename a mode in a collection
-        this.server.tool("figma_rename_mode", "Rename an existing mode in a Figma variable collection. Requires the F-MCP ATezer Bridge plugin to be running.", {
-            collectionId: z.string().describe("The collection ID containing the mode (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
-            modeId: z.string().describe("The mode ID to rename (e.g., '123:0'). Get this from the collection's modes array in figma_get_variables."),
-            newName: z.string().describe("The new name for the mode (e.g., 'Dark Theme', 'Tablet')."),
+        this.server.registerTool("figma_rename_mode", {
+            description: "Rename an existing mode in a Figma variable collection. Requires the F-MCP ATezer Bridge plugin to be running.",
+            inputSchema: {
+                collectionId: z.string().describe("The collection ID containing the mode (e.g., 'VariableCollectionId:123:456'). Get this from figma_get_variables."),
+                modeId: z.string().describe("The mode ID to rename (e.g., '123:0'). Get this from the collection's modes array in figma_get_variables."),
+                newName: z.string().describe("The new name for the mode (e.g., 'Dark Theme', 'Tablet')."),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ collectionId, modeId, newName }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1405,8 +1473,12 @@ Common issues to check:
             return { cacheEntry, fileKey, wasLoaded: true };
         };
         // Tool 1: Get Design System Summary (~1000 tokens response)
-        this.server.tool("figma_get_design_system_summary", "Get a compact overview of the design system. Returns categories, component counts, and token collection names WITHOUT full details. Use this first to understand what's available, then use figma_search_components to find specific components. This tool is optimized for minimal token usage.", {
-            forceRefresh: z.boolean().optional().default(false).describe("Force refresh the cached data (use sparingly - extraction can take minutes for large files)"),
+        this.server.registerTool("figma_get_design_system_summary", {
+            description: "Get a compact overview of the design system. Returns categories, component counts, and token collection names WITHOUT full details. Use this first to understand what's available, then use figma_search_components to find specific components. This tool is optimized for minimal token usage.",
+            inputSchema: {
+                forceRefresh: z.boolean().optional().default(false).describe("Force refresh the cached data (use sparingly - extraction can take minutes for large files)"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ forceRefresh }) => {
             try {
                 const { DesignSystemManifestCache, createEmptyManifest, figmaColorToHex, getCategories, getTokenSummary, } = await import('./core/design-system-manifest.js');
@@ -1568,11 +1640,15 @@ Common issues to check:
             }
         });
         // Tool 2: Search Components (~3000 tokens response max, paginated)
-        this.server.tool("figma_search_components", "Search for components by name, category, or description. Returns paginated results with component keys for instantiation. Automatically loads the design system cache if needed.", {
-            query: z.string().optional().default("").describe("Search query to match component names or descriptions"),
-            category: z.string().optional().describe("Filter by category (e.g., 'Button', 'Input', 'Card')"),
-            limit: z.number().optional().default(10).describe("Maximum results to return (default: 10, max: 25)"),
-            offset: z.number().optional().default(0).describe("Offset for pagination"),
+        this.server.registerTool("figma_search_components", {
+            description: "Search for components by name, category, or description. Returns paginated results with component keys for instantiation. Automatically loads the design system cache if needed.",
+            inputSchema: {
+                query: z.string().optional().default("").describe("Search query to match component names or descriptions"),
+                category: z.string().optional().describe("Filter by category (e.g., 'Button', 'Input', 'Card')"),
+                limit: z.number().optional().default(10).describe("Maximum results to return (default: 10, max: 25)"),
+                offset: z.number().optional().default(0).describe("Offset for pagination"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ query, category, limit, offset }) => {
             try {
                 const { searchComponents } = await import('./core/design-system-manifest.js');
@@ -1630,9 +1706,13 @@ Common issues to check:
             }
         });
         // Tool 3: Get Component Details (~500 tokens per component)
-        this.server.tool("figma_get_component_details", "Get full details for a specific component including all variants, properties, and keys needed for instantiation. Use the component key or name from figma_search_components.", {
-            componentKey: z.string().optional().describe("The component key (preferred for exact match)"),
-            componentName: z.string().optional().describe("The component name (used if key not provided)"),
+        this.server.registerTool("figma_get_component_details", {
+            description: "Get full details for a specific component including all variants, properties, and keys needed for instantiation. Use the component key or name from figma_search_components.",
+            inputSchema: {
+                componentKey: z.string().optional().describe("The component key (preferred for exact match)"),
+                componentName: z.string().optional().describe("The component name (used if key not provided)"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ componentKey, componentName }) => {
             try {
                 if (!componentKey && !componentName) {
@@ -1720,10 +1800,14 @@ Common issues to check:
             }
         });
         // Tool 4: Get Token Values (~2000 tokens response max)
-        this.server.tool("figma_get_token_values", "Get actual values for design tokens (colors, spacing, etc). Use after figma_get_design_system_summary to get specific token values for implementation.", {
-            type: z.enum(["colors", "spacing", "all"]).optional().default("all").describe("Type of tokens to retrieve"),
-            filter: z.string().optional().describe("Filter token names (e.g., 'primary' to get all primary colors)"),
-            limit: z.number().optional().default(50).describe("Maximum tokens to return (default: 50)"),
+        this.server.registerTool("figma_get_token_values", {
+            description: "Get actual values for design tokens (colors, spacing, etc). Use after figma_get_design_system_summary to get specific token values for implementation.",
+            inputSchema: {
+                type: z.enum(["colors", "spacing", "all"]).optional().default("all").describe("Type of tokens to retrieve"),
+                filter: z.string().optional().describe("Filter token names (e.g., 'primary' to get all primary colors)"),
+                limit: z.number().optional().default(50).describe("Maximum tokens to return (default: 50)"),
+            },
+            annotations: { readOnlyHint: true },
         }, async ({ type, filter, limit }) => {
             try {
                 // Auto-load design system cache if needed
@@ -1796,22 +1880,26 @@ Common issues to check:
             }
         });
         // Tool 5: Instantiate Component
-        this.server.tool("figma_instantiate_component", `Create an instance of a component from the design system. Works with both published library components (by key) and local/unpublished components (by nodeId).
+        this.server.registerTool("figma_instantiate_component", {
+            description: `Create an instance of a component from the design system. Works with both published library components (by key) and local/unpublished components (by nodeId).
 
 **IMPORTANT: Always re-search before instantiating!**
 NodeIds are session-specific and may be stale from previous conversations. ALWAYS call figma_search_components at the start of each design session to get current, valid identifiers.
 
 **VISUAL VALIDATION WORKFLOW:**
-After instantiating components, use figma_take_screenshot to verify the result looks correct. Check placement, sizing, and visual balance.`, {
-            componentKey: z.string().optional().describe("The component key (for published library components). Get this from figma_search_components."),
-            nodeId: z.string().optional().describe("The node ID (for local/unpublished components). Get this from figma_search_components. Required if componentKey doesn't work."),
-            variant: z.record(z.string()).optional().describe("Variant properties to set (e.g., { Type: 'Simple', State: 'Active' })"),
-            overrides: z.record(z.any()).optional().describe("Property overrides (e.g., { 'Button Label': 'Click Me' })"),
-            position: z.object({
-                x: z.number(),
-                y: z.number(),
-            }).optional().describe("Position on canvas (default: 0, 0)"),
-            parentId: z.string().optional().describe("Parent node ID to append the instance to"),
+After instantiating components, use figma_take_screenshot to verify the result looks correct. Check placement, sizing, and visual balance.`,
+            inputSchema: {
+                componentKey: z.string().optional().describe("The component key (for published library components). Get this from figma_search_components."),
+                nodeId: z.string().optional().describe("The node ID (for local/unpublished components). Get this from figma_search_components. Required if componentKey doesn't work."),
+                variant: z.record(z.string()).optional().describe("Variant properties to set (e.g., { Type: 'Simple', State: 'Active' })"),
+                overrides: z.record(z.any()).optional().describe("Property overrides (e.g., { 'Button Label': 'Click Me' })"),
+                position: z.object({
+                    x: z.number(),
+                    y: z.number(),
+                }).optional().describe("Position on canvas (default: 0, 0)"),
+                parentId: z.string().optional().describe("Parent node ID to append the instance to"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ componentKey, nodeId, variant, overrides, position, parentId }) => {
             try {
                 if (!componentKey && !nodeId) {
@@ -1863,10 +1951,14 @@ After instantiating components, use figma_take_screenshot to verify the result l
         // NEW: Component Property Management Tools
         // ============================================================================
         // Tool: Set Node Description
-        this.server.tool("figma_set_description", "Set the description text on a component, component set, or style. Descriptions appear in Dev Mode and help document design intent. Supports plain text and markdown formatting.", {
-            nodeId: z.string().describe("The node ID of the component or style to update (e.g., '123:456')"),
-            description: z.string().describe("The plain text description to set"),
-            descriptionMarkdown: z.string().optional().describe("Optional rich text description using markdown formatting"),
+        this.server.registerTool("figma_set_description", {
+            description: "Set the description text on a component, component set, or style. Descriptions appear in Dev Mode and help document design intent. Supports plain text and markdown formatting.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID of the component or style to update (e.g., '123:456')"),
+                description: z.string().describe("The plain text description to set"),
+                descriptionMarkdown: z.string().optional().describe("Optional rich text description using markdown formatting"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, description, descriptionMarkdown }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1900,11 +1992,15 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Add Component Property
-        this.server.tool("figma_add_component_property", "Add a new component property to a component or component set. Properties enable dynamic content and behavior in component instances. Supported types: BOOLEAN (toggle), TEXT (string), INSTANCE_SWAP (component swap), VARIANT (variant selection).", {
-            nodeId: z.string().describe("The component or component set node ID"),
-            propertyName: z.string().describe("Name for the new property (e.g., 'Show Icon', 'Button Label')"),
-            type: z.enum(["BOOLEAN", "TEXT", "INSTANCE_SWAP", "VARIANT"]).describe("Property type: BOOLEAN for toggles, TEXT for strings, INSTANCE_SWAP for component swaps, VARIANT for variant selection"),
-            defaultValue: z.any().describe("Default value for the property. BOOLEAN: true/false, TEXT: string, INSTANCE_SWAP: component key, VARIANT: variant value"),
+        this.server.registerTool("figma_add_component_property", {
+            description: "Add a new component property to a component or component set. Properties enable dynamic content and behavior in component instances. Supported types: BOOLEAN (toggle), TEXT (string), INSTANCE_SWAP (component swap), VARIANT (variant selection).",
+            inputSchema: {
+                nodeId: z.string().describe("The component or component set node ID"),
+                propertyName: z.string().describe("Name for the new property (e.g., 'Show Icon', 'Button Label')"),
+                type: z.enum(["BOOLEAN", "TEXT", "INSTANCE_SWAP", "VARIANT"]).describe("Property type: BOOLEAN for toggles, TEXT for strings, INSTANCE_SWAP for component swaps, VARIANT for variant selection"),
+                defaultValue: z.any().describe("Default value for the property. BOOLEAN: true/false, TEXT: string, INSTANCE_SWAP: component key, VARIANT: variant value"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, propertyName, type, defaultValue }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1939,14 +2035,18 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Edit Component Property
-        this.server.tool("figma_edit_component_property", "Edit an existing component property. Can change the name, default value, or preferred values (for INSTANCE_SWAP). Use the full property name including the unique suffix.", {
-            nodeId: z.string().describe("The component or component set node ID"),
-            propertyName: z.string().describe("The full property name with suffix (e.g., 'Show Icon#123:456')"),
-            newValue: z.object({
-                name: z.string().optional().describe("New name for the property"),
-                defaultValue: z.any().optional().describe("New default value"),
-                preferredValues: z.array(z.any()).optional().describe("Preferred values (INSTANCE_SWAP only)"),
-            }).describe("Object with the values to update"),
+        this.server.registerTool("figma_edit_component_property", {
+            description: "Edit an existing component property. Can change the name, default value, or preferred values (for INSTANCE_SWAP). Use the full property name including the unique suffix.",
+            inputSchema: {
+                nodeId: z.string().describe("The component or component set node ID"),
+                propertyName: z.string().describe("The full property name with suffix (e.g., 'Show Icon#123:456')"),
+                newValue: z.object({
+                    name: z.string().optional().describe("New name for the property"),
+                    defaultValue: z.any().optional().describe("New default value"),
+                    preferredValues: z.array(z.any()).optional().describe("Preferred values (INSTANCE_SWAP only)"),
+                }).describe("Object with the values to update"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, propertyName, newValue }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -1979,9 +2079,13 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Delete Component Property
-        this.server.tool("figma_delete_component_property", "Delete a component property. Only works with BOOLEAN, TEXT, and INSTANCE_SWAP properties (not VARIANT). This is a destructive operation.", {
-            nodeId: z.string().describe("The component or component set node ID"),
-            propertyName: z.string().describe("The full property name with suffix (e.g., 'Show Icon#123:456')"),
+        this.server.registerTool("figma_delete_component_property", {
+            description: "Delete a component property. Only works with BOOLEAN, TEXT, and INSTANCE_SWAP properties (not VARIANT). This is a destructive operation.",
+            inputSchema: {
+                nodeId: z.string().describe("The component or component set node ID"),
+                propertyName: z.string().describe("The full property name with suffix (e.g., 'Show Icon#123:456')"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, propertyName }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2017,11 +2121,15 @@ After instantiating components, use figma_take_screenshot to verify the result l
         // NEW: Node Manipulation Tools
         // ============================================================================
         // Tool: Resize Node
-        this.server.tool("figma_resize_node", "Resize a node to specific dimensions. By default respects child constraints; use withConstraints=false to ignore them.", {
-            nodeId: z.string().describe("The node ID to resize"),
-            width: z.number().describe("New width in pixels"),
-            height: z.number().describe("New height in pixels"),
-            withConstraints: z.boolean().optional().default(true).describe("Whether to apply child constraints during resize (default: true)"),
+        this.server.registerTool("figma_resize_node", {
+            description: "Resize a node to specific dimensions. By default respects child constraints; use withConstraints=false to ignore them.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to resize"),
+                width: z.number().describe("New width in pixels"),
+                height: z.number().describe("New height in pixels"),
+                withConstraints: z.boolean().optional().default(true).describe("Whether to apply child constraints during resize (default: true)"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, width, height, withConstraints }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2054,10 +2162,14 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Move Node
-        this.server.tool("figma_move_node", "Move a node to a new position within its parent.", {
-            nodeId: z.string().describe("The node ID to move"),
-            x: z.number().describe("New X position"),
-            y: z.number().describe("New Y position"),
+        this.server.registerTool("figma_move_node", {
+            description: "Move a node to a new position within its parent.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to move"),
+                x: z.number().describe("New X position"),
+                y: z.number().describe("New Y position"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, x, y }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2090,13 +2202,17 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Set Node Fills
-        this.server.tool("figma_set_fills", "Set the fill colors on a node. Accepts hex color strings (e.g., '#FF0000') or full paint objects.", {
-            nodeId: z.string().describe("The node ID to modify"),
-            fills: z.array(z.object({
-                type: z.literal("SOLID").describe("Fill type (currently only SOLID supported)"),
-                color: z.string().describe("Hex color string (e.g., '#FF0000', '#FF000080' for transparency)"),
-                opacity: z.number().optional().describe("Opacity 0-1 (default: 1)"),
-            })).describe("Array of fill objects"),
+        this.server.registerTool("figma_set_fills", {
+            description: "Set the fill colors on a node. Accepts hex color strings (e.g., '#FF0000') or full paint objects.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to modify"),
+                fills: z.array(z.object({
+                    type: z.literal("SOLID").describe("Fill type (currently only SOLID supported)"),
+                    color: z.string().describe("Hex color string (e.g., '#FF0000', '#FF000080' for transparency)"),
+                    opacity: z.number().optional().describe("Opacity 0-1 (default: 1)"),
+                })).describe("Array of fill objects"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, fills }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2129,14 +2245,18 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Set Node Strokes
-        this.server.tool("figma_set_strokes", "Set the stroke (border) on a node. Accepts hex color strings and optional stroke weight.", {
-            nodeId: z.string().describe("The node ID to modify"),
-            strokes: z.array(z.object({
-                type: z.literal("SOLID").describe("Stroke type"),
-                color: z.string().describe("Hex color string"),
-                opacity: z.number().optional().describe("Opacity 0-1"),
-            })).describe("Array of stroke objects"),
-            strokeWeight: z.number().optional().describe("Stroke thickness in pixels"),
+        this.server.registerTool("figma_set_strokes", {
+            description: "Set the stroke (border) on a node. Accepts hex color strings and optional stroke weight.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to modify"),
+                strokes: z.array(z.object({
+                    type: z.literal("SOLID").describe("Stroke type"),
+                    color: z.string().describe("Hex color string"),
+                    opacity: z.number().optional().describe("Opacity 0-1"),
+                })).describe("Array of stroke objects"),
+                strokeWeight: z.number().optional().describe("Stroke thickness in pixels"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, strokes, strokeWeight }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2169,8 +2289,12 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Clone Node
-        this.server.tool("figma_clone_node", "Duplicate a node. The clone is placed at a slight offset from the original.", {
-            nodeId: z.string().describe("The node ID to clone"),
+        this.server.registerTool("figma_clone_node", {
+            description: "Duplicate a node. The clone is placed at a slight offset from the original.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to clone"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2203,8 +2327,12 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Delete Node
-        this.server.tool("figma_delete_node", "Delete a node from the canvas. WARNING: This is a destructive operation (can be undone with Figma's undo).", {
-            nodeId: z.string().describe("The node ID to delete"),
+        this.server.registerTool("figma_delete_node", {
+            description: "Delete a node from the canvas. WARNING: This is a destructive operation (can be undone with Figma's undo).",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to delete"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2237,9 +2365,13 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Rename Node
-        this.server.tool("figma_rename_node", "Rename a node in the layer panel.", {
-            nodeId: z.string().describe("The node ID to rename"),
-            newName: z.string().describe("The new name for the node"),
+        this.server.registerTool("figma_rename_node", {
+            description: "Rename a node in the layer panel.",
+            inputSchema: {
+                nodeId: z.string().describe("The node ID to rename"),
+                newName: z.string().describe("The new name for the node"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, newName }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2272,10 +2404,14 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Set Text Content
-        this.server.tool("figma_set_text", "Set the text content of a text node. Optionally adjust font size.", {
-            nodeId: z.string().describe("The text node ID"),
-            text: z.string().describe("The new text content"),
-            fontSize: z.number().optional().describe("Optional font size to set"),
+        this.server.registerTool("figma_set_text", {
+            description: "Set the text content of a text node. Optionally adjust font size.",
+            inputSchema: {
+                nodeId: z.string().describe("The text node ID"),
+                text: z.string().describe("The new text content"),
+                fontSize: z.number().optional().describe("Optional font size to set"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ nodeId, text, fontSize }) => {
             try {
                 const connector = await this.getDesktopConnector();
@@ -2309,21 +2445,25 @@ After instantiating components, use figma_take_screenshot to verify the result l
             }
         });
         // Tool: Create Child Node
-        this.server.tool("figma_create_child", "Create a new child node inside a parent container. Useful for adding shapes, text, or frames to existing structures.", {
-            parentId: z.string().describe("The parent node ID"),
-            nodeType: z.enum(["RECTANGLE", "ELLIPSE", "FRAME", "TEXT", "LINE"]).describe("Type of node to create"),
-            properties: z.object({
-                name: z.string().optional().describe("Name for the new node"),
-                x: z.number().optional().describe("X position within parent"),
-                y: z.number().optional().describe("Y position within parent"),
-                width: z.number().optional().describe("Width (default: 100)"),
-                height: z.number().optional().describe("Height (default: 100)"),
-                fills: z.array(z.object({
-                    type: z.literal("SOLID"),
-                    color: z.string(),
-                })).optional().describe("Fill colors (hex strings)"),
-                text: z.string().optional().describe("Text content (for TEXT nodes only)"),
-            }).optional().describe("Properties for the new node"),
+        this.server.registerTool("figma_create_child", {
+            description: "Create a new child node inside a parent container. Useful for adding shapes, text, or frames to existing structures.",
+            inputSchema: {
+                parentId: z.string().describe("The parent node ID"),
+                nodeType: z.enum(["RECTANGLE", "ELLIPSE", "FRAME", "TEXT", "LINE"]).describe("Type of node to create"),
+                properties: z.object({
+                    name: z.string().optional().describe("Name for the new node"),
+                    x: z.number().optional().describe("X position within parent"),
+                    y: z.number().optional().describe("Y position within parent"),
+                    width: z.number().optional().describe("Width (default: 100)"),
+                    height: z.number().optional().describe("Height (default: 100)"),
+                    fills: z.array(z.object({
+                        type: z.literal("SOLID"),
+                        color: z.string(),
+                    })).optional().describe("Fill colors (hex strings)"),
+                    text: z.string().optional().describe("Text content (for TEXT nodes only)"),
+                }).optional().describe("Properties for the new node"),
+            },
+            annotations: { destructiveHint: true },
         }, async ({ parentId, nodeType, properties }) => {
             try {
                 const connector = await this.getDesktopConnector();

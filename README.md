@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../lmcp.png" alt="F-MCP Bridge Logo" width="280" />
+</p>
+
 # F-MCP (Figma MCP Bridge)
 
 Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin'i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.

@@ -719,10 +719,11 @@ export function registerFigmaAPITools(
 	// NOTE: For specific use cases, consider using specialized tools:
 	// - figma_get_component_for_development: For UI component implementation
 	// - figma_get_file_for_plugin: For plugin development
-	server.tool(
+	server.registerTool(
 		"figma_get_file_data",
-		"Get full file structure and document tree. WARNING: Can consume large amounts of tokens. NOT recommended for component descriptions (use figma_get_component instead). Best for understanding file structure or finding component nodeIds. Start with verbosity='summary' and depth=1 for initial exploration.",
 		{
+			description: "Get full file structure and document tree. WARNING: Can consume large amounts of tokens. NOT recommended for component descriptions (use figma_get_component instead). Best for understanding file structure or finding component nodeIds. Start with verbosity='summary' and depth=1 for initial exploration.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -756,6 +757,8 @@ export function registerFigmaAPITools(
 				.describe(
 					"Set to true when user asks for: file statistics, health metrics, design system audit, or quality analysis. Adds statistics, health scores, and audit summaries. Default: false"
 				),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, depth, nodeIds, enrich, verbosity }) => {
 			try {
@@ -957,10 +960,11 @@ export function registerFigmaAPITools(
 	 *
 	 * IMPORTANT: Snippet requires Figma Plugin API context, not browser DevTools console.
 	 */
-	server.tool(
+	server.registerTool(
 		"figma_get_variables",
-		"Extract design tokens and variables from a Figma file with code export support (CSS, Tailwind, TypeScript, Sass). Use when user asks for: design system tokens, variables, color/spacing values, theme data, or code exports. Handles multi-mode variables (Light/Dark themes). NOT for component metadata (use figma_get_component). Supports filtering by collection/mode/name and verbosity control to prevent token exhaustion. Enterprise plan required for Variables API; automatically falls back to Styles API or console-based extraction if unavailable.",
 		{
+			description: "Extract design tokens and variables from a Figma file with code export support (CSS, Tailwind, TypeScript, Sass). Use when user asks for: design system tokens, variables, color/spacing values, theme data, or code exports. Handles multi-mode variables (Light/Dark themes). NOT for component metadata (use figma_get_component). Supports filtering by collection/mode/name and verbosity control to prevent token exhaustion. Enterprise plan required for Variables API; automatically falls back to Styles API or console-based extraction if unavailable.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -1075,10 +1079,12 @@ export function registerFigmaAPITools(
 				.default(false)
 				.describe(
 					"Automatically resolve variable aliases to their final values (hex colors, numbers, etc.). " +
-					"When true, each variable will include a 'resolvedValuesByMode' field with the actual values " +
-					"instead of just alias references. Useful for getting color hex values without manual resolution. " +
-					"Default: false."
+				"When true, each variable will include a 'resolvedValuesByMode' field with the actual values " +
+				"instead of just alias references. Useful for getting color hex values without manual resolution. " +
+				"Default: false."
 				),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({
 			fileUrl,
@@ -2271,10 +2277,11 @@ export function registerFigmaAPITools(
 	);
 
 	// Tool 10: Get Component Data
-	server.tool(
+	server.registerTool(
 		"figma_get_component",
-		"Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the F-MCP ATezer Bridge is running (Right-click in Figma → Plugins → Development → F-MCP ATezer Bridge) to get complete description data.",
 		{
+			description: "Get component metadata or reconstruction specification. Two export formats: (1) 'metadata' (default) - comprehensive documentation with properties, variants, and design tokens for style guides and references, (2) 'reconstruction' - node tree specification compatible with Figma Component Reconstructor plugin for programmatic component creation. IMPORTANT: For local/unpublished components with metadata format, ensure the F-MCP ATezer Bridge is running (Right-click in Figma → Plugins → Development → F-MCP ATezer Bridge) to get complete description data.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -2298,6 +2305,8 @@ export function registerFigmaAPITools(
 				.describe(
 					"Set to true when user asks for: design token coverage, hardcoded value analysis, or component quality metrics. Adds token coverage analysis and hardcoded value detection. Default: false. Only applicable for metadata format."
 				),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, nodeId, format = "metadata", enrich }) => {
 			try {
@@ -2569,10 +2578,11 @@ export function registerFigmaAPITools(
 	);
 
 	// Tool 11: Get Styles
-	server.tool(
+	server.registerTool(
 		"figma_get_styles",
-		"Get all styles (color, text, effects, grids) from a Figma file with optional code exports. Use when user asks for: text styles, color palette, design system styles, typography, or style documentation. Returns organized style definitions with resolved values. NOT for design tokens/variables (use figma_get_variables). Set enrich=true for CSS/Tailwind/Sass code examples. Supports verbosity control to manage payload size.",
 		{
+			description: "Get all styles (color, text, effects, grids) from a Figma file with optional code exports. Use when user asks for: text styles, color palette, design system styles, typography, or style documentation. Returns organized style definitions with resolved values. NOT for design tokens/variables (use figma_get_variables). Set enrich=true for CSS/Tailwind/Sass code examples. Supports verbosity control to manage payload size.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -2607,6 +2617,8 @@ export function registerFigmaAPITools(
 				.describe(
 					"Which code formats to generate examples for. Use when user mentions specific formats like 'CSS', 'Tailwind', 'SCSS', 'TypeScript', etc. Automatically enables enrichment. Default: all formats"
 				),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, verbosity, enrich, include_usage, include_exports, export_formats }) => {
 			try {
@@ -2756,10 +2768,11 @@ export function registerFigmaAPITools(
 	);
 
 	// Tool 12: Get Component Image (Visual Reference)
-	server.tool(
+	server.registerTool(
 		"figma_get_component_image",
-		"Render a specific component or node as an image (PNG, JPG, SVG, PDF). Returns image URL valid for 30 days. Use when user asks for: component screenshot, visual preview, rendered output, or 'show me'. NOT for component metadata/properties (use figma_get_component). NOT for getting code/layout data (use figma_get_component_for_development). Best for: visual references, design review, documentation.",
 		{
+			description: "Render a specific component or node as an image (PNG, JPG, SVG, PDF). Returns image URL valid for 30 days. Use when user asks for: component screenshot, visual preview, rendered output, or 'show me'. NOT for component metadata/properties (use figma_get_component). NOT for getting code/layout data (use figma_get_component_for_development). Best for: visual references, design review, documentation.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -2782,6 +2795,8 @@ export function registerFigmaAPITools(
 				.optional()
 				.default("png")
 				.describe("Image format (default: png)"),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, nodeId, scale, format }) => {
 			try {
@@ -2916,10 +2931,11 @@ export function registerFigmaAPITools(
 	);
 
 	// Tool 13: Get Component for Development (UI Implementation)
-	server.tool(
+	server.registerTool(
 		"figma_get_component_for_development",
-		"Get component data optimized for UI implementation, includes rendered image + filtered implementation context (layout, typography, visual properties). Use when user asks to: 'build this component', 'implement this in React/Vue', 'generate code for', or needs both visual reference and technical specs. Automatically includes 2x scale image unless includeImage=false. Best for: UI development, code generation, design-to-code workflows. For just metadata, use figma_get_component; for just image, use figma_get_component_image.",
 		{
+			description: "Get component data optimized for UI implementation, includes rendered image + filtered implementation context (layout, typography, visual properties). Use when user asks to: 'build this component', 'implement this in React/Vue', 'generate code for', or needs both visual reference and technical specs. Automatically includes 2x scale image unless includeImage=false. Best for: UI development, code generation, design-to-code workflows. For just metadata, use figma_get_component; for just image, use figma_get_component_image.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -2935,6 +2951,8 @@ export function registerFigmaAPITools(
 				.optional()
 				.default(true)
 				.describe("Include rendered image for visual reference (default: true)"),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, nodeId, includeImage }) => {
 			try {
@@ -3117,10 +3135,11 @@ export function registerFigmaAPITools(
 	);
 
 	// Tool 14: Get File for Plugin Development
-	server.tool(
+	server.registerTool(
 		"figma_get_file_for_plugin",
-		"Get file data optimized for plugin development with filtered properties (IDs, structure, plugin data, component relationships). Excludes visual properties (fills, strokes, effects) to reduce payload. Use when user asks for: plugin development, file structure for manipulation, node IDs for plugin API. NOT for component descriptions (use figma_get_component). NOT for visual/styling data (use figma_get_component_for_development). Supports deeper tree traversal (max depth=5) than figma_get_file_data.",
 		{
+			description: "Get file data optimized for plugin development with filtered properties (IDs, structure, plugin data, component relationships). Excludes visual properties (fills, strokes, effects) to reduce payload. Use when user asks for: plugin development, file structure for manipulation, node IDs for plugin API. NOT for component descriptions (use figma_get_component). NOT for visual/styling data (use figma_get_component_for_development). Supports deeper tree traversal (max depth=5) than figma_get_file_data.",
+			inputSchema: {
 			fileUrl: z
 				.string()
 				.url()
@@ -3141,6 +3160,8 @@ export function registerFigmaAPITools(
 				.array(z.string())
 				.optional()
 				.describe("Specific node IDs to retrieve (optional)"),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ fileUrl, depth, nodeIds }) => {
 			try {
@@ -3325,10 +3346,11 @@ export function registerFigmaAPITools(
 	// Tool 15: Capture Screenshot via Plugin (F-MCP ATezer Bridge)
 	// This uses exportAsync() which reads the current plugin runtime state, not the cloud state
 	// Solves race condition where REST API screenshots show stale data after changes
-	server.tool(
+	server.registerTool(
 		"figma_capture_screenshot",
-		"Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires F-MCP ATezer Bridge connection (Figma Desktop with plugin running).",
 		{
+			description: "Capture a screenshot of a node using the plugin's exportAsync API. IMPORTANT: This tool captures the CURRENT state from the plugin runtime (not cloud state like REST API), making it reliable for validating changes immediately after making them. Use this instead of figma_get_component_image when you need to verify that changes were applied correctly. Requires F-MCP ATezer Bridge connection (Figma Desktop with plugin running).",
+			inputSchema: {
 			nodeId: z
 				.string()
 				.optional()
@@ -3347,6 +3369,8 @@ export function registerFigmaAPITools(
 				.optional()
 				.default(2)
 				.describe("Scale factor (default: 2 for 2x resolution)"),
+			},
+			annotations: { readOnlyHint: true },
 		},
 		async ({ nodeId, format, scale }) => {
 			try {
@@ -3437,10 +3461,11 @@ export function registerFigmaAPITools(
 	// Tool 16: Set Instance Properties (F-MCP ATezer Bridge)
 	// Updates component properties on an instance using setProperties()
 	// This is the correct way to update TEXT/BOOLEAN/VARIANT properties on component instances
-	server.tool(
+	server.registerTool(
 		"figma_set_instance_properties",
-		"Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires F-MCP ATezer Bridge connection.",
 		{
+			description: "Update component properties on a component instance. IMPORTANT: Use this tool instead of trying to edit text nodes directly when working with component instances. Components often expose TEXT, BOOLEAN, INSTANCE_SWAP, and VARIANT properties that control their content. Direct text node editing may fail silently if the component uses properties. This tool handles the #nodeId suffix pattern automatically. Requires F-MCP ATezer Bridge connection.",
+			inputSchema: {
 			nodeId: z
 				.string()
 				.describe(
@@ -3453,6 +3478,8 @@ export function registerFigmaAPITools(
 					"Values are strings for TEXT/VARIANT properties, booleans for BOOLEAN properties. " +
 					"The tool automatically handles the #nodeId suffix for TEXT/BOOLEAN/INSTANCE_SWAP properties."
 				),
+			},
+			annotations: { destructiveHint: true },
 		},
 		async ({ nodeId, properties }) => {
 			try {
