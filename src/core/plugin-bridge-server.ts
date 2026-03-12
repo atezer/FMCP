@@ -11,7 +11,7 @@ import { createServer, get as httpGet } from "http";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 
-const PING_INTERVAL_MS = 15000;
+const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
 const MAX_PORT = 5470;
 
@@ -39,9 +39,11 @@ export class PluginBridgeServer {
 	private wss: WebSocketServer | null = null;
 	private httpServer: ReturnType<typeof createServer> | null = null;
 	private client: WebSocket | null = null;
+	private clientAlive = false;
+	private missedHeartbeats = 0;
 	private pending = new Map<string, Pending>();
 	private requestTimeoutMs = 120000;
-	private pingTimer: ReturnType<typeof setInterval> | null = null;
+	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private auditLogPath: string | undefined;
 
 	constructor(port: number, options?: { auditLogPath?: string }) {
@@ -119,18 +121,18 @@ export class PluginBridgeServer {
 			this.wss = new WebSocketServer({ server });
 
 			this.wss.on("connection", (ws: WebSocket) => {
-				if (this.client) {
-					try {
-						this.client.close();
-					} catch {
-						// ignore
-					}
+				if (this.client && this.client !== ws) {
+					this.rejectAllPending("Replaced by new plugin connection");
+					logger.info("Plugin bridge: new connection arrived, switching to it");
 				}
 				this.client = ws;
+				this.clientAlive = true;
+				this.missedHeartbeats = 0;
 				logger.info({ port: this.port }, "Plugin bridge: plugin connected");
 				auditPlugin(this.auditLogPath, "plugin_connect");
 
 				ws.on("message", (data: Buffer | string) => {
+					this.clientAlive = true;
 					try {
 						const msg = JSON.parse(data.toString()) as BridgeResponse & { type?: string };
 						if (msg.type === "ready") {
@@ -138,6 +140,9 @@ export class PluginBridgeServer {
 							ws.send(JSON.stringify({ type: "welcome", bridgeVersion: "1.0.0", port: this.port }));
 							return;
 						}
+					if (msg.type === "pong" || msg.type === "keepalive") {
+						return;
+					}
 						if (msg.id && this.pending.has(msg.id)) {
 							const p = this.pending.get(msg.id)!;
 							this.pending.delete(msg.id);
@@ -159,6 +164,9 @@ export class PluginBridgeServer {
 				ws.on("close", () => {
 					if (this.client === ws) {
 						this.client = null;
+						this.clientAlive = false;
+						this.clearHeartbeatTimers();
+						this.rejectAllPending("Plugin disconnected");
 						auditPlugin(this.auditLogPath, "plugin_disconnect");
 						logger.info("Plugin bridge: plugin disconnected");
 					}
@@ -170,11 +178,28 @@ export class PluginBridgeServer {
 			});
 
 			logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s)", bindHost, this.port);
-			this.pingTimer = setInterval(() => {
+
+			this.heartbeatTimer = setInterval(() => {
 				if (this.client && this.client.readyState === 1) {
-					this.client.ping();
+					if (!this.clientAlive) {
+						this.missedHeartbeats++;
+						if (this.missedHeartbeats >= 3) {
+							logger.warn("Plugin bridge: client not responding to heartbeat, terminating connection");
+							try { this.client.terminate(); } catch { /* ignore */ }
+							this.client = null;
+							this.clientAlive = false;
+							this.missedHeartbeats = 0;
+							return;
+						}
+					} else {
+						this.missedHeartbeats = 0;
+						this.clientAlive = false;
+					}
+					try {
+						this.client.send(JSON.stringify({ type: "ping" }));
+					} catch { /* ignore */ }
 				}
-			}, PING_INTERVAL_MS);
+			}, HEARTBEAT_INTERVAL_MS);
 		});
 	}
 
@@ -207,7 +232,14 @@ export class PluginBridgeServer {
 				method,
 				startTime,
 			});
-			this.client!.send(JSON.stringify(req));
+			try {
+				this.client!.send(JSON.stringify(req));
+			} catch (err) {
+				this.pending.delete(id);
+				clearTimeout(timeout);
+				auditTool(this.auditLogPath, method, false, "send_failed", Date.now() - startTime);
+				reject(new Error(`Failed to send request '${method}': ${err instanceof Error ? err.message : String(err)}`));
+			}
 		});
 	}
 
@@ -215,10 +247,24 @@ export class PluginBridgeServer {
 		return !!this.client && this.client.readyState === 1;
 	}
 
+	private clearHeartbeatTimers(): void {
+		// placeholder for future timers
+	}
+
+	private rejectAllPending(reason: string): void {
+		for (const [id, p] of this.pending) {
+			clearTimeout(p.timeout);
+			const durationMs = Date.now() - p.startTime;
+			auditTool(this.auditLogPath, p.method, false, reason, durationMs);
+			p.reject(new Error(`Plugin bridge request '${p.method}' failed: ${reason}`));
+		}
+		this.pending.clear();
+	}
+
 	stop(): void {
-		if (this.pingTimer) {
-			clearInterval(this.pingTimer);
-			this.pingTimer = null;
+		if (this.heartbeatTimer) {
+			clearInterval(this.heartbeatTimer);
+			this.heartbeatTimer = null;
 		}
 		for (const p of this.pending.values()) {
 			clearTimeout(p.timeout);

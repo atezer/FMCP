@@ -19,24 +19,29 @@ export declare class PluginBridgeServer {
     private wss;
     private httpServer;
     private client;
+    private clientAlive;
+    private missedHeartbeats;
     private pending;
     private requestTimeoutMs;
-    private pingTimer;
+    private heartbeatTimer;
     private auditLogPath;
     constructor(port: number, options?: {
         auditLogPath?: string;
     });
     private port;
     /**
-     * Start the WebSocket server. Tries ports 5454–5470 if the preferred port is in use (multi-instance). Idempotent.
+     * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
      */
     start(): void;
+    private checkPortConflict;
     private tryListen;
     /**
      * Send a request to the plugin and wait for the response.
      */
     request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>;
     isConnected(): boolean;
+    private clearHeartbeatTimers;
+    private rejectAllPending;
     stop(): void;
 }
 //# sourceMappingURL=plugin-bridge-server.d.ts.map

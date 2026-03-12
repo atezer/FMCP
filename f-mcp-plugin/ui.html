@@ -504,7 +504,11 @@
         case 'VARIABLES_DATA':
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
-          updateStatus('ready', true, false);
+          if (mcpConnectedPort) {
+            updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+          } else {
+            updateStatus('ready', true, false);
+          }
           console.log('[F-MCP ATezer Bridge] Active - ' + (msg.data.variables?.length || 0) + ' vars');
           break;
 
@@ -710,6 +714,11 @@
     var MCP_BRIDGE_HOST_KEY = 'f-mcp-bridge-host';
     var mcpBridgeWs = null;
     var mcpBridgeReconnectTimer = null;
+    var mcpReconnectDelay = 1000;
+    var MCP_RECONNECT_MIN = 1000;
+    var MCP_RECONNECT_MAX = 30000;
+    var mcpConnecting = false;
+    var mcpConnectedPort = null;
 
     function getMcpBridgeHost() {
       var el = document.getElementById('mcp-host');
@@ -726,6 +735,21 @@
       return n;
     }
 
+    function forceDisconnectAndReconnect() {
+      if (mcpBridgeReconnectTimer) { clearTimeout(mcpBridgeReconnectTimer); mcpBridgeReconnectTimer = null; }
+      mcpReconnectDelay = MCP_RECONNECT_MIN;
+      mcpConnecting = false;
+      if (mcpBridgeWs) {
+        var old = mcpBridgeWs;
+        mcpBridgeWs = null;
+        old.onclose = null;
+        old.onerror = null;
+        old.onmessage = null;
+        try { old.close(); } catch (_) {}
+      }
+      connectMcpBridge();
+    }
+
     function initMcpHostInput() {
       try {
         var stored = localStorage.getItem(MCP_BRIDGE_HOST_KEY);
@@ -739,11 +763,7 @@
         el.addEventListener('change', function() {
           var host = getMcpBridgeHost();
           try { localStorage.setItem(MCP_BRIDGE_HOST_KEY, host); } catch (e) {}
-          if (mcpBridgeWs) {
-            mcpBridgeWs.close();
-            mcpBridgeWs = null;
-          }
-          connectMcpBridge();
+          forceDisconnectAndReconnect();
         });
       }
     }
@@ -764,33 +784,61 @@
         el.addEventListener('change', function() {
           var port = getMcpBridgePort();
           try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(port)); } catch (e) {}
-          if (mcpBridgeWs) {
-            mcpBridgeWs.close();
-            mcpBridgeWs = null;
-          }
-          connectMcpBridge();
+          forceDisconnectAndReconnect();
         });
       }
     }
 
     var mcpHandshakeTimer = null;
     var mcpHandshakeDone = false;
+    var mcpKeepAliveTimer = null;
+
+    function scheduleReconnect() {
+      if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
+      mcpBridgeReconnectTimer = setTimeout(function() {
+        mcpBridgeReconnectTimer = null;
+        connectMcpBridge();
+      }, mcpReconnectDelay);
+      mcpReconnectDelay = Math.min(mcpReconnectDelay * 2, MCP_RECONNECT_MAX);
+    }
+
+    function startKeepAlive(ws) {
+      if (mcpKeepAliveTimer) { clearInterval(mcpKeepAliveTimer); mcpKeepAliveTimer = null; }
+      mcpKeepAliveTimer = setInterval(function() {
+        if (ws && ws.readyState === 1) {
+          try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch (_) {}
+        } else {
+          clearInterval(mcpKeepAliveTimer);
+          mcpKeepAliveTimer = null;
+        }
+      }, 2000);
+    }
+
+    function stopKeepAlive() {
+      if (mcpKeepAliveTimer) { clearInterval(mcpKeepAliveTimer); mcpKeepAliveTimer = null; }
+    }
 
     function connectMcpBridge() {
-      if (mcpBridgeWs && mcpBridgeWs.readyState === 1) return;
+      if (mcpConnecting) return;
+      if (mcpBridgeWs && (mcpBridgeWs.readyState === 0 || mcpBridgeWs.readyState === 1)) return;
+      mcpConnecting = true;
       var host = getMcpBridgeHost();
       var port = getMcpBridgePort();
       var url = 'ws://' + host + ':' + port;
       mcpHandshakeDone = false;
       try {
         mcpBridgeWs = new WebSocket(url);
+        var currentWs = mcpBridgeWs;
         mcpBridgeWs.onopen = function() {
+          mcpConnecting = false;
+          mcpReconnectDelay = MCP_RECONNECT_MIN;
           console.log('[F-MCP ATezer Bridge] WebSocket opened to ' + url + ', waiting for handshake...');
           updateStatus('connecting...', false, false);
-          mcpBridgeWs.send(JSON.stringify({ type: 'ready' }));
+          currentWs.send(JSON.stringify({ type: 'ready' }));
+          startKeepAlive(currentWs);
           if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
           mcpHandshakeTimer = setTimeout(function() {
-            if (!mcpHandshakeDone && mcpBridgeWs) {
+            if (!mcpHandshakeDone && mcpBridgeWs === currentWs) {
               console.warn('[F-MCP ATezer Bridge] No welcome from server — wrong server or outdated bridge');
               updateStatus('wrong server', false, true);
             }
@@ -802,9 +850,15 @@
             if (msg.type === 'welcome') {
               mcpHandshakeDone = true;
               if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
-              var connectedPort = msg.port || port;
-              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + connectedPort);
-              updateStatus('ready (:' + connectedPort + ')', true, false);
+              mcpConnectedPort = msg.port || port;
+              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
+              updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+              return;
+            }
+            if (msg.type === 'ping') {
+              if (mcpBridgeWs && mcpBridgeWs.readyState === 1) {
+                mcpBridgeWs.send(JSON.stringify({ type: 'pong' }));
+              }
               return;
             }
             if (!msg.id || !msg.method) return;
@@ -951,34 +1005,51 @@
               }
               return { success: false, error: 'Unknown method: ' + method };
             };
+            var wsRef = mcpBridgeWs;
             Promise.resolve(run()).then(function(result) {
-              mcpBridgeWs.send(JSON.stringify({ id: id, result: result }));
+              if (wsRef && wsRef.readyState === 1) {
+                try { wsRef.send(JSON.stringify({ id: id, result: result })); } catch (_) {}
+              }
             }).catch(function(err) {
-              mcpBridgeWs.send(JSON.stringify({ id: id, error: err.message || String(err) }));
+              if (wsRef && wsRef.readyState === 1) {
+                try { wsRef.send(JSON.stringify({ id: id, error: err.message || String(err) })); } catch (_) {}
+              }
             });
           } catch (e) {
-            if (mcpBridgeWs && mcpBridgeWs.readyState === 1 && msg && msg.id)
-              mcpBridgeWs.send(JSON.stringify({ id: msg.id, error: e.message || String(e) }));
+            if (mcpBridgeWs && mcpBridgeWs.readyState === 1 && msg && msg.id) {
+              try { mcpBridgeWs.send(JSON.stringify({ id: msg.id, error: e.message || String(e) })); } catch (_) {}
+            }
           }
         };
         mcpBridgeWs.onclose = function() {
+          stopKeepAlive();
+          if (mcpBridgeWs !== currentWs) return;
           mcpBridgeWs = null;
+          mcpConnecting = false;
+          mcpConnectedPort = null;
+          if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
           updateStatus('no server', false, true);
-          if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
+          scheduleReconnect();
         };
         mcpBridgeWs.onerror = function() {
-          mcpBridgeWs = null;
-          updateStatus('no server', false, true);
-          if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-          mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
+          mcpConnecting = false;
         };
       } catch (e) {
+        mcpConnecting = false;
         updateStatus('no server', false, true);
-        if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-        mcpBridgeReconnectTimer = setTimeout(connectMcpBridge, 2000);
+        scheduleReconnect();
       }
     }
+
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && (!mcpBridgeWs || mcpBridgeWs.readyState > 1)) {
+          mcpReconnectDelay = MCP_RECONNECT_MIN;
+          connectMcpBridge();
+        }
+      });
+    }
+
     if (typeof WebSocket !== 'undefined') {
       initMcpHostInput();
       initMcpPortInput();
