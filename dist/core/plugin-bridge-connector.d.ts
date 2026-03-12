@@ -3,11 +3,14 @@
  *
  * Implements the same interface as FigmaDesktopConnector but talks to the
  * Figma plugin over WebSocket (PluginBridgeServer). No CDP / debug port needed.
+ * Supports optional fileKey routing for multi-client scenarios.
  */
 import type { PluginBridgeServer } from "./plugin-bridge-server.js";
 export declare class PluginBridgeConnector {
     private bridge;
-    constructor(bridge: PluginBridgeServer);
+    private fileKey?;
+    constructor(bridge: PluginBridgeServer, fileKey?: string);
+    setFileKey(fileKey: string | undefined): void;
     initialize(): Promise<void>;
     getVariablesFromPluginUI(fileKey?: string): Promise<any>;
     getComponentFromPluginUI(nodeId: string): Promise<any>;

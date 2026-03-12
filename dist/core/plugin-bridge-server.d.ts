@@ -2,9 +2,10 @@
  * Plugin Bridge WebSocket Server
  *
  * Listens for connections from the F-MCP ATezer Bridge plugin (no CDP needed).
- * When the plugin connects, MCP tools can send JSON-RPC style requests and get
- * responses (variables, execute, component, etc.).
+ * Supports MULTIPLE simultaneous plugin connections (e.g. Figma Desktop + FigJam browser).
+ * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  */
+import { type WebSocket } from "ws";
 export interface BridgeRequest {
     id: string;
     method: string;
@@ -15,32 +16,52 @@ export interface BridgeResponse {
     result?: unknown;
     error?: string;
 }
+export interface ClientInfo {
+    ws: WebSocket;
+    clientId: string;
+    fileKey: string | null;
+    fileName: string | null;
+    alive: boolean;
+    missedHeartbeats: number;
+    connectedAt: number;
+}
+export interface ConnectedFileInfo {
+    clientId: string;
+    fileKey: string | null;
+    fileName: string | null;
+    connectedAt: number;
+}
 export declare class PluginBridgeServer {
     private wss;
     private httpServer;
-    private client;
-    private clientAlive;
-    private missedHeartbeats;
+    private clients;
     private pending;
     private requestTimeoutMs;
     private heartbeatTimer;
     private auditLogPath;
+    private clientIdCounter;
     constructor(port: number, options?: {
         auditLogPath?: string;
     });
     private port;
-    /**
-     * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
-     */
     start(): void;
     private checkPortConflict;
+    private generateClientId;
+    private findClientByFileKey;
+    private getDefaultClient;
+    private resolveClient;
+    private removeClient;
     private tryListen;
     /**
-     * Send a request to the plugin and wait for the response.
+     * Send a request to a plugin and wait for the response.
+     * If fileKey is specified, routes to the client serving that file.
+     * Otherwise routes to the most recently connected client.
      */
-    request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>;
-    isConnected(): boolean;
-    private clearHeartbeatTimers;
+    request<T = unknown>(method: string, params?: Record<string, unknown>, fileKey?: string): Promise<T>;
+    isConnected(fileKey?: string): boolean;
+    listConnectedFiles(): ConnectedFileInfo[];
+    connectedClientCount(): number;
+    private rejectPendingForClient;
     private rejectAllPending;
     stop(): void;
 }

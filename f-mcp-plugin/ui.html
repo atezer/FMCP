@@ -178,6 +178,8 @@
     window.__figmaComponentData = null;
     window.__figmaComponentRequests = new Map();
     window.__figmaPendingRequests = new Map();
+    window.__figmaFileKey = null;
+    window.__figmaFileName = null;
 
     let requestIdCounter = 0;
 
@@ -501,6 +503,12 @@
 
       // Handle message types
       switch (msg.type) {
+        case 'FILE_IDENTITY':
+          window.__figmaFileKey = msg.fileKey || null;
+          window.__figmaFileName = msg.fileName || null;
+          console.log('[F-MCP ATezer Bridge] File identity: ' + (msg.fileName || '?') + ' (' + (msg.fileKey || '?') + ')');
+          break;
+
         case 'VARIABLES_DATA':
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
@@ -834,7 +842,11 @@
           mcpReconnectDelay = MCP_RECONNECT_MIN;
           console.log('[F-MCP ATezer Bridge] WebSocket opened to ' + url + ', waiting for handshake...');
           updateStatus('connecting...', false, false);
-          currentWs.send(JSON.stringify({ type: 'ready' }));
+          currentWs.send(JSON.stringify({
+            type: 'ready',
+            fileKey: window.__figmaFileKey || null,
+            fileName: window.__figmaFileName || null
+          }));
           startKeepAlive(currentWs);
           if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
           mcpHandshakeTimer = setTimeout(function() {

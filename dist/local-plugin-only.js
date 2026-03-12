@@ -43,10 +43,19 @@ function normalizeForCompare(s) {
     return s.replace(/\s/g, "");
 }
 const PLUGIN_NOT_CONNECTED = "F-MCP ATezer Bridge plugin not connected. Open Figma → Plugins → Development → F-MCP ATezer Bridge, wait for 'ready'.";
-function getConnector(bridge) {
-    if (!bridge.isConnected())
+function getConnector(bridge, fileKey) {
+    if (!bridge.isConnected(fileKey)) {
+        if (fileKey) {
+            const connected = bridge.listConnectedFiles();
+            const fileList = connected.length > 0
+                ? ` Connected files: ${connected.map(f => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
+                : "";
+            throw new Error(`No plugin connected for fileKey "${fileKey}".${fileList} ` +
+                "Open the target file in Figma and run the F-MCP ATezer Bridge plugin.");
+        }
         throw new Error(PLUGIN_NOT_CONNECTED);
-    return new PluginBridgeConnector(bridge);
+    }
+    return new PluginBridgeConnector(bridge, fileKey);
 }
 export async function main() {
     const config = getConfig();
@@ -58,10 +67,32 @@ export async function main() {
         name: "F-MCP ATezer Bridge (Plugin-only)",
         version: "1.1.2",
     });
+    // ---- figma_list_connected_files (multi-client discovery) ----
+    server.registerTool("figma_list_connected_files", {
+        description: "List all currently connected Figma/FigJam plugin instances. Returns fileKey, fileName, and connection time for each. Use this to discover available files when multiple plugins are running (e.g. Figma Desktop + FigJam browser). Then pass the fileKey to other tools to target a specific file.",
+        inputSchema: {},
+        annotations: { readOnlyHint: true },
+    }, async () => {
+        const files = bridge.listConnectedFiles();
+        return {
+            content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        connectedFiles: files,
+                        totalConnections: files.length,
+                        message: files.length === 0
+                            ? "No plugins connected. Open Figma and run the F-MCP ATezer Bridge plugin."
+                            : `${files.length} plugin(s) connected. Use fileKey parameter in other tools to target a specific file.`,
+                    }, null, 0),
+                }],
+        };
+    });
     // ---- figma_get_file_data_plugin (no REST, no token) ----
     server.registerTool("figma_get_file_data", {
-        description: "Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography).",
+        description: "Get file structure and document tree from the open Figma file. No REST API or token needed. Uses plugin only. Start with depth=1 and verbosity=summary for minimal tokens. Use includeLayout/includeVisual/includeTypography for pixel-perfect spec (auto-layout, constraints, fills, typography). Use fileKey to target a specific file when multiple plugins are connected.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
             depth: z.number().min(0).max(3).optional().default(1),
             verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
             includeLayout: z.boolean().optional(),
@@ -71,9 +102,9 @@ export async function main() {
             outputHint: z.enum(["react", "tailwind"]).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+    }, async ({ fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
-            const conn = getConnector(bridge);
+            const conn = getConnector(bridge, fileKey);
             const opts = includeLayout !== undefined ||
                 includeVisual !== undefined ||
                 includeTypography !== undefined ||
@@ -99,8 +130,9 @@ export async function main() {
     });
     // ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
     server.registerTool("figma_get_design_context", {
-        description: "Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token.",
+        description: "Design context for a node or whole file: structure + text, and optionally layout/visual/typography. Returns roleHint/suiComponent (SUI-style name), layoutSummary, colorHex, variantSummary/suggestedProps for instances, incompleteReasons, hasImageFill. Use outputHint: react or tailwind for code-ready layoutSummary. No Figma REST API, no token. Use fileKey to target a specific file when multiple plugins are connected.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
             nodeId: z.string().optional(),
             depth: z.number().min(0).max(3).optional().default(2),
             verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
@@ -112,9 +144,9 @@ export async function main() {
             outputHint: z.enum(["react", "tailwind"]).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+    }, async ({ fileKey, nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
-            const conn = getConnector(bridge);
+            const conn = getConnector(bridge, fileKey);
             const opts = includeLayout !== undefined ||
                 includeVisual !== undefined ||
                 includeTypography !== undefined ||
@@ -142,13 +174,14 @@ export async function main() {
     });
     // ---- figma_get_variables (plugin only, token-friendly default) ----
     server.registerTool("figma_get_variables", {
-        description: "Get design tokens and variables from the open Figma file. No REST API or token. Returns summary by default to save tokens.",
+        description: "Get design tokens and variables from the open Figma file. No REST API or token. Returns summary by default to save tokens. Use fileKey to target a specific file when multiple plugins are connected.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ verbosity }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, verbosity }) => {
+        const conn = getConnector(bridge, fileKey);
         const raw = await conn.getVariablesFromPluginUI();
         if (!raw || !raw.variables) {
             return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Variables not loaded" }) }] };
@@ -175,61 +208,70 @@ export async function main() {
     });
     // ---- figma_get_component ----
     server.registerTool("figma_get_component", {
-        description: "Get component metadata by node ID from the open Figma file. No REST API. Use figma_get_file_data or figma_search_components to find nodeIds.",
-        inputSchema: { nodeId: z.string() },
+        description: "Get component metadata by node ID from the open Figma file. No REST API. Use figma_get_file_data or figma_search_components to find nodeIds. Use fileKey to target a specific file.",
+        inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
+            nodeId: z.string(),
+        },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, nodeId }) => {
+        const conn = getConnector(bridge, fileKey);
         const result = await conn.getComponentFromPluginUI(nodeId);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_get_styles (plugin only) ----
     server.registerTool("figma_get_styles", {
-        description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Default verbosity=summary for token saving.",
-        inputSchema: { verbosity: z.enum(["summary", "full"]).optional().default("summary") },
+        description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Default verbosity=summary for token saving. Use fileKey to target a specific file.",
+        inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
+            verbosity: z.enum(["summary", "full"]).optional().default("summary"),
+        },
         annotations: { readOnlyHint: true },
-    }, async ({ verbosity }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, verbosity }) => {
+        const conn = getConnector(bridge, fileKey);
         const data = await conn.getLocalStyles(verbosity);
         return { content: [{ type: "text", text: JSON.stringify(data || {}, null, 0) }] };
     });
     // ---- figma_execute ----
     server.registerTool("figma_execute", {
-        description: "Run JavaScript in the Figma plugin context. Full Plugin API available (figma.root, figma.createFrame, etc.). No token needed.",
+        description: "Run JavaScript in the Figma plugin context. Full Plugin API available (figma.root, figma.createFrame, etc.). No token needed. Use fileKey to target a specific file.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             code: z.string(),
             timeout: z.number().optional().default(5000),
         },
         annotations: { destructiveHint: true },
-    }, async ({ code, timeout }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, code, timeout }) => {
+        const conn = getConnector(bridge, fileKey);
         const result = await conn.executeCodeViaUI(code, timeout);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_capture_screenshot ----
     server.registerTool("figma_capture_screenshot", {
-        description: "Capture screenshot of a node or current view from the plugin. No REST API.",
+        description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey to target a specific file.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string().optional(),
             format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
             scale: z.number().optional().default(2),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId, format, scale }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, nodeId, format, scale }) => {
+        const conn = getConnector(bridge, fileKey);
         const result = await conn.captureScreenshot(nodeId ?? null, { format, scale });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
     // ---- figma_set_instance_properties ----
     server.registerTool("figma_set_instance_properties", {
-        description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.).",
+        description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.). Use fileKey to target a specific file.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             nodeId: z.string(),
             properties: z.record(z.union([z.string(), z.boolean()])),
         },
         annotations: { destructiveHint: true },
-    }, async ({ nodeId, properties }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, nodeId, properties }) => {
+        const conn = getConnector(bridge, fileKey);
         const result = await conn.setInstanceProperties(nodeId, properties);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
     });
@@ -317,14 +359,15 @@ export async function main() {
     });
     // ---- Design system summary (minimal tokens) ----
     server.registerTool("figma_get_design_system_summary", {
-        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file.",
+        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files (SUI); set currentPageOnly: false to scan entire file. Use fileKey to target a specific file.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ currentPageOnly, limit }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, currentPageOnly, limit }) => {
+        const conn = getConnector(bridge, fileKey);
         const [vars, components] = await Promise.all([
             conn.getVariablesFromPluginUI(),
             conn.getLocalComponents({ currentPageOnly, limit }),
@@ -342,15 +385,16 @@ export async function main() {
     });
     // ---- figma_search_components ----
     server.registerTool("figma_search_components", {
-        description: "Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file.",
+        description: "Search local components by name. Returns nodeIds and names. No REST API. Uses currentPageOnly: true by default to avoid timeout on large files; set currentPageOnly: false to search entire file. Use fileKey to target a specific file.",
         inputSchema: {
+            fileKey: z.string().optional().describe("Target a specific connected file."),
             query: z.string().optional(),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ query, currentPageOnly, limit }) => {
-        const conn = getConnector(bridge);
+    }, async ({ fileKey, query, currentPageOnly, limit }) => {
+        const conn = getConnector(bridge, fileKey);
         const result = (await conn.getLocalComponents({ currentPageOnly, limit }));
         const data = result?.data;
         if (!data) {
@@ -740,15 +784,27 @@ export async function main() {
     });
     // ---- figma_get_status (plugin-only) ----
     server.registerTool("figma_get_status", {
-        description: "Check if F-MCP ATezer Bridge plugin is connected. No REST API or token.",
+        description: "Check if F-MCP ATezer Bridge plugin is connected and list all connected files. No REST API or token.",
         inputSchema: {},
         annotations: { readOnlyHint: true },
     }, async () => {
         const connected = bridge.isConnected();
+        const connectedFiles = bridge.listConnectedFiles();
+        const clientCount = bridge.connectedClientCount();
         const msg = connected
-            ? "F-MCP ATezer Bridge plugin is connected. You can use all figma_* tools."
+            ? `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected. You can use all figma_* tools.`
             : PLUGIN_NOT_CONNECTED;
-        return { content: [{ type: "text", text: JSON.stringify({ pluginConnected: connected, message: msg }, null, 0) }] };
+        return {
+            content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        pluginConnected: connected,
+                        connectedClients: clientCount,
+                        connectedFiles,
+                        message: msg,
+                    }, null, 0),
+                }],
+        };
     });
     const transport = new StdioServerTransport();
     await server.connect(transport);
