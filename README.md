@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../lmcp.png" alt="F-MCP Bridge Logo" width="280" />
+  <img src="assets/logo.png" alt="F-MCP Bridge Logo" width="280" />
 </p>
 
 # F-MCP (Figma MCP Bridge)
