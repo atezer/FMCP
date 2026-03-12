@@ -202,9 +202,14 @@ Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Deskt
 
 ---
 
-## Design / Dev Mode
+## Design / Dev Mode / FigJam
 
-**Design seat olmayan, sadece Dev Mode erişimi olan kullanıcılar da bu MCP'yi kullanabilir.** Plugin hem Design hem Dev Mode'da çalışır (`editorType: ["figma", "dev"]`). MCP bağlantısı için mod farkı engel değildir. **Dev Mode kullanıcıları (SEM, PO, Dev):** Dosyayı Dev Mode'da açın → sağ panelde **Plugins** sekmesi → **F-MCP ATezer Bridge** ile çalıştırın. Detay: [ONBOARDING.md](docs/ONBOARDING.md) (Dev Mode bölümü).
+**Design seat olmayan, sadece Dev Mode erişimi olan kullanıcılar da bu MCP'yi kullanabilir.** Plugin Design, Dev Mode ve **FigJam** dahil tüm editör tiplerinde çalışır (`editorType: ["figma", "figjam", "dev"]`). MCP bağlantısı için mod farkı engel değildir.
+
+- **Dev Mode kullanıcıları (SEM, PO, Dev):** Dosyayı Dev Mode'da açın → sağ panelde **Plugins** sekmesi → **F-MCP ATezer Bridge** ile çalıştırın.
+- **FigJam kullanıcıları:** FigJam dosyasını açın → **Plugins** → **F-MCP ATezer Bridge** ile çalıştırın. FigJam'de brainstorm, flow ve diyagram verilerine MCP üzerinden erişebilirsiniz.
+
+Detay: [ONBOARDING.md](docs/ONBOARDING.md) (Dev Mode bölümü).
 
 **Plugin–MCP bağlantı özeti:** İki mod var; debug portu zorunlu değil. **Plugin-only (önerilen):** Config'te `dist/local-plugin-only.js`, Figma normal açılır, token yok. **Tam mod:** Config'te `dist/local.js`, Figma `--remote-debugging-port=9222` ile açılır (console/screenshot için). Ayrıntı: [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md).
 
