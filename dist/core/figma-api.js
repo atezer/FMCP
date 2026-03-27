@@ -1,0 +1,274 @@
+/**
+ * Figma REST API Client
+ * Handles HTTP calls to Figma's REST API for file data, variables, components, and styles
+ */
+import { createChildLogger } from './logger.js';
+const logger = createChildLogger({ component: 'figma-api' });
+const FIGMA_API_BASE = 'https://api.figma.com/v1';
+/**
+ * Extract file key from Figma URL
+ * @example https://www.figma.com/design/abc123/My-File -> abc123
+ */
+export function extractFileKey(url) {
+    try {
+        const urlObj = new URL(url);
+        // Match patterns like /design/FILE_KEY or /file/FILE_KEY
+        const match = urlObj.pathname.match(/\/(design|file)\/([a-zA-Z0-9]+)/);
+        return match ? match[2] : null;
+    }
+    catch (error) {
+        logger.error({ error, url }, 'Failed to extract file key from URL');
+        return null;
+    }
+}
+/**
+ * Figma API Client
+ * Makes authenticated requests to Figma REST API
+ */
+export class FigmaAPI {
+    constructor(config) {
+        this.accessToken = config.accessToken;
+    }
+    /**
+     * Make authenticated request to Figma API
+     */
+    async request(endpoint, options = {}) {
+        const url = `${FIGMA_API_BASE}${endpoint}`;
+        // Detect token type and use appropriate authentication header
+        // OAuth tokens start with 'figu_' and require Authorization: Bearer header
+        // Personal Access Tokens use X-Figma-Token header
+        const isOAuthToken = this.accessToken.startsWith('figu_');
+        // Debug logging to verify token is being used
+        const tokenPreview = this.accessToken ? `${this.accessToken.substring(0, 10)}...` : 'NO TOKEN';
+        logger.info({
+            url,
+            tokenPreview,
+            hasToken: !!this.accessToken,
+            tokenLength: this.accessToken?.length,
+            isOAuthToken,
+            authMethod: isOAuthToken ? 'Bearer' : 'X-Figma-Token'
+        }, 'Making Figma API request with token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {}),
+        };
+        // Add authentication header based on token type
+        if (isOAuthToken) {
+            headers['Authorization'] = `Bearer ${this.accessToken}`;
+        }
+        else {
+            headers['X-Figma-Token'] = this.accessToken;
+        }
+        const response = await fetch(url, {
+            ...options,
+            headers,
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            logger.error({ status: response.status, statusText: response.statusText, body: errorText }, 'Figma API request failed');
+            throw new Error(`Figma API error (${response.status}): ${errorText}`);
+        }
+        const data = await response.json();
+        return data;
+    }
+    /**
+     * GET /v1/files/:file_key
+     * Get full file data including document tree, components, and styles
+     */
+    async getFile(fileKey, options) {
+        let endpoint = `/files/${fileKey}`;
+        const params = new URLSearchParams();
+        if (options?.version)
+            params.append('version', options.version);
+        if (options?.ids)
+            params.append('ids', options.ids.join(','));
+        if (options?.depth !== undefined)
+            params.append('depth', options.depth.toString());
+        if (options?.geometry)
+            params.append('geometry', options.geometry);
+        if (options?.plugin_data)
+            params.append('plugin_data', options.plugin_data);
+        if (options?.branch_data)
+            params.append('branch_data', 'true');
+        if (params.toString()) {
+            endpoint += `?${params.toString()}`;
+        }
+        return this.request(endpoint);
+    }
+    /**
+     * GET /v1/files/:file_key/variables/local
+     * Get local variables (design tokens) from a file
+     */
+    async getLocalVariables(fileKey) {
+        const response = await this.request(`/files/${fileKey}/variables/local`);
+        // Figma API returns {status, error, meta: {variableCollections, variables}}
+        // Extract meta to match expected format
+        return response.meta || response;
+    }
+    /**
+     * GET /v1/files/:file_key/variables/published
+     * Get published variables from a file
+     */
+    async getPublishedVariables(fileKey) {
+        const response = await this.request(`/files/${fileKey}/variables/published`);
+        // Figma API returns {status, error, meta: {variableCollections, variables}}
+        // Extract meta to match expected format
+        return response.meta || response;
+    }
+    /**
+     * GET /v1/files/:file_key/nodes
+     * Get specific nodes by ID
+     */
+    async getNodes(fileKey, nodeIds, options) {
+        let endpoint = `/files/${fileKey}/nodes`;
+        const params = new URLSearchParams();
+        params.append('ids', nodeIds.join(','));
+        if (options?.version)
+            params.append('version', options.version);
+        if (options?.depth !== undefined)
+            params.append('depth', options.depth.toString());
+        if (options?.geometry)
+            params.append('geometry', options.geometry);
+        if (options?.plugin_data)
+            params.append('plugin_data', options.plugin_data);
+        endpoint += `?${params.toString()}`;
+        return this.request(endpoint);
+    }
+    /**
+     * GET /v1/files/:file_key/styles
+     * Get styles from a file
+     */
+    async getStyles(fileKey) {
+        return this.request(`/files/${fileKey}/styles`);
+    }
+    /**
+     * GET /v1/files/:file_key/components
+     * Get components from a file
+     */
+    async getComponents(fileKey) {
+        return this.request(`/files/${fileKey}/components`);
+    }
+    /**
+     * GET /v1/files/:file_key/component_sets
+     * Get component sets (variants) from a file
+     */
+    async getComponentSets(fileKey) {
+        return this.request(`/files/${fileKey}/component_sets`);
+    }
+    /**
+     * GET /v1/images/:file_key
+     * Renders images for specified nodes
+     * @param fileKey - The file key
+     * @param nodeIds - Node IDs to render (single string or array)
+     * @param options - Rendering options
+     * @returns Map of node IDs to image URLs (URLs expire after 30 days)
+     */
+    async getImages(fileKey, nodeIds, options) {
+        const params = new URLSearchParams();
+        // Handle single or multiple node IDs
+        const ids = Array.isArray(nodeIds) ? nodeIds.join(',') : nodeIds;
+        params.append('ids', ids);
+        // Add optional parameters
+        if (options?.scale !== undefined)
+            params.append('scale', options.scale.toString());
+        if (options?.format)
+            params.append('format', options.format);
+        if (options?.svg_outline_text !== undefined)
+            params.append('svg_outline_text', options.svg_outline_text.toString());
+        if (options?.svg_include_id !== undefined)
+            params.append('svg_include_id', options.svg_include_id.toString());
+        if (options?.svg_include_node_id !== undefined)
+            params.append('svg_include_node_id', options.svg_include_node_id.toString());
+        if (options?.svg_simplify_stroke !== undefined)
+            params.append('svg_simplify_stroke', options.svg_simplify_stroke.toString());
+        if (options?.contents_only !== undefined)
+            params.append('contents_only', options.contents_only.toString());
+        const endpoint = `/images/${fileKey}?${params.toString()}`;
+        logger.info({ fileKey, ids, options }, 'Rendering images');
+        return this.request(endpoint);
+    }
+    /**
+     * Helper: Get all design tokens (variables) with formatted output
+     */
+    async getAllVariables(fileKey) {
+        // Don't catch errors - let them bubble up so proper error messages are shown
+        const [local, published] = await Promise.all([
+            this.getLocalVariables(fileKey),
+            this.getPublishedVariables(fileKey).catch(() => ({ variables: {} })), // Published can fail gracefully
+        ]);
+        return { local, published };
+    }
+    /**
+     * Helper: Get component metadata with properties
+     */
+    async getComponentData(fileKey, nodeId) {
+        const response = await this.getNodes(fileKey, [nodeId], { depth: 2 });
+        return response.nodes?.[nodeId];
+    }
+    /**
+     * Helper: Search for components by name
+     */
+    async searchComponents(fileKey, searchTerm) {
+        const { meta } = await this.getComponents(fileKey);
+        const components = meta?.components || [];
+        return components.filter((comp) => comp.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+}
+/**
+ * Helper function to format variables for display
+ */
+export function formatVariables(variablesData) {
+    const collections = Object.entries(variablesData.variableCollections || {}).map(([id, collection]) => ({
+        id,
+        name: collection.name,
+        key: collection.key,
+        modes: collection.modes,
+        variableIds: collection.variableIds,
+    }));
+    const variables = Object.entries(variablesData.variables || {}).map(([id, variable]) => ({
+        id,
+        name: variable.name,
+        key: variable.key,
+        resolvedType: variable.resolvedType,
+        valuesByMode: variable.valuesByMode,
+        variableCollectionId: variable.variableCollectionId,
+        scopes: variable.scopes,
+        description: variable.description,
+    }));
+    const variablesByType = variables.reduce((acc, v) => {
+        acc[v.resolvedType] = (acc[v.resolvedType] || 0) + 1;
+        return acc;
+    }, {});
+    return {
+        collections,
+        variables,
+        summary: {
+            totalCollections: collections.length,
+            totalVariables: variables.length,
+            variablesByType,
+        },
+    };
+}
+/**
+ * Helper function to format component data for display
+ */
+export function formatComponentData(componentNode) {
+    return {
+        id: componentNode.id,
+        name: componentNode.name,
+        type: componentNode.type,
+        description: componentNode.description,
+        descriptionMarkdown: componentNode.descriptionMarkdown,
+        properties: componentNode.componentPropertyDefinitions,
+        children: componentNode.children?.map((child) => ({
+            id: child.id,
+            name: child.name,
+            type: child.type,
+        })),
+        bounds: componentNode.absoluteBoundingBox,
+        fills: componentNode.fills,
+        strokes: componentNode.strokes,
+        effects: componentNode.effects,
+    };
+}
+//# sourceMappingURL=figma-api.js.map
