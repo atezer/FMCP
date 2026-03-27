@@ -51,7 +51,7 @@ const DEFAULT_CONFIG = {
     local: {
         debugHost: process.env.FIGMA_DEBUG_HOST || 'localhost',
         debugPort: parseInt(process.env.FIGMA_DEBUG_PORT || '9222', 10),
-        pluginBridgePort: parseInt(process.env.FIGMA_PLUGIN_BRIDGE_PORT || '5454', 10),
+        pluginBridgePort: parseInt(process.env.FIGMA_MCP_BRIDGE_PORT || process.env.FIGMA_PLUGIN_BRIDGE_PORT || '5454', 10),
         auditLogPath: process.env.FIGMA_MCP_AUDIT_LOG_PATH || undefined,
     },
 };

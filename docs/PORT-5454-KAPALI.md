@@ -1,8 +1,10 @@
-# Port 5454 "address already in use" (EADDRINUSE)
+# Port 5454 meşgul veya EADDRINUSE
 
-MCP sunucusu veya plugin bridge başlarken **5454** portu zaten kullanımdaysa `EADDRINUSE` hatası alırsınız.
+**5454** doluysa köprü artık **5454–5470** aralığında boş bir sonraki porta otomatik bağlanır (stderr’de `F-MCP bridge listening on ws://127.0.0.1:<port>`). Figma plugin’i otomatik port modunda bu porta uyum sağlar.
 
-## Hızlı çözüm
+Hâlâ sorun yaşıyorsanız veya **tüm aralık doluysa** aşağıdaki adımlar geçerlidir.
+
+## Hızlı çözüm (5454’ü veya kullanılan portu boşaltmak)
 
 **1. 5454’ü kullanan süreci bulun:**
 ```bash
@@ -24,16 +26,12 @@ kill <PID>
 - Daha önce `npm run dev:local` çalıştırdıysanız ve terminali kapatmadan Claude/Cursor MCP’yi açtıysanız, 5454 zaten o process tarafından kullanılıyordur.
 - Claude/Cursor MCP’yi birden fazla kez “reconnect” ettiğinizde bazen eski process hemen kapanmamış olabilir.
 
-## Alternatif: Farklı port kullanmak
+## Alternatif: Sabit farklı port (elle)
 
-5454’ü başka bir uygulama sürekli kullanıyorsa, bridge’i farklı bir portta çalıştırabilirsiniz:
+Otomatik yedekleme yerine veya **5454–5470 dışı** bir port istiyorsanız:
 
-1. **MCP’yi farklı portta başlatın:**  
+1. **MCP’yi o portta başlatın:**  
    `FIGMA_PLUGIN_BRIDGE_PORT=5455 node dist/local-plugin-only.js`  
-   (veya config’te bu env var’ı 5455 yapacak şekilde ayarlayın.)
+   (veya Cursor/Claude MCP config’inde aynı env.)
 
-2. **Plugin’in bağlanacağı portu değiştirin:**  
-   `f-mcp-plugin/manifest.json` içinde `allowedDomains`’e `http://localhost:5455` ve `ws://localhost:5455` ekleyin.  
-   `f-mcp-plugin/ui.html` içinde `MCP_BRIDGE_WS_PORT = 5455` yapın.
-
-Bu şekilde hem MCP hem plugin aynı portu (5455) kullanır.
+2. **Plugin:** Gelişmiş panelde **Port** alanına aynı numarayı yazın (ör. 5455). `f-mcp-plugin/manifest.json` içinde **5454–5470** zaten listelenmiştir; bu aralık dışı bir port kullanıyorsanız `allowedDomains`’e `http://localhost:<port>` ve `ws://localhost:<port>` eklemeniz gerekir.

@@ -71,6 +71,15 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 
 Kurulum: **En basit (repo indirmeden):** aşağıdaki [En basit kurulum](#en-basit-kurulum-npx--repo-indirmeden) adımları. **Detaylı:** [Kurulum rehberi (Onboarding)](docs/ONBOARDING.md). **Windows:** [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) (Node veya Python bridge).
 
+### Çalışma modları (hangi binary?)
+
+| Mod | NPM / `node` girişi | Ne zaman |
+| --- | --- | --- |
+| **Plugin-only (önerilen)** | `figma-mcp-bridge-plugin` veya `dist/local-plugin-only.js` | Figma’da **F-MCP ATezer Bridge** plugin’i ile çalışmak; REST token gerekmez; debug portu gerekmez. |
+| **Tam (CDP + REST)** | `figma-mcp-bridge` veya `dist/local.js` | Console log, ekran görüntüsü CDP üzerinden, `FIGMA_ACCESS_TOKEN`, Figma `--remote-debugging-port=9222` vb. |
+
+Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile yetiniyorsanız config’te **`figma-mcp-bridge-plugin`** kullanın (NPX örnekleri aşağıda).
+
 ## Hızlı başlangıç
 
 Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
@@ -86,8 +95,8 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek iç
 | ---- | ------------------------------------------------------------------------------------------------------------ |
 | 1    | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin.               |
 | 2    | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin.                    |
-| 3    | **Cursor veya Claude'u yeniden başlatın** — MCP sunucusu port 5454'te otomatik başlar.                       |
-| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
+| 3    | **Cursor veya Claude'u yeniden başlatın** — köprü varsayılan olarak **5454**’te dinler (meşgulse **5454–5470** arasında otomatik yedek port). |
+| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:…)"** görünene kadar bekleyin (port otomatik veya `welcome` ile eşleşir). |
 
 
 **Cursor** — Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`:
@@ -97,7 +106,7 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek iç
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
     }
   }
 }
@@ -110,7 +119,7 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek iç
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest"]
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
     }
   }
 }
@@ -124,7 +133,7 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek iç
 ```json
 "figma-mcp-bridge": {
   "command": "npx",
-  "args": ["-y", "@atezer/figma-mcp-bridge@latest"],
+  "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"],
   "env": {
     "FIGMA_PLUGIN_BRIDGE_PORT": "5455"
   }
@@ -192,7 +201,7 @@ npm run dev:local
 
 ## Claude / Cursor ile bağlama (detay)
 
-**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. `npx @atezer/figma-mcp-bridge@latest` ile clone yapmadan kullanılabilir. Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md).
+**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. Plugin-only için: `npx -y @atezer/figma-mcp-bridge@latest figma-mcp-bridge-plugin` (tam mod için son argümanı atlayıp varsayılan `figma-mcp-bridge` binary’si kullanılır). Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md).
 
 **Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
 
@@ -309,6 +318,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                         |
 | [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                   |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                               |
+| [DEPENDENCY_LAYERS.md](docs/DEPENDENCY_LAYERS.md)                       | Bağımlılık katmanları (plugin-only / tam / Cloudflare) ve olası paket ayrımı taslağı            |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
 | [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma'da yayınlama: Data security cevapları, final details, Plugin ID       |
 |                                                                         |                                                                                                  |

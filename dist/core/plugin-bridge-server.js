@@ -6,7 +6,7 @@
  * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  */
 import { WebSocketServer } from "ws";
-import { createServer, get as httpGet } from "http";
+import { createServer } from "http";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 const HEARTBEAT_INTERVAL_MS = 3000;
@@ -21,7 +21,9 @@ export class PluginBridgeServer {
         this.requestTimeoutMs = 120000;
         this.heartbeatTimer = null;
         this.clientIdCounter = 0;
-        this.port = port;
+        const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, port));
+        this.preferredPort = clamped;
+        this.port = clamped;
         this.auditLogPath = options?.auditLogPath;
     }
     start() {
@@ -29,18 +31,29 @@ export class PluginBridgeServer {
             logger.debug({ port: this.port }, "Plugin bridge server already running");
             return;
         }
-        this.tryListen(this.port);
+        const candidates = this.buildPortCandidateList(this.preferredPort);
+        this.attemptListen(candidates, 0);
     }
-    checkPortConflict(port) {
-        return new Promise((resolve) => {
-            const req = httpGet(`http://127.0.0.1:${port}`, (res) => {
-                let body = "";
-                res.on("data", (c) => { body += c.toString(); });
-                res.on("end", () => resolve(body));
-            });
-            req.on("error", () => resolve(null));
-            req.setTimeout(2000, () => { req.destroy(); resolve(null); });
-        });
+    /** Try preferred first, then scan forward to MAX, then wrap MIN..preferred-1. */
+    buildPortCandidateList(preferred) {
+        const p0 = Math.max(MIN_PORT, Math.min(MAX_PORT, preferred));
+        const list = [];
+        for (let p = p0; p <= MAX_PORT; p++)
+            list.push(p);
+        for (let p = MIN_PORT; p < p0; p++)
+            list.push(p);
+        return list;
+    }
+    attemptListen(candidatePorts, index) {
+        if (index >= candidatePorts.length) {
+            console.error(`\n❌ No free port in range ${MIN_PORT}-${MAX_PORT} (all in use).\n` +
+                `   Free a port or set FIGMA_PLUGIN_BRIDGE_PORT to a free value in this range.\n` +
+                `   ⚠️  Avoid running multiple MCP bridge instances when one is enough.\n`);
+            process.exit(1);
+            return;
+        }
+        const port = candidatePorts[index];
+        this.tryListenOne(port, candidatePorts, index);
     }
     generateClientId() {
         return `client_${Date.now()}_${++this.clientIdCounter}`;
@@ -79,7 +92,7 @@ export class PluginBridgeServer {
         auditPlugin(this.auditLogPath, "plugin_disconnect");
         logger.info({ clientId, fileKey: info.fileKey, fileName: info.fileName }, "Plugin bridge: client disconnected (%s)", reason);
     }
-    tryListen(port) {
+    tryListenOne(port, candidatePorts, index) {
         const server = createServer((_req, res) => {
             res.writeHead(200, {
                 "Content-Type": "text/plain",
@@ -90,25 +103,8 @@ export class PluginBridgeServer {
         });
         server.on("error", (err) => {
             if (err.code === "EADDRINUSE") {
-                this.checkPortConflict(port).then((body) => {
-                    const isFmcp = body !== null && body.includes("F-MCP");
-                    const hint = process.platform === "win32"
-                        ? `netstat -ano | findstr :${port}`
-                        : `lsof -i :${port}`;
-                    if (isFmcp) {
-                        console.error(`\n❌ Port ${port} is already used by another F-MCP bridge instance.\n` +
-                            `   Find it: ${hint}\n` +
-                            `   Kill it and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n` +
-                            `   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev:local'.\n`);
-                    }
-                    else {
-                        console.error(`\n❌ Port ${port} is already in use by another application.\n` +
-                            `   Find it: ${hint}\n` +
-                            `   Free the port and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n`);
-                    }
-                    process.exit(1);
-                });
                 server.close();
+                this.attemptListen(candidatePorts, index + 1);
                 return;
             }
             logger.error({ err }, "Plugin bridge server error");
@@ -116,6 +112,13 @@ export class PluginBridgeServer {
         const bindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
         server.listen(port, bindHost, () => {
             this.port = port;
+            process.env.FIGMA_PLUGIN_BRIDGE_PORT = String(port);
+            process.env.FIGMA_MCP_BRIDGE_PORT = String(port);
+            if (port !== this.preferredPort) {
+                console.error(`\n⚠️  Port ${this.preferredPort} was busy — F-MCP bridge bound to ${port} instead.\n` +
+                    `   Set FIGMA_PLUGIN_BRIDGE_PORT=${port} in your MCP config to avoid this message, or free port ${this.preferredPort}.\n`);
+            }
+            console.error(`F-MCP bridge listening on ws://${bindHost}:${port}\n`);
             this.httpServer = server;
             this.wss = new WebSocketServer({ server });
             this.wss.on("connection", (ws) => {
