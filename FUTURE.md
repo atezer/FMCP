@@ -1,21 +1,23 @@
 # F-MCP — Kalan Adımlar (Future)
 
-> Son güncelleme: 27 Mart 2026 (Figma plugin yayın durumu + doküman)  
+> Son güncelleme: 27 Mart 2026 (kod/doküman taraması + Figma plugin)  
 > Paket sürümü (`package.json`): **1.2.0**
+
+**Kod taraması özeti:** `npm view @atezer/figma-mcp-bridge version` → **1.2.0** (npm yayını doğrulandı). `dist/local-plugin-only.js` / `dist/local.js` içinde `figma_search_assets`, `figma_get_code_connect`, `figma_use` stringleri **yok** — `docs/TOOLS.md` Agent Canvas paritesi bu build ile uyumsuz; envanter düzeltmesi açık (§7).
 
 ---
 
 ## 1. NPM Publish
 
-- [ ] `@atezer/figma-mcp-bridge@1.2.0` npm'e yayınla (`npm publish --access public`)
-- [ ] Yayın sonrası `npx -y @atezer/figma-mcp-bridge@latest` ile doğrula
-- [ ] `figma-mcp-bridge-plugin` bin girdisinin çalıştığını test et
+- [x] `@atezer/figma-mcp-bridge@1.2.0` npm'de yayında (`npm view` ile doğrulandı)
+- [x] `npx -y @atezer/figma-mcp-bridge@latest` ile çekilebilirlik (paket sürümü 1.2.0)
+- [ ] `figma-mcp-bridge-plugin` bin'inin temiz ortamda smoke testi (isteğe bağlı CI)
 
 ---
 
 ## 2. Yerel repo durumu (FCM — bu workspace)
 
-Aşağıdakiler repoda **mevcut**; uzak GitHub (`atezer/FMCP`) ile bire bir senkron mu ayrıca kontrol edilmeli.
+Aşağıdakiler repoda **mevcut**; upstream `atezer/FMCP` ile çalışıyorsanız `main` günceldir (fork/PR akışıyla çekenler kendi senkronunu doğrular).
 
 ### Skills
 
@@ -47,8 +49,8 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 | Konu | Durum |
 |------|--------|
-| `dist/local-plugin-only.js` | `figma_search_assets`, `figma_get_code_connect`, `figma_use` kayıtlı |
-| `dist/local.js` | Aynı üç araç + `getPluginBridgeConnector` (plugin-only ile parite) |
+| `dist/local-plugin-only.js` | Plugin-only araç seti: dosya/design context, variable CRUD, batch token, parity, token browser, `figma_execute`, ekran görüntüsü, `figma_get_status`, vb. (**Kod taraması:** `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu dosyada kayıtlı değil.) |
+| `dist/local.js` | Tam mod: CDP (`figma_navigate`, konsol, screenshot), ek node araçları (`figma_resize_node`, …), tasarım sistemi önbelleği — **aynı üç araç yok** |
 | `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable araması için) |
 
 ### Config örnekleri
@@ -62,7 +64,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 3. GitHub ve doküman tutarlılığı
 
-- [ ] Yukarıdaki yerel dosyaların `atezer/FMCP` üzerinde güncel olduğunu doğrula (push / PR)
+- [x] `atezer/FMCP` `main` ile yerel push senkronu (son değişiklikler gönderildi; fork/PR kullananlar kendi dallarını birleştirmeli)
 - [x] `KURULUM.md` — **Sürüm** **1.2.0** (`package.json` ile uyum)
 - [x] `.cursor-plugin/plugin.json` — `version` **1.2.0**; açıklama `docs/TOOLS.md` ile hizalı
 - [x] Sürüm notları — kök `CHANGELOG.md`; `README.md` ve `KURULUM.md` içinde GitHub Releases / npm takibi ve güncelleme özeti
@@ -72,8 +74,10 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 4. Cursor Plugin Dağıtımı
 
-- [ ] `.cursor-plugin/plugin.json` formatını son Cursor Plugin API'ye uygun kontrol et
-- [ ] Skills dosyalarının Cursor tarafından doğru okunduğunu test et
+**Kontrol:** `.cursor-plugin/plugin.json` geçerli JSON; `skills` → `.cursor/skills/f-mcp/`, `mcpServers` NPX tanımı mevcut — Cursor sürümüne göre resmi şema doğrulaması elle/marketplace rehberi ile yapılmalı.
+
+- [ ] Cursor Plugin API / şema ile biçim doğrulaması (resmi dokümantasyon)
+- [ ] Skills yollarının IDE’de yüklendiği manuel test
 - [ ] Cursor Marketplace'e publish değerlendir
 
 ---
@@ -90,34 +94,39 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 6. .mcpb Dosya Dağıtımı
 
-- [ ] `figma-mcp-bridge.mcpb` (130 MB) — GitHub'a sığmıyor (100 MB limit)
-- [ ] Alternatif dağıtım: GitHub Releases'a asset olarak ekle, veya ayrı hosting
-- [ ] Gerekirse Git LFS kullanımını değerlendir
+**Kontrol:** Depoda `*.mcpb` dosyası yok; dağıtım maddeleri hâlâ geçerli.
+
+- [ ] `figma-mcp-bridge.mcpb` (büyük paket) — GitHub tek dosya limiti dışında kalıyorsa
+- [ ] Alternatif: GitHub Releases asset veya ayrı hosting
+- [ ] Gerekirse Git LFS
 
 ---
 
 ## 7. Doküman & README İyileştirmeleri
 
-- [ ] GitHub repo description ve topics ekle (Figma, MCP, design-system, AI, cursor, claude)
-- [ ] Kök `README.md` (varsa) ve `docs/` bağlantılarını güncelle
+- [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) — repo ayarları (UI)
+- [x] Kök `README.md` mevcut ve güncel; `docs/` bağlantı tablosu var
+- [ ] `docs/TOOLS.md` — **Agent Canvas** bölümündeki `figma_search_assets` / `figma_get_code_connect` / `figma_use` / `local-plugin-only` paritesi; mevcut `dist/` ile hizala veya “planlanan / kaldırıldı” notu düş
 - [ ] İngilizce README alternatifi veya çift dil desteği değerlendir
-- [ ] Badge'ler ekle (npm version, license, GitHub stars)
+- [ ] Badge'ler (npm version, license, stars)
 
 ---
 
 ## 8. Test & CI
 
-- [ ] GitHub Actions ile basit CI (build check, lint)
-- [ ] NPM publish otomasyonu (tag-based release)
-- [ ] Plugin bağlantı testi (smoke test)
+**Kontrol:** `.github/workflows/` yok — CI otomasyonu eklenmedi.
+
+- [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
+- [ ] NPM publish workflow (tag → `npm publish`)
+- [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
 
 ---
 
 ## 9. İleri Seviye (Uzun Vadeli)
 
-- [ ] Cloudflare Worker deployment — remote MCP sunucusu
-- [ ] OAuth akışı — çoklu kullanıcı kimlik doğrulama
-- [ ] Python bridge güncellemesi — v1.2.0 ile uyum
-- [ ] Multi-instance (port 5454–5470) dokümantasyonunu auto-port discovery davranışı ile güncelle
-- [ ] Tek port env adı standardını tamamla (`FIGMA_MCP_BRIDGE_PORT`) ve eski adı (`FIGMA_PLUGIN_BRIDGE_PORT`) deprecate planını yaz
-- [ ] Enterprise audit log örnekleri ve test
+- [ ] Cloudflare Worker — `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokümantasyon netleştirilmeli
+- [ ] OAuth — Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık
+- [ ] Python bridge — `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
+- [x] Multi-instance — `docs/MULTI_INSTANCE.md` 5454–5470 ve otomatik port tarama davranışını anlatıyor; ek iyileştirme isteğe bağlı
+- [x] Port env — `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Kalan iş: dokümantasyonda tek isim standardına geçiş ve eski ad için **deprecate** notu
+- [x] Enterprise audit log — `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); örnek log senaryoları / test isteğe bağlı
