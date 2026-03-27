@@ -13,6 +13,7 @@
 		"dist",
 		"f-mcp-plugin",
 		"README.md",
+		"CHANGELOG.md",
 		"LICENSE"
 	],
 	"scripts": {

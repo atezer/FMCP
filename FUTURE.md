@@ -65,7 +65,8 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [ ] Yukarıdaki yerel dosyaların `atezer/FMCP` üzerinde güncel olduğunu doğrula (push / PR)
 - [x] `KURULUM.md` — **Sürüm** **1.2.0** (`package.json` ile uyum)
 - [x] `.cursor-plugin/plugin.json` — `version` **1.2.0**; açıklama `docs/TOOLS.md` ile hizalı
-- [ ] GitHub Releases — v1.2.0 release (changelog)
+- [x] Sürüm notları — kök `CHANGELOG.md`; `README.md` ve `KURULUM.md` içinde GitHub Releases / npm takibi ve güncelleme özeti
+- [ ] GitHub Releases — v1.2.0 (ve sonraki) tag + release sayfasında CHANGELOG özeti yayımla (changelog dosyası repoda; Release açıklamasına kopyalanabilir)
 
 ---
 

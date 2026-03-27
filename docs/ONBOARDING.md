@@ -6,7 +6,7 @@ Bu rehber, **figma-mcp-bridge** ile Claude/Cursor’u Figma’ya bağlamak için
 
 ## En basit kurulum (NPX — repo indirmeden)
 
-Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemeler `@latest` ile otomatik alınır.
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **Kurulum sonrası güncellemeler:** kök [README.md](../README.md#sürüm-ve-güncellemeler) (NPX önbelleği, `git pull` + build) ve [CHANGELOG.md](../CHANGELOG.md); yayın bildirimi için GitHub [Releases](https://github.com/atezer/FMCP/releases).
 
 | Adım | Yapılacak |
 |------|------------|
@@ -161,6 +161,17 @@ Repo'yu clone ettiyseniz `<PROJE-YOLU>` yerine FMCP klasörünün **tam yolunu**
 ```
 
 Config’i kaydettikten sonra **Cursor veya Claude’u yeniden başlatın**.
+
+---
+
+## Güncelleme (daha önce kurduysanız)
+
+Tam sil-yeniden-kur gerekmez. Özet:
+
+- **Clone + build:** `git pull` → gerekirse `npm install` → `npm run build:local` → IDE’yi yeniden başlatın. Plugin kaynağı değiştiyse Figma’da manifest’i yenileyin.
+- **NPX:** `@latest` ve önbellek davranışı: [README.md — Sürüm ve güncellemeler](../README.md#sürüm-ve-güncellemeler).
+
+Ayrıntı: [KURULUM.md — Sürüm takibi ve güncelleme notları](../KURULUM.md#sürüm-takibi-ve-güncelleme-notları).
 
 ---
 
