@@ -1,6 +1,6 @@
 # F-MCP — Kalan Adımlar (Future)
 
-> Son güncelleme: 27 Mart 2026 (güvenlik denetimi maddeleri + `docs/SECURITY_AUDIT.md`)  
+> Son güncelleme: 27 Mart 2026 (§8 bağımlılık/secret maddeleri)  
 > Paket sürümü (`package.json`): **1.2.0**
 
 **Tamamlananlar (işaretlendi):** npm **1.2.0** yayın/doğrulama · GitHub **Release v1.2.0** (gövde güncel) · **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** süreç satırı · **Figma** org plugin · **FUTURE** kod taraması / Bridge tablosu · **§3** GitHub doküman maddeleri · **§7** README satırı.
@@ -123,6 +123,8 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [ ] NPM publish workflow (tag → `npm publish`)
 - [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
 - [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [§10](#10-güvenlik-denetimi-security-audit))
+- [ ] Bağımlılık gözden geçirmesi: periyodik `npm audit` (gerekirse `fix` / manuel yükseltme); kritik CVE’lerde patch sürümü
+- [ ] İsteğe bağlı: commit/CI öncesi **secret / anahtar sızıntısı** taraması (örn. [gitleaks](https://github.com/gitleaks/gitleaks), TruffleHog) — `wrangler.jsonc` id’leri için [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) (D2)
 
 ---
 
