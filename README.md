@@ -8,7 +8,7 @@ Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI as
 
 **Proje düzeni:** `src/`, `dist/` ve `f-mcp-plugin` bu depo **kökündedir.** Yerel MCP config ve dokümanlardaki yollar `…/<clone>/dist/...` ve `…/<clone>/f-mcp-plugin/...` şeklinde olmalıdır.
 
-**Eski kurulum:** Daha önce `…/FCM/f-mcp-bridge/dist/...` kullanıyorsanız, `f-mcp-bridge` segmentini kaldırıp `…/FCM/dist/...` (aynı makinede `FCM` = clone kökü) kullanın.
+**Eski kurulum:** MCP `args` içinde `…/f-mcp-bridge/dist/...` varsa `…/<clone-kökü>/dist/...` yapın. Launch Agent, `.app` ve ayrıntılı adımlar için [KURULUM.md](KURULUM.md) içindeki **«Eski f-mcp-bridge alt yolundan geçiş»** bölümüne bakın.
 
 ### Figma API token tüketmiyor
 

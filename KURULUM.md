@@ -12,6 +12,23 @@ veya repoyu `figma-mcp-bridge` adıyla klonladıysanız:
 /Users/abdussamed.tezer/figma-mcp-bridge
 ```
 
+### 🔄 Eski `f-mcp-bridge/` alt yolundan geçiş (başka makine veya eski kurulum)
+
+Daha önce araçlar `…/FCM/f-mcp-bridge/dist/...` veya `…/f-mcp-bridge/scripts/...` gibi yollara işaret ediyorsa, **clone kökü** artık doğrudan `dist/`, `scripts/`, `f-mcp-plugin/` içeriyor; `f-mcp-bridge` segmenti kaldırıldı.
+
+1. **Claude / Cursor MCP** — `~/Library/Application Support/Claude/claude_desktop_config.json` veya proje `.cursor/mcp.json` içinde `args` dizisinde `.../f-mcp-bridge/dist/` geçiyorsa, `.../<clone-kökünüz>/dist/` olacak şekilde düzenleyin (örnek: `/Users/siz/FCM/dist/local-plugin-only.js`).
+
+2. **Launch Agent (macOS, plugin otomatik çalıştırma)** — Repoyu güncelledikten sonra, clone kökünde:
+   ```bash
+   cd <clone-kökü>/scripts
+   ./install-autorun.sh
+   ```
+   Bu komut `~/Library/LaunchAgents/com.figma.desktop-bridge.plist` dosyasını repodaki `scripts/com.figma.desktop-bridge.plist` ile **yeniden yükler**; plist içinde hâlâ eski `f-mcp-bridge` yolu kalmaz (şablon güncelse).
+
+3. **Plist’te kendi kullanıcı yolunuz** — Repodaki `scripts/com.figma.desktop-bridge.plist` örnek bir kullanıcı yolu içerebilir. Sizin makinede farklıysa, `ProgramArguments` içindeki `autorun-bridge.sh` yolunu kendi `<clone-kökü>/scripts/autorun-bridge.sh` mutlak yolunuzla değiştirip ardından yine `./install-autorun.sh` çalıştırın.
+
+4. **Figma Bridge Launcher.app** — `scripts/Figma Bridge Launcher.app` ile Accessibility’e ekleme yaptıysanız, güncel sürümü repodan tekrar kopyalayıp eskisinin üzerine yazın; gerekirse Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik’te uygulamayı yeniden onaylayın.
+
 ### 🔧 Claude Desktop Konfigürasyonu
 Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
