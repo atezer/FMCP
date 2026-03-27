@@ -6,7 +6,9 @@
 
 Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin'i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
 
-**Proje düzeni:** `src/`, `dist/` ve `f-mcp-plugin` bu depo **kökündedir**; ayrı bir `f-mcp-bridge/` alt klasörü yoktur. Yerel MCP config ve dokümanlardaki yollar `…/<clone>/dist/...` şeklinde olmalıdır.
+**Proje düzeni:** `src/`, `dist/` ve `f-mcp-plugin` bu depo **kökündedir.** Yerel MCP config ve dokümanlardaki yollar `…/<clone>/dist/...` ve `…/<clone>/f-mcp-plugin/...` şeklinde olmalıdır.
+
+**Eski kurulum:** Daha önce `…/FCM/f-mcp-bridge/dist/...` kullanıyorsanız, `f-mcp-bridge` segmentini kaldırıp `…/FCM/dist/...` (aynı makinede `FCM` = clone kökü) kullanın.
 
 ### Figma API token tüketmiyor
 
