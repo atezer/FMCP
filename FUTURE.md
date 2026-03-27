@@ -1,7 +1,7 @@
 # F-MCP — Kalan Adımlar (Future)
 
 > Son güncelleme: 26 Mart 2026 (kod/doküman taraması)  
-> Paket sürümü (`f-mcp-bridge/package.json`): **1.2.0**
+> Paket sürümü (`package.json`): **1.2.0**
 
 ---
 
@@ -47,8 +47,8 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 | Konu | Durum |
 |------|--------|
-| `f-mcp-bridge/dist/local-plugin-only.js` | `figma_search_assets`, `figma_get_code_connect`, `figma_use` kayıtlı |
-| `f-mcp-bridge/dist/local.js` | Aynı üç araç + `getPluginBridgeConnector` (plugin-only ile parite) |
+| `dist/local-plugin-only.js` | `figma_search_assets`, `figma_get_code_connect`, `figma_use` kayıtlı |
+| `dist/local.js` | Aynı üç araç + `getPluginBridgeConnector` (plugin-only ile parite) |
 | `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable araması için) |
 
 ### Config örnekleri

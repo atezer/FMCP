@@ -19,13 +19,13 @@ Bu klasör, F-MCP ATezer Bridge plugin'inin Figma açıldığında otomatik çal
 
 ```bash
 # Figma Desktop → Plugins → Development → Import plugin from manifest
-# Dosya: /Users/abdussamed.tezer/FCM/f-mcp-bridge/f-mcp-plugin/manifest.json
+# Dosya: /Users/abdussamed.tezer/FCM/f-mcp-plugin/manifest.json
 ```
 
 ### 2. Autorun'ı Kurun
 
 ```bash
-cd /Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts
+cd /Users/abdussamed.tezer/FCM/scripts
 ./install-autorun.sh
 ```
 

@@ -138,7 +138,7 @@ Claude Desktop’un MCP sunucusu olarak figma-mcp-bridge’i tanıması gerekir.
 
 ### Örnek config (clone ile — tam yol)
 
-Repo'yu clone ettiyseniz `<PROJE-YOLU>` yerine FMCP klasörünün **tam yolunu** yazın (örn. `/Users/adiniz/f-mcp-bridge` veya `C:\Users\adiniz\f-mcp-bridge`).
+Repo'yu clone ettiyseniz `<PROJE-YOLU>` yerine FMCP klasörünün **tam yolunu** yazın (örn. `/Users/adiniz/FMCP` veya `C:\Users\adiniz\FMCP`).
 
 ```json
 {

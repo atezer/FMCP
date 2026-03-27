@@ -22,7 +22,7 @@ Sonuc:
 
 ## 3) Bridge API — guncel durum (FCM repo)
 
-`f-mcp-bridge/dist/local-plugin-only.js` ve plugin (`f-mcp-plugin`) tarafinda asagidakiler **eklendi**:
+`dist/local-plugin-only.js` ve plugin (`f-mcp-plugin`) tarafinda asagidakiler **eklendi**:
 
 - **`figma_search_assets`**: `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync` + `getVariablesInLibraryCollectionAsync` (etkin kutuphaneler); ayrica dosya icindeki bilesenler. Manifest: `permissions: ["teamlibrary"]`.
 - **`figma_get_code_connect`**: Node bazli `documentationLinks`, `description`, `componentKey` (tam Code Connect CLI haritasi degil).

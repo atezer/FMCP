@@ -122,7 +122,7 @@ Figma’da **Plugins → Development → Use Developer VM** açık olsun.
 
 1. Figma Desktop'ı açın.
 2. **Plugins → Development → Import plugin from manifest...**
-3. **F-MCP ATezer Bridge** için `manifest.json` dosyasının yolunu seçin (örn. `f-mcp-bridge/f-mcp-plugin/manifest.json`).
+3. **F-MCP ATezer Bridge** için `manifest.json` dosyasının yolunu seçin (örn. `f-mcp-plugin/manifest.json` — depo kökünden).
 4. Plugin listede **Development** altında "F-MCP ATezer Bridge" olarak görünür.
 
 ### 3.4 Adım 3: Plugin'i Çalıştırmak
