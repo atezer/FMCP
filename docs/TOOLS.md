@@ -1,6 +1,6 @@
 # FMCP araç envanteri (tek doğruluk kaynağı)
 
-Kaynak: `f-mcp-bridge/dist/local.js`, `f-mcp-bridge/dist/local-plugin-only.js`, `f-mcp-bridge/dist/core/figma-tools.js` içindeki `registerTool("figma_*")` çağrıları. Sürüm değişince bu dosya güncellenmeli.
+Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js` içindeki `registerTool("figma_*")` çağrıları. Sürüm değişince bu dosya güncellenmeli.
 
 ## Giriş modları
 

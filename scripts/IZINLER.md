@@ -17,7 +17,7 @@ Plugin’in Figma açıldığında otomatik çalışması için macOS’ta **eri
 3. Altta **+** ile uygulama ekleyin
 4. Şu konuma gidin ve **“Figma Bridge Launcher”** uygulamasını seçin:
    ```
-   /Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts/Figma Bridge Launcher.app
+   /Users/abdussamed.tezer/FCM/scripts/Figma Bridge Launcher.app
    ```
 5. Listede **Figma Bridge Launcher**’ın yanındaki kutu **işaretli** olsun
 
@@ -53,7 +53,7 @@ Plugin’i elle açmak için:
 1. **Figma’yı** açın ve bir dosyayı açın
 2. Terminal’de:
    ```bash
-   open "/Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts/Figma Bridge Launcher.app"
+   open "/Users/abdussamed.tezer/FCM/scripts/Figma Bridge Launcher.app"
    ```
 3. İzin penceresi çıkarsa **Allow** deyin
 4. Birkaç saniye içinde plugin Figma’da açılmalı

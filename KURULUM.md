@@ -3,13 +3,13 @@
 ## ✅ Kurulum Tamamlandı!
 
 ### 📁 Proje Konumu
-Proje klasörü (clone ettiğiniz yer, örn.):
+Kaynak kod ve `dist/` çıktıları **depo kökündedir** (`f-mcp-bridge` alt klasörü yoktur). Proje klasörü (clone ettiğiniz yer, örn.):
 ```
-/Users/abdussamed.tezer/FCM/f-mcp-bridge
+/Users/abdussamed.tezer/FCM
 ```
 veya repoyu `figma-mcp-bridge` adıyla klonladıysanız:
 ```
-/Users/abdussamed.tezer/FCM/figma-mcp-bridge
+/Users/abdussamed.tezer/figma-mcp-bridge
 ```
 
 ### 🔧 Claude Desktop Konfigürasyonu
@@ -21,7 +21,7 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local-plugin-only.js"]
+      "args": ["/Users/abdussamed.tezer/FCM/dist/local-plugin-only.js"]
     }
   }
 }
@@ -45,12 +45,12 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local.js"]
+      "args": ["/Users/abdussamed.tezer/FCM/dist/local.js"]
     }
   }
 }
 ```
-`/Users/abdussamed.tezer/FCM/f-mcp-bridge` kısmını kendi proje yolunuzla değiştirin.
+`/Users/abdussamed.tezer/FCM` kısmını kendi proje yolunuzla değiştirin.
 
 ---
 
@@ -100,12 +100,12 @@ Tüm araçlar: proje içi `docs/TOOLS.md`.
 #### Otomatik başlatma (isteğe bağlı)
 Plugin’i Figma açıldığında otomatik çalıştırmak için:
 ```bash
-cd /Users/abdussamed.tezer/FCM/f-mcp-bridge/scripts
+cd /Users/abdussamed.tezer/FCM/scripts
 ./install-autorun.sh
 ```
 - Test: `./test-autorun.sh`
 - Kaldırma: `./uninstall-autorun.sh`  
-Detay: `f-mcp-bridge/scripts/README.md`
+Detay: `scripts/README.md`
 
 ---
 
@@ -124,7 +124,7 @@ Yanıt yoksa Figma’yı `--remote-debugging-port=9222` ile yeniden başlatın.
 
 ### Build güncellemesi
 ```bash
-cd /Users/abdussamed.tezer/FCM/f-mcp-bridge
+cd /Users/abdussamed.tezer/FCM
 npm run build:local
 ```
 
@@ -142,7 +142,7 @@ npm run build:local
 
 - **Proje:** [GitHub – atezer/figma-mcp-bridge](https://github.com/atezer/figma-mcp-bridge)
 - **Dokümantasyon:** [docs/](https://github.com/atezer/figma-mcp-bridge/tree/main/docs) (SETUP, PLUGIN-MCP-BAGLANTI, TROUBLESHOOTING)
-- **Plugin nasıl çalışır:** [PLUGIN-NASIL-CALISIR.md](f-mcp-bridge/docs/PLUGIN-NASIL-CALISIR.md) (Worker/UI, WebSocket vs CDP)
+- **Plugin nasıl çalışır:** [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md) (Worker/UI, WebSocket vs CDP)
 - **MCP protokolü:** [modelcontextprotocol.io](https://modelcontextprotocol.io)
 
 ---
@@ -157,4 +157,4 @@ npm run build:local
 
 ---
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)  
-**Sürüm:** 1.2.0 (`f-mcp-bridge/package.json` ile uyumlu)
+**Sürüm:** 1.2.0 (`package.json` ile uyumlu)

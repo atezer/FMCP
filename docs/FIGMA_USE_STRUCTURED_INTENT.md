@@ -2,7 +2,7 @@
 
 Bu dokuman, NL-only router yerine yapilandirilmis intent + alt-tool dispatch modelini tanimlar.
 
-**Uygulama:** `f-mcp-bridge/dist/local-plugin-only.js` icinde `figma_use` MCP araci (structured `intent` + `params` + `context` + `dryRun`).
+**Uygulama:** `dist/local-plugin-only.js` icinde `figma_use` MCP araci (structured `intent` + `params` + `context` + `dryRun`).
 
 ## Neden?
 

@@ -1,6 +1,6 @@
 # Güvenlik Düzeltmeleri Etki Analizi (O2, O6, K3)
 
-Bu doküman, önerilen güvenlik düzeltmelerinin f-mcp-bridge projesindeki mevcut işlevselliği bozma riskini analiz eder.
+Bu doküman, önerilen güvenlik düzeltmelerinin bu repodaki (FMCP / figma-mcp-bridge) mevcut işlevselliği bozma riskini analiz eder.
 
 ---
 
