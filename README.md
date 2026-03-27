@@ -342,6 +342,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                               |
 | [DEPENDENCY_LAYERS.md](docs/DEPENDENCY_LAYERS.md)                       | Bağımlılık katmanları (plugin-only / tam / Cloudflare) ve olası paket ayrımı taslağı            |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
+| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)                           | **Güvenlik denetimi** — bulgular checklist ([FUTURE.md](FUTURE.md) §10)                            |
 | [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma'da yayınlama: Data security cevapları, final details, Plugin ID       |
 |                                                                         |                                                                                                  |
 
