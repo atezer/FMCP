@@ -1,0 +1,53 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "figma-mcp-bridge",
+	"account_id": "4718d49e576512c578ff94c6b1ba7d3f",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-03-10",
+	"compatibility_flags": ["nodejs_compat"],
+	"migrations": [
+		{
+			"new_sqlite_classes": ["FigmaMCP"],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "FigmaMCP",
+				"name": "MCP_OBJECT"
+			}
+		]
+	},
+	"browser": {
+		"binding": "BROWSER"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_TOKENS",
+			"id": "c6b268e475e64764a11641effddd56a3"
+		},
+		{
+			"binding": "OAUTH_STATE",
+			"id": "bcdeabb0932e4b0895a82215c6901bc4"
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	// OAuth Configuration (Required for user authentication)
+	// Set these secrets using: wrangler secret put FIGMA_OAUTH_CLIENT_ID
+	// Get your OAuth credentials at: https://www.figma.com/developers
+	//
+	// FIGMA_OAUTH_CLIENT_ID: Your Figma OAuth app client ID
+	// FIGMA_OAUTH_CLIENT_SECRET: Your Figma OAuth app client secret
+	// FIGMA_ACCESS_TOKEN: (Optional/Deprecated) Server-wide token for testing
+	//
+	// Note: Secrets are not defined in this file - they must be set via:
+	// wrangler secret put FIGMA_OAUTH_CLIENT_ID
+	// wrangler secret put FIGMA_OAUTH_CLIENT_SECRET
+}

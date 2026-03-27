@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "node",
+      "args": ["<PROJE-YOLU>/dist/local-plugin-only.js"]
+    }
+  }
+}
