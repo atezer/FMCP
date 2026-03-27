@@ -1,6 +1,6 @@
 # F-MCP — Kalan Adımlar (Future)
 
-> Son güncelleme: 27 Mart 2026 (release notu + CHANGELOG süreç satırı)  
+> Son güncelleme: 27 Mart 2026 (güvenlik denetimi maddeleri + `docs/SECURITY_AUDIT.md`)  
 > Paket sürümü (`package.json`): **1.2.0**
 
 **Tamamlananlar (işaretlendi):** npm **1.2.0** yayın/doğrulama · GitHub **Release v1.2.0** (gövde güncel) · **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** süreç satırı · **Figma** org plugin · **FUTURE** kod taraması / Bridge tablosu · **§3** GitHub doküman maddeleri · **§7** README satırı.
@@ -44,6 +44,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 | `docs/FMCP_AGENT_CANVAS_COMPAT.md` | Mevcut |
 | `docs/FIGMA_USE_STRUCTURED_INTENT.md` | Mevcut |
 | `docs/FMCP_ENTERPRISE_WORKFLOWS.md` | Mevcut |
+| `docs/SECURITY_AUDIT.md` | Mevcut (güvenlik bulguları checklist) |
 | `docs/handoff.manifest.schema.json` | Mevcut |
 | `HANDOFF_TEMPLATE.md` | Mevcut |
 
@@ -121,14 +122,30 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
 - [ ] NPM publish workflow (tag → `npm publish`)
 - [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
+- [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [§10](#10-güvenlik-denetimi-security-audit))
 
 ---
 
 ## 9. İleri Seviye (Uzun Vadeli)
 
 - [ ] Cloudflare Worker — `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokümantasyon netleştirilmeli
-- [ ] OAuth — Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık
+- [ ] OAuth — Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık ([§10](#10-güvenlik-denetimi-security-audit) Y1/O3 ile ilişkili)
 - [ ] Python bridge — `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
 - [x] Multi-instance — `docs/MULTI_INSTANCE.md` 5454–5470 ve otomatik port tarama davranışını anlatıyor; ek iyileştirme isteğe bağlı
 - [x] Port env — `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Kalan iş: dokümantasyonda tek isim standardına geçiş ve eski ad için **deprecate** notu
 - [x] Enterprise audit log — `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); örnek log senaryoları / test isteğe bağlı
+
+---
+
+## 10. Güvenlik denetimi (Security audit)
+
+**Evet, FUTURE’a eklenmeli:** Yayınlanmış bir köprü + `eval` + WebSocket yüzeyi için izlenebilir maddeler yol haritasında olmalı. Özet checklist repoda: **[docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)** (K1–K4, Y1–Y3, O1–O7, D1–D4; Y4 iptal notu).
+
+**Kaynak:** Cursor planı `~/.cursor/plans/security_audit_fixes_f803037b.plan.md` — ekip için asıl takip **`docs/SECURITY_AUDIT.md`** üzerinden yapılmalı; plan yalnızca geliştirici makinesinde kalabilir.
+
+- [ ] **Kritik:** K1 `code.js` eval limit · K2 Zod (plugin-only + `local.ts`) + Python `len` · K3 `nodeId` · K4 OPT-IN WS secret
+- [ ] **Yüksek:** Y1 token log · Y2 `0.0.0.0` uyarısı · Y3 path traversal — Y4 dokümana “postMessage `*` zorunlu” notu
+- [ ] **Orta:** O2 maxPayload + rate · O3/O5/O7 hata sanitize (Worker OAuth dahil) · O6 console-monitor · O1/O4 dokümantasyon + debug log
+- [ ] **Düşük:** D1–D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
+
+OAuth / token logları **§9** ile birlikte ele alınmalı; düzeltmelerde tek PR veya sıralı sürüm önerilir.
