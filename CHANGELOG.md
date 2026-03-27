@@ -20,6 +20,7 @@ Bu changelog’a ekleme öncesi sürümlerin tam ayrıntıları için `git log` 
 
 - Sürüm takibi ve güncelleme adımları: [README.md](README.md#sürüm-ve-güncellemeler), [KURULUM.md](KURULUM.md#sürüm-takibi-ve-güncelleme-notları).
 - Bu changelog dosyası eklendi; GitHub Releases ve npm ile birlikte tek referans olarak kullanılmalıdır.
+- GitHub [Release v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) yayınlandı; gövde metni: [docs/releases/v1.2.0-body.md](docs/releases/v1.2.0-body.md). Sonraki sürümler için: [docs/RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md).
 
 ### Not
 
