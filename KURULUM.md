@@ -145,6 +145,19 @@ cd /Users/abdussamed.tezer/FCM
 npm run build:local
 ```
 
+### Sürüm takibi ve güncelleme notları
+
+| Bilgi | Kaynak |
+|-------|--------|
+| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.2.0**) |
+| Ne değişti | Kök [CHANGELOG.md](CHANGELOG.md) |
+| Yayın bildirimi | GitHub [Releases](https://github.com/atezer/FMCP/releases) — depoyu izleyin (*Watch* → *Custom* → *Releases*) |
+| npm paket sürümü | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) veya `npm view @atezer/figma-mcp-bridge version` |
+
+**Repo ile kurduysanız (sil-yeniden-kur gerekmez):** `git pull` → gerekirse `npm install` → `npm run build:local` → Claude/Cursor’u yeniden başlatın. `f-mcp-plugin/` güncellendiyse Figma’da Development → ilgili plugin için manifest’i yeniden import edin veya plugin’i kapatıp açın.
+
+**NPX ile kurduysanız:** Config’te `@atezer/figma-mcp-bridge@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra genelde bir sonraki `npx` çalıştırmasında indirilir; önbellek sorununda `npx clear-npx-cache` veya sürümü sabitleyin (`@1.2.0` gibi). Değişiklik listesi için [CHANGELOG.md](CHANGELOG.md) ve [Releases](https://github.com/atezer/FMCP/releases).
+
 ### Plugin “ready” olmuyor
 - Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun. Plugin artık 5454–5470 aralığında dinleyen portu otomatik dener; gerekirse **Advanced** bölümünden host/port elle girin.
 - Tam mod: Figma’yı 9222 ile açtığınızdan ve **Use Developer VM**’in açık olduğundan emin olun.
@@ -157,8 +170,9 @@ npm run build:local
 
 ## 📚 Daha fazla bilgi
 
-- **Proje:** [GitHub – atezer/figma-mcp-bridge](https://github.com/atezer/figma-mcp-bridge)
-- **Dokümantasyon:** [docs/](https://github.com/atezer/figma-mcp-bridge/tree/main/docs) (SETUP, PLUGIN-MCP-BAGLANTI, TROUBLESHOOTING)
+- **Proje (kaynak):** [GitHub – atezer/FMCP](https://github.com/atezer/FMCP) — npm paketi `@atezer/figma-mcp-bridge` bu depodan üretilir.
+- **Sürüm notları:** [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/atezer/FMCP/releases)
+- **Dokümantasyon:** [docs/](https://github.com/atezer/FMCP/tree/main/docs) (SETUP, PLUGIN-MCP-BAGLANTI, TROUBLESHOOTING)
 - **Plugin nasıl çalışır:** [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md) (Worker/UI, WebSocket vs CDP)
 - **MCP protokolü:** [modelcontextprotocol.io](https://modelcontextprotocol.io)
 

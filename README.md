@@ -84,6 +84,22 @@ Kurulum: **En basit (repo indirmeden):** aşağıdaki [En basit kurulum](#en-bas
 
 Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile yetiniyorsanız config’te **`figma-mcp-bridge-plugin`** kullanın (NPX örnekleri aşağıda).
 
+## Sürüm ve güncellemeler
+
+| Ne | Nerede |
+| --- | --- |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.0**) |
+| **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
+| **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
+| **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |
+
+**Zaten kurulu yapıyı güncellemek (özet):**
+
+- **Repo clone + `node …/dist/local-plugin-only.js`:** `git pull` → gerekirse `npm install` → `npm run build:local` → Cursor/Claude’u yeniden başlatın. Figma plugin kaynağı (`f-mcp-plugin/`) değiştiyse Development’tan manifest’i yeniden import edin veya plugin’i yeniden çalıştırın.
+- **NPX:** Config’te `@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra bir sonraki MCP başlatmada indirilir; takılmada yukarıdaki önbellek notuna bakın. Sabit sürüm kullanıyorsanız `package.json`/CHANGELOG ile uyumlu sürüm numarasını elle güncelleyin.
+
+Ayrıntılı adımlar: [KURULUM.md — Sürüm takibi ve güncelleme notları](KURULUM.md#sürüm-takibi-ve-güncelleme-notları).
+
 ## Hızlı başlangıç
 
 Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
@@ -92,7 +108,7 @@ Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalı
 
 ### En basit kurulum (NPX — repo indirmeden)
 
-Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. Güncellemek için paket otomatik güncellenir (`@latest`).
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@1.2.0`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
 
 
 | Adım | Yapılacak                                                                                                    |
@@ -313,6 +329,7 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
 | [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                  |
+| [CHANGELOG.md](CHANGELOG.md)                                           | **Sürüm geçmişi** — npm/GitHub Releases ile birlikte referans                                    |
 | [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                            |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md)                                 | Kendi sunucunda host                                                                             |
 | [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)               | Dağıtım karşılaştırma                                                                            |
