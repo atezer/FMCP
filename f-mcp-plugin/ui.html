@@ -10,15 +10,9 @@
     }
 
     html, body {
-      overflow: hidden !important;
-      overflow-x: hidden !important;
-      overflow-y: hidden !important;
-      /* Scrollbar'ları gizle; içerik ne ise öyle görünsün (taşma yok) */
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    html::-webkit-scrollbar, body::-webkit-scrollbar {
-      display: none;
+      width: auto;
+      height: auto;
+      overflow: hidden;
     }
 
     body {
@@ -26,26 +20,31 @@
       font-size: 11px;
       background: var(--figma-color-bg, #2c2c2c);
       color: var(--figma-color-text, rgba(255, 255, 255, 0.9));
-      width: fit-content;
-      min-width: 0;
+      width: auto;
       height: auto;
-      min-height: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 8px;
+      padding: 8px;
       user-select: none;
+    }
+
+    .bridge-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: max-content;
+      max-width: 100%;
+      min-height: 0;
+      overflow: visible;
+      padding-right: 2px;
     }
 
     .bridge-status {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 8px;
+      padding: 8px 10px;
       background: var(--figma-color-bg-secondary, #383838);
       border: 1px solid var(--figma-color-border, #4a4a4a);
-      border-radius: 4px;
-      white-space: nowrap;
+      border-radius: 8px;
     }
 
     .status-indicator {
@@ -94,14 +93,41 @@
       margin-left: 4px;
     }
 
-    .bridge-row {
+    .advanced-wrap {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .advanced-toggle {
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      background: transparent;
+      color: inherit;
+      border-radius: 6px;
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .advanced-state {
+      font-size: 10px;
+      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+    }
+
+    .advanced-panel {
+      display: none;
       flex-direction: column;
-      gap: 6px;
-      width: fit-content;
-      min-width: 0;
-      max-width: 100%;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--figma-color-bg-secondary, #383838);
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      border-radius: 8px;
       overflow: hidden;
+    }
+
+    .advanced-panel.is-open {
+      display: flex;
     }
     .bridge-host, .bridge-port {
       display: flex;
@@ -141,6 +167,10 @@
         background: #fff;
         border-color: #e5e5e5;
       }
+      .advanced-panel {
+        background: #fff;
+        border-color: #e5e5e5;
+      }
       .status-text .label {
         color: #666;
       }
@@ -159,13 +189,19 @@
         <span class="state" id="status-state">connecting</span>
       </div>
     </div>
-    <div class="bridge-host" title="Host: localhost (aynı makine) veya IP adresi (uzak makine). Browser Figma'da da çalışır.">
-      <label for="mcp-host">Host</label>
-      <input type="text" id="mcp-host" value="localhost" placeholder="localhost" aria-label="MCP bridge host (localhost veya IP)" />
+    <div class="advanced-wrap">
+      <button id="advanced-toggle" class="advanced-toggle" type="button">Advanced</button>
+      <span id="advanced-state" class="advanced-state">auto port</span>
     </div>
-    <div class="bridge-port" title="Port: Claude açıkken 5454'te bağlanır. Çoklu kullanıcıda her kullanıcı farklı port (5455–5470) seçer.">
-      <label for="mcp-port">Port</label>
-      <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (5454 varsayılan, Claude açıkken bağlanır)" />
+    <div id="advanced-panel" class="advanced-panel">
+      <div class="bridge-host" title="Host: localhost (aynı makine) veya IP adresi (uzak makine). Browser Figma'da da çalışır.">
+        <label for="mcp-host">Host</label>
+        <input type="text" id="mcp-host" value="localhost" placeholder="localhost" aria-label="MCP bridge host (localhost veya IP)" />
+      </div>
+      <div class="bridge-port" title="Port elle belirtilmezse bridge'in dinlediği porta otomatik bağlanır (5454-5470 aralığı).">
+        <label for="mcp-port">Port</label>
+        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" />
+      </div>
     </div>
   </div>
 
@@ -190,6 +226,24 @@
 
       dot.className = 'status-indicator ' + (isError ? 'error' : (isActive ? 'active' : 'loading'));
       stateText.textContent = state;
+      requestUiResize();
+    }
+
+    var resizeRaf = null;
+    function requestUiResize() {
+      if (resizeRaf) return;
+      resizeRaf = requestAnimationFrame(function() {
+        resizeRaf = null;
+        var root = document.querySelector('.bridge-row') || document.body;
+        if (!root) return;
+        var rect = root.getBoundingClientRect();
+        var bodyStyle = window.getComputedStyle(document.body);
+        var padX = (parseFloat(bodyStyle.paddingLeft) || 0) + (parseFloat(bodyStyle.paddingRight) || 0);
+        var padY = (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0);
+        var width = Math.ceil(Math.max(root.scrollWidth, rect.width) + padX + 6);
+        var height = Math.ceil(Math.max(root.scrollHeight, rect.height) + padY + 6);
+        parent.postMessage({ pluginMessage: { type: 'RESIZE_UI', width: width, height: height } }, '*');
+      });
     }
 
     // ============================================================================
@@ -295,6 +349,24 @@
       params.currentPageOnly = currentPageOnly !== false;
       if (limit != null && limit > 0) params.limit = limit;
       return window.sendPluginCommand('GET_LOCAL_COMPONENTS', params, 120000)
+        .catch(function(err) { return { success: false, error: err.message || String(err) }; });
+    };
+
+    window.searchLibraryAssets = (query, assetTypes, limit, currentPageOnly) => {
+      var p = { query: query || '' };
+      if (assetTypes && assetTypes.length) p.assetTypes = assetTypes;
+      if (limit != null && limit > 0) p.limit = limit;
+      if (currentPageOnly === false) p.currentPageOnly = false;
+      return window.sendPluginCommand('SEARCH_LIBRARY_ASSETS', p, 120000)
+        .catch(function(err) { return { success: false, error: err.message || String(err) }; });
+    };
+
+    window.getCodeConnectHints = (nodeIds, scanCurrentPage, maxNodes) => {
+      var p = {};
+      if (nodeIds && nodeIds.length) p.nodeIds = nodeIds;
+      if (scanCurrentPage) p.scanCurrentPage = true;
+      if (maxNodes != null && maxNodes > 0) p.maxNodes = maxNodes;
+      return window.sendPluginCommand('GET_CODE_CONNECT_HINTS', p, 60000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
@@ -571,6 +643,12 @@
         case 'GET_LOCAL_COMPONENTS_RESULT':
           handleResult('GET_LOCAL_COMPONENTS', null);
           break;
+        case 'SEARCH_LIBRARY_ASSETS_RESULT':
+          handleResult('SEARCH_LIBRARY_ASSETS', null);
+          break;
+        case 'GET_CODE_CONNECT_HINTS_RESULT':
+          handleResult('GET_CODE_CONNECT_HINTS', null);
+          break;
         case 'INSTANTIATE_COMPONENT_RESULT':
           handleResult('INSTANTIATE_COMPONENT', 'instance');
           break;
@@ -720,6 +798,7 @@
     // ============================================================================
     var MCP_BRIDGE_PORT_KEY = 'f-mcp-bridge-port';
     var MCP_BRIDGE_HOST_KEY = 'f-mcp-bridge-host';
+    var MCP_ADVANCED_OPEN_KEY = 'f-mcp-bridge-advanced-open';
     var mcpBridgeWs = null;
     var mcpBridgeReconnectTimer = null;
     var mcpReconnectDelay = 1000;
@@ -727,6 +806,51 @@
     var MCP_RECONNECT_MAX = 30000;
     var mcpConnecting = false;
     var mcpConnectedPort = null;
+    var MCP_PORT_MIN = 5454;
+    var MCP_PORT_MAX = 5470;
+    var DEFAULT_MCP_PORT = 5454;
+    var autoPortProbeActive = false;
+    var manualPortLocked = false;
+    var candidatePorts = [];
+    var candidatePortIndex = 0;
+
+    function setAdvancedPanelOpen(open) {
+      var panel = document.getElementById('advanced-panel');
+      var state = document.getElementById('advanced-state');
+      if (panel) {
+        panel.classList.toggle('is-open', !!open);
+      }
+      if (state) {
+        state.textContent = open ? 'manual controls' : 'auto port';
+      }
+      try { localStorage.setItem(MCP_ADVANCED_OPEN_KEY, open ? '1' : '0'); } catch (e) {}
+      if (open) {
+        var mainScroller = document.querySelector('.bridge-row');
+        if (mainScroller && typeof mainScroller.scrollTop === 'number') {
+          mainScroller.scrollTop = 0;
+        }
+      }
+      requestUiResize();
+    }
+
+    function initAdvancedPanel() {
+      var toggle = document.getElementById('advanced-toggle');
+      var initial = false;
+      try { initial = localStorage.getItem(MCP_ADVANCED_OPEN_KEY) === '1'; } catch (e) {}
+      setAdvancedPanelOpen(initial);
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          var panel = document.getElementById('advanced-panel');
+          setAdvancedPanelOpen(!(panel && panel.classList.contains('is-open')));
+        });
+      }
+      if (typeof ResizeObserver !== 'undefined') {
+        var observer = new ResizeObserver(function() { requestUiResize(); });
+        observer.observe(document.body);
+        var row = document.querySelector('.bridge-row');
+        if (row) observer.observe(row);
+      }
+    }
 
     function getMcpBridgeHost() {
       var el = document.getElementById('mcp-host');
@@ -737,15 +861,34 @@
 
     function getMcpBridgePort() {
       var el = document.getElementById('mcp-port');
-      if (!el) return 5454;
+      if (!el) return DEFAULT_MCP_PORT;
       var n = parseInt(el.value, 10);
-      if (isNaN(n) || n < 5454 || n > 5470) return 5454;
+      if (isNaN(n) || n < MCP_PORT_MIN || n > MCP_PORT_MAX) return DEFAULT_MCP_PORT;
       return n;
+    }
+
+    function listCandidatePorts() {
+      var set = {};
+      var out = [];
+      var manual = getMcpBridgePort();
+      var push = function(n) {
+        if (typeof n !== 'number' || isNaN(n)) return;
+        if (n < MCP_PORT_MIN || n > MCP_PORT_MAX) return;
+        if (set[n]) return;
+        set[n] = true;
+        out.push(n);
+      };
+      push(manual);
+      push(DEFAULT_MCP_PORT);
+      for (var p = MCP_PORT_MIN; p <= MCP_PORT_MAX; p++) push(p);
+      return out;
     }
 
     function forceDisconnectAndReconnect() {
       if (mcpBridgeReconnectTimer) { clearTimeout(mcpBridgeReconnectTimer); mcpBridgeReconnectTimer = null; }
       mcpReconnectDelay = MCP_RECONNECT_MIN;
+      candidatePorts = listCandidatePorts();
+      candidatePortIndex = 0;
       mcpConnecting = false;
       if (mcpBridgeWs) {
         var old = mcpBridgeWs;
@@ -781,7 +924,7 @@
         var stored = localStorage.getItem(MCP_BRIDGE_PORT_KEY);
         if (stored) {
           var n = parseInt(stored, 10);
-          if (n >= 5454 && n <= 5470) {
+          if (n >= MCP_PORT_MIN && n <= MCP_PORT_MAX) {
             var el = document.getElementById('mcp-port');
             if (el) { el.value = n; }
           }
@@ -792,6 +935,9 @@
         el.addEventListener('change', function() {
           var port = getMcpBridgePort();
           try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(port)); } catch (e) {}
+          manualPortLocked = true;
+          candidatePorts = [port];
+          candidatePortIndex = 0;
           forceDisconnectAndReconnect();
         });
       }
@@ -831,9 +977,14 @@
       if (mcpBridgeWs && (mcpBridgeWs.readyState === 0 || mcpBridgeWs.readyState === 1)) return;
       mcpConnecting = true;
       var host = getMcpBridgeHost();
-      var port = getMcpBridgePort();
+      if (!candidatePorts || !candidatePorts.length) {
+        candidatePorts = listCandidatePorts();
+        candidatePortIndex = 0;
+      }
+      var port = candidatePorts[Math.min(candidatePortIndex, candidatePorts.length - 1)];
       var url = 'ws://' + host + ':' + port;
       mcpHandshakeDone = false;
+      autoPortProbeActive = !manualPortLocked && candidatePorts.length > 1;
       try {
         mcpBridgeWs = new WebSocket(url);
         var currentWs = mcpBridgeWs;
@@ -863,6 +1014,15 @@
               mcpHandshakeDone = true;
               if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
               mcpConnectedPort = msg.port || port;
+              try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(mcpConnectedPort)); } catch (e) {}
+              var portEl = document.getElementById('mcp-port');
+              if (portEl && mcpConnectedPort >= MCP_PORT_MIN && mcpConnectedPort <= MCP_PORT_MAX) {
+                portEl.value = String(mcpConnectedPort);
+              }
+              if (!manualPortLocked) {
+                candidatePorts = [mcpConnectedPort];
+                candidatePortIndex = 0;
+              }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
               updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
               return;
@@ -933,6 +1093,12 @@
               }
               if (method === 'getLocalComponents') {
                 return window.getLocalComponents(params.currentPageOnly, params.limit);
+              }
+              if (method === 'searchLibraryAssets') {
+                return window.searchLibraryAssets(params.query, params.assetTypes, params.limit, params.currentPageOnly);
+              }
+              if (method === 'getCodeConnectHints') {
+                return window.getCodeConnectHints(params.nodeIds, params.scanCurrentPage, params.maxNodes);
               }
               if (method === 'instantiateComponent') {
                 return window.instantiateComponent(params.componentKey, params.options);
@@ -1040,7 +1206,12 @@
           mcpConnecting = false;
           mcpConnectedPort = null;
           if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
-          updateStatus('no server', false, true);
+          if (autoPortProbeActive && candidatePortIndex < candidatePorts.length - 1) {
+            candidatePortIndex += 1;
+            updateStatus('auto-connect :' + candidatePorts[candidatePortIndex], false, false);
+          } else {
+            updateStatus('no server', false, true);
+          }
           scheduleReconnect();
         };
         mcpBridgeWs.onerror = function() {
@@ -1065,7 +1236,16 @@
     if (typeof WebSocket !== 'undefined') {
       initMcpHostInput();
       initMcpPortInput();
+      initAdvancedPanel();
+      try {
+        var rememberedPort = parseInt(localStorage.getItem(MCP_BRIDGE_PORT_KEY) || '', 10);
+        if (rememberedPort >= MCP_PORT_MIN && rememberedPort <= MCP_PORT_MAX) {
+          DEFAULT_MCP_PORT = rememberedPort;
+        }
+      } catch (e) {}
+      candidatePorts = listCandidatePorts();
       connectMcpBridge();
+      requestUiResize();
     }
   </script>
 </body>

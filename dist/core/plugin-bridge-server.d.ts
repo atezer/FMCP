@@ -40,18 +40,22 @@ export declare class PluginBridgeServer {
     private heartbeatTimer;
     private auditLogPath;
     private clientIdCounter;
+    /** User/config preferred port (before clamp and fallback). */
+    private readonly preferredPort;
     constructor(port: number, options?: {
         auditLogPath?: string;
     });
     private port;
     start(): void;
-    private checkPortConflict;
+    /** Try preferred first, then scan forward to MAX, then wrap MIN..preferred-1. */
+    private buildPortCandidateList;
+    private attemptListen;
     private generateClientId;
     private findClientByFileKey;
     private getDefaultClient;
     private resolveClient;
     private removeClient;
-    private tryListen;
+    private tryListenOne;
     /**
      * Send a request to a plugin and wait for the response.
      * If fileKey is specified, routes to the client serving that file.

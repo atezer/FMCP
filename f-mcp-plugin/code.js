@@ -19,8 +19,8 @@ console.error = function() { _pushLog('error', arguments); _origError.apply(cons
 
 console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 
-// Show minimal UI - compact status indicator
-figma.showUI(__html__, { width: 200, height: 56, visible: true, themeColors: true });
+// Start compact; UI asks for dynamic resize based on content.
+figma.showUI(__html__, { width: 280, height: 96, visible: true, themeColors: true });
 
 // Send file identity to UI so it can include it in the WebSocket handshake
 figma.ui.postMessage({
@@ -172,6 +172,18 @@ function hexToFigmaRGB(hex) {
 
 // Listen for requests from UI (e.g., component data requests, write operations)
 figma.ui.onmessage = async (msg) => {
+  if (msg.type === 'RESIZE_UI') {
+    try {
+      var requestedWidth = Number(msg.width);
+      var requestedHeight = Number(msg.height);
+      var width = Math.max(220, Math.min(520, Math.round(isNaN(requestedWidth) ? 280 : requestedWidth)));
+      var height = Math.max(72, Math.min(420, Math.round(isNaN(requestedHeight) ? 96 : requestedHeight)));
+      figma.ui.resize(width, height);
+    } catch (error) {
+      console.warn('🌉 [F-MCP ATezer Bridge] UI resize failed:', error && error.message ? error.message : String(error));
+    }
+    return;
+  }
 
   function rgbaToHex(color) {
     if (!color || typeof color !== 'object') return null;
@@ -1149,6 +1161,201 @@ figma.ui.onmessage = async (msg) => {
         requestId: msg.requestId,
         success: false,
         error: errorMsg
+      });
+    }
+  }
+
+  // ============================================================================
+  // SEARCH_LIBRARY_ASSETS — enabled library variables + file components (query filter)
+  // ============================================================================
+  else if (msg.type === 'SEARCH_LIBRARY_ASSETS') {
+    try {
+      var q = (msg.query || '').toLowerCase().trim();
+      var assetTypes = msg.assetTypes && msg.assetTypes.length ? msg.assetTypes : ['variables', 'components'];
+      var limit = Math.min(Math.max(parseInt(msg.limit, 10) || 25, 1), 80);
+      var currentPageOnly = msg.currentPageOnly !== false;
+      var out = {
+        success: true,
+        query: msg.query || '',
+        variables: [],
+        components: [],
+        componentSets: [],
+        librariesScanned: [],
+        notes: []
+      };
+
+      if (assetTypes.indexOf('variables') >= 0 && figma.teamLibrary && typeof figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync === 'function') {
+        try {
+          var cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+          for (var ci = 0; ci < cols.length && out.variables.length < limit; ci++) {
+            var col = cols[ci];
+            out.librariesScanned.push({ kind: 'variableCollection', name: col.name || '', key: col.key || '' });
+            var libVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(col.key);
+            for (var vi = 0; vi < libVars.length && out.variables.length < limit; vi++) {
+              var lv = libVars[vi];
+              var nm = (lv.name || '').toLowerCase();
+              if (!q || nm.indexOf(q) >= 0) {
+                out.variables.push({
+                  name: lv.name,
+                  key: lv.key,
+                  resolvedType: lv.resolvedType,
+                  libraryCollectionKey: col.key,
+                  libraryCollectionName: col.name
+                });
+              }
+            }
+          }
+        } catch (ve) {
+          out.variableLibraryError = ve && ve.message ? ve.message : String(ve);
+        }
+      } else if (assetTypes.indexOf('variables') >= 0) {
+        out.notes.push('Library variables skipped: teamLibrary API unavailable or permission missing (manifest permissions: teamlibrary).');
+      }
+
+      if (assetTypes.indexOf('components') >= 0) {
+        var components = [];
+        var componentSets = [];
+        var hitLimit = false;
+        function extractComponentData(node, fromSet) {
+          return {
+            id: node.id,
+            name: node.name,
+            key: node.key,
+            description: node.description || null,
+            fromLibraryComponentSet: !!fromSet
+          };
+        }
+        function extractComponentSetData(node) {
+          return {
+            id: node.id,
+            name: node.name,
+            key: node.key,
+            description: node.description || null,
+            variantCount: node.children ? node.children.length : 0
+          };
+        }
+        async function processNodeList(nodes) {
+          for (var i = 0; i < nodes.length && !hitLimit; i++) {
+            if (components.length + componentSets.length >= limit) {
+              hitLimit = true;
+              break;
+            }
+            var node = nodes[i];
+            if (!node) continue;
+            if (node.loadAsync) await node.loadAsync();
+            var nname = (node.name || '').toLowerCase();
+            var ndesc = (node.description || '').toLowerCase();
+            var match = !q || nname.indexOf(q) >= 0 || ndesc.indexOf(q) >= 0;
+            if (node.type === 'COMPONENT_SET') {
+              if (match) componentSets.push(extractComponentSetData(node));
+            } else if (node.type === 'COMPONENT') {
+              if (!node.parent || node.parent.type !== 'COMPONENT_SET') {
+                if (match) components.push(extractComponentData(node, false));
+              }
+            }
+          }
+        }
+        if (currentPageOnly) {
+          var page = figma.currentPage;
+          if (page) {
+            if (page.loadAsync) await page.loadAsync();
+            var pn = page.findAllWithCriteria ? page.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }) : [];
+            await processNodeList(pn);
+          }
+        } else {
+          await figma.loadAllPagesAsync();
+          var pages = figma.root.children;
+          for (var p = 0; p < pages.length && !hitLimit; p++) {
+            var pg = pages[p];
+            if (pg && pg.loadAsync) await pg.loadAsync();
+            var pageNodes = pg && pg.findAllWithCriteria ? pg.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }) : [];
+            await processNodeList(pageNodes);
+          }
+        }
+        out.components = components;
+        out.componentSets = componentSets;
+        out.truncatedByLimit = hitLimit;
+        out.currentPageOnly = currentPageOnly;
+        out.notes.push('Components are from the current file (local + published keys via component.key). Full remote catalog may require REST API.');
+      }
+
+      figma.ui.postMessage({
+        type: 'SEARCH_LIBRARY_ASSETS_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: out
+      });
+    } catch (error) {
+      var emsg = error && error.message ? error.message : String(error);
+      figma.ui.postMessage({
+        type: 'SEARCH_LIBRARY_ASSETS_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: emsg
+      });
+    }
+  }
+
+  // ============================================================================
+  // GET_CODE_CONNECT_HINTS — documentationLinks + component keys (not full Code Connect file map)
+  // ============================================================================
+  else if (msg.type === 'GET_CODE_CONNECT_HINTS') {
+    try {
+      var ids = msg.nodeIds && msg.nodeIds.length ? msg.nodeIds : [];
+      var scanPage = msg.scanCurrentPage === true;
+      var maxNodes = Math.min(parseInt(msg.maxNodes, 10) || 40, 120);
+      var nodes = [];
+
+      async function pushNodeEntry(n) {
+        if (!n) return;
+        if (n.loadAsync) await n.loadAsync();
+        var entry = { nodeId: n.id, name: n.name, type: n.type };
+        if (n.type === 'COMPONENT' || n.type === 'COMPONENT_SET') {
+          entry.componentKey = n.key;
+        }
+        if ('description' in n && n.description) entry.description = n.description;
+        if ('documentationLinks' in n && n.documentationLinks && n.documentationLinks.length) {
+          entry.documentationLinks = n.documentationLinks.map(function (link) {
+            return { uri: link.uri, type: link.type };
+          });
+        }
+        nodes.push(entry);
+      }
+
+      if (ids.length > 0) {
+        for (var ii = 0; ii < ids.length && nodes.length < maxNodes; ii++) {
+          var node = await figma.getNodeByIdAsync(ids[ii]);
+          await pushNodeEntry(node);
+        }
+      } else if (scanPage) {
+        var cur = figma.currentPage;
+        if (cur && cur.loadAsync) await cur.loadAsync();
+        var found = cur && cur.findAllWithCriteria
+          ? cur.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET', 'INSTANCE'] })
+          : [];
+        for (var fi = 0; fi < found.length && nodes.length < maxNodes; fi++) {
+          await pushNodeEntry(found[fi]);
+        }
+      } else {
+        throw new Error('Provide nodeIds array or set scanCurrentPage=true');
+      }
+
+      figma.ui.postMessage({
+        type: 'GET_CODE_CONNECT_HINTS_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: {
+          nodes: nodes,
+          note: 'Full Code Connect source paths live in repo figma.config / CLI; use Figma official MCP for native get_code_connect_map when needed.'
+        }
+      });
+    } catch (error2) {
+      var emsg2 = error2 && error2.message ? error2.message : String(error2);
+      figma.ui.postMessage({
+        type: 'GET_CODE_CONNECT_HINTS_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: emsg2
       });
     }
   }
