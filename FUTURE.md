@@ -1,7 +1,9 @@
 # F-MCP — Kalan Adımlar (Future)
 
-> Son güncelleme: 27 Mart 2026 (kod/doküman taraması + Figma plugin)  
+> Son güncelleme: 27 Mart 2026 (release notu + CHANGELOG süreç satırı)  
 > Paket sürümü (`package.json`): **1.2.0**
+
+**Tamamlananlar (işaretlendi):** npm **1.2.0** yayın/doğrulama · GitHub **Release v1.2.0** (gövde güncel) · **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** süreç satırı · **Figma** org plugin · **FUTURE** kod taraması / Bridge tablosu · **§3** GitHub doküman maddeleri · **§7** README satırı.
 
 **Kod taraması özeti:** `npm view @atezer/figma-mcp-bridge version` → **1.2.0** (npm yayını doğrulandı). `dist/local-plugin-only.js` / `dist/local.js` içinde `figma_search_assets`, `figma_get_code_connect`, `figma_use` stringleri **yok** — `docs/TOOLS.md` Agent Canvas paritesi bu build ile uyumsuz; envanter düzeltmesi açık (§7).
 
@@ -68,7 +70,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [x] `KURULUM.md` — **Sürüm** **1.2.0** (`package.json` ile uyum)
 - [x] `.cursor-plugin/plugin.json` — `version` **1.2.0**; açıklama `docs/TOOLS.md` ile hizalı
 - [x] Sürüm notları — kök `CHANGELOG.md`; `README.md` ve `KURULUM.md` içinde GitHub Releases / npm takibi ve güncelleme özeti
-- [x] GitHub Releases — [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) tag + release; gövde: `docs/releases/v1.2.0-body.md`; sonraki sürümler için `docs/RELEASE_NOTES_TEMPLATE.md`
+- [x] GitHub Releases — [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) tag + release; gövde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md) (`gh release edit` ile senkron); sonraki sürüm: **CHANGELOG → `docs/releases/vX.Y.Z-body.md` → [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) içindeki `gh release create` / `edit`**
 
 ---
 
