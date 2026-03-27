@@ -1,6 +1,6 @@
 # F-MCP — Kalan Adımlar (Future)
 
-> Son güncelleme: 26 Mart 2026 (kod/doküman taraması)  
+> Son güncelleme: 27 Mart 2026 (Figma plugin yayın durumu + doküman)  
 > Paket sürümü (`package.json`): **1.2.0**
 
 ---
@@ -80,9 +80,11 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 5. Figma Plugin Yayını
 
-- [ ] **Organization private plugin** olarak yayınla (Figma Org/Enterprise plan gerektirir)
-- [ ] Community'ye açık yayınlama değerlendir (review süreci var)
-- [ ] Plugin listing için görsel/açıklama/etiketler hazırla
+**Kontrol notu (2026-03-27):** Depo tarafında `f-mcp-plugin/manifest.json` (Plugin ID, `teamlibrary`, `enablePrivatePluginApi`, `networkAccess` localhost **5454–5470**, FigJam/Dev editor) ve [docs/PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md) (Data security cevapları, org seçimi) yayın gereksinimleriyle uyumlu. **Canlı durum:** Organization üzerinden plugin yayını tamamlandı; diğer organizasyonel dağıtımlar (ek org / aynı yapılandırma ile çoğaltma) için hazırlık kullanıcı tarafından onaylandı.
+
+- [x] **Organization private plugin** — Figma Org üzerinden yayınlandı; çoklu org / org yapılarına uygun dağıtım için hazır
+- [ ] **Community (genel)** — İsteğe bağlı; Figma Community incelemesi ayrı süreç (şimdilik org odaklı yayın yeterli sayıldı)
+- [x] **Plugin listing** — Görsel, açıklama ve etiketler org yayını için hazırlandı / kullanıldı
 
 ---
 
