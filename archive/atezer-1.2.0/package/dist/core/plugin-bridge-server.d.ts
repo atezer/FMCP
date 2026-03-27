@@ -1,0 +1,47 @@
+/**
+ * Plugin Bridge WebSocket Server
+ *
+ * Listens for connections from the F-MCP ATezer Bridge plugin (no CDP needed).
+ * When the plugin connects, MCP tools can send JSON-RPC style requests and get
+ * responses (variables, execute, component, etc.).
+ */
+export interface BridgeRequest {
+    id: string;
+    method: string;
+    params?: Record<string, unknown>;
+}
+export interface BridgeResponse {
+    id: string;
+    result?: unknown;
+    error?: string;
+}
+export declare class PluginBridgeServer {
+    private wss;
+    private httpServer;
+    private client;
+    private clientAlive;
+    private missedHeartbeats;
+    private pending;
+    private requestTimeoutMs;
+    private heartbeatTimer;
+    private auditLogPath;
+    constructor(port: number, options?: {
+        auditLogPath?: string;
+    });
+    private port;
+    /**
+     * Start the WebSocket server on the configured port. Fails loudly if port is in use. Idempotent.
+     */
+    start(): void;
+    private checkPortConflict;
+    private tryListen;
+    /**
+     * Send a request to the plugin and wait for the response.
+     */
+    request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>;
+    isConnected(): boolean;
+    private clearHeartbeatTimers;
+    private rejectAllPending;
+    stop(): void;
+}
+//# sourceMappingURL=plugin-bridge-server.d.ts.map

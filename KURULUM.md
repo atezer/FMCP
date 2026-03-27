@@ -15,25 +15,37 @@ veya repoyu `figma-mcp-bridge` adıyla klonladıysanız:
 ### 🔧 Claude Desktop Konfigürasyonu
 Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-**Tam mod (CDP + plugin, debug portu gerekir):**
-```json
-{
-  "mcpServers": {
-    "figma-mcp-bridge": {
-      "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local.js"]
-    }
-  }
-}
-```
-
-**Plugin-only mod (önerilen: debug portu yok, token yok):**
+**Plugin-only mod (önerilen: debug portu yok, REST token yok, Puppeteer yok):**
 ```json
 {
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
       "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local-plugin-only.js"]
+    }
+  }
+}
+```
+
+**NPX (repo indirmeden, plugin-only binary):**
+```json
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+    }
+  }
+}
+```
+
+**Tam mod (CDP + plugin, `--remote-debugging-port=9222`, REST token, Puppeteer):**
+```json
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "node",
+      "args": ["/Users/abdussamed.tezer/FCM/f-mcp-bridge/dist/local.js"]
     }
   }
 }
@@ -117,8 +129,12 @@ npm run build:local
 ```
 
 ### Plugin “ready” olmuyor
-- Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun; port 5454 kullanımda olmasın.
+- Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun. Plugin artık 5454–5470 aralığında dinleyen portu otomatik dener; gerekirse **Advanced** bölümünden host/port elle girin.
 - Tam mod: Figma’yı 9222 ile açtığınızdan ve **Use Developer VM**’in açık olduğundan emin olun.
+
+### Port standardı (önerilen)
+- Bridge portunu `FIGMA_MCP_BRIDGE_PORT` ile verin (geriye dönük olarak `FIGMA_PLUGIN_BRIDGE_PORT` da desteklenir).
+- Cursor/Claude aynı makinedeyse her biri farklı port kullanmalı (ör. 5454 ve 5455); plugin doğru bridge’i otomatik bulur ve son başarılı portu hatırlar.
 
 ---
 
@@ -141,4 +157,4 @@ npm run build:local
 
 ---
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)  
-**Sürüm:** 1.1.2
+**Sürüm:** 1.2.0 (`f-mcp-bridge/package.json` ile uyumlu)

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+    }
+  }
+}

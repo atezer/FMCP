@@ -1,0 +1,20 @@
+{
+  "name": "figma-mcp-bridge",
+  "version": "1.2.0",
+  "description": "Figma tasarim verilerini genis figma_* MCP araclari ile AI asistanlarina acar. Ayrintili liste: docs/TOOLS.md. REST API token gerektirmez (plugin-only), Zero Trust mimarisi.",
+  "author": {
+    "name": "Abdussamed Tezer"
+  },
+  "homepage": "https://github.com/atezer/FMCP",
+  "repository": "https://github.com/atezer/FMCP",
+  "license": "MIT",
+  "keywords": ["figma", "mcp", "design", "design-system", "design-tokens", "ui", "cursor", "plugin"],
+  "logo": "assets/logo.png",
+  "skills": ".cursor/skills/f-mcp/",
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+    }
+  }
+}

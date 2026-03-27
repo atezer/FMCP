@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/atezer/FMCP/schemas/handoff.manifest.schema.json",
+  "title": "FMCP AI Handoff Manifest",
+  "type": "object",
+  "required": [
+    "handoffVersion",
+    "createdAt",
+    "source",
+    "scope",
+    "designContext",
+    "tokenSummary",
+    "screenshots"
+  ],
+  "properties": {
+    "handoffVersion": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": ["fileKey", "fileUrl", "nodeIds"],
+      "properties": {
+        "fileKey": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "nodeIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["summary", "acceptanceCriteria", "platforms"],
+      "properties": {
+        "summary": { "type": "string" },
+        "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+        "platforms": {
+          "type": "array",
+          "items": { "enum": ["web", "ios", "android"] },
+          "minItems": 1
+        }
+      }
+    },
+    "designContext": {
+      "type": "object",
+      "required": ["request", "summary"],
+      "properties": {
+        "request": {
+          "type": "object",
+          "properties": {
+            "depth": { "type": "integer" },
+            "includeLayout": { "type": "boolean" },
+            "includeVisual": { "type": "boolean" },
+            "includeTypography": { "type": "boolean" },
+            "includeCodeReady": { "type": "boolean" },
+            "outputHint": { "type": "string" }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "layout": { "type": "string" },
+            "typography": { "type": "string" },
+            "visual": { "type": "string" },
+            "interactions": { "type": "string" }
+          }
+        }
+      }
+    },
+    "tokenSummary": {
+      "type": "object",
+      "properties": {
+        "colors": { "type": "array", "items": { "type": "string" } },
+        "spacing": { "type": "array", "items": { "type": "string" } },
+        "typography": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "componentReuse": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "key": { "type": "string" },
+          "nodeId": { "type": "string" },
+          "decision": { "enum": ["reuse", "new"] }
+        }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "required": ["before", "after"],
+      "properties": {
+        "before": { "type": "array", "items": { "type": "string" } },
+        "after": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "selfHealingIterations": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "openIssues": { "type": "array", "items": { "type": "string" } },
+        "manualReviewNeeded": { "type": "boolean" }
+      }
+    },
+    "codeConnect": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nodeId": { "type": "string" },
+          "platform": { "enum": ["web", "ios", "android"] },
+          "codePath": { "type": "string" },
+          "symbol": { "type": "string" }
+        }
+      }
+    }
+  }
+}
