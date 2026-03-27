@@ -58,7 +58,7 @@ You can run **without** the full MCP server (figma-mcp-bridge) and **without** a
 1. Use the **plugin-only MCP relay**: `node dist/local-plugin-only.js` (or add it to Claude as the only MCP server).
 2. All data comes from the plugin: variables, file structure, components, styles, execute, screenshot. No `FIGMA_ACCESS_TOKEN` needed.
 3. Token use is minimized: tools default to `verbosity=summary` and compact responses.
-4. Claude config: point `args` to `.../f-mcp-bridge/dist/local-plugin-only.js` and you only need the plugin running in Figma.
+4. Claude config: point `args` to `.../<repo-root>/dist/local-plugin-only.js` and you only need the plugin running in Figma.
 
 ## Installation
 
@@ -66,7 +66,7 @@ You can run **without** the full MCP server (figma-mcp-bridge) and **without** a
 
 1. **Open Figma Desktop**
 2. **Go to Plugins → Development → Import plugin from manifest...**
-3. **Navigate to:** `/path/to/f-mcp-bridge/f-mcp-plugin/manifest.json`
+3. **Navigate to:** `/path/to/<repo-root>/f-mcp-plugin/manifest.json`
 4. **Click "Open"**
 
 The plugin will appear in your Development plugins list as "F-MCP ATezer Bridge".
@@ -76,7 +76,7 @@ The plugin will appear in your Development plugins list as "F-MCP ATezer Bridge"
 Alternatively, you can install from the plugin directory:
 
 ```bash
-# From the project root (f-mcp-bridge)
+# From the project root (FMCP / figma-mcp-bridge clone)
 cd f-mcp-plugin
 
 # Figma will use these files:
@@ -102,14 +102,14 @@ The plugin will:
 
 ### Connecting Claude App (plugin-only, no token)
 
-1. **Build** (once): `cd f-mcp-bridge && npm run build:local`
+1. **Build** (once): `npm run build:local` (depo kökünde)
 2. **Claude config** (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`:
    ```json
    {
      "mcpServers": {
        "figma": {
          "command": "node",
-         "args": ["/ABSOLUTE/PATH/TO/f-mcp-bridge/dist/local-plugin-only.js"]
+         "args": ["/ABSOLUTE/PATH/TO/<repo-root>/dist/local-plugin-only.js"]
        }
      }
    }

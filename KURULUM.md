@@ -3,7 +3,7 @@
 ## ✅ Kurulum Tamamlandı!
 
 ### 📁 Proje Konumu
-Kaynak kod ve `dist/` çıktıları **depo kökündedir** (`f-mcp-bridge` alt klasörü yoktur). Proje klasörü (clone ettiğiniz yer, örn.):
+Kaynak kod ve `dist/` çıktıları **depo kökündedir** (ayrı bir alt klasörde ikinci kopya yoktur). Proje klasörü (clone ettiğiniz yer, örn.):
 ```
 /Users/abdussamed.tezer/FCM
 ```
