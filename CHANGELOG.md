@@ -51,6 +51,8 @@ Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanila
 
 ## [1.2.1] - 2026-04-01
 
+GitHub Release govdesi: [docs/releases/v1.2.1-body.md](docs/releases/v1.2.1-body.md) (`gh release create v1.2.1 --notes-file ...`).
+
 ### Bridge
 
 - **`figma_search_components`:** Cikti ozetine bileşen **`key`** alani eklendi; `figma_instantiate_component(componentKey)` akisi ile uyum.
