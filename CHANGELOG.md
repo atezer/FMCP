@@ -14,40 +14,20 @@ Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanila
 
 ## [Unreleased]
 
-### Bridge (port yonetimi)
+(Yaklasan degisiklikler buraya.)
 
-- **Sabit port stratejisi:** Otomatik port taramasi (5454-5470 sirali deneme) kaldirildi. Bridge artik yapilandirilan porta dogrudan baglanir; port mesgulse HTTP health-check ile canli F-MCP / olu surec / farkli servis ayirt edilir; olu port icin kisa gecikmeli tek retry.
-- **Graceful shutdown:** `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi -- IDE veya Claude kapandiginda `bridge.stop()` cagrilarak port aninda serbest birakilir (olu port sorununun ana duzeltmesi).
-- **probePort edge case:** `FIGMA_BRIDGE_HOST=0.0.0.0` durumunda port probe'u `127.0.0.1` uzerinden yapilir.
+## [1.2.2] - 2026-04-01
 
-### Dokumantasyon
-
-- [docs/MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md): "Tek MCP = tum pencereler ayni oturum" bolumu, **"Paralel gorevler (Claude + Cursor + ikinci hat)"** bolumu (mimari, port tablosu, plugin Advanced uyarisi, Cursor paylasimli MCP notu, audit log cakisma notu).
-- [docs/CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md): coklu `mcpServers` ornegi (5455 + 5470 farkli sunucu adlariyla).
-- [KURULUM.md](KURULUM.md): Claude config "sik gorulen hatalar" ozeti.
-- [README.md](README.md): Port catismasi uyarisi guncellemesi.
-
-### Araclar
-
-- `npm run check-ports` -- [`scripts/check-ports.sh`](scripts/check-ports.sh): 5454-5470 arasinda LISTEN durumundaki surecleri listeler (paralel gorev dogrulamasi ve sorun giderme icin).
-
-### Cursor skills (F-MCP)
-
-- Yeni skill'ler: `audit-figma-design-system`, `fix-figma-design-system-finding`, `apply-figma-design-system` (tuval ici design system audit/fix/apply; F-MCP Bridge arac eslemesi).
-- Mevcut F-MCP skill'lerine karsilikli **F-MCP skill koordinasyonu** bolumleri eklendi.
-- Tuval skill'lerinde `figma_get_metadata` kaldirildi; Bridge ile uyum icin `figma_get_file_data` / `figma_get_component` / `figma_get_design_context` eslemesi; **design-drift-detector** koordinasyonunda tipik sira (implement - drift) netlestirildi; **audit** icinde zincir performans notlari.
-- [.cursor/skills/f-mcp/SKILL_INDEX.md](.cursor/skills/f-mcp/SKILL_INDEX.md): tum skill'lerin dizini, workspace koku (FCM) notu, ozet akis.
-- `npm run validate:fmcp-skills` -- [`scripts/validate-fmcp-skills-tools.mjs`](scripts/validate-fmcp-skills-tools.mjs): skill `.md` icindeki `figma_*` adlarini `src/local.ts`, `src/local-plugin-only.ts`, `src/core/figma-tools.ts` icindeki `registerTool` birlesimne gore dogrular.
-- GitHub Actions: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) -- `master` / `main` icin PR ve push'ta `npm run validate:fmcp-skills` zorunlu.
+GitHub Release: [v1.2.2](https://github.com/atezer/FMCP/releases/tag/v1.2.2); govde: [docs/releases/v1.2.2-body.md](docs/releases/v1.2.2-body.md).
 
 ### Plugin (F-MCP Bridge)
 
-- Gelismis panel: **Otomatik tara** dugmesi -- port alaniyla tek porta kilitlenmeyi kaldirip 5454-5470 taramasini yeniden baslatir.
-- Advanced panel kapatildiginda ayni kilit kalkar (ilk yuklemede cift baglanti tetiklenmez).
+- **Multi-client `fileKey`:** UI WebSocket `onopen` bazen plugin ana iş parçacığından gelen `FILE_IDENTITY` mesajından önce çalışıyordu; ilk `ready` `fileKey`/`fileName` olmadan gidince köprü (`PluginBridgeServer`) o client’ı `null` anahtarla listeliyordu. `pushBridgeFileIdentity()` eklendi: kimlik geldikten sonra açık soket varsa `ready` yeniden gönderiliyor; `figma_list_connected_files` ve `fileKey` ile yönlendirme tüm pencerelerde (FigJam + birden fazla Figma tarayıcı sekmesi) tutarlı çalışır.
 
-### Surec (bakimcilar)
+### Dokumantasyon
 
-- Sonraki surum: `CHANGELOG.md` guncelle - `docs/releases/vX.Y.Z-body.md` olustur - [RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `gh release edit` ile GitHub Release ac veya guncelle.
+- [README.md](README.md): Multi-client bölümünde kimlik zamanlaması notu (1.2.2+).
+- [FUTURE.md](FUTURE.md): Sürüm satırı ve tamamlanan madde özeti.
 
 ## [1.2.1] - 2026-04-01
 

@@ -14,6 +14,13 @@ Sonuc:
 - FMCP bugun en net sekilde MCP-destekli istemcilerde calisir: Cursor ve Claude Desktop.
 - `claude.ai` hedefi icin ekstra bir remote wrapper/host katmani gerekir.
 
+### 1b) Cloudflare Worker — transport (Streamable HTTP + SSE)
+
+- Worker girisi: [`src/index.ts`](../src/index.ts). `/mcp` uclari **Cloudflare `agents` paketindeki `McpAgent.serve()`** ile sunulur; varsayilan transport **`streamable-http`** (MCP Streamable HTTP). `/sse` ise legacy SSE yoludur.
+- Uzak istemci (or. claude.ai connector) hangi ucu kullanacagini kendi implementasyonuna gore secer; **dogrulama icin gercek connector ile smoke test** sarttir.
+- CORS: Allowlist tabanli sikistirma [`src/cloud-cors.ts`](../src/cloud-cors.ts) + `maybeTightenMcpCors` ile `/mcp` ve `/sse` yanitlarina uygulanir (claude.ai, v0, Lovable origin'leri).
+- Yerel smoke (health + OPTIONS + pairing): `npm run dev` sonrası `BASE_URL=http://127.0.0.1:8787 npm run smoke:cloud` — [`scripts/smoke-fmcp-cloud.mjs`](../scripts/smoke-fmcp-cloud.mjs). Gercek claude.ai connector davranisi icin deploy URL ile manuel test gerekir.
+
 ## 2) Bu repoda bulunan kanitlar
 
 - MCP kurulum ornegi: `.mcp.json` dosyasi, `npx -y @atezer/figma-mcp-bridge@latest figma-mcp-bridge-plugin` ile plugin-only stdio server baslatir.
@@ -45,3 +52,10 @@ Pazarlama / dokumantasyon dilinde su ifade daha guvenli:
 Asagidaki ifade kosullu olmalidir:
 
 - "claude.ai uzerinden calisir" (yalnizca remote MCP host kati eklenirse).
+
+## 5) FMCP Cloud Mode (plugin relay)
+
+- **Amaç:** Tarayicida uzak MCP (`https://.../mcp`) + Figma plugin arasinda, yerel Node olmadan **WebSocket plugin bridge** ile ayni RPC protokolunu tasimak.
+- **Bilesenler:** `POST /fmcp-cloud/pairing`, `WebSocket /fmcp-cloud/plugin`, KV (`OAUTH_STATE` uzerinde `fmcp_*` anahtarlari), `FmcpRelaySession` Durable Object, MCP araclari `fmcp_generate_pairing_code`, `fmcp_cloud_bind`, `fmcp_cloud_status`, `fmcp_cloud_disconnect`, `fmcp_plugin_bridge_request` ([`src/index.ts`](../src/index.ts)).
+- **Oturum:** MCP **streamable-http** transport oturum kimligi (`mcp-session-id` / DO adi) ile `fmcp_bind:*` eslemesi yapilir; bu, OAuth icin kullanilan sabit `figma-mcp-bridge-default-session` ile **karistirilmamali** (sizma riski).
+- **Plugin:** [`f-mcp-plugin/ui.html`](../f-mcp-plugin/ui.html) Cloud Mode; [`f-mcp-plugin/manifest.json`](../f-mcp-plugin/manifest.json) icine kendi Worker host'unuzu (`wss://...`) eklemeniz gerekir.

@@ -90,7 +90,7 @@ Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile y
 
 | Ne | Nerede |
 | --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.1**) |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.2**) |
 | **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
 | **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
 | **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |
@@ -110,7 +110,7 @@ Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalı
 
 ### En basit kurulum (NPX — repo indirmeden)
 
-Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@1.2.0`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@1.2.2`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
 
 
 | Adım | Yapılacak                                                                                                    |
@@ -280,6 +280,8 @@ Hangi **linki** verirseniz, istek o linkteki dosyaya yönlendirilir; diğer penc
 **Link ile kullanım:** Verdiğiniz Figma veya FigJam linki, ilgili tool çağrılarında `figmaUrl` parametresi olarak verilebilir; bridge linkten dosyayı tespit edip o dosyadaki plugin'e yönlendirir. Örneğin: "Bu FigJam linkine bak: https://figma.com/board/XYZ/..." → AI `figma_get_design_context({ figmaUrl: "https://..." })` ile çağırır.
 
 **Manuel fileKey:** Her plugin bağlantısı kendini `fileKey` ile tanıtır. `figma_list_connected_files` ile bağlı dosyaları listeleyip, diğer tool'larda `fileKey` parametresi ile hedef dosyayı belirtebilirsiniz. `fileKey` ve `figmaUrl` belirtilmezse en son bağlanan dosyaya gider (geriye uyumlu).
+
+**Kimlik zamanlaması (1.2.2+):** WebSocket bazen ana iş parçacığından gelen dosya kimliğinden önce açılabiliyordu; köprüde bir bağlantı `fileKey: null` görünebiliyordu. Plugin artık `FILE_IDENTITY` geldikten sonra `ready` mesajını yeniden göndererek sunucu kaydını güncelliyor. Çoklu sekme kullanıyorsanız bu sürümdeki `f-mcp-plugin` kaynağını yeniden import edin veya npm paketindeki `f-mcp-plugin` ile hizalayın ([CHANGELOG.md](CHANGELOG.md) **\[1.2.2\]**).
 
 **Kullanım:**
 

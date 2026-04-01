@@ -172,6 +172,62 @@
       opacity: 0.9;
     }
 
+    .cloud-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 10px;
+      background: var(--figma-color-bg-secondary, #383838);
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      border-radius: 8px;
+      font-size: 10px;
+    }
+    .cloud-panel label.cloud-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .cloud-fields {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cloud-fields.is-visible {
+      display: flex;
+    }
+    .cloud-fields .field label {
+      display: block;
+      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+      margin-bottom: 2px;
+    }
+    .cloud-fields input[type="text"],
+    .cloud-fields input[type="password"] {
+      width: 100%;
+      max-width: 220px;
+      padding: 4px 6px;
+      background: var(--figma-color-bg-tertiary, #1e1e1e);
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      border-radius: 4px;
+      color: inherit;
+      font-size: 11px;
+    }
+    .cloud-connect {
+      align-self: flex-start;
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      background: transparent;
+      color: inherit;
+      border-radius: 6px;
+      font-size: 10px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .cloud-hint {
+      font-size: 9px;
+      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.55));
+    }
+
     /* Light theme support */
     @media (prefers-color-scheme: light) {
       body {
@@ -218,6 +274,25 @@
         <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
       <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
+    </div>
+    <div class="cloud-panel" id="cloud-panel">
+      <label class="cloud-toggle"><input type="checkbox" id="cloud-mode-toggle" aria-label="Cloud Mode" /> Cloud Mode (uzak MCP, yerel Node yok)</label>
+      <div class="cloud-fields" id="cloud-fields">
+        <div class="field">
+          <label for="cloud-base">Worker URL (https://…)</label>
+          <input type="text" id="cloud-base" placeholder="https://figma-mcp-bridge.workers.dev" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="cloud-code">Pairing code</label>
+          <input type="text" id="cloud-code" maxlength="8" placeholder="6 karakter" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="cloud-secret">Secret</label>
+          <input type="password" id="cloud-secret" placeholder="AI / fmcp_generate_pairing_code çıktısı" autocomplete="off" />
+        </div>
+        <button type="button" id="cloud-connect" class="cloud-connect">Bağlan</button>
+        <div class="cloud-hint" id="cloud-hint">Kodlar yaklaşık 5 dk geçerlidir. Önce uzak MCP’de fmcp_generate_pairing_code çalıştırın, sonra buraya yapıştırın.</div>
+      </div>
     </div>
   </div>
 
@@ -595,6 +670,7 @@
           window.__figmaFileKey = msg.fileKey || null;
           window.__figmaFileName = msg.fileName || null;
           console.log('[F-MCP ATezer Bridge] File identity: ' + (msg.fileName || '?') + ' (' + (msg.fileKey || '?') + ')');
+          pushBridgeFileIdentity();
           break;
 
         case 'VARIABLES_DATA':
@@ -830,6 +906,71 @@
     var candidatePorts = [];
     var candidatePortIndex = 0;
 
+    /**
+     * WebSocket onopen often runs before FILE_IDENTITY arrives from the plugin main thread.
+     * Re-send "ready" when fileKey/fileName are known so the bridge can route multi-client RPCs.
+     */
+    function pushBridgeFileIdentity() {
+      if (!mcpBridgeWs || mcpBridgeWs.readyState !== 1) return;
+      try {
+        mcpBridgeWs.send(JSON.stringify({
+          type: 'ready',
+          fileKey: window.__figmaFileKey || null,
+          fileName: window.__figmaFileName || null
+        }));
+      } catch (_) {}
+    }
+
+    var CLOUD_MODE_KEY = 'f-mcp-cloud-mode';
+    var CLOUD_BASE_STORAGE = 'f-mcp-cloud-base';
+
+    function isCloudMode() {
+      var el = document.getElementById('cloud-mode-toggle');
+      return !!(el && el.checked);
+    }
+
+    function syncCloudFieldsVisibility() {
+      var f = document.getElementById('cloud-fields');
+      if (f) f.classList.toggle('is-visible', isCloudMode());
+    }
+
+    function buildCloudWsUrl() {
+      var baseEl = document.getElementById('cloud-base');
+      var codeEl = document.getElementById('cloud-code');
+      var secEl = document.getElementById('cloud-secret');
+      var base = (baseEl && baseEl.value || '').trim().replace(/\/$/, '');
+      var code = (codeEl && codeEl.value || '').trim().toUpperCase();
+      var secret = (secEl && secEl.value || '').trim();
+      if (!base || !code || !secret) return null;
+      var wsBase = base.indexOf('https://') === 0 ? 'wss://' + base.slice(8) : (base.indexOf('http://') === 0 ? 'ws://' + base.slice(7) : base);
+      if (wsBase.indexOf('wss://') !== 0 && wsBase.indexOf('ws://') !== 0) wsBase = 'wss://' + wsBase;
+      return wsBase + '/fmcp-cloud/plugin?code=' + encodeURIComponent(code) + '&secret=' + encodeURIComponent(secret);
+    }
+
+    function initCloudModeUi() {
+      var toggle = document.getElementById('cloud-mode-toggle');
+      var baseEl = document.getElementById('cloud-base');
+      try {
+        if (baseEl && localStorage.getItem(CLOUD_BASE_STORAGE)) baseEl.value = localStorage.getItem(CLOUD_BASE_STORAGE);
+        if (toggle && localStorage.getItem(CLOUD_MODE_KEY) === '1') toggle.checked = true;
+      } catch (e) {}
+      syncCloudFieldsVisibility();
+      if (toggle) {
+        toggle.addEventListener('change', function() {
+          try { localStorage.setItem(CLOUD_MODE_KEY, toggle.checked ? '1' : '0'); } catch (e2) {}
+          syncCloudFieldsVisibility();
+          forceDisconnectAndReconnect();
+        });
+      }
+      if (baseEl) {
+        baseEl.addEventListener('change', function() {
+          try { localStorage.setItem(CLOUD_BASE_STORAGE, (baseEl.value || '').trim()); } catch (e3) {}
+        });
+      }
+      var cbtn = document.getElementById('cloud-connect');
+      if (cbtn) cbtn.addEventListener('click', function() { forceDisconnectAndReconnect(); });
+    }
+
     /** Port alanı elle değiştirilince manualPortLocked=true olur; bu kilit 5454–5470 taramasını durdurur. */
     function unlockAutoPortScan() {
       manualPortLocked = false;
@@ -917,6 +1058,8 @@
     }
 
     function forceDisconnectAndReconnect() {
+      stopCloudPairCountdown();
+      resetCloudHintDefault();
       if (mcpBridgeReconnectTimer) { clearTimeout(mcpBridgeReconnectTimer); mcpBridgeReconnectTimer = null; }
       mcpReconnectDelay = MCP_RECONNECT_MIN;
       candidatePorts = listCandidatePorts();
@@ -978,6 +1121,46 @@
     var mcpHandshakeTimer = null;
     var mcpHandshakeDone = false;
     var mcpKeepAliveTimer = null;
+    var cloudPairCountdownTimer = null;
+    var CLOUD_PAIR_TTL_SEC = 300;
+    var CLOUD_HINT_DEFAULT = 'Kodlar yaklaşık 5 dk geçerlidir. Önce uzak MCP’de fmcp_generate_pairing_code çalıştırın, sonra buraya yapıştırın.';
+
+    function stopCloudPairCountdown() {
+      if (cloudPairCountdownTimer) {
+        clearInterval(cloudPairCountdownTimer);
+        cloudPairCountdownTimer = null;
+      }
+    }
+
+    function startCloudPairCountdown() {
+      stopCloudPairCountdown();
+      var hint = document.getElementById('cloud-hint');
+      var left = CLOUD_PAIR_TTL_SEC;
+      function fmt(t) {
+        var m = Math.floor(t / 60);
+        var s = t % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+      }
+      function tick() {
+        if (hint) {
+          hint.textContent = left > 0
+            ? ('Pairing penceresi (yakl.): ' + fmt(left) + ' — sunucu TTL 5 dk')
+            : 'Süre doldu; uzak MCP’de fmcp_generate_pairing_code ile yeni kod alın.';
+        }
+        if (left <= 0) {
+          stopCloudPairCountdown();
+          return;
+        }
+        left--;
+      }
+      tick();
+      cloudPairCountdownTimer = setInterval(tick, 1000);
+    }
+
+    function resetCloudHintDefault() {
+      var hint = document.getElementById('cloud-hint');
+      if (hint) hint.textContent = CLOUD_HINT_DEFAULT;
+    }
 
     function scheduleReconnect() {
       if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
@@ -1004,7 +1187,269 @@
       if (mcpKeepAliveTimer) { clearInterval(mcpKeepAliveTimer); mcpKeepAliveTimer = null; }
     }
 
+    function handleMcpBridgeMessage(event) {
+      try {
+        var msg = JSON.parse(event.data);
+        if (msg.type === 'welcome') {
+          mcpHandshakeDone = true;
+          if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
+          if (isCloudMode()) {
+            stopCloudPairCountdown();
+            var ch = document.getElementById('cloud-hint');
+            if (ch) ch.textContent = 'Bağlı. Uzak MCP oturumunda fmcp_cloud_bind çağrılmalı.';
+            console.log('[F-MCP ATezer Bridge] Cloud handshake OK — ' + (msg.bridgeVersion || '?'));
+            updateStatus('cloud ready', true, false);
+            return;
+          }
+          var port = candidatePorts[Math.min(candidatePortIndex, candidatePorts.length - 1)];
+          mcpConnectedPort = msg.port || port;
+          try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(mcpConnectedPort)); } catch (e) {}
+          var portEl = document.getElementById('mcp-port');
+          if (portEl && mcpConnectedPort >= MCP_PORT_MIN && mcpConnectedPort <= MCP_PORT_MAX) {
+            portEl.value = String(mcpConnectedPort);
+          }
+          if (!manualPortLocked) {
+            candidatePorts = [mcpConnectedPort];
+            candidatePortIndex = 0;
+          }
+          console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
+          updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+          return;
+        }
+        if (msg.type === 'ping') {
+          if (mcpBridgeWs && mcpBridgeWs.readyState === 1) {
+            mcpBridgeWs.send(JSON.stringify({ type: 'pong' }));
+          }
+          return;
+        }
+        if (!msg.id || !msg.method) return;
+        var id = msg.id;
+        var method = msg.method;
+        var params = msg.params || {};
+        var run = function() {
+          if (method === 'getVariablesFromPluginUI') {
+            return window.refreshVariables().then(function(r) {
+              if (r && r.success === false) return { success: false, error: r.error || 'Variables refresh failed' };
+              if (!window.__figmaVariablesData) return { success: false, error: 'Variables not loaded' };
+              return { success: true, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
+            });
+          }
+          if (method === 'getComponentFromPluginUI') {
+            return window.requestComponentData(params.nodeId).then(function(data) {
+              return { success: true, component: data };
+            });
+          }
+          if (method === 'getComponentByNodeId') {
+            return window.requestComponentData(params.nodeId).then(function(data) {
+              return { success: true, component: data };
+            });
+          }
+          if (method === 'getVariables') {
+            if (!window.__figmaVariablesReady || !window.__figmaVariablesData)
+              return { success: false, error: 'Variables not loaded yet' };
+            return { success: true, timestamp: Date.now(), fileMetadata: {}, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
+          }
+          if (method === 'executeCodeViaUI') {
+            return window.executeCode(params.code, params.timeout);
+          }
+          if (method === 'updateVariable') {
+            return window.updateVariable(params.variableId, params.modeId, params.value);
+          }
+          if (method === 'createVariable') {
+            return window.createVariable(params.name, params.collectionId, params.resolvedType, params.options);
+          }
+          if (method === 'createVariableCollection') {
+            return window.createVariableCollection(params.name, params.options);
+          }
+          if (method === 'deleteVariable') {
+            return window.deleteVariable(params.variableId);
+          }
+          if (method === 'deleteVariableCollection') {
+            return window.deleteVariableCollection(params.collectionId);
+          }
+          if (method === 'renameVariable') {
+            return window.renameVariable(params.variableId, params.newName);
+          }
+          if (method === 'addMode') {
+            return window.addMode(params.collectionId, params.modeName);
+          }
+          if (method === 'renameMode') {
+            return window.renameMode(params.collectionId, params.modeId, params.newName);
+          }
+          if (method === 'refreshVariables') {
+            return window.refreshVariables();
+          }
+          if (method === 'getLocalComponents') {
+            return window.getLocalComponents(params.currentPageOnly, params.limit);
+          }
+          if (method === 'searchLibraryAssets') {
+            return window.searchLibraryAssets(params.query, params.assetTypes, params.limit, params.currentPageOnly);
+          }
+          if (method === 'getCodeConnectHints') {
+            return window.getCodeConnectHints(params.nodeIds, params.scanCurrentPage, params.maxNodes);
+          }
+          if (method === 'instantiateComponent') {
+            return window.instantiateComponent(params.componentKey, params.options);
+          }
+          if (method === 'setNodeDescription') {
+            return window.setNodeDescription(params.nodeId, params.description, params.descriptionMarkdown);
+          }
+          if (method === 'addComponentProperty') {
+            return window.addComponentProperty(params.nodeId, params.propertyName, params.type, params.defaultValue, params.options);
+          }
+          if (method === 'editComponentProperty') {
+            return window.editComponentProperty(params.nodeId, params.propertyName, params.newValue);
+          }
+          if (method === 'deleteComponentProperty') {
+            return window.deleteComponentProperty(params.nodeId, params.propertyName);
+          }
+          if (method === 'resizeNode') {
+            return window.resizeNode(params.nodeId, params.width, params.height, params.withConstraints);
+          }
+          if (method === 'moveNode') {
+            return window.moveNode(params.nodeId, params.x, params.y);
+          }
+          if (method === 'setNodeFills') {
+            return window.setNodeFills(params.nodeId, params.fills);
+          }
+          if (method === 'setNodeStrokes') {
+            return window.setNodeStrokes(params.nodeId, params.strokes, params.strokeWeight);
+          }
+          if (method === 'setNodeOpacity') {
+            return window.setNodeOpacity(params.nodeId, params.opacity);
+          }
+          if (method === 'setNodeCornerRadius') {
+            return window.setNodeCornerRadius(params.nodeId, params.radius);
+          }
+          if (method === 'cloneNode') {
+            return window.cloneNode(params.nodeId);
+          }
+          if (method === 'deleteNode') {
+            return window.deleteNode(params.nodeId);
+          }
+          if (method === 'renameNode') {
+            return window.renameNode(params.nodeId, params.newName);
+          }
+          if (method === 'setTextContent') {
+            return window.setTextContent(params.nodeId, params.text, params.options);
+          }
+          if (method === 'createChildNode') {
+            return window.createChildNode(params.parentId, params.nodeType, params.properties);
+          }
+          if (method === 'captureScreenshot') {
+            return window.captureScreenshot(params.nodeId, params.options);
+          }
+          if (method === 'setInstanceProperties') {
+            return window.setInstanceProperties(params.nodeId, params.properties);
+          }
+          if (method === 'getDocumentStructure') {
+            return window.getDocumentStructure(params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
+          }
+          if (method === 'getNodeContext') {
+            return window.getNodeContext(params.nodeId, params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
+          }
+          if (method === 'getLocalStyles') {
+            return window.getLocalStyles(params.verbosity);
+          }
+          if (method === 'getConsoleLogs') {
+            return window.getConsoleLogs(params.limit);
+          }
+          if (method === 'clearConsole') {
+            return window.clearConsole();
+          }
+          if (method === 'batchCreateVariables') {
+            return window.batchCreateVariables(params.items);
+          }
+          if (method === 'batchUpdateVariables') {
+            return window.batchUpdateVariables(params.items);
+          }
+          if (method === 'setupDesignTokens') {
+            return window.setupDesignTokens(params);
+          }
+          if (method === 'arrangeComponentSet') {
+            return window.arrangeComponentSet(params.nodeIds);
+          }
+          return { success: false, error: 'Unknown method: ' + method };
+        };
+        var wsRef = mcpBridgeWs;
+        Promise.resolve(run()).then(function(result) {
+          if (wsRef && wsRef.readyState === 1) {
+            try { wsRef.send(JSON.stringify({ id: id, result: result })); } catch (_) {}
+          }
+        }).catch(function(err) {
+          if (wsRef && wsRef.readyState === 1) {
+            try { wsRef.send(JSON.stringify({ id: id, error: err.message || String(err) })); } catch (_) {}
+          }
+        });
+      } catch (e) {
+        if (mcpBridgeWs && mcpBridgeWs.readyState === 1 && msg && msg.id) {
+          try { mcpBridgeWs.send(JSON.stringify({ id: msg.id, error: e.message || String(e) })); } catch (_) {}
+        }
+      }
+    }
+
+    function connectCloudMcpBridge() {
+      if (mcpConnecting) return;
+      if (mcpBridgeWs && (mcpBridgeWs.readyState === 0 || mcpBridgeWs.readyState === 1)) return;
+      var url = buildCloudWsUrl();
+      if (!url) {
+        updateStatus('cloud: eksik alan', false, true);
+        return;
+      }
+      startCloudPairCountdown();
+      mcpConnecting = true;
+      mcpHandshakeDone = false;
+      autoPortProbeActive = false;
+      try {
+        mcpBridgeWs = new WebSocket(url);
+        var currentWs = mcpBridgeWs;
+        mcpBridgeWs.onopen = function() {
+          mcpConnecting = false;
+          mcpReconnectDelay = MCP_RECONNECT_MIN;
+          console.log('[F-MCP ATezer Bridge] Cloud WebSocket: ' + url);
+          updateStatus('cloud…', false, false);
+          currentWs.send(JSON.stringify({
+            type: 'ready',
+            fileKey: window.__figmaFileKey || null,
+            fileName: window.__figmaFileName || null
+          }));
+          startKeepAlive(currentWs);
+          if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
+          mcpHandshakeTimer = setTimeout(function() {
+            if (!mcpHandshakeDone && mcpBridgeWs === currentWs) {
+              updateStatus('cloud handshake?', false, true);
+            }
+          }, 8000);
+        };
+        mcpBridgeWs.onmessage = handleMcpBridgeMessage;
+        mcpBridgeWs.onclose = function() {
+          stopKeepAlive();
+          stopCloudPairCountdown();
+          resetCloudHintDefault();
+          if (mcpBridgeWs !== currentWs) return;
+          mcpBridgeWs = null;
+          mcpConnecting = false;
+          if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
+          updateStatus('cloud kapalı', false, true);
+          scheduleReconnect();
+        };
+        mcpBridgeWs.onerror = function() {
+          mcpConnecting = false;
+        };
+      } catch (e) {
+        stopCloudPairCountdown();
+        resetCloudHintDefault();
+        mcpConnecting = false;
+        updateStatus('cloud hata', false, true);
+        scheduleReconnect();
+      }
+    }
+
     function connectMcpBridge() {
+      if (isCloudMode()) {
+        connectCloudMcpBridge();
+        return;
+      }
       if (mcpConnecting) return;
       if (mcpBridgeWs && (mcpBridgeWs.readyState === 0 || mcpBridgeWs.readyState === 1)) return;
       mcpConnecting = true;
@@ -1039,198 +1484,7 @@
             }
           }, 5000);
         };
-        mcpBridgeWs.onmessage = function(event) {
-          try {
-            var msg = JSON.parse(event.data);
-            if (msg.type === 'welcome') {
-              mcpHandshakeDone = true;
-              if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
-              mcpConnectedPort = msg.port || port;
-              try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(mcpConnectedPort)); } catch (e) {}
-              var portEl = document.getElementById('mcp-port');
-              if (portEl && mcpConnectedPort >= MCP_PORT_MIN && mcpConnectedPort <= MCP_PORT_MAX) {
-                portEl.value = String(mcpConnectedPort);
-              }
-              if (!manualPortLocked) {
-                candidatePorts = [mcpConnectedPort];
-                candidatePortIndex = 0;
-              }
-              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
-              updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
-              return;
-            }
-            if (msg.type === 'ping') {
-              if (mcpBridgeWs && mcpBridgeWs.readyState === 1) {
-                mcpBridgeWs.send(JSON.stringify({ type: 'pong' }));
-              }
-              return;
-            }
-            if (!msg.id || !msg.method) return;
-            var id = msg.id;
-            var method = msg.method;
-            var params = msg.params || {};
-            var run = function() {
-              if (method === 'getVariablesFromPluginUI') {
-                // Always refresh first (async API) so variables work in dynamic-page context
-                return window.refreshVariables().then(function(r) {
-                  if (r && r.success === false) return { success: false, error: r.error || 'Variables refresh failed' };
-                  if (!window.__figmaVariablesData) return { success: false, error: 'Variables not loaded' };
-                  return { success: true, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
-                });
-              }
-              if (method === 'getComponentFromPluginUI') {
-                return window.requestComponentData(params.nodeId).then(function(data) {
-                  return { success: true, component: data };
-                });
-              }
-              if (method === 'getComponentByNodeId') {
-                return window.requestComponentData(params.nodeId).then(function(data) {
-                  return { success: true, component: data };
-                });
-              }
-              if (method === 'getVariables') {
-                if (!window.__figmaVariablesReady || !window.__figmaVariablesData)
-                  return { success: false, error: 'Variables not loaded yet' };
-                return { success: true, timestamp: Date.now(), fileMetadata: {}, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections };
-              }
-              if (method === 'executeCodeViaUI') {
-                return window.executeCode(params.code, params.timeout);
-              }
-              if (method === 'updateVariable') {
-                return window.updateVariable(params.variableId, params.modeId, params.value);
-              }
-              if (method === 'createVariable') {
-                return window.createVariable(params.name, params.collectionId, params.resolvedType, params.options);
-              }
-              if (method === 'createVariableCollection') {
-                return window.createVariableCollection(params.name, params.options);
-              }
-              if (method === 'deleteVariable') {
-                return window.deleteVariable(params.variableId);
-              }
-              if (method === 'deleteVariableCollection') {
-                return window.deleteVariableCollection(params.collectionId);
-              }
-              if (method === 'renameVariable') {
-                return window.renameVariable(params.variableId, params.newName);
-              }
-              if (method === 'addMode') {
-                return window.addMode(params.collectionId, params.modeName);
-              }
-              if (method === 'renameMode') {
-                return window.renameMode(params.collectionId, params.modeId, params.newName);
-              }
-              if (method === 'refreshVariables') {
-                return window.refreshVariables();
-              }
-              if (method === 'getLocalComponents') {
-                return window.getLocalComponents(params.currentPageOnly, params.limit);
-              }
-              if (method === 'searchLibraryAssets') {
-                return window.searchLibraryAssets(params.query, params.assetTypes, params.limit, params.currentPageOnly);
-              }
-              if (method === 'getCodeConnectHints') {
-                return window.getCodeConnectHints(params.nodeIds, params.scanCurrentPage, params.maxNodes);
-              }
-              if (method === 'instantiateComponent') {
-                return window.instantiateComponent(params.componentKey, params.options);
-              }
-              if (method === 'setNodeDescription') {
-                return window.setNodeDescription(params.nodeId, params.description, params.descriptionMarkdown);
-              }
-              if (method === 'addComponentProperty') {
-                return window.addComponentProperty(params.nodeId, params.propertyName, params.type, params.defaultValue, params.options);
-              }
-              if (method === 'editComponentProperty') {
-                return window.editComponentProperty(params.nodeId, params.propertyName, params.newValue);
-              }
-              if (method === 'deleteComponentProperty') {
-                return window.deleteComponentProperty(params.nodeId, params.propertyName);
-              }
-              if (method === 'resizeNode') {
-                return window.resizeNode(params.nodeId, params.width, params.height, params.withConstraints);
-              }
-              if (method === 'moveNode') {
-                return window.moveNode(params.nodeId, params.x, params.y);
-              }
-              if (method === 'setNodeFills') {
-                return window.setNodeFills(params.nodeId, params.fills);
-              }
-              if (method === 'setNodeStrokes') {
-                return window.setNodeStrokes(params.nodeId, params.strokes, params.strokeWeight);
-              }
-              if (method === 'setNodeOpacity') {
-                return window.setNodeOpacity(params.nodeId, params.opacity);
-              }
-              if (method === 'setNodeCornerRadius') {
-                return window.setNodeCornerRadius(params.nodeId, params.radius);
-              }
-              if (method === 'cloneNode') {
-                return window.cloneNode(params.nodeId);
-              }
-              if (method === 'deleteNode') {
-                return window.deleteNode(params.nodeId);
-              }
-              if (method === 'renameNode') {
-                return window.renameNode(params.nodeId, params.newName);
-              }
-              if (method === 'setTextContent') {
-                return window.setTextContent(params.nodeId, params.text, params.options);
-              }
-              if (method === 'createChildNode') {
-                return window.createChildNode(params.parentId, params.nodeType, params.properties);
-              }
-              if (method === 'captureScreenshot') {
-                return window.captureScreenshot(params.nodeId, params.options);
-              }
-              if (method === 'setInstanceProperties') {
-                return window.setInstanceProperties(params.nodeId, params.properties);
-              }
-              if (method === 'getDocumentStructure') {
-                return window.getDocumentStructure(params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
-              }
-              if (method === 'getNodeContext') {
-                return window.getNodeContext(params.nodeId, params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
-              }
-              if (method === 'getLocalStyles') {
-                return window.getLocalStyles(params.verbosity);
-              }
-              if (method === 'getConsoleLogs') {
-                return window.getConsoleLogs(params.limit);
-              }
-              if (method === 'clearConsole') {
-                return window.clearConsole();
-              }
-              if (method === 'batchCreateVariables') {
-                return window.batchCreateVariables(params.items);
-              }
-              if (method === 'batchUpdateVariables') {
-                return window.batchUpdateVariables(params.items);
-              }
-              if (method === 'setupDesignTokens') {
-                return window.setupDesignTokens(params);
-              }
-              if (method === 'arrangeComponentSet') {
-                return window.arrangeComponentSet(params.nodeIds);
-              }
-              return { success: false, error: 'Unknown method: ' + method };
-            };
-            var wsRef = mcpBridgeWs;
-            Promise.resolve(run()).then(function(result) {
-              if (wsRef && wsRef.readyState === 1) {
-                try { wsRef.send(JSON.stringify({ id: id, result: result })); } catch (_) {}
-              }
-            }).catch(function(err) {
-              if (wsRef && wsRef.readyState === 1) {
-                try { wsRef.send(JSON.stringify({ id: id, error: err.message || String(err) })); } catch (_) {}
-              }
-            });
-          } catch (e) {
-            if (mcpBridgeWs && mcpBridgeWs.readyState === 1 && msg && msg.id) {
-              try { mcpBridgeWs.send(JSON.stringify({ id: msg.id, error: e.message || String(e) })); } catch (_) {}
-            }
-          }
-        };
+        mcpBridgeWs.onmessage = handleMcpBridgeMessage;
         mcpBridgeWs.onclose = function() {
           stopKeepAlive();
           if (mcpBridgeWs !== currentWs) return;
@@ -1266,6 +1520,7 @@
     }
 
     if (typeof WebSocket !== 'undefined') {
+      initCloudModeUi();
       initMcpHostInput();
       initMcpPortInput();
       initAdvancedPanel();
@@ -1275,7 +1530,9 @@
           DEFAULT_MCP_PORT = rememberedPort;
         }
       } catch (e) {}
-      candidatePorts = listCandidatePorts();
+      if (!isCloudMode()) {
+        candidatePorts = listCandidatePorts();
+      }
       connectMcpBridge();
       requestUiResize();
     }

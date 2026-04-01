@@ -159,14 +159,14 @@ npm run build:local
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.2.0**) |
+| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.2.2**) |
 | Ne değişti | Kök [CHANGELOG.md](CHANGELOG.md) |
 | Yayın bildirimi | GitHub [Releases](https://github.com/atezer/FMCP/releases) — depoyu izleyin (*Watch* → *Custom* → *Releases*) |
 | npm paket sürümü | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) veya `npm view @atezer/figma-mcp-bridge version` |
 
 **Repo ile kurduysanız (sil-yeniden-kur gerekmez):** `git pull` → gerekirse `npm install` → `npm run build:local` → Claude/Cursor’u yeniden başlatın. `f-mcp-plugin/` güncellendiyse Figma’da Development → ilgili plugin için manifest’i yeniden import edin veya plugin’i kapatıp açın.
 
-**NPX ile kurduysanız:** Config’te `@atezer/figma-mcp-bridge@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra genelde bir sonraki `npx` çalıştırmasında indirilir; önbellek sorununda `npx clear-npx-cache` veya sürümü sabitleyin (`@1.2.0` gibi). Değişiklik listesi için [CHANGELOG.md](CHANGELOG.md) ve [Releases](https://github.com/atezer/FMCP/releases).
+**NPX ile kurduysanız:** Config’te `@atezer/figma-mcp-bridge@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra genelde bir sonraki `npx` çalıştırmasında indirilir; önbellek sorununda `npx clear-npx-cache` veya sürümü sabitleyin (`@1.2.2` gibi). Değişiklik listesi için [CHANGELOG.md](CHANGELOG.md) ve [Releases](https://github.com/atezer/FMCP/releases).
 
 ### Plugin “ready” olmuyor
 - Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun. Plugin artık 5454–5470 aralığında dinleyen portu otomatik dener; gerekirse **Advanced** bölümünden host/port elle girin.
@@ -199,4 +199,4 @@ npm run build:local
 
 ---
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)  
-**Sürüm:** 1.2.1 (`package.json` ile uyumlu)
+**Sürüm:** 1.2.2 (`package.json` ile uyumlu)

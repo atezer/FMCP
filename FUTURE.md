@@ -1,11 +1,11 @@
 # F-MCP -- Kalan Adimlar (Future)
 
-> Son guncelleme: 1 Nisan 2026 (sabit port, graceful shutdown, paralel gorevler)
-> Paket surumu (`package.json`): **1.2.1**
+> Son guncelleme: 1 Nisan 2026 (multi-client fileKey handshake, npm 1.2.2)
+> Paket surumu (`package.json`): **1.2.2**
 
-**Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti.
+**Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **Plugin UI** `pushBridgeFileIdentity` (coklu pencere `fileKey` yarisi, **1.2.2**).
 
-**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.2.1** dogrulanabilir (yayim sonrasi).
+**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.2.2** dogrulanabilir (yayim sonrasi).
 
 ---
 
@@ -68,6 +68,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | `dist/local.js` | Tam mod: CDP, ek node araclari, tasarim sistemi onbellegi |
 | `src/core/plugin-bridge-server.ts` | **Sabit port** stratejisi, `probePort` health-check, olu port retry |
 | `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable aramasi icin) |
+| `f-mcp-plugin/ui.html` | **1.2.2:** `pushBridgeFileIdentity` — `FILE_IDENTITY` sonrasi `ready` yenileme (multi-client `fileKey`) |
 | `scripts/check-ports.sh` | 5454-5470 port tarama teshis scripti |
 
 ### Config ornekleri
@@ -75,17 +76,17 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | Dosya | Durum |
 |-------|--------|
 | `.mcp.json` | Mevcut (kok) |
-| `.cursor-plugin/plugin.json` | Mevcut; surum **1.2.0**, aciklama `docs/TOOLS.md` referansli |
+| `.cursor-plugin/plugin.json` | Mevcut; surum **1.2.2**, aciklama `docs/TOOLS.md` referansli |
 
 ---
 
 ## 3. GitHub ve dokuman tutarliligi
 
 - [x] `atezer/FMCP` `main` ile yerel push senkronu (son degisiklikler gonderildi; fork/PR kullananlar kendi dallarini birlestirmeli)
-- [x] `KURULUM.md` -- **Surum** **1.2.0** (`package.json` ile uyum)
-- [x] `.cursor-plugin/plugin.json` -- `version` **1.2.0**; aciklama `docs/TOOLS.md` ile hizali
+- [x] `KURULUM.md` -- **Surum** **1.2.2** (`package.json` ile uyum)
+- [x] `.cursor-plugin/plugin.json` -- `version` **1.2.2**; aciklama `docs/TOOLS.md` ile hizali
 - [x] Surum notlari -- kok `CHANGELOG.md`; `README.md` ve `KURULUM.md` icinde GitHub Releases / npm takibi ve guncelleme ozeti
-- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0), [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1); govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md), [`docs/releases/v1.2.1-body.md`](docs/releases/v1.2.1-body.md); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
+- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0), [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1), [v1.2.2](https://github.com/atezer/FMCP/releases/tag/v1.2.2); govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md), [`docs/releases/v1.2.1-body.md`](docs/releases/v1.2.1-body.md), [`docs/releases/v1.2.2-body.md`](docs/releases/v1.2.2-body.md); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
 
 ---
 

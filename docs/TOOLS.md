@@ -9,6 +9,13 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 | **Tam (local)** | `dist/local.js` | Tasarım sistemi önbelleği, tarayıcı/CDP tabanlı REST araçları (`figma-tools.js` ile birlikte), plugin bridge yazma araçları. `FIGMA_ACCESS_TOKEN` vb. gerekebilir. |
 | **Plugin-only** | `dist/local-plugin-only.js` | REST token yok; veri WebSocket + plugin. Önerilen zero-trust akış. |
 | **Hibrit** | `local.js` içinde `figma-tools` | Bulut REST + yerel ekran görüntüsü (`figma_capture_screenshot`) birlikte. |
+| **Hosted Worker** | `src/index.ts` → `dist/cloudflare/` | OAuth + Browser Rendering + Figma REST (`figma-tools.js`). **Cloud Mode** ile plugin relay: `fmcp_*` araçları + `fmcp_plugin_bridge_request` (tam `local-plugin-only` yüzeyi tek tek kayıtlı değil; genel RPC kaçışı). |
+
+## Hosted Worker (`FigmaMCP`) — `fmcp_*` ve relay
+
+- `fmcp_generate_pairing_code`, `fmcp_cloud_bind`, `fmcp_cloud_status`, `fmcp_cloud_disconnect`
+- `fmcp_plugin_bridge_request` — `PluginBridgeConnector` ile aynı `method` adları (ör. `getVariables`, `executeCodeViaUI`). Bağlı oturum ve plugin WebSocket gerekir.
+- Önceden var olan hosted `figma_*` araçları (konsol, navigate, REST) Cloud Mode’dan bağımsız çalışır; plugin-öncelikli işler için relay + bu araç kullanılır.
 
 ## `local.js` — `figma_*` araçları
 
