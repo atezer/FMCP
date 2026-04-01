@@ -54,6 +54,7 @@ Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanila
 ### Bridge
 
 - **`figma_search_components`:** Cikti ozetine bileşen **`key`** alani eklendi; `figma_instantiate_component(componentKey)` akisi ile uyum.
+- **`prepublishOnly`:** `npm publish` oncesi `build:local` + `validate:fmcp-skills` (Worker `build:cloudflare` ayri; npm paketi bin'leri `dist/local*.js`).
 
 ### Dokumantasyon
 
