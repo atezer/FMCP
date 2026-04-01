@@ -14,15 +14,19 @@
    - Paket adı `figma-mcp-bridge` (package.json). Bu isim npm'de başkasına aitse yayınlayamazsınız; scoped kullanın: `@kullaniciadi/figma-mcp-bridge` ve package.json içinde `"name": "@kullaniciadi/figma-mcp-bridge"` yapın. Scoped paket ilk yayında: `npm publish --access public`.
 
 3. **Build**
-   - `prepublishOnly` script'i `npm run build` çalıştırır (build:local + build:cloudflare). Sadece MCP için yayınlayacaksanız Cloudflare build'i atlayabilirsiniz:
-   - `npm run build:local` — sadece `dist/` (local + local-plugin-only) oluşturur.
-   - Yayına girecek dosyalar: `dist/`, `f-mcp-plugin/`, `README.md`, `LICENSE` (package.json `files` alanında).
+   - `prepublishOnly`, yayın öncesi `npm run build:local && npm run validate:fmcp-skills` çalıştırır (MCP bin’leri `dist/local.js` / `dist/local-plugin-only.js`). Cloudflare Worker derlemesi (`build:cloudflare`) ayrıdır; `wrangler deploy` için elle çalıştırılır.
+   - İsteğe bağlı: `npm run build:local` — yerelde `dist/` üretmek için.
+   - Yayına girecek dosyalar: `dist/`, `f-mcp-plugin/`, `README.md`, `CHANGELOG.md`, `LICENSE` (package.json `files` alanında).
 
 4. **Yayınlama**
    ```bash
-   npm run build:local    # isteğe bağlı; prepublishOnly zaten build çalıştırır
-   npm publish           # veya scoped ise: npm publish --access public
+   npm publish                    # scoped ilk kez: npm publish --access public
    ```
+   **2FA (`auth-and-writes` veya `auth-only`):** Profilde authenticator açıksa npm, yayında **TOTP** ister. Authenticator uygulamasındaki 6 haneli kodu ekleyin:
+   ```bash
+   npm publish --otp=123456       # 123456 yerine o anki kod
+   ```
+   Tarayıcıda npm’e giriş yapmak `npm publish` için yeterli değildir; terminalde `npm login` + gerekirse `--otp` gerekir.
 
 5. **Doğrulama**
    ```bash
@@ -30,7 +34,7 @@
    ```
    Sonrasında kullanıcılar `npx @atezer/figma-mcp-bridge@latest` ile kullanabilir.
 
-**Not:** Güncelleme için `npm version patch` (veya minor/major) ardından `npm publish` yeterli.
+**Not:** Güncelleme için `npm version patch` (veya minor/major) ardından `npm publish` (2FA varsa `npm publish --otp=...`) yeterli.
 
 ---
 
@@ -141,8 +145,9 @@ To enable this installation method, the maintainer needs to:
 # 1. Ensure you're logged into npm
 npm login
 
-# 2. Build and publish
+# 2. Publish (prepublishOnly runs build:local + validate:fmcp-skills)
 npm publish
+# If 2FA is enabled (e.g. auth-and-writes): npm publish --otp=<authenticator-code>
 
 # 3. Verify publication
 npm view @atezer/figma-mcp-bridge
@@ -156,7 +161,7 @@ For maintainers:
 # 1. Update version in package.json
 npm version patch  # or minor/major
 
-# 2. Build and publish
+# 2. Publish (use --otp=... if 2FA is on)
 npm publish
 
 # 3. Users with @latest will get the update automatically
