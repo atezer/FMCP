@@ -1,8 +1,11 @@
 ---
 name: code-design-mapper
-description: Figma tasarım bileşenlerini iOS, Android ve Web platformlarındaki kod bileşenlerine eşler. Bir Figma component'i birden fazla platform implementasyonuyla eşleşebilir. Enterprise plan gerektirmez, lokal çalışır. "code connect", "connect component", "map component", "bileşen eşle", "component mapping" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+description: Figma tasarım bileşenlerini iOS, Android ve Web platformlarındaki kod bileşenlerine eşler. Bir Figma component'i birden fazla platform implementasyonuyla eşleşebilir. Enterprise plan gerektirmez, lokal çalışır. "code connect", "connect component", "map component", "bileşen eşle", "component mapping", "hangi kod bu bileşene karşılık geliyor", "bileşen eşleme tablosu" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - uidev
+    - designops
 ---
 
 # Code-Design Mapper (Multi-Platform)
@@ -19,6 +22,22 @@ Figma resmi Code Connect'ten farkları:
 - Platformlar arası tutarlılık kontrolü
 
 REST API veya Figma access token gerekmez.
+
+## Code Connect Uyarlama Notu
+
+Resmi Figma MCP'de Code Connect akışı `get_code_connect_suggestions` ve `send_code_connect_mappings` araçlarıyla çalışır. **F-MCP Bridge'de bu araçlar kayıtlı değildir** (FUTURE.md'de planlı).
+
+F-MCP ile eşdeğer iş akışı:
+
+| Resmi Code Connect adımı | F-MCP Bridge karşılığı |
+|---|---|
+| Resmi: code connect suggestions | `figma_search_components` + `figma_get_component` + `figma_get_component_for_development` |
+| Bileşen–kod eşleme | AI ile `.figma-mappings.json` üretimi (bu skill'in ana akışı) |
+| Resmi: send code connect mappings | **yok** — eşleme dosyası repoda kalır, Figma'ya gönderilmez |
+
+**Resmi Code Connect `.figma.js` şablonları gerekiyorsa:** Kullanıcıya resmi Figma MCP sunucusunu etkinleştirmesi ve [topluluk figma-code-connect skill'ini](https://github.com/figma/mcp-server-guide/blob/main/skills/figma-code-connect/SKILL.md) kullanması önerilir.
+
+**Bridge'e Code Connect araçları eklendiğinde** bu bölüm ve iş akışı güncellenmeli.
 
 ## Prerequisites
 
@@ -343,3 +362,9 @@ Kullanıcı: "Android Compose component'lerini Figma ile eşle"
 ### Sorun: Legacy ve modern aynı platformda
 
 **Çözüm:** `platforms` altında ayrı entry ekle: `"web-legacy": { "framework": "jQuery", ... }`. Bir Figma component'in hem modern hem legacy web karşılığı olabilir.
+
+## Evolution Triggers
+
+- Bridge'e Code Connect araçları (suggestions / send mappings) eklenirse Code Connect uyarlama bölümü ve iş akışı güncellenmeli
+- Yeni platform desteği (Flutter, .NET MAUI) eklenirse platform profilleri genişletilmeli
+- `.figma-mappings.json` şeması değişirse çıktı formatı uyarlanmalı

@@ -1,8 +1,10 @@
 ---
 name: implement-design
-description: Figma tasarımlarını iOS (SwiftUI/UIKit), Android (Compose/XML) ve Web (React/Vue/legacy) platformlarına production-ready koda dönüştürür. Figma node ID paylaşıldığında, "implement design", "tasarımı kodla", "build this component", "bu ekranı implement et" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+description: Figma tasarımlarını iOS (SwiftUI/UIKit), Android (Compose/XML) ve Web (React/Vue/legacy) platformlarına production-ready koda dönüştürür. Figma node ID paylaşıldığında, "implement design", "tasarımı kodla", "build this component", "bu ekranı implement et", "bu tasarımı kodla", "Figma'dan kod üret" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - uidev
 ---
 
 # Implement Design (Multi-Platform)
@@ -68,11 +70,27 @@ Node ID verilmediyse dosya yapısını keşfet:
 figma_get_file_data(depth=1, verbosity="summary")
 ```
 
-### Step 4: Design Context Al
+### Step 4: Design Context Al (Chunked Metadata Stratejisi)
+
+**Büyük ekranlar için parçalı okuma stratejisi uygula:**
+
+1. **İlk çağrı — üst yapı:** `depth=1`, `verbosity="summary"` ile ekranın ana bölümlerini ve child ID'lerini al
+2. **Bölüm bazlı detay:** Her ana bölümün ID'si ile ayrı `figma_get_design_context` çağrısı (`depth=2`, `verbosity="full"`)
+3. **3 seviye sınırı:** Hiçbir çağrıda `depth` 3'ü geçmesin — timeout ve aşırı veri riski
 
 ```
 figma_get_design_context(
   nodeId="<NODE_ID>",
+  depth=1,
+  verbosity="summary"
+)
+```
+
+Sonra her child bölüm için:
+
+```
+figma_get_design_context(
+  nodeId="<CHILD_NODE_ID>",
   depth=2,
   verbosity="full",
   includeLayout=true,
@@ -92,8 +110,6 @@ Bu çağrı döner:
 - Renkler (hex → UIColor/Color/SwiftUI Color, Android Color, CSS var)
 - Component yapısı ve variant'lar
 - roleHint / suiComponent
-
-**Yanıt çok büyükse:** `depth=1` ile dene, child node'ları ayrı çek.
 
 ### Step 5: Screenshot Al
 
@@ -260,6 +276,35 @@ fun ButtonComponent(
 - Bootstrap 3/4 grid system'ine uyarla
 - IE11 / eski browser desteği için fallback'ler ekle
 
+### Step 7b: Asset İndirme
+
+Bileşende SVG/PNG asset gerekiyorsa:
+
+```
+figma_get_component_image(componentId="<COMPONENT_ID>", format="SVG")
+```
+
+veya
+
+```
+figma_get_component_image(componentId="<COMPONENT_ID>", format="PNG", scale=2)
+```
+
+İndirilen asset'leri platform dizinine yerleştir:
+- **iOS:** `Assets.xcassets/` (1x, 2x, 3x)
+- **Android:** `res/drawable-*dpi/`
+- **Web:** `public/assets/` veya `src/assets/`
+
+### Step 7c: Screenshot ile Görsel Doğrulama
+
+Her platform çıktısı sonrası Figma screenshot'ı ile karşılaştır:
+
+```
+figma_capture_screenshot(nodeId="<NODE_ID>", format="PNG", scale=2)
+```
+
+Üretilen kodu çalıştırıp ekran görüntüsünü al ve Figma screenshot'ı ile karşılaştır. Farklar varsa düzelt.
+
 ### Step 8: Design Parity Kontrolü
 
 **Önemli sınırlama:** `figma_check_design_parity` yalnızca **token değerlerini** karşılaştırır (variables + styles). Belirli bir component'in layout, spacing veya typography'sini kontrol etmez. Component-level doğrulama için screenshot karşılaştırması kullan.
@@ -368,3 +413,10 @@ Kullanıcı: "Bu login ekranını Bootstrap 4 ile implement et, nodeId: 10:5"
 ### Sorun: Legacy altyapıda modern Figma tasarımı implement edilemiyor
 
 **Çözüm:** Progressive enhancement uygula. Temel görünüm legacy CSS ile, gelişmiş özellikler (animasyon, blur, gradient) modern browser'lar için ekle.
+
+## Evolution Triggers
+
+- Bridge'e yeni design context parametreleri eklendiğinde Step 4 güncellenmeli
+- `figma_get_component_image` formatları genişletilirse asset indirme adımı güncellenmeli
+- Yeni platform desteği (Flutter, .NET MAUI, Kotlin Multiplatform) eklenirse platform çevirme bölümleri genişletilmeli
+- `outputHint` iOS/Android desteği eklenir eklenirse ilgili not kaldırılmalı

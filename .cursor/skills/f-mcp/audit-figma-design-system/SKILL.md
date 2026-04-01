@@ -1,8 +1,12 @@
 ---
 name: audit-figma-design-system
-description: Figma ekran veya bileşenini design system entegrasyonu açısından okuma-only denetler; eksik kütüphane instance'ları, yerel override'lar ve bağlanmamış token'ları raporlar. "figma ds audit", "design system audit", "kütüphane kullanımı kontrol", "token bağlı mı" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+description: Figma ekran veya bileşenini design system entegrasyonu açısından okuma-only denetler; eksik kütüphane instance'ları, yerel override'lar ve bağlanmamış token'ları raporlar. "figma ds audit", "design system audit", "kütüphane kullanımı kontrol", "token bağlı mı", "DS sağlık kontrolü", "ne kadar DS uyumlu", "tasarım durumu raporu", "ekran kalitesi" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - designer
+    - designops
+    - po
 ---
 
 # Audit Figma Design System (tuval içi)
@@ -33,6 +37,8 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 | **design-token-pipeline** | Rapor “token export / kod tarafı senkron” gerektiriyorsa |
 | **design-drift-detector** | Aynı ekranın **kod** ile parity’si de soruluyorsa (Figma audit’ten sonra) |
 | **code-design-mapper** | Eşleştirilecek bileşen aileleri netleştikten sonra mapping güncellemesi |
+| **figma-screen-analyzer** | PO/PM/SEM'e yönelik teknik olmayan ekran analizi ve DS uyum raporu |
+| **ds-impact-analysis** | Bir token/bileşen değişikliğinin etki yarıçapını ölçmek istiyorsan |
 | **ai-handoff-export** / **implement-design** | Audit “Pass” veya düzeltme sonrası koda geçiş |
 
 ### Önerilen uçtan uca akış (özet)
@@ -49,10 +55,10 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 
 ### Zincir performansı (tek oturum)
 
-- Aynı zincirde **tekrarlı** `figma_get_variables(verbosity="full")` ve `figma_get_design_context` çağrılarını azalt: önceki adımın çıktısı hâlâ geçerliyse yeniden çağırma; mümkünse `verbosity="summary"` ile başla, gerekince `full`.
+- Aynı zincirde **tekrarlı** `figma_get_variables(verbosity="full")` ve `figma_get_design_context` çağrılarını azalt: önceki adımın çıktısı hâlâ geçerliyse yeniden çağırma; mümkünse `verbosity="summary"` ile başla, orta detay için `"standard"`, tam detay için `"full"` kullan.
 - `figma_search_components`: varsayılan **`currentPageOnly=true`**; `false` yalnızca gerektiğinde (büyük dosyada timeout riski).
 
-## Output format seçimi
+## Çıktı Formatı
 
 - Kullanıcı `--json` veya JSON isterse: şema altındaki JSON’u **markdown fence’siz**, ek metin yok.
 - Sohbet ortamı veya `--markdown`: insan okunur markdown rapor.
@@ -95,14 +101,14 @@ Tek JSON obje; markdown veya ek prose yok:
       }
     }
   ],
-  "overall_correctness": "patch is correct" | "patch is incorrect",
+  "overall_correctness": "ds compliant" | "ds non-compliant",
   "overall_explanation": "1-3 cümle özet",
   "overall_confidence_score": 0.0
 }
 ```
 
-- En az bir bulgu varsa `overall_correctness`: `"patch is incorrect"`.
-- Bulgu yoksa `"patch is correct"`.
+- En az bir bulgu varsa `overall_correctness`: `"ds non-compliant"`.
+- Bulgu yoksa `"ds compliant"`.
 - `code_location.absolute_file_path`: en spesifik sorunlu node için `/figma/<fileKey>/nodes/<nodeId>`.
 - `line_range` her zaman `1`.
 
@@ -111,8 +117,50 @@ Tek JSON obje; markdown veya ek prose yok:
 - **priority:** 0 nit, 1 orta drift, 2 önemli primitive/token, 3 kütüphane/nav seviyesi kritik.
 - **confidence_score:** 0.9–1.0 doğrudan yapısal kanıt; 0.7–0.89 güçlü çıkarım; 0.5–0.69 zayıf — tercihen bulgu yazma.
 
+## Erişilebilirlik (a11y) Kontrol Noktaları
+
+Audit sırasında aşağıdaki temel a11y kontrolleri de yapılır. Ayrıntılı a11y denetimi için **figma-a11y-audit** skill'ine yönlendir.
+
+- **Renk kontrastı:** Metin/arka plan renk çiftlerinde WCAG AA minimum kontrastı (4.5:1 normal metin, 3:1 büyük metin) sağlanıyor mu?
+- **Minimum boyut:** Etkileşimli öğeler (button, input, link) iOS için 44x44pt, Android için 48x48dp minimumunu karşılıyor mu?
+- **Metin boyutu:** Body metin en az 14px (mobil) / 16px (masaüstü) mü?
+
+Bu kontroller audit raporunda `[a11y]` etiketiyle ayrı bölümde gösterilir. Detaylı denetim (fokus sırası, VoiceOver/TalkBack, ARIA) için:
+
+→ **figma-a11y-audit** skill'ini kullan.
+
+## PO/PM Executive Rapor Modu
+
+`--executive` flag veya PO/PM persona algılandığında teknik detay yerine yönetici özeti çıkar:
+
+**Executive summary formatı:**
+
+```markdown
+## DS Uyum Raporu — [Ekran Adı]
+
+- **DS Uyum Oranı:** %85 (17/20 öğe DS ile uyumlu)
+- **Risk Seviyesi:** Orta
+- **Kritik Bulgular:** 2 adet
+- **Önerilen Aksiyon Süresi:** ~2 saat
+
+### Bulgular (öncelik sırasıyla)
+1. [Yüksek] Navigation bar custom yapılmış — DS NavBar bileşeni mevcut
+2. [Orta] 3 renk token'a bağlı değil — tema değişikliğinde kopacak
+
+### Sonraki Adım
+→ apply-figma-design-system ile otomatik düzeltme önerilir
+```
+
 ## Tetik örnekleri
 
 - "Bu ekranı design system entegrasyonu için denetle"
 - "Bu board'da eksik component kullanımı var mı?"
 - "Token'lar doğru bağlı mı — audit --json ile ver"
+- "Tasarım durumu raporu ver" (PO/PM)
+- "Ne kadar DS uyumlu bu ekran?" (PO/PM)
+
+## Evolution Triggers
+
+- Bridge'e yeni DS analiz aracı eklendiğinde kanıt toplama adımları güncellenmeli
+- Yeni a11y standartları (WCAG 3.0) yayınlandığında kontrol noktaları güncellenmeli
+- PO/PM geri bildirimine göre executive summary formatı genişletilmeli

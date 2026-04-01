@@ -2,7 +2,7 @@
 
 Bu dokuman, NL-only router yerine yapilandirilmis intent + alt-tool dispatch modelini tanimlar.
 
-**Uygulama:** `dist/local-plugin-only.js` icinde `figma_use` MCP araci (structured `intent` + `params` + `context` + `dryRun`).
+**Durum (2026-04):** Bu belge **taslak / planli** bir sozlesmedir. `dist/local-plugin-only.js` icinde **`figma_use` MCP araci kayitli degildir**; ayni ihtiyaclar icin dogrudan **`figma_execute`** ve diger `figma_*` araclari kullanilir. Gelecekte `figma_use` eklendiginde bu sema uygulanabilir.
 
 ## Neden?
 

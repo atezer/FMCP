@@ -90,7 +90,7 @@ Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile y
 
 | Ne | Nerede |
 | --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.0**) |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.1**) |
 | **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
 | **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
 | **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |

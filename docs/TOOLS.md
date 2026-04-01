@@ -18,7 +18,7 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 - Tasarım sistemi önbelleği: `figma_get_design_system_summary`, `figma_search_components`, `figma_get_component_details`, `figma_get_token_values`
 - Bileşen / node yazma: `figma_instantiate_component`, `figma_set_description`, `figma_add_component_property`, `figma_edit_component_property`, `figma_delete_component_property`
 - Geometri / görünüm: `figma_resize_node`, `figma_move_node`, `figma_set_fills`, `figma_set_strokes`, `figma_clone_node`, `figma_delete_node`, `figma_rename_node`, `figma_set_text`, `figma_create_child`
-- **Parite (Agent Canvas, plugin köprüsü):** `figma_search_assets`, `figma_get_code_connect`, `figma_use` — `local-plugin-only.js` ile aynı üç araç; `fileKey` / `figmaUrl` ile çoklu dosya yönlendirmesi için `getPluginBridgeConnector` kullanılır.
+- **Agent Canvas / resmi MCP eşlemesi:** Resmi `search_design_system` ihtiyacı için `figma_search_components` + `figma_get_design_system_summary` kullanılır. **`figma_search_assets`, `figma_get_code_connect` ve `figma_use` bu `local.js` build’inde `registerTool` ile kayıtlı değildir** (gelecek veya harici entegrasyon; bkz. [FMCP_AGENT_CANVAS_COMPAT.md](./FMCP_AGENT_CANVAS_COMPAT.md)). Yapılandırılmış tuval işlemleri için `figma_execute` kullanılır. Çoklu dosya: `fileKey` / `figmaUrl` ile connector yönlendirmesi.
 
 ## `local-plugin-only.js` — `figma_*` araçları
 
@@ -29,7 +29,7 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 - Konsol: `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`
 - `figma_set_description`, `figma_get_component_image`, `figma_get_component_for_development`
 - Toplu token: `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_arrange_component_set`, `figma_check_design_parity`, `figma_get_token_browser`, `figma_get_status`
-- **Parite (Agent Canvas):** `figma_search_assets`, `figma_get_code_connect`, `figma_use` (yapılandırılmış intent; bkz. [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md))
+- **Agent Canvas notu:** `figma_search_assets`, `figma_get_code_connect`, `figma_use` **bu build’de yok**. DS keşfi: `figma_search_components` (çıktıda bileşen `key` — `figma_instantiate_component` için), `figma_get_design_system_summary`. Yapılandırılmış intent taslağı: [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md) (şu an yerine **`figma_execute`** kullanın).
 
 ## `figma-tools.js` (REST / tarayıcı tarafı)
 
@@ -37,8 +37,8 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 
 ## Şeffaf sınırlar
 
-- **Tam katalog published library bileşenleri:** Plugin API, etkin kütüphanelerdeki değişken koleksiyonlarını `figma.teamLibrary` ile listeler; tüm published component envanteri için REST veya Code Connect CLI gibi ek kanallar gerekebilir. `figma_search_assets` bileşen tarafında dosyadaki yerel / içe aktarılabilir anahtarlar üzerinden arama yapar.
-- **Code Connect dosya yolu eşlemesi:** Resmi Code Connect haritası çoğunlukla repodaki config ile yaşar. `figma_get_code_connect` node üzerindeki `documentationLinks`, açıklama ve component `key` ile **ipucu** döndürür; tam eşleme için Code Connect / REST kullanın.
+- **Published library bileşen envanteri:** Plugin API, etkin kütüphanelerdeki değişken koleksiyonlarını `figma.teamLibrary` ile listeler; tüm published component kataloğu için REST veya Code Connect CLI gibi ek kanallar gerekebilir. Bu bridge’de bileşen araması **`figma_search_components`** ile dosyadaki yerel / içe aktarılabilir bileşenler üzerinden yapılır; sonuçlarda `key` alanı `figma_instantiate_component` ile uyumludur.
+- **Code Connect dosya yolu eşlemesi:** Bridge’de ayrı bir `figma_get_code_connect` aracı yoktur. İpuçları için `figma_get_component`, `figma_get_component_for_development` veya `figma_execute` ile node üzerindeki `documentationLinks` / açıklama / `key` okunabilir; tam harita için Code Connect CLI veya Figma REST kullanın.
 
 ---
 

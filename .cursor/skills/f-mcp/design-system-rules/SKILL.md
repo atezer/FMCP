@@ -1,8 +1,11 @@
 ---
 name: design-system-rules
-description: iOS, Android ve Web platformlarına özel design system kuralları oluşturur. Figma variable ve style verilerini analiz ederek akıllı kural üretimi yapar. "create design system rules", "design system kuralları oluştur", "platform kuralları ayarla" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+description: iOS, Android ve Web platformlarına özel design system kuralları oluşturur. Figma variable ve style verilerini analiz ederek akıllı kural üretimi yapar. "create design system rules", "design system kuralları oluştur", "platform kuralları ayarla", "DS standartlarını belirle", "token kullanım kuralları" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - designops
+    - uidev
 ---
 
 # Design System Rules Generator (Multi-Platform)
@@ -364,3 +367,9 @@ Kullanıcı: "Android için Figma kurallarını oluştur, Compose kullanıyoruz"
 ### Sorun: Platform-spesifik token isimleri Figma'yla eşleşmiyor
 
 **Çözüm:** Cross-platform kuralında token eşleme tablosu oluştur. Her geliştirici kendi platformundaki karşılığı tabloda bulabilir.
+
+## Evolution Triggers
+
+- Bridge'e `create_design_system_rules` benzeri araç eklenirse şablon tabanlı üretim entegre edilmeli
+- Yeni platform veya framework desteği eklenirse kural şablonları genişletilmeli
+- Cursor/IDE kural formatı değişirse çıktı dosya yapısı uyarlanmalı

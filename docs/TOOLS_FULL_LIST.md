@@ -25,6 +25,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_get_design_system_summary` | Hızlı genel bakış (koleksiyonlar, bileşen sayıları); varsayılan currentPageOnly (büyük dosyada timeout önlemi) |
 | `figma_get_design_context` | Belirli node veya dosya için yapı + metin (TEXT `characters`); get_design_context tarzı isteklerde **token tasarruflu**, Figma token/screenshot yok |
 | `figma_get_file_data` | Dosya hiyerarşisi, sayfalar, katmanlar (depth / verbosity) |
+| `figma_list_connected_files` | Bridge’e bağlı Figma/FigJam dosyalarının listesi (`fileKey` yönlendirmesi için) |
 | `figma_get_status` | Plugin bağlantısını kontrol et |
 | `figma_get_styles` | Paint, Text, Effect stilleri |
 | `figma_get_token_browser` | Değişken + stiller hiyerarşik tarama (Token Browser) |
@@ -33,14 +34,14 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_refresh_variables` | Değişkenleri yenile |
 | `figma_rename_mode` | Modu yeniden adlandır |
 | `figma_rename_variable` | Değişkeni yeniden adlandır |
-| `figma_search_components` | İsimle bileşen arama; varsayılan currentPageOnly (büyük dosyada timeout önlemi) |
+| `figma_search_components` | İsimle bileşen arama; varsayılan currentPageOnly (büyük dosyada timeout önlemi); çıktıda **`key`** (`componentKey`) — `figma_instantiate_component` ile uyum |
 | `figma_set_description` | Component/set/style node’a description (markdown destekli) |
 | `figma_set_instance_properties` | Instance özelliklerini değiştir (TEXT, BOOLEAN, VARIANT) |
 | `figma_setup_design_tokens` | Atomik: koleksiyon + modlar + variable’lar (rollback destekli) |
 | `figma_update_variable` | Değişken değerini güncelle |
 | `figma_watch_console` | Yeni console log’ları timeout’a kadar stream et |
 
-**Toplam: 33 araç.** (Claude ile test edilmiş; plugin-only bağlantıda tamamı sorunsuz çalışır.)  
+**Toplam: 34 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.

@@ -176,7 +176,7 @@ export async function main() {
             outputHint: z.enum(["react", "tailwind"]).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+    }, async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
         try {
             const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
             if (figmaUrl && !resolvedKey) {
@@ -186,12 +186,13 @@ export async function main() {
                 };
             }
             const conn = getConnector(bridge, resolvedKey);
-            const opts = includeLayout !== undefined ||
+            const opts = excludeScreenshot !== undefined ||
+                includeLayout !== undefined ||
                 includeVisual !== undefined ||
                 includeTypography !== undefined ||
                 includeCodeReady !== undefined ||
                 outputHint !== undefined
-                ? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+                ? { excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
                 : undefined;
             const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
             const data = effectiveNodeId
@@ -453,7 +454,7 @@ export async function main() {
             const q = query.trim().toLowerCase();
             list = list.filter((c) => (c.name || "").toLowerCase().includes(q));
         }
-        const summary = list.map((c) => ({ id: c.id, name: c.name, type: c.type }));
+        const summary = list.map((c) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
         return { content: [{ type: "text", text: JSON.stringify({ success: true, components: summary }, null, 0) }] };
     });
     // ---- Node operations (short list) ----

@@ -1,8 +1,11 @@
 ---
 name: design-token-pipeline
-description: Figma variable'larını iOS (Swift Color/Font/Spacing), Android (colors.xml, dimens.xml, Compose Theme), ve Web (CSS, Tailwind, Sass, TS) formatlarında otomatik token dosyalarına dönüştürür. "export tokens", "token pipeline", "token'ları export et", "sync tokens", "generate token files" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir. Bu özellik resmi Figma plugininde yoktur.
+description: Figma variable'larını iOS (Swift Color/Font/Spacing), Android (colors.xml, dimens.xml, Compose Theme), ve Web (CSS, Tailwind, Sass, TS) formatlarında otomatik token dosyalarına dönüştürür. Ters yönde kod token dosyalarından Figma variable'ları da oluşturabilir. "export tokens", "token pipeline", "token'ları export et", "sync tokens", "generate token files", "token'ları Figma'ya yaz", "kod token'larını senkronla" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir. Bu özellik resmi Figma plugininde yoktur.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - uidev
+    - designops
 ---
 
 # Design Token Pipeline (Multi-Platform)
@@ -49,6 +52,7 @@ REST API veya Figma access token gerekmez.
 
 - **Önce:** Figma’da token’lar tutarlı bağlıysa export daha güvenilir — isteğe bağlı **audit-figma-design-system**.
 - **Sonra:** **design-drift-detector** ve **implement-design** bu dosyaları referans alır; **design-system-rules** güncellenebilir.
+- **Etki analizi:** Bir token değişikliğinin yarıçapını ölçmek istiyorsan → **ds-impact-analysis**
 - **Performans:** Aynı oturumda token verisi zaten çekildiyse (`figma_get_variables` / `figma_get_styles`) yeniden full çağırma; **audit-figma-design-system** içindeki “Zincir performansı” bölümüne uy.
 
 ## Required Workflow
@@ -67,7 +71,7 @@ figma_get_status()
 figma_get_token_browser(verbosity="full")
 ```
 
-Sonra detaylı variable verisi:
+Sonra detaylı variable verisi (`summary`: koleksiyon/sayı, `standard`: isim/tip, `full`: tüm değerler + mode'lar):
 
 ```
 figma_get_variables(verbosity="full")
@@ -473,3 +477,125 @@ Kullanıcı: "Android renk token'larını güncelle"
 ### Sorun: Figma'da mode 2'den fazla (ör. Light, Dark, HighContrast)
 
 **Çözüm:** iOS: Asset Catalog'da "High Contrast" appearance ekle. Android: her mode için ayrı resource qualifier. Web: her mode için ayrı CSS class/data-attribute.
+
+---
+
+## Reverse Flow: Kod → Figma Variable
+
+Mevcut akış yalnızca **Figma → Kod** yönünde çalışır. Bu bölüm ters yönü tanımlar: kod tabanındaki token tanımlarını Figma variable'larına yazmak.
+
+### Ne zaman kullanılır
+
+- Kod tabanında token'lar tanımlı ama Figma'da henüz variable yok
+- Kod tabanındaki token güncellemelerini Figma'ya yansıtmak
+- JSON contract/W3C Design Token dosyasını Figma'ya aktarmak
+
+### Direction parametresi
+
+- `--direction=figma-to-code` — Mevcut varsayılan akış (Figma → kod dosyaları)
+- `--direction=code-to-figma` — Reverse flow (kod → Figma variable'ları)
+
+### Reverse Flow Adımları
+
+#### R-Step 1: Kaynak token dosyasını oku
+
+Desteklenen kaynak formatları:
+
+| Format | Dosya | Ayrıştırma |
+|---|---|---|
+| CSS Custom Properties | `tokens.css` | `--token-name: value` ayrıştır |
+| Tailwind config | `tailwind.config.js` | `theme.extend.*` objelerini çıkar |
+| JSON (W3C Design Tokens) | `tokens.json` | `$value`, `$type` alanları |
+| Swift Color extension | `Colors.swift` | Renk tanımlarını ayrıştır |
+| Android colors.xml | `colors.xml` | `<color name="">` elementleri |
+| Sass variables | `_tokens.scss` | `$token-name: value` ayrıştır |
+| TypeScript constants | `tokens.ts` | `export const` objelerini çıkar |
+
+#### R-Step 2: Token'ları kategorize et
+
+Kaynak dosyadan çıkarılan her token'ı sınıfla:
+
+- **COLOR** — hex, rgb, hsl değerleri
+- **FLOAT** — spacing, radius, font-size (px/dp/pt → sayısal değer)
+- **STRING** — font family, font weight isimleri
+
+#### R-Step 3: Mevcut Figma variable'larla karşılaştır
+
+```
+figma_get_variables(verbosity="full")
+```
+
+- Aynı isimde variable varsa: değer farkı kontrol et → güncelle veya atla
+- Yeni token varsa: oluşturulacaklar listesi
+- Figma'da olup kodda olmayan: rapor et (silme önerisi)
+
+#### R-Step 4: Collection ve variable oluştur/güncelle
+
+Yeni collection gerekiyorsa:
+```
+figma_create_variable_collection(name="Design Tokens", modes=["Light", "Dark"])
+```
+
+Toplu oluşturma (tercih):
+```
+figma_batch_create_variables(
+  collectionId="<id>",
+  variables=[
+    { name: "color/primary", type: "COLOR", values: { "Light": "#2563EB", "Dark": "#60A5FA" } },
+    { name: "spacing/md", type: "FLOAT", values: { "Light": 16 } },
+    ...
+  ]
+)
+```
+
+Güncelleme:
+```
+figma_batch_update_variables(
+  updates=[
+    { variableId: "<id>", values: { "Light": "#3B82F6" } },
+    ...
+  ]
+)
+```
+
+#### R-Step 5: Scope ayarla
+
+Her variable için uygun scope'u ayarla (figma_execute içinde):
+
+```js
+const variable = await figma.variables.getVariableByIdAsync("<id>");
+// Renk token'ları
+if (variable.resolvedType === "COLOR") {
+  variable.scopes = variable.name.includes("text")
+    ? ["TEXT_FILL"]
+    : ["FRAME_FILL", "SHAPE_FILL"];
+}
+// Spacing token'ları
+if (variable.resolvedType === "FLOAT" && variable.name.includes("spacing")) {
+  variable.scopes = ["GAP", "WIDTH_HEIGHT"];
+}
+return { id: variable.id, scopes: variable.scopes };
+```
+
+#### R-Step 6: Doğrulama
+
+Oluşturulan variable'ları kontrol et:
+
+```
+figma_get_variables(verbosity="summary")
+```
+
+Sayı ve isimlerin kaynak ile eşleştiğini doğrula.
+
+### Çıktı
+
+- Oluşturulan variable sayısı ve listesi
+- Güncellenen variable sayısı ve fark özeti
+- Atlanılan (zaten güncel) token sayısı
+- Figma'da olup kodda olmayan token raporu
+
+## Evolution Triggers
+
+- Bridge'e yeni token araçları eklendiğinde (ör. toplu token import aracı) ilgili adımlar güncellenmeli
+- W3C Design Tokens spec güncellendiğinde JSON formatı uyarlanmalı
+- Yeni platform formatları (Flutter, .NET MAUI vb.) desteklendiğinde çıktı tablosu genişletilmeli

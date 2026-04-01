@@ -123,6 +123,8 @@ export class PluginBridgeConnector {
     }
     async getDocumentStructure(depth, verbosity, opts) {
         const params = { depth: depth ?? 1, verbosity: verbosity ?? "summary" };
+        if (opts?.excludeScreenshot !== undefined)
+            params.excludeScreenshot = opts.excludeScreenshot;
         if (opts?.includeLayout !== undefined)
             params.includeLayout = opts.includeLayout;
         if (opts?.includeVisual !== undefined)
@@ -141,6 +143,8 @@ export class PluginBridgeConnector {
             depth: depth ?? 2,
             verbosity: verbosity ?? "standard",
         };
+        if (opts?.excludeScreenshot !== undefined)
+            params.excludeScreenshot = opts.excludeScreenshot;
         if (opts?.includeLayout !== undefined)
             params.includeLayout = opts.includeLayout;
         if (opts?.includeVisual !== undefined)

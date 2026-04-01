@@ -195,6 +195,7 @@ export class PluginBridgeConnector {
 		depth?: number,
 		verbosity?: string,
 		opts?: {
+			excludeScreenshot?: boolean;
 			includeLayout?: boolean;
 			includeVisual?: boolean;
 			includeTypography?: boolean;
@@ -203,6 +204,7 @@ export class PluginBridgeConnector {
 		}
 	): Promise<any> {
 		const params: Record<string, unknown> = { depth: depth ?? 1, verbosity: verbosity ?? "summary" };
+		if (opts?.excludeScreenshot !== undefined) params.excludeScreenshot = opts.excludeScreenshot;
 		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;
 		if (opts?.includeVisual !== undefined) params.includeVisual = opts.includeVisual;
 		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;
@@ -216,6 +218,7 @@ export class PluginBridgeConnector {
 		depth?: number,
 		verbosity?: string,
 		opts?: {
+			excludeScreenshot?: boolean;
 			includeLayout?: boolean;
 			includeVisual?: boolean;
 			includeTypography?: boolean;
@@ -228,6 +231,7 @@ export class PluginBridgeConnector {
 			depth: depth ?? 2,
 			verbosity: verbosity ?? "standard",
 		};
+		if (opts?.excludeScreenshot !== undefined) params.excludeScreenshot = opts.excludeScreenshot;
 		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;
 		if (opts?.includeVisual !== undefined) params.includeVisual = opts.includeVisual;
 		if (opts?.includeTypography !== undefined) params.includeTypography = opts.includeTypography;

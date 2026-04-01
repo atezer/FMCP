@@ -1,8 +1,11 @@
 ---
 name: ai-handoff-export
-description: Figma tasarım verisini AI'nın kod üretimi için kullanabileceği tek bir handoff paketine dönüştürür (HANDOFF şablonu + JSON manifest). Node kimlikleri, design context özeti, token özeti, ekran görüntüsü referansları ve opsiyonel Code Connect haritası üretir. "AI handoff", "handoff dosyası", "handoff export", "teslimat paketi", "figma handoff", "koda teslim özeti", "design handoff oluştur" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+description: Figma tasarım verisini AI'nın kod üretimi için kullanabileceği tek bir handoff paketine dönüştürür (HANDOFF şablonu + JSON manifest). Node kimlikleri, design context özeti, token özeti, ekran görüntüsü referansları ve opsiyonel Code Connect haritası üretir. PO/PM için executive summary da içerir. "AI handoff", "handoff dosyası", "handoff export", "teslimat paketi", "figma handoff", "koda teslim özeti", "design handoff oluştur", "handoff al", "implementasyon paketi" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - uidev
+    - po
 ---
 
 # AI Handoff Export
@@ -20,12 +23,13 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 
 - **Önce:** Tuval DS uyumu için isteğe bağlı **audit-figma-design-system** / **apply-figma-design-system**; token isimleri için **design-token-pipeline** ile uyumlu manifest.
 - **Sonra:** **implement-design** ana tüketici; **code-design-mapper** özetini manifest’e işleyebilirsin.
+- **PO/PM akışı:** Teknik olmayan ekran özeti için **figma-screen-analyzer**; değişiklik etkisi için **ds-impact-analysis**
 
 ## Required Workflow
 
-### Step 1: Bağlantıyı doğrula
+### Step 1: Plugin Bağlantısını Doğrula
 
-`figma_get_status`
+`figma_get_status()`
 
 ### Step 2: Hedef node'ları netleştir
 
@@ -57,11 +61,58 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 1. `HANDOFF_TEMPLATE.md` içini doldur.
 2. `docs/handoff.manifest.schema.json` uyumlu `handoff.manifest.json` çıktısı oluştur.
 
-### Step 7: Self-healing sonucunu işle
+### Step 7: Platform Hedefi Belirle
+
+Handoff manifest'ine hedef platform(lar) eklenir:
+
+```json
+{
+  "targetPlatforms": ["ios", "android", "web"],
+  "platformDetails": {
+    "ios": { "framework": "SwiftUI", "minVersion": "16.0" },
+    "android": { "framework": "Compose", "minApiLevel": 24 },
+    "web": { "framework": "React", "styling": "Tailwind" }
+  }
+}
+```
+
+Platform bilgisi kullanıcıdan alınır veya proje yapısından çıkarılır.
+
+### Step 8: Self-healing sonucunu işle
 
 - İterasyon sayısını kaydet (`0-3`).
 - Açık kalan sapmaları `openIssues` alanına yaz.
 - Çözülemeyen fark varsa `manualReviewNeeded=true`.
+
+### Step 9: Executive Summary (PO/PM Modu)
+
+PO/PM persona algılandığında veya `--executive` flag ile teknik handoff'un yanında yönetici özeti eklenir:
+
+```markdown
+## Executive Summary — [Ekran Adı]
+
+### Genel Bakış
+- **Ekran:** Login Screen
+- **DS Uyum:** %92 (23/25 öğe)
+- **Tahmini İmplementasyon Süresi:** iOS: 4s, Android: 4s, Web: 3s
+- **Risk Seviyesi:** Düşük
+
+### Bileşen Dağılımı
+- DS instance: 18 (hazır)
+- Custom öğe: 2 (oluşturulması gerekli)
+- Token bağlı: 23/25
+
+### Platform Hazırlık Durumu
+| Platform | Token | Bileşen | Hazırlık |
+|---|---|---|---|
+| iOS | ✓ | %90 | Hazır |
+| Android | ✓ | %85 | Eksik: SegmentedControl |
+| Web | ✓ | %95 | Hazır |
+
+### Riskler ve Açık Noktalar
+1. Custom illustration asset'i henüz export edilmedi
+2. Animasyon spesifikasyonu eksik
+```
 
 ## Rules
 
@@ -69,3 +120,11 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 - "Yeni component oluştur" kararı vermeden önce component araması yap.
 - Handoff dosyasında varsayımları açıkça "riskler" altında belirt.
 - Code Connect verisi yoksa alanı boş bırak; uydurma map yazma.
+- PO/PM persona'sı için executive summary'yi her zaman ekle.
+- Platform hedefini manifest'e her zaman yaz.
+
+## Evolution Triggers
+
+- Bridge'e yeni metadata araçları eklendiğinde handoff paketi zenginleştirilebilir
+- Yeni platform desteği (Flutter, .NET MAUI) eklenirse platformDetails şeması genişletilmeli
+- PO/PM geri bildirimine göre executive summary formatı güncellenmeli

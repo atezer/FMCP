@@ -5,7 +5,7 @@ Kurumsal tasarim sistemleri icin Cursor / Claude skill’leri ve MCP araclari te
 ## 1. Temel akis (tasarim → kod)
 
 1. Baglanti: `figma_get_status` → plugin `ready`.
-2. Baglam: `figma_get_design_context` veya `figma_use` intent `handoff_export` ([FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md)).
+2. Baglam: `figma_get_design_context` veya handoff icin `figma_execute` / ilgili `figma_*` araclari (`figma_use` taslagi: [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md) — bridge'de kayitli degil).
 3. Teslim: [ai-handoff-export](../.cursor/skills/f-mcp/ai-handoff-export/SKILL.md) — `HANDOFF_TEMPLATE.md` + `handoff.manifest.json`.
 4. Kod: [implement-design](../.cursor/skills/f-mcp/implement-design/SKILL.md) (platform secimi).
 
@@ -17,7 +17,7 @@ Kurumsal tasarim sistemleri icin Cursor / Claude skill’leri ve MCP araclari te
 ## 3. Bilesen eslemesi
 
 - Figma ↔ repo bileseni: [code-design-mapper](../.cursor/skills/f-mcp/code-design-mapper/SKILL.md).
-- Node bazli baglantilar: `figma_get_code_connect` + (gerekirse) Code Connect CLI / resmi MCP.
+- Node bazli baglantilar: `figma_get_component` / `figma_execute` (documentationLinks) + (gerekirse) Code Connect CLI / resmi MCP (`figma_get_code_connect` bridge'de yok).
 
 ## 4. Tasarim sistemi kurallari
 
