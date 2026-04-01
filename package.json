@@ -1,6 +1,6 @@
 {
 	"name": "@atezer/figma-mcp-bridge",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
 	"main": "dist/local.js",
@@ -36,7 +36,8 @@
 		"cf-typegen": "wrangler types",
 		"type-check": "tsc --noEmit",
 		"validate:fmcp-skills": "node scripts/validate-fmcp-skills-tools.mjs",
-		"check-ports": "bash scripts/check-ports.sh"
+		"check-ports": "bash scripts/check-ports.sh",
+		"smoke:cloud": "node scripts/smoke-fmcp-cloud.mjs"
 	},
 	"keywords": [
 		"mcp",

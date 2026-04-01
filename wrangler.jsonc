@@ -13,6 +13,10 @@
 		{
 			"new_sqlite_classes": ["FigmaMCP"],
 			"tag": "v1"
+		},
+		{
+			"new_sqlite_classes": ["FmcpRelaySession"],
+			"tag": "v2-fmcp-relay"
 		}
 	],
 	"durable_objects": {
@@ -20,6 +24,10 @@
 			{
 				"class_name": "FigmaMCP",
 				"name": "MCP_OBJECT"
+			},
+			{
+				"class_name": "FmcpRelaySession",
+				"name": "FMCP_RELAY"
 			}
 		]
 	},
