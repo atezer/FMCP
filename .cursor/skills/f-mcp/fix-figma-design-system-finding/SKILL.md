@@ -1,8 +1,11 @@
 ---
 name: fix-figma-design-system-finding
-description: audit-figma-design-system ile tespit edilen tek bir design system bulgusunu Figma tuvalinde dar kapsamda düzeltir (swap, token bağlama, variant hizalama). F-MCP Bridge ve figma_execute gerektirir. "tek bulguyu düzelt", "ds finding fix", "şu node'u kütüphaneye bağla" ifadeleriyle tetiklenir.
+description: audit-figma-design-system ile tespit edilen tek bir design system bulgusunu Figma tuvalinde dar kapsamda düzeltir (swap, token bağlama, variant hizalama). F-MCP Bridge ve figma_execute gerektirir. "tek bulguyu düzelt", "ds finding fix", "şu node'u kütüphaneye bağla", "bileşeni değiştir", "token bağla" ifadeleriyle tetiklenir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - designer
+    - designops
 ---
 
 # Fix Figma Design System Finding (dar yazma)
@@ -49,14 +52,15 @@ Seçilen bulgu çözülene, **blocked** veya **needs-follow-up** raporlanana kad
 
 ## Required Workflow
 
-1. **Normalize:** `fileKey`, `nodeId`, bulgu başlığı ve gerekçe.
-2. **Uyumluluk (belirsiz replacement’ta):** Yazmadan önce hangi component/variant, override’lar, layout sözleşmesi — sonuç `safe-to-apply` \| `blocked` \| `needs-human-choice`. `blocked` / `needs-human-choice` ise yazma; durumu bildir.
-3. **Minimal kanıt:** `figma_capture_screenshot`; yapı için `figma_get_design_context` veya `figma_get_file_data` (dar kapsam); token bulgusuysa `figma_get_variables` / `figma_get_styles`; gerekirse `figma_search_components`.
-4. **Remediasyon modu (tek seç):** `swap-instance` \| `compose-from-primitives` \| `bind-tokens` \| `align-variant` \| `blocked`. En küçük yeterli değişiklik.
-5. **Yedek:** Yıkıcı düzenlemeden önce yalnızca etkilenen alt ağacı veya minimal üst section’ı çoğalt; net isimlendir (`Backup - Fix finding …`). Mümkünse ayrı `figma_execute` çağrısı; dönen node id’yi not et.
-6. **Uygula:** `figma_execute` ile adım adım; mümkünse `swapComponent` benzeri koruyucu yollar; karşılaştırmalı rebuild gerekiyorsa orijinalin yanında inşa et.
-7. **Doğrula:** Bulgunun özellikle çözüldüğünü screenshot ve yapı ile kanıtla; global pattern dokunduysa genişlet.
-8. **İsteğe bağlı:** Regresyon için **audit-figma-design-system** ile aynı kapsamı yeniden çalıştır (özellikle çok adımlı fix sonrası).
+1. **Plugin bağlantısını doğrula:** `figma_get_status()` — bağlantı yoksa devam etme.
+3. **Normalize:** `fileKey`, `nodeId`, bulgu başlığı ve gerekçe.
+3. **Uyumluluk (belirsiz replacement’ta):** Yazmadan önce hangi component/variant, override’lar, layout sözleşmesi — sonuç `safe-to-apply` \| `blocked` \| `needs-human-choice`. `blocked` / `needs-human-choice` ise yazma; durumu bildir.
+4. **Minimal kanıt:** `figma_capture_screenshot`; yapı için `figma_get_design_context` veya `figma_get_file_data` (dar kapsam); token bulgusuysa `figma_get_variables` / `figma_get_styles`; gerekirse `figma_search_components`.
+5. **Remediasyon modu (tek seç):** `swap-instance` \| `compose-from-primitives` \| `bind-tokens` \| `align-variant` \| `blocked`. En küçük yeterli değişiklik.
+6. **Yedek:** Yıkıcı düzenlemeden önce yalnızca etkilenen alt ağacı veya minimal üst section’ı çoğalt; net isimlendir (`Backup - Fix finding …`). Mümkünse ayrı `figma_execute` çağrısı; dönen node id’yi not et.
+7. **Uygula:** `figma_execute` ile adım adım; mümkünse `swapComponent` benzeri koruyucu yollar; karşılaştırmalı rebuild gerekiyorsa orijinalin yanında inşa et.
+8. **Doğrula:** Bulgunun özellikle çözüldüğünü screenshot ve yapı ile kanıtla; global pattern dokunduysa genişlet.
+9. **İsteğe bağlı:** Regresyon için **audit-figma-design-system** ile aynı kapsamı yeniden çalıştır (özellikle çok adımlı fix sonrası).
 
 ## Yazma kuralları
 
@@ -70,3 +74,9 @@ Seçilen bulgu çözülene, **blocked** veya **needs-follow-up** raporlanana kad
 - **Finding fixed:** Ne değişti, hangi node.
 - **Validation:** Orijinal şikayetin giderildiği kanıtı.
 - **Blocked / Follow-up:** Varsa kısa.
+
+## Evolution Triggers
+
+- Bridge'e yeni `figma_execute` kalıpları eklendiğinde remediasyon modları güncellenmeli
+- Audit bulgu formatı değişirse girdi normalize adımı uyarlanmalı
+- Batch düzeltme desteği eklenirse tek/toplu mod ayrımı yapılmalı

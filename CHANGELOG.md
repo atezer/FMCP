@@ -49,6 +49,18 @@ Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanila
 
 - Sonraki surum: `CHANGELOG.md` guncelle - `docs/releases/vX.Y.Z-body.md` olustur - [RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `gh release edit` ile GitHub Release ac veya guncelle.
 
+## [1.2.1] - 2026-04-01
+
+### Bridge
+
+- **`figma_search_components`:** Cikti ozetine bileşen **`key`** alani eklendi; `figma_instantiate_component(componentKey)` akisi ile uyum.
+
+### Dokumantasyon
+
+- **`docs/TOOLS.md`**, **`docs/TOOLS_FULL_LIST.md`:** `dist/local-plugin-only.js` ile parite; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu build'de kayitli degildir notu; `figma_search_components` + `key` aciklamasi.
+- **`docs/FMCP_AGENT_CANVAS_COMPAT.md`:** Bolum 3 guncel envanter / planlanan ayrimi.
+- **`docs/FIGMA_USE_STRUCTURED_INTENT.md`:** `figma_use` taslak; canli araç `figma_execute` notu.
+
 ## [1.2.0] - 2026-03-27
 
 ### Dokumantasyon

@@ -80,6 +80,7 @@ export declare class PluginBridgeConnector {
     }): Promise<any>;
     setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<any>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {
+        excludeScreenshot?: boolean;
         includeLayout?: boolean;
         includeVisual?: boolean;
         includeTypography?: boolean;
@@ -87,6 +88,7 @@ export declare class PluginBridgeConnector {
         outputHint?: "react" | "tailwind";
     }): Promise<any>;
     getNodeContext(nodeId: string, depth?: number, verbosity?: string, opts?: {
+        excludeScreenshot?: boolean;
         includeLayout?: boolean;
         includeVisual?: boolean;
         includeTypography?: boolean;

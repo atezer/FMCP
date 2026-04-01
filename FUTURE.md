@@ -1,11 +1,11 @@
 # F-MCP -- Kalan Adimlar (Future)
 
 > Son guncelleme: 1 Nisan 2026 (sabit port, graceful shutdown, paralel gorevler)
-> Paket surumu (`package.json`): **1.2.0**
+> Paket surumu (`package.json`): **1.2.1**
 
 **Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti.
 
-**Kod taramasi ozeti:** `npm view @atezer/figma-mcp-bridge version` -> **1.2.0** (npm yayini dogrulandi). `dist/local-plugin-only.js` / `dist/local.js` icinde `figma_search_assets`, `figma_get_code_connect`, `figma_use` stringleri **yok** -- `docs/TOOLS.md` Agent Canvas paritesi bu build ile uyumsuz; envanter duzeltmesi acik (S7).
+**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.2.1** dogrulanabilir (yayim sonrasi).
 
 ---
 
@@ -27,16 +27,23 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 
 | Dosya | Durum |
 |-------|--------|
-| `.cursor/skills/f-mcp/implement-design/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/generate-figma-screen/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/generate-figma-library/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/audit-figma-design-system/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/fix-figma-design-system-finding/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/apply-figma-design-system/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/design-token-pipeline/SKILL.md` | Mevcut |
 | `.cursor/skills/f-mcp/code-design-mapper/SKILL.md` | Mevcut |
 | `.cursor/skills/f-mcp/design-system-rules/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/design-token-pipeline/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/design-drift-detector/SKILL.md` | Mevcut |
 | `.cursor/skills/f-mcp/ai-handoff-export/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/audit-figma-design-system/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/fix-figma-design-system-finding/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/apply-figma-design-system/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/implement-design/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/design-drift-detector/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/visual-qa-compare/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/figma-a11y-audit/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/figma-screen-analyzer/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/ds-impact-analysis/SKILL.md` | Mevcut (yeni) |
 
 ### Dokumanlar
 
@@ -116,7 +123,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 
 - [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) -- repo ayarlari (UI)
 - [x] Kok `README.md` mevcut ve guncel; `docs/` baglanti tablosu var
-- [ ] `docs/TOOLS.md` -- **Agent Canvas** bolumundeki `figma_search_assets` / `figma_get_code_connect` / `figma_use` / `local-plugin-only` paritesi; mevcut `dist/` ile hizala veya "planlanan / kaldirildi" notu dus
+- [x] `docs/TOOLS.md` -- **Agent Canvas** / `local-plugin-only` paritesi (2026-04): `figma_search_assets` / `figma_get_code_connect` / `figma_use` kayitli degildir notu; `TOOLS_FULL_LIST.md`, `FMCP_AGENT_CANVAS_COMPAT.md`, `FIGMA_USE_STRUCTURED_INTENT.md` ile hizali
 - [ ] Ingilizce README alternatifi veya cift dil destegi degerlendir
 - [ ] Badge'ler (npm version, license, stars)
 

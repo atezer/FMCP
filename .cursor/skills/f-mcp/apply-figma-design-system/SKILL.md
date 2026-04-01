@@ -1,8 +1,11 @@
 ---
 name: apply-figma-design-system
-description: Mevcut Figma ekranını yayınlanmış design system bileşenleri ve token'larıyla çok bölümlü şekilde hizalar; yedek, envanter, bölüm bölüm swap/compose. "ekranı ds'ye bağla", "kütüphaneye geçir", "design system apply" ifadeleriyle tetiklenir. F-MCP Bridge ve figma_execute gerektirir.
+description: Mevcut Figma ekranını yayınlanmış design system bileşenleri ve token'larıyla çok bölümlü şekilde hizalar; yedek, envanter, bölüm bölüm swap/compose. "ekranı ds'ye bağla", "kütüphaneye geçir", "design system apply", "tasarım sistemi uygula", "bileşenleri hizala", "token'ları bağla" ifadeleriyle tetiklenir. F-MCP Bridge ve figma_execute gerektirir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - designer
+    - designops
 ---
 
 # Apply Figma Design System (geniş yazma)
@@ -51,15 +54,16 @@ Birkaç DS butonu içerdi diye bölüm “bağlı” sayılmaz. Bu skill **çok 
 
 ## Required Workflow (özet)
 
-1. **Kapsam:** Gerekirse audit; tek bulguya düşerse fix skill’e yönlendir.
-2. **Durum yakala:** `figma_get_file_data` (gerekirse düşük `depth`) + `figma_capture_screenshot`; isteğe bağlı `figma_get_design_context` (Code Connect uyarısı varsa araç talimatına uy).
-3. **Yedek:** Hedef frame/page çoğalt, sağa `Backup - …` adıyla koy; mümkünse ayrı `figma_execute`, oluşan id’yi dön.
-4. **Envanter:** `figma_execute` ile section instance’ları, `mainComponent`, remote/local, iç içe published kullanımı topla (Edenspiekermann örnek pattern’i referans: instance listesi JSON ile kısa dönüş).
-5. **Harita:** Önce dosya içi kanıt ekranları, sonra gerekirse `figma_search_components`. Variant seçimini orijinal görsel/ipuçlarına göre yap; varsayılan variant’a sessizce düşme.
-6. **Strateji:** Bölüm başına `exact-swap` vs `compose-from-primitives` vs `blocked` karar ver.
-7. **Uygula:** **Bölüm bölüm**, tek script ile tüm ekranı yıkma; auto-layout olmayan üstlerde x/y ve boyutları açıkça koru; drift uyarısı ver.
-8. **Import hata:** Dur; alakasız edit yapıp “bağlandı” deme; key doğrula, tekrar dene; olmazsa `blocked` raporla.
-9. **Doğrula:** Her bölüm sonrası screenshot; sonda tam ekran.
+1. **Plugin bağlantısını doğrula:** `figma_get_status()` — bağlantı yoksa devam etme.
+3. **Kapsam:** Gerekirse audit; tek bulguya düşerse fix skill’e yönlendir.
+3. **Durum yakala:** `figma_get_file_data` (gerekirse düşük `depth`) + `figma_capture_screenshot`; isteğe bağlı `figma_get_design_context` (Code Connect uyarısı varsa araç talimatına uy).
+4. **Yedek:** Hedef frame/page çoğalt, sağa `Backup - …` adıyla koy; mümkünse ayrı `figma_execute`, oluşan id’yi dön.
+5. **Envanter:** `figma_execute` ile section instance’ları, `mainComponent`, remote/local, iç içe published kullanımı topla (Edenspiekermann örnek pattern’i referans: instance listesi JSON ile kısa dönüş).
+6. **Harita:** Önce dosya içi kanıt ekranları, sonra gerekirse `figma_search_components`. Variant seçimini orijinal görsel/ipuçlarına göre yap; varsayılan variant’a sessizce düşme.
+7. **Strateji:** Bölüm başına `exact-swap` vs `compose-from-primitives` vs `blocked` karar ver.
+8. **Uygula:** **Bölüm bölüm**, tek script ile tüm ekranı yıkma; auto-layout olmayan üstlerde x/y ve boyutları açıkça koru; drift uyarısı ver.
+9. **Import hata:** Dur; alakasız edit yapıp “bağlandı” deme; key doğrula, tekrar dene; olmazsa `blocked` raporla.
+10. **Doğrula:** Her bölüm sonrası screenshot; sonda tam ekran.
 
 ## Import / layout kuralları
 
@@ -74,3 +78,9 @@ Birkaç DS butonu içerdi diye bölüm “bağlı” sayılmaz. Bu skill **çok 
 
 - Okuma-only ön kontrol: **audit-figma-design-system**
 - Tek bulgu: **fix-figma-design-system-finding**
+
+## Evolution Triggers
+
+- Bridge'e yeni swap/compose araçları eklendiğinde reconcile stratejisi güncellenmeli
+- `figma_search_components` kapasitesi değişirse bileşen eşleme adımları uyarlanmalı
+- Yeni DS standartları (multi-brand, white-label) desteklenirse iş akışı genişletilmeli

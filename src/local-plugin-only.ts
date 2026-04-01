@@ -202,7 +202,7 @@ export async function main() {
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ figmaUrl, fileKey, nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+		async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
 			try {
 				const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
 				if (figmaUrl && !resolvedKey) {
@@ -211,16 +211,17 @@ export async function main() {
 						isError: true,
 					};
 				}
-				const conn = getConnector(bridge, resolvedKey);
-				const opts =
-					includeLayout !== undefined ||
-					includeVisual !== undefined ||
-					includeTypography !== undefined ||
-					includeCodeReady !== undefined ||
-					outputHint !== undefined
-						? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
-						: undefined;
-				const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
+			const conn = getConnector(bridge, resolvedKey);
+			const opts =
+				excludeScreenshot !== undefined ||
+				includeLayout !== undefined ||
+				includeVisual !== undefined ||
+				includeTypography !== undefined ||
+				includeCodeReady !== undefined ||
+				outputHint !== undefined
+					? { excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+					: undefined;
+			const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
 				const data = effectiveNodeId
 					? await conn.getNodeContext(effectiveNodeId, depth, verbosity, opts)
 					: await conn.getDocumentStructure(depth, verbosity, opts);
@@ -543,7 +544,7 @@ export async function main() {
 				const q = query.trim().toLowerCase();
 				list = list.filter((c: any) => (c.name || "").toLowerCase().includes(q));
 			}
-			const summary = list.map((c: any) => ({ id: c.id, name: c.name, type: c.type }));
+			const summary = list.map((c: any) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, components: summary }, null, 0) }] };
 		}
 	);

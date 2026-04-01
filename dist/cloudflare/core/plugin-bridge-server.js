@@ -115,7 +115,8 @@ export class PluginBridgeServer {
                     process.exit(1);
                     return;
                 }
-                this.probePort(port, bindHost).then((status) => {
+                const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
+                this.probePort(port, probeHost).then((status) => {
                     if (status === "fmcp") {
                         console.error(`\n⚠️  Port ${port} is already in use by another F-MCP bridge instance.\n` +
                             `   One bridge is enough for all Figma/FigJam windows.\n` +

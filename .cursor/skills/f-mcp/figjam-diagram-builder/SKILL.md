@@ -1,8 +1,12 @@
 ---
 name: figjam-diagram-builder
-description: F-MCP Bridge ile FigJam üzerinde güvenli ve ölçekli diyagram/süreç şeması üretir. 1MB tool-result taşmalarını önlemek için kısa dönüş, adımlı üretim ve deterministik koordinat stratejisi uygular. "figjam çiz", "swimlane oluştur", "figjam diyagram", "process map", "flowchart figjam" ifadeleriyle tetiklenir.
+description: F-MCP Bridge ile FigJam üzerinde güvenli ve ölçekli diyagram/süreç şeması üretir. 1MB tool-result taşmalarını önlemek için kısa dönüş, adımlı üretim ve deterministik koordinat stratejisi uygular. "figjam çiz", "swimlane oluştur", "figjam diyagram", "process map", "flowchart figjam", "akış şeması çiz", "süreç haritası" ifadeleriyle tetiklenir.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - designer
+    - designops
+    - po
 ---
 
 # FigJam Diagram Builder (FMCP Safe Mode)
@@ -28,7 +32,7 @@ Skill, her adıma kısa ve güvenli dönüş zorunluluğu getirir; node/connecto
 
 ## Required Workflow
 
-### Step 1: Bağlantıyı doğrula
+### Step 1: Plugin Bağlantısını Doğrula
 
 ```txt
 figma_get_status()
@@ -122,3 +126,9 @@ Her `figma_execute` öncesi kontrol et:
 ### Sorun: Bağlantı koptu
 
 Çözüm: `figma_get_status()` ile kontrol et, plugin'i ilgili dosyada yeniden başlat, `figma_list_connected_files()` ile doğrula.
+
+## Evolution Triggers
+
+- Bridge'e FigJam-spesifik araçlar eklenirse (ör. connector oluşturma aracı) adımlı üretim stratejisi basitleştirilebilir
+- `figma_execute` boyut/payload limiti değişirse kısa dönüş kuralları uyarlanmalı
+- Yeni diyagram türleri (Gantt, mindmap) talep edilirse koordinat şablonları eklenmeli

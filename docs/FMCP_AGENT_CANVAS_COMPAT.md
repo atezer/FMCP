@@ -22,13 +22,13 @@ Sonuc:
 
 ## 3) Bridge API — guncel durum (FCM repo)
 
-`dist/local-plugin-only.js` ve plugin (`f-mcp-plugin`) tarafinda asagidakiler **eklendi**:
+`dist/local-plugin-only.js` icinde **`registerTool` ile kayitli** envanter [TOOLS.md](./TOOLS.md) ve [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md) ile uyumludur.
 
-- **`figma_search_assets`**: `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync` + `getVariablesInLibraryCollectionAsync` (etkin kutuphaneler); ayrica dosya icindeki bilesenler. Manifest: `permissions: ["teamlibrary"]`.
-- **`figma_get_code_connect`**: Node bazli `documentationLinks`, `description`, `componentKey` (tam Code Connect CLI haritasi degil).
-- **`figma_use`**: Yapilandirilmis intent → mevcut bridge cagrilarina yonlendirme; bkz. [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md).
+**Planlanan / henuz bridge'de yok** (Agent Canvas taslagi; `registerTool` dogrulamasi):
 
-Tam envanter: [TOOLS.md](./TOOLS.md).
+- **`figma_search_assets`** (taslak): kutuphane variable + dosya icindeki bilesen aramasi — bugun yerine `figma_search_components` + `figma_get_design_system_summary` + `figma_get_variables`.
+- **`figma_get_code_connect`** (taslak): node bazli ipuclari — bugun `figma_get_component` / `figma_execute` ile `documentationLinks` okunabilir.
+- **`figma_use`** (taslak): yapilandirilmis intent — bugun **`figma_execute`**; sozlesme taslagi: [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md).
 
 **Henuz yok:** Published library bilesenlerinin tek cagrida tam REST kotasiz katalogu (plugin API sinirli); `create_file` (Drafts) MCP araci.
 

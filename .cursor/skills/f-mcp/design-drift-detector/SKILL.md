@@ -1,8 +1,12 @@
 ---
 name: design-drift-detector
-description: iOS, Android ve Web platformlarında mevcut kod ile Figma tasarımı arasındaki farkları (drift) tespit eder. Platform bazlı ve cross-platform drift raporları üretir. "check drift", "design drift", "platform drift", "tasarım sapması kontrol et", "parity check" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir. Bu özellik resmi Figma plugininde yoktur.
+description: iOS, Android ve Web platformlarında mevcut kod ile Figma tasarımı arasındaki farkları (drift) tespit eder. Platform bazlı ve cross-platform drift raporları üretir. "check drift", "design drift", "platform drift", "tasarım sapması kontrol et", "parity check", "kod Figma uyuşuyor mu", "spacing doğrula", "token tutarlılık" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir. Bu özellik resmi Figma plugininde yoktur.
 metadata:
   mcp-server: user-figma-mcp-bridge
+  personas:
+    - uidev
+    - designops
+    - po
 ---
 
 # Design Drift Detector (Multi-Platform)
@@ -35,6 +39,8 @@ REST API veya Figma access token gerekmez.
 
 **Drift sonrası yönlendirme:**
 - Sapma **kodda** → kodu düzelt, ardından bu skill’i **yeniden** çalıştır.
+- Değişiklik etkisini ölçmek istiyorsan → **ds-impact-analysis**
+- PO/PM'e teknik olmayan özet sunmak istiyorsan → **figma-screen-analyzer**
 - Sapma **Figma tuvalinde** (instance/token) → **audit-figma-design-system** / **fix** / **apply**, sonra gerekirse tekrar drift veya implement.
 
 **Performans:** Aynı oturumda `figma_get_variables` + `figma_get_design_context` tekrarını azalt; önceki tool çıktısı geçerliyse yeniden çağırma. Zincir notları: **audit-figma-design-system** içindeki “Zincir performansı”.
@@ -371,3 +377,10 @@ Kullanıcı: "Button tüm platformlarda güncel mi?"
 - Renk: Delta E < 3 ise "low priority"
 - Spacing: 1px fark ise "low priority"
 - Font size: tam eşleşme bekle (fark yok)
+
+## Evolution Triggers
+
+- Bridge'e yeni parity aracı eklenirse (ör. token karşılaştırma aracı) ilgili adımlar basitleştirilmeli
+- Yeni platform desteği (Flutter, .NET MAUI) eklenirse platform drift profilleri genişletilmeli
+- `figma_check_design_parity` parametreleri değişirse Step güncellemesi yapılmalı
+- Cross-platform drift raporunda CI entegrasyonu eklenirse JSON çıktı formatı standardize edilmeli
