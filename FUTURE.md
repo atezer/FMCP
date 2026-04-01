@@ -1,29 +1,29 @@
-# F-MCP — Kalan Adımlar (Future)
+# F-MCP -- Kalan Adimlar (Future)
 
-> Son güncelleme: 27 Mart 2026 (§8 bağımlılık/secret maddeleri)  
-> Paket sürümü (`package.json`): **1.2.0**
+> Son guncelleme: 1 Nisan 2026 (sabit port, graceful shutdown, paralel gorevler)
+> Paket surumu (`package.json`): **1.2.0**
 
-**Tamamlananlar (işaretlendi):** npm **1.2.0** yayın/doğrulama · GitHub **Release v1.2.0** (gövde güncel) · **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** süreç satırı · **Figma** org plugin · **FUTURE** kod taraması / Bridge tablosu · **§3** GitHub doküman maddeleri · **§7** README satırı.
+**Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti.
 
-**Kod taraması özeti:** `npm view @atezer/figma-mcp-bridge version` → **1.2.0** (npm yayını doğrulandı). `dist/local-plugin-only.js` / `dist/local.js` içinde `figma_search_assets`, `figma_get_code_connect`, `figma_use` stringleri **yok** — `docs/TOOLS.md` Agent Canvas paritesi bu build ile uyumsuz; envanter düzeltmesi açık (§7).
+**Kod taramasi ozeti:** `npm view @atezer/figma-mcp-bridge version` -> **1.2.0** (npm yayini dogrulandi). `dist/local-plugin-only.js` / `dist/local.js` icinde `figma_search_assets`, `figma_get_code_connect`, `figma_use` stringleri **yok** -- `docs/TOOLS.md` Agent Canvas paritesi bu build ile uyumsuz; envanter duzeltmesi acik (S7).
 
 ---
 
 ## 1. NPM Publish
 
-- [x] `@atezer/figma-mcp-bridge@1.2.0` npm'de yayında (`npm view` ile doğrulandı)
-- [x] `npx -y @atezer/figma-mcp-bridge@latest` ile çekilebilirlik (paket sürümü 1.2.0)
-- [ ] `figma-mcp-bridge-plugin` bin'inin temiz ortamda smoke testi (isteğe bağlı CI)
+- [x] `@atezer/figma-mcp-bridge@1.2.0` npm'de yayinda (`npm view` ile dogrulandi)
+- [x] `npx -y @atezer/figma-mcp-bridge@latest` ile cekilebilirlik (paket surumu 1.2.0)
+- [ ] `figma-mcp-bridge-plugin` bin'inin temiz ortamda smoke testi (istege bagli CI)
 
 ---
 
-## 2. Yerel repo durumu (FCM — bu workspace)
+## 2. Yerel repo durumu (FCM -- bu workspace)
 
-Aşağıdakiler repoda **mevcut**; upstream `atezer/FMCP` ile çalışıyorsanız `main` günceldir (fork/PR akışıyla çekenler kendi senkronunu doğrular).
+Asagidakiler repoda **mevcut**; upstream `atezer/FMCP` ile calisiyorsaniz `main` gunceldur (fork/PR akisiyla cekenler kendi senkronunu dogrular).
 
 ### Skills
 
-Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde: `archive/skills-root-duplicate/`).
+Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `archive/skills-root-duplicate/`).
 
 | Dosya | Durum |
 |-------|--------|
@@ -34,120 +34,128 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 | `.cursor/skills/f-mcp/design-drift-detector/SKILL.md` | Mevcut |
 | `.cursor/skills/f-mcp/ai-handoff-export/SKILL.md` | Mevcut |
 | `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` | Mevcut |
+| `.cursor/skills/f-mcp/audit-figma-design-system/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/fix-figma-design-system-finding/SKILL.md` | Mevcut (yeni) |
+| `.cursor/skills/f-mcp/apply-figma-design-system/SKILL.md` | Mevcut (yeni) |
 
-### Dokümanlar
+### Dokumanlar
 
 | Dosya | Durum |
 |-------|--------|
 | `PRIVACY.md` | Mevcut |
-| `docs/TOOLS.md` | Mevcut (MCP araç envanteri) |
+| `docs/TOOLS.md` | Mevcut (MCP arac envanteri) |
 | `docs/FMCP_AGENT_CANVAS_COMPAT.md` | Mevcut |
 | `docs/FIGMA_USE_STRUCTURED_INTENT.md` | Mevcut |
 | `docs/FMCP_ENTERPRISE_WORKFLOWS.md` | Mevcut |
-| `docs/SECURITY_AUDIT.md` | Mevcut (güvenlik bulguları checklist) |
+| `docs/SECURITY_AUDIT.md` | Mevcut (guvenlik bulgulari checklist) |
 | `docs/handoff.manifest.schema.json` | Mevcut |
 | `HANDOFF_TEMPLATE.md` | Mevcut |
+| `docs/MULTI_INSTANCE.md` | Mevcut (paralel gorevler bolumu eklendi) |
+| `docs/CLAUDE_DESKTOP_CONFIG.md` | Mevcut (coklu mcpServers ornegi eklendi) |
 
 ### Bridge
 
 | Konu | Durum |
 |------|--------|
-| `dist/local-plugin-only.js` | Plugin-only araç seti: dosya/design context, variable CRUD, batch token, parity, token browser, `figma_execute`, ekran görüntüsü, `figma_get_status`, vb. (**Kod taraması:** `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu dosyada kayıtlı değil.) |
-| `dist/local.js` | Tam mod: CDP (`figma_navigate`, konsol, screenshot), ek node araçları (`figma_resize_node`, …), tasarım sistemi önbelleği — **aynı üç araç yok** |
-| `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable araması için) |
+| `dist/local-plugin-only.js` | Plugin-only arac seti + **graceful shutdown** (SIGINT/SIGTERM) |
+| `dist/local.js` | Tam mod: CDP, ek node araclari, tasarim sistemi onbellegi |
+| `src/core/plugin-bridge-server.ts` | **Sabit port** stratejisi, `probePort` health-check, olu port retry |
+| `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable aramasi icin) |
+| `scripts/check-ports.sh` | 5454-5470 port tarama teshis scripti |
 
-### Config örnekleri
+### Config ornekleri
 
 | Dosya | Durum |
 |-------|--------|
-| `.mcp.json` | Mevcut (kök) |
-| `.cursor-plugin/plugin.json` | Mevcut; sürüm **1.2.0**, açıklama `docs/TOOLS.md` referanslı |
+| `.mcp.json` | Mevcut (kok) |
+| `.cursor-plugin/plugin.json` | Mevcut; surum **1.2.0**, aciklama `docs/TOOLS.md` referansli |
 
 ---
 
-## 3. GitHub ve doküman tutarlılığı
+## 3. GitHub ve dokuman tutarliligi
 
-- [x] `atezer/FMCP` `main` ile yerel push senkronu (son değişiklikler gönderildi; fork/PR kullananlar kendi dallarını birleştirmeli)
-- [x] `KURULUM.md` — **Sürüm** **1.2.0** (`package.json` ile uyum)
-- [x] `.cursor-plugin/plugin.json` — `version` **1.2.0**; açıklama `docs/TOOLS.md` ile hizalı
-- [x] Sürüm notları — kök `CHANGELOG.md`; `README.md` ve `KURULUM.md` içinde GitHub Releases / npm takibi ve güncelleme özeti
-- [x] GitHub Releases — [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) tag + release; gövde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md) (`gh release edit` ile senkron); sonraki sürüm: **CHANGELOG → `docs/releases/vX.Y.Z-body.md` → [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) içindeki `gh release create` / `edit`**
-
----
-
-## 4. Cursor Plugin Dağıtımı
-
-**Kontrol:** `.cursor-plugin/plugin.json` geçerli JSON; `skills` → `.cursor/skills/f-mcp/`, `mcpServers` NPX tanımı mevcut — Cursor sürümüne göre resmi şema doğrulaması elle/marketplace rehberi ile yapılmalı.
-
-- [ ] Cursor Plugin API / şema ile biçim doğrulaması (resmi dokümantasyon)
-- [ ] Skills yollarının IDE’de yüklendiği manuel test
-- [ ] Cursor Marketplace'e publish değerlendir
+- [x] `atezer/FMCP` `main` ile yerel push senkronu (son degisiklikler gonderildi; fork/PR kullananlar kendi dallarini birlestirmeli)
+- [x] `KURULUM.md` -- **Surum** **1.2.0** (`package.json` ile uyum)
+- [x] `.cursor-plugin/plugin.json` -- `version` **1.2.0**; aciklama `docs/TOOLS.md` ile hizali
+- [x] Surum notlari -- kok `CHANGELOG.md`; `README.md` ve `KURULUM.md` icinde GitHub Releases / npm takibi ve guncelleme ozeti
+- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) tag + release; govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md) (`gh release edit` ile senkron); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
 
 ---
 
-## 5. Figma Plugin Yayını
+## 4. Cursor Plugin Dagitimi
 
-**Kontrol notu (2026-03-27):** Depo tarafında `f-mcp-plugin/manifest.json` (Plugin ID, `teamlibrary`, `enablePrivatePluginApi`, `networkAccess` localhost **5454–5470**, FigJam/Dev editor) ve [docs/PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md) (Data security cevapları, org seçimi) yayın gereksinimleriyle uyumlu. **Canlı durum:** Organization üzerinden plugin yayını tamamlandı; diğer organizasyonel dağıtımlar (ek org / aynı yapılandırma ile çoğaltma) için hazırlık kullanıcı tarafından onaylandı.
+**Kontrol:** `.cursor-plugin/plugin.json` gecerli JSON; `skills` -> `.cursor/skills/f-mcp/`, `mcpServers` NPX tanimi mevcut -- Cursor surumune gore resmi sema dogrulamasi elle/marketplace rehberi ile yapilmali.
 
-- [x] **Organization private plugin** — Figma Org üzerinden yayınlandı; çoklu org / org yapılarına uygun dağıtım için hazır
-- [ ] **Community (genel)** — İsteğe bağlı; Figma Community incelemesi ayrı süreç (şimdilik org odaklı yayın yeterli sayıldı)
-- [x] **Plugin listing** — Görsel, açıklama ve etiketler org yayını için hazırlandı / kullanıldı
+- [ ] Cursor Plugin API / sema ile bicim dogrulamasi (resmi dokumantasyon)
+- [ ] Skills yollarinin IDE'de yuklendigi manuel test
+- [ ] Cursor Marketplace'e publish degerlendir
 
 ---
 
-## 6. .mcpb Dosya Dağıtımı
+## 5. Figma Plugin Yayini
 
-**Kontrol:** Depoda `*.mcpb` dosyası yok; dağıtım maddeleri hâlâ geçerli.
+**Kontrol notu (2026-03-27):** Depo tarafinda `f-mcp-plugin/manifest.json` (Plugin ID, `teamlibrary`, `enablePrivatePluginApi`, `networkAccess` localhost **5454-5470**, FigJam/Dev editor) ve [docs/PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md) (Data security cevaplari, org secimi) yayin gereksinimleriyle uyumlu. **Canli durum:** Organization uzerinden plugin yayini tamamlandi; diger organizasyonel dagitimlar (ek org / ayni yapilandirma ile cogaltma) icin hazirlik kullanici tarafindan onaylandi.
 
-- [ ] `figma-mcp-bridge.mcpb` (büyük paket) — GitHub tek dosya limiti dışında kalıyorsa
-- [ ] Alternatif: GitHub Releases asset veya ayrı hosting
+- [x] **Organization private plugin** -- Figma Org uzerinden yayinlandi; coklu org / org yapilarina uygun dagitim icin hazir
+- [ ] **Community (genel)** -- Istege bagli; Figma Community incelemesi ayri surec (simdilik org odakli yayin yeterli sayildi)
+- [x] **Plugin listing** -- Gorsel, aciklama ve etiketler org yayini icin hazirlandi / kullanildi
+
+---
+
+## 6. .mcpb Dosya Dagitimi
+
+**Kontrol:** Depoda `*.mcpb` dosyasi yok; dagitim maddeleri hala gecerli.
+
+- [ ] `figma-mcp-bridge.mcpb` (buyuk paket) -- GitHub tek dosya limiti disinda kaliyorsa
+- [ ] Alternatif: GitHub Releases asset veya ayri hosting
 - [ ] Gerekirse Git LFS
 
 ---
 
-## 7. Doküman & README İyileştirmeleri
+## 7. Dokuman & README Iyilestirmeleri
 
-- [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) — repo ayarları (UI)
-- [x] Kök `README.md` mevcut ve güncel; `docs/` bağlantı tablosu var
-- [ ] `docs/TOOLS.md` — **Agent Canvas** bölümündeki `figma_search_assets` / `figma_get_code_connect` / `figma_use` / `local-plugin-only` paritesi; mevcut `dist/` ile hizala veya “planlanan / kaldırıldı” notu düş
-- [ ] İngilizce README alternatifi veya çift dil desteği değerlendir
+- [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) -- repo ayarlari (UI)
+- [x] Kok `README.md` mevcut ve guncel; `docs/` baglanti tablosu var
+- [ ] `docs/TOOLS.md` -- **Agent Canvas** bolumundeki `figma_search_assets` / `figma_get_code_connect` / `figma_use` / `local-plugin-only` paritesi; mevcut `dist/` ile hizala veya "planlanan / kaldirildi" notu dus
+- [ ] Ingilizce README alternatifi veya cift dil destegi degerlendir
 - [ ] Badge'ler (npm version, license, stars)
 
 ---
 
 ## 8. Test & CI
 
-**Kontrol:** `.github/workflows/` yok — CI otomasyonu eklenmedi.
+**Kontrol:** `.github/workflows/` mevcut (validate:fmcp-skills CI); ek test/build CI eklenmedi.
 
 - [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
-- [ ] NPM publish workflow (tag → `npm publish`)
-- [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
-- [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [§10](#10-güvenlik-denetimi-security-audit))
-- [ ] Bağımlılık gözden geçirmesi: periyodik `npm audit` (gerekirse `fix` / manuel yükseltme); kritik CVE’lerde patch sürümü
-- [ ] İsteğe bağlı: commit/CI öncesi **secret / anahtar sızıntısı** taraması (örn. [gitleaks](https://github.com/gitleaks/gitleaks), TruffleHog) — `wrangler.jsonc` id’leri için [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) (D2)
+- [ ] NPM publish workflow (tag -> `npm publish`)
+- [ ] Plugin baglantisi smoke testi (istege bagli)
+- [ ] Guvenlik duzeltmeleri sonrasi regresyon: `figma_execute` limit, WS payload (bkz. [S10](#10-guvenlik-denetimi-security-audit))
+- [ ] Bagimlilk gozden gecirmesi: periyodik `npm audit` (gerekirse `fix` / manuel yukseltme); kritik CVE'lerde patch surumu
+- [ ] Istege bagli: commit/CI oncesi **secret / anahtar sizintisi** taramasi (orn. [gitleaks](https://github.com/gitleaks/gitleaks), TruffleHog) -- `wrangler.jsonc` id'leri icin [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) (D2)
 
 ---
 
-## 9. İleri Seviye (Uzun Vadeli)
+## 9. Ileri Seviye (Uzun Vadeli)
 
-- [ ] Cloudflare Worker — `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokümantasyon netleştirilmeli
-- [ ] OAuth — Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık ([§10](#10-güvenlik-denetimi-security-audit) Y1/O3 ile ilişkili)
-- [ ] Python bridge — `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
-- [x] Multi-instance — `docs/MULTI_INSTANCE.md` 5454–5470 ve otomatik port tarama davranışını anlatıyor; ek iyileştirme isteğe bağlı
-- [x] Port env — `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Kalan iş: dokümantasyonda tek isim standardına geçiş ve eski ad için **deprecate** notu
-- [x] Enterprise audit log — `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); örnek log senaryoları / test isteğe bağlı
+- [ ] Cloudflare Worker -- `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokumantasyon netlestirilmeli
+- [ ] OAuth -- Worker tarafinda token/refresh kodu var; **coklu kullanici / oturum modeli** ve guvenlik gozden gecirmesi acik ([S10](#10-guvenlik-denetimi-security-audit) Y1/O3 ile iliskili)
+- [ ] Python bridge -- `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
+- [x] Multi-instance -- `docs/MULTI_INSTANCE.md` sabit port ve paralel gorevler dokumantasyonu tamamlandi; `check-ports.sh` teshis scripti eklendi
+- [x] Port env -- `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Sabit port stratejisi uygulanmis; otomatik port taramasi kaldirilmis.
+- [x] Enterprise audit log -- `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); ornek log senaryolari / test istege bagli
+- [x] Graceful shutdown -- `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi; port serbest birakma sorunu cozuldu
 
 ---
 
-## 10. Güvenlik denetimi (Security audit)
+## 10. Guvenlik denetimi (Security audit)
 
-**Evet, FUTURE’a eklenmeli:** Yayınlanmış bir köprü + `eval` + WebSocket yüzeyi için izlenebilir maddeler yol haritasında olmalı. Özet checklist repoda: **[docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)** (K1–K4, Y1–Y3, O1–O7, D1–D4; Y4 iptal notu).
+**Evet, FUTURE'a eklenmeli:** Yayinlanmis bir kopru + `eval` + WebSocket yuzeyi icin izlenebilir maddeler yol haritasinda olmali. Ozet checklist repoda: **[docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)** (K1-K4, Y1-Y3, O1-O7, D1-D4; Y4 iptal notu).
 
-**Kaynak:** Cursor planı `~/.cursor/plans/security_audit_fixes_f803037b.plan.md` — ekip için asıl takip **`docs/SECURITY_AUDIT.md`** üzerinden yapılmalı; plan yalnızca geliştirici makinesinde kalabilir.
+**Kaynak:** Cursor plani `~/.cursor/plans/security_audit_fixes_f803037b.plan.md` -- ekip icin asil takip **`docs/SECURITY_AUDIT.md`** uzerinden yapilmali; plan yalnizca gelistirici makinesinde kalabilir.
 
-- [ ] **Kritik:** K1 `code.js` eval limit · K2 Zod (plugin-only + `local.ts`) + Python `len` · K3 `nodeId` · K4 OPT-IN WS secret
-- [ ] **Yüksek:** Y1 token log · Y2 `0.0.0.0` uyarısı · Y3 path traversal — Y4 dokümana “postMessage `*` zorunlu” notu
-- [ ] **Orta:** O2 maxPayload + rate · O3/O5/O7 hata sanitize (Worker OAuth dahil) · O6 console-monitor · O1/O4 dokümantasyon + debug log
-- [ ] **Düşük:** D1–D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
+- [ ] **Kritik:** K1 `code.js` eval limit - K2 Zod (plugin-only + `local.ts`) + Python `len` - K3 `nodeId` - K4 OPT-IN WS secret
+- [ ] **Yuksek:** Y1 token log - Y2 `0.0.0.0` uyarisi - Y3 path traversal -- Y4 dokumana "postMessage `*` zorunlu" notu
+- [ ] **Orta:** O2 maxPayload + rate - O3/O5/O7 hata sanitize (Worker OAuth dahil) - O6 console-monitor - O1/O4 dokumantasyon + debug log
+- [ ] **Dusuk:** D1-D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
 
-OAuth / token logları **§9** ile birlikte ele alınmalı; düzeltmelerde tek PR veya sıralı sürüm önerilir.
+OAuth / token loglari **S9** ile birlikte ele alinmali; duzeltmelerde tek PR veya sirali surum onerilir.

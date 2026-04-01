@@ -26,6 +26,11 @@ REST API veya Figma access token gerekmez.
 - En az bir platformda component implementasyonu mevcut olmalı
 - Platform proje dizinleri biliniyor olmalı
 
+## F-MCP skill koordinasyonu
+
+- **Önce:** Stabil kütüphane instance’ları için isteğe bağlı **apply-figma-design-system** veya **audit-figma-design-system**.
+- **Sonra:** `.figma-mappings.json` ile **design-drift-detector** ve **implement-design**; manifest için **ai-handoff-export**.
+
 ## Required Workflow
 
 **Bu adımları sırayla uygula. Adım atlama.**

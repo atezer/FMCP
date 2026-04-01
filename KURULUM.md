@@ -32,6 +32,16 @@ Daha önce araçlar `…/FCM/f-mcp-bridge/dist/...` veya `…/f-mcp-bridge/scrip
 ### 🔧 Claude Desktop Konfigürasyonu
 Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
+> **Önemli — sık görülen hatalar**
+>
+> | Sorun | Kontrol |
+> |--------|---------|
+> | Claude’da **Server disconnected** / logda `MODULE_NOT_FOUND` | `args` yolu **clone kökündeki** `dist/local-plugin-only.js` olmalı. `…/f-mcp-bridge/dist/…` **yanlış** (eski yapı); bu klasör çoğu kurulumda yoktur. |
+> | `dist` yok | Depo kökünde `npm run build:local` çalıştırın. |
+> | Plugin’de **MCP no server** | Bridge **hangi portta** dinliyorsa (varsayılan 5454 veya `FIGMA_PLUGIN_BRIDGE_PORT`) Figma plugin **Advanced → Port** ile **aynı** olmalı. İsterseniz `env` içindeki portu kaldırıp her iki tarafta 5454 kullanın. |
+>
+> Tam örnekler ve `env` açıklaması: [docs/CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md)
+
 **Plugin-only mod (önerilen: debug portu yok, REST token yok, Puppeteer yok):**
 ```json
 {
@@ -160,6 +170,7 @@ npm run build:local
 
 ### Plugin “ready” olmuyor
 - Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun. Plugin artık 5454–5470 aralığında dinleyen portu otomatik dener; gerekirse **Advanced** bölümünden host/port elle girin.
+- Port alanını bir kez değiştirip bağlanamıyorsanız plugin **tek porta kilitlenmiş** olabilir: **Otomatik tara** düğmesine basın veya **Advanced** panelini kapatıp tekrar **auto port** moduna dönün; Claude’daki bridge portu ile eşleştiğinden emin olun.
 - Tam mod: Figma’yı 9222 ile açtığınızdan ve **Use Developer VM**’in açık olduğundan emin olun.
 
 ### Port standardı (önerilen)

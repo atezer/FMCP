@@ -29,6 +29,11 @@ REST API veya Figma access token gerekmez; tüm veriler plugin bridge üzerinden
 - Hedef platform belirlenmiş olmalı (iOS / Android / Web)
 - Projenin platform-spesifik konvansiyonları bilinmeli
 
+## F-MCP skill koordinasyonu
+
+- **Önce:** **code-design-mapper** ve **design-token-pipeline** çıktıları varsa kullan; isteğe bağlı **ai-handoff-export**; tuvalde ham primitive’ler varsa **audit-figma-design-system** → **apply-figma-design-system** (veya tek bulgu için **fix-figma-design-system-finding**).
+- **Sonra (tipik):** Kod üretildikten veya güncellendikten sonra **design-drift-detector** ile parity. Drift bulgusu Figma kaynaklıysa **fix-figma-design-system-finding** veya **apply-figma-design-system**; kod kaynaklıysa kodu düzeltip drift’i yeniden çalıştır.
+
 ## Required Workflow
 
 **Bu adımları sırayla uygula. Adım atlama.**

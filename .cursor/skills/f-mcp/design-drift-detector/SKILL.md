@@ -27,6 +27,18 @@ REST API veya Figma access token gerekmez.
 - Tercihen `.figma-mappings.json` mevcut olmalı (code-design-mapper skill'i ile oluşturulur)
 - Token dosyaları mevcut olmalı (design-token-pipeline skill'i ile oluşturulur)
 
+## F-MCP skill koordinasyonu
+
+**Bu skill’in yeri:** Kod ve Figma **parity** doğrulaması — tipik olarak **implement-design** veya mevcut kod tabanı üzerinde **sonra** çalıştırılır; handoff/implement **öncesi** “mutlaka drift” diye zorunlu değildir (henüz kod yoksa anlamsız olur).
+
+**Tipik sıra (kod hattı):** **design-token-pipeline** → isteğe bağlı **code-design-mapper** → **ai-handoff-export** → **implement-design** → **design-drift-detector** (parity). Tuvalde DS tutarsızlığı şüpheliyse önce **audit-figma-design-system** ve gerekirse **fix-figma-design-system-finding** / **apply-figma-design-system**; aksi halde drift raporu **yanlış pozitif** üretebilir.
+
+**Drift sonrası yönlendirme:**
+- Sapma **kodda** → kodu düzelt, ardından bu skill’i **yeniden** çalıştır.
+- Sapma **Figma tuvalinde** (instance/token) → **audit-figma-design-system** / **fix** / **apply**, sonra gerekirse tekrar drift veya implement.
+
+**Performans:** Aynı oturumda `figma_get_variables` + `figma_get_design_context` tekrarını azalt; önceki tool çıktısı geçerliyse yeniden çağırma. Zincir notları: **audit-figma-design-system** içindeki “Zincir performansı”.
+
 ## Required Workflow
 
 ### Step 1: Plugin Bağlantısını Doğrula

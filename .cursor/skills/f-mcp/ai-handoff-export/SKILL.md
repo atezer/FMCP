@@ -16,6 +16,11 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 
 **Önemli:** Tüm veriler plugin bridge üzerinden alınır. Şablon: repo kökünde `HANDOFF_TEMPLATE.md`; şema: `docs/handoff.manifest.schema.json`.
 
+## F-MCP skill koordinasyonu
+
+- **Önce:** Tuval DS uyumu için isteğe bağlı **audit-figma-design-system** / **apply-figma-design-system**; token isimleri için **design-token-pipeline** ile uyumlu manifest.
+- **Sonra:** **implement-design** ana tüketici; **code-design-mapper** özetini manifest’e işleyebilirsin.
+
 ## Required Workflow
 
 ### Step 1: Bağlantıyı doğrula

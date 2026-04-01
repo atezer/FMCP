@@ -157,6 +157,21 @@
       font-size: 11px;
     }
 
+    .auto-port-reset {
+      align-self: flex-start;
+      border: 1px solid var(--figma-color-border, #4a4a4a);
+      background: transparent;
+      color: inherit;
+      border-radius: 6px;
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .auto-port-reset:hover {
+      opacity: 0.9;
+    }
+
     /* Light theme support */
     @media (prefers-color-scheme: light) {
       body {
@@ -200,8 +215,9 @@
       </div>
       <div class="bridge-port" title="Port elle belirtilmezse bridge'in dinlediği porta otomatik bağlanır (5454-5470 aralığı).">
         <label for="mcp-port">Port</label>
-        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" />
+        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
+      <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
     </div>
   </div>
 
@@ -814,7 +830,14 @@
     var candidatePorts = [];
     var candidatePortIndex = 0;
 
-    function setAdvancedPanelOpen(open) {
+    /** Port alanı elle değiştirilince manualPortLocked=true olur; bu kilit 5454–5470 taramasını durdurur. */
+    function unlockAutoPortScan() {
+      manualPortLocked = false;
+      forceDisconnectAndReconnect();
+    }
+
+    function setAdvancedPanelOpen(open, opts) {
+      opts = opts || {};
       var panel = document.getElementById('advanced-panel');
       var state = document.getElementById('advanced-state');
       if (panel) {
@@ -829,6 +852,8 @@
         if (mainScroller && typeof mainScroller.scrollTop === 'number') {
           mainScroller.scrollTop = 0;
         }
+      } else if (!opts.skipUnlock) {
+        unlockAutoPortScan();
       }
       requestUiResize();
     }
@@ -837,11 +862,18 @@
       var toggle = document.getElementById('advanced-toggle');
       var initial = false;
       try { initial = localStorage.getItem(MCP_ADVANCED_OPEN_KEY) === '1'; } catch (e) {}
-      setAdvancedPanelOpen(initial);
+      setAdvancedPanelOpen(initial, { skipUnlock: true });
       if (toggle) {
         toggle.addEventListener('click', function() {
           var panel = document.getElementById('advanced-panel');
-          setAdvancedPanelOpen(!(panel && panel.classList.contains('is-open')));
+          var willOpen = !(panel && panel.classList.contains('is-open'));
+          setAdvancedPanelOpen(willOpen);
+        });
+      }
+      var autoBtn = document.getElementById('auto-port-reset');
+      if (autoBtn) {
+        autoBtn.addEventListener('click', function() {
+          unlockAutoPortScan();
         });
       }
       if (typeof ResizeObserver !== 'undefined') {
