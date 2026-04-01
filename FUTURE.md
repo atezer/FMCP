@@ -85,7 +85,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 - [x] `KURULUM.md` -- **Surum** **1.2.0** (`package.json` ile uyum)
 - [x] `.cursor-plugin/plugin.json` -- `version` **1.2.0**; aciklama `docs/TOOLS.md` ile hizali
 - [x] Surum notlari -- kok `CHANGELOG.md`; `README.md` ve `KURULUM.md` icinde GitHub Releases / npm takibi ve guncelleme ozeti
-- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0) tag + release; govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md) (`gh release edit` ile senkron); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
+- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0), [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1); govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md), [`docs/releases/v1.2.1-body.md`](docs/releases/v1.2.1-body.md); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
 
 ---
 

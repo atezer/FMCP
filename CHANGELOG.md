@@ -51,7 +51,7 @@ Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanila
 
 ## [1.2.1] - 2026-04-01
 
-GitHub Release govdesi: [docs/releases/v1.2.1-body.md](docs/releases/v1.2.1-body.md) (`gh release create v1.2.1 --notes-file ...`).
+GitHub Release: [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1); govde: [docs/releases/v1.2.1-body.md](docs/releases/v1.2.1-body.md).
 
 ### Bridge
 
