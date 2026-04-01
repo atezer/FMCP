@@ -1,17 +1,23 @@
 /**
  * Plugin Bridge WebSocket Server
  *
- * Listens for connections from the F-MCP ATezer Bridge plugin (no CDP needed).
- * Supports MULTIPLE simultaneous plugin connections (e.g. Figma Desktop + FigJam browser).
+ * Listens on a FIXED port for connections from the F-MCP ATezer Bridge plugin
+ * (no CDP needed). Supports MULTIPLE simultaneous plugin connections
+ * (e.g. Figma Desktop + FigJam browser + Figma browser — all on one port).
  * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
+ *
+ * Port strategy: no auto-scanning. If the configured port is busy, the server
+ * probes it to distinguish a live F-MCP instance from a stale/dead process.
+ * Stale ports get one automatic retry after a short delay.
  */
 import { WebSocketServer } from "ws";
-import { createServer } from "http";
+import { createServer, get as httpGet } from "http";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
 const MAX_PORT = 5470;
+const STALE_PORT_RETRY_DELAY_MS = 1500;
 export class PluginBridgeServer {
     constructor(port, options) {
         this.wss = null;
@@ -31,29 +37,7 @@ export class PluginBridgeServer {
             logger.debug({ port: this.port }, "Plugin bridge server already running");
             return;
         }
-        const candidates = this.buildPortCandidateList(this.preferredPort);
-        this.attemptListen(candidates, 0);
-    }
-    /** Try preferred first, then scan forward to MAX, then wrap MIN..preferred-1. */
-    buildPortCandidateList(preferred) {
-        const p0 = Math.max(MIN_PORT, Math.min(MAX_PORT, preferred));
-        const list = [];
-        for (let p = p0; p <= MAX_PORT; p++)
-            list.push(p);
-        for (let p = MIN_PORT; p < p0; p++)
-            list.push(p);
-        return list;
-    }
-    attemptListen(candidatePorts, index) {
-        if (index >= candidatePorts.length) {
-            console.error(`\n❌ No free port in range ${MIN_PORT}-${MAX_PORT} (all in use).\n` +
-                `   Free a port or set FIGMA_PLUGIN_BRIDGE_PORT to a free value in this range.\n` +
-                `   ⚠️  Avoid running multiple MCP bridge instances when one is enough.\n`);
-            process.exit(1);
-            return;
-        }
-        const port = candidatePorts[index];
-        this.tryListenOne(port, candidatePorts, index);
+        this.tryListenFixed(this.preferredPort, false);
     }
     generateClientId() {
         return `client_${Date.now()}_${++this.clientIdCounter}`;
@@ -92,7 +76,25 @@ export class PluginBridgeServer {
         auditPlugin(this.auditLogPath, "plugin_disconnect");
         logger.info({ clientId, fileKey: info.fileKey, fileName: info.fileName }, "Plugin bridge: client disconnected (%s)", reason);
     }
-    tryListenOne(port, candidatePorts, index) {
+    /**
+     * Probe a port via HTTP to determine if a live F-MCP bridge is already
+     * running or if the port is held by a stale/dead process.
+     * Returns "fmcp" | "other" | "dead".
+     */
+    probePort(port, host) {
+        return new Promise((resolve) => {
+            const req = httpGet({ hostname: host, port, path: "/", timeout: 2000 }, (res) => {
+                let body = "";
+                res.on("data", (chunk) => { body += chunk; });
+                res.on("end", () => {
+                    resolve(body.includes("F-MCP") ? "fmcp" : "other");
+                });
+            });
+            req.on("error", () => resolve("dead"));
+            req.on("timeout", () => { req.destroy(); resolve("dead"); });
+        });
+    }
+    tryListenFixed(port, isRetry) {
         const server = createServer((_req, res) => {
             res.writeHead(200, {
                 "Content-Type": "text/plain",
@@ -101,23 +103,44 @@ export class PluginBridgeServer {
             });
             res.end("F-MCP ATezer Bridge (connect via WebSocket)\n");
         });
+        const bindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
         server.on("error", (err) => {
             if (err.code === "EADDRINUSE") {
                 server.close();
-                this.attemptListen(candidatePorts, index + 1);
+                if (isRetry) {
+                    console.error(`\n❌ Port ${port} is still busy after retry.\n` +
+                        `   A process may be holding this port. Find and stop it:\n` +
+                        `     lsof -i :${port}   (macOS/Linux)\n` +
+                        `   Then restart, or set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
+                    process.exit(1);
+                    return;
+                }
+                this.probePort(port, bindHost).then((status) => {
+                    if (status === "fmcp") {
+                        console.error(`\n⚠️  Port ${port} is already in use by another F-MCP bridge instance.\n` +
+                            `   One bridge is enough for all Figma/FigJam windows.\n` +
+                            `   If you need a separate session, set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
+                        process.exit(1);
+                    }
+                    else if (status === "dead") {
+                        console.error(`\n⚠️  Port ${port} is busy but not responding (stale process).\n` +
+                            `   Retrying in ${STALE_PORT_RETRY_DELAY_MS}ms…\n`);
+                        setTimeout(() => this.tryListenFixed(port, true), STALE_PORT_RETRY_DELAY_MS);
+                    }
+                    else {
+                        console.error(`\n❌ Port ${port} is in use by a different service (not F-MCP).\n` +
+                            `   Free the port or set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
+                        process.exit(1);
+                    }
+                });
                 return;
             }
             logger.error({ err }, "Plugin bridge server error");
         });
-        const bindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
         server.listen(port, bindHost, () => {
             this.port = port;
             process.env.FIGMA_PLUGIN_BRIDGE_PORT = String(port);
             process.env.FIGMA_MCP_BRIDGE_PORT = String(port);
-            if (port !== this.preferredPort) {
-                console.error(`\n⚠️  Port ${this.preferredPort} was busy — F-MCP bridge bound to ${port} instead.\n` +
-                    `   Set FIGMA_PLUGIN_BRIDGE_PORT=${port} in your MCP config to avoid this message, or free port ${this.preferredPort}.\n`);
-            }
             console.error(`F-MCP bridge listening on ws://${bindHost}:${port}\n`);
             this.httpServer = server;
             this.wss = new WebSocketServer({ server });

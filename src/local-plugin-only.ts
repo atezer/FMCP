@@ -1036,6 +1036,14 @@ export async function main() {
 		}
 	);
 
+	const shutdown = () => {
+		logger.info("Shutting down plugin-only MCP server...");
+		try { bridge.stop(); } catch { /* ignore */ }
+		process.exit(0);
+	};
+	process.on("SIGINT", shutdown);
+	process.on("SIGTERM", shutdown);
+
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
 	logger.info({ port }, "F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s", port);

@@ -45,6 +45,12 @@ REST API veya Figma access token gerekmez.
 - F-MCP Bridge plugin bağlı olmalı
 - Hedef platform(lar) ve styling yaklaşımları bilinmeli
 
+## F-MCP skill koordinasyonu
+
+- **Önce:** Figma’da token’lar tutarlı bağlıysa export daha güvenilir — isteğe bağlı **audit-figma-design-system**.
+- **Sonra:** **design-drift-detector** ve **implement-design** bu dosyaları referans alır; **design-system-rules** güncellenebilir.
+- **Performans:** Aynı oturumda token verisi zaten çekildiyse (`figma_get_variables` / `figma_get_styles`) yeniden full çağırma; **audit-figma-design-system** içindeki “Zincir performansı” bölümüne uy.
+
 ## Required Workflow
 
 ### Step 1: Plugin Bağlantısını Doğrula

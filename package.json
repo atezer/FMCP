@@ -34,7 +34,9 @@
 		"format": "biome format --write",
 		"lint:fix": "biome lint --fix",
 		"cf-typegen": "wrangler types",
-		"type-check": "tsc --noEmit"
+		"type-check": "tsc --noEmit",
+		"validate:fmcp-skills": "node scripts/validate-fmcp-skills-tools.mjs",
+		"check-ports": "bash scripts/check-ports.sh"
 	},
 	"keywords": [
 		"mcp",

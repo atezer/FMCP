@@ -22,6 +22,10 @@ Skill, her adıma kısa ve güvenli dönüş zorunluluğu getirir; node/connecto
 - Hedef FigJam dosyası Figma Desktop'ta açık olmalı
 - Kullanıcıdan şema tipi alınmalı (swimlane, flowchart, karar ağacı vb.)
 
+## F-MCP skill koordinasyonu
+
+- Süreç/diyagram odaklıdır; token veya kod üretim döngüsüyle zorunlu sıra yoktur. Ürün ekranı ve implementasyon için **implement-design** veya **ai-handoff-export** ayrı akıştır; tuval DS düzeltmesi için **apply-figma-design-system** / **audit-figma-design-system**.
+
 ## Required Workflow
 
 ### Step 1: Bağlantıyı doğrula

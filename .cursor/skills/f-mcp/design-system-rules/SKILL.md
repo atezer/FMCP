@@ -21,6 +21,11 @@ REST API veya Figma access token gerekmez.
 - Hangi platformlara hizmet verildiği bilinmeli
 - Platform proje dizinleri erişilebilir olmalı
 
+## F-MCP skill koordinasyonu
+
+- **Önce:** Figma isimlendirme ve bağlılık için isteğe bağlı **audit-figma-design-system** veya **design-token-pipeline** çıktılarıyla hizala.
+- **Sonra:** Üretilen kuralları **design-drift-detector** ve **implement-design** doğrulamalarında referans al; tuval ihlali için **apply-figma-design-system** / **fix-figma-design-system-finding**.
+
 ## Required Workflow
 
 ### Step 1: Plugin Bağlantısını Doğrula

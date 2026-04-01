@@ -10,6 +10,8 @@ Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI as
 
 **Eski kurulum:** MCP `args` içinde `…/f-mcp-bridge/dist/...` varsa `…/<clone-kökü>/dist/...` yapın. Launch Agent, `.app` ve ayrıntılı adımlar için [KURULUM.md](KURULUM.md) içindeki **«Eski f-mcp-bridge alt yolundan geçiş»** bölümüne bakın.
 
+**Claude Desktop config:** `env.FIGMA_PLUGIN_BRIDGE_PORT` kullanıyorsanız Figma plugin’deki port ile aynı olmalı; tam örnekler [docs/CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md).
+
 ### Figma API token tüketmiyor
 
 figma-mcp-bridge, Figma'nın **REST API'sini kullanmıyor**. Akış:
@@ -115,8 +117,8 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncellem
 | ---- | ------------------------------------------------------------------------------------------------------------ |
 | 1    | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin.               |
 | 2    | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin.                    |
-| 3    | **Cursor veya Claude'u yeniden başlatın** — köprü varsayılan olarak **5454**’te dinler (meşgulse **5454–5470** arasında otomatik yedek port). |
-| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:…)"** görünene kadar bekleyin (port otomatik veya `welcome` ile eşleşir). |
+| 3    | **Cursor veya Claude'u yeniden başlatın** — köprü varsayılan olarak **5454**’te dinler (meşgulse **5454–5470** arasında sabit port; port mesgulse acik hata mesaji verir). Farkli porta gecmek icin `FIGMA_PLUGIN_BRIDGE_PORT` env var kullanin. |
+| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
 
 
 **Cursor** — Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`:
@@ -225,7 +227,7 @@ npm run dev:local
 
 **Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
 
-**Çoklu kullanıcı (multi-instance):** Aynı anda birden fazla kişi kullanacaksa her kullanıcı farklı port (5454, 5455, … 5470) seçer; MCP config'e `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin, plugin'de aynı portu girin. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
+**Paralel görevler / çoklu kullanıcı:** Aynı anda farklı Figma dosyalarında (Figma Desktop + FigJam + Figma Browser gibi) paralel AI görevleri çalıştırabilirsiniz. Her hat için ayrı port (5454, 5455, 5456, …) ve ayrı bridge process başlatın. MCP config'e `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin, plugin'de aynı portu girin. Port durumunu kontrol: `npm run check-ports`. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
 
 **Enterprise:** Audit log (`FIGMA_MCP_AUDIT_LOG_PATH`), air-gap kurulum ve Organization plugin: [ENTERPRISE.md](docs/ENTERPRISE.md).
 
@@ -339,7 +341,8 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                            |
 | [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                         |
 | [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                   |
-| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Çoklu kullanıcı** — Aynı anda birden fazla kişi (port 5454–5470)                               |
+| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Paralel görevler & çoklu kullanıcı** — sabit port, paralel hatlar, Claude çoklu MCP           |
+| [CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md)               | Claude Desktop config örnekleri (tek ve çoklu MCP sunucusu)                                      |
 | [DEPENDENCY_LAYERS.md](docs/DEPENDENCY_LAYERS.md)                       | Bağımlılık katmanları (plugin-only / tam / Cloudflare) ve olası paket ayrımı taslağı            |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
 | [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)                           | **Güvenlik denetimi** — bulgular checklist ([FUTURE.md](FUTURE.md) §10)                            |

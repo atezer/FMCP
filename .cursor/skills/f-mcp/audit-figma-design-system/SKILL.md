@@ -1,0 +1,118 @@
+---
+name: audit-figma-design-system
+description: Figma ekran veya bileşenini design system entegrasyonu açısından okuma-only denetler; eksik kütüphane instance'ları, yerel override'lar ve bağlanmamış token'ları raporlar. "figma ds audit", "design system audit", "kütüphane kullanımı kontrol", "token bağlı mı" ifadeleriyle tetiklenir. F-MCP Bridge plugin bağlantısı gerektirir.
+metadata:
+  mcp-server: user-figma-mcp-bridge
+---
+
+# Audit Figma Design System (tuval içi)
+
+## Overview
+
+Bu skill **yalnızca okur**; Figma node'unun yayınlanmış design system ile ne kadar entegre olduğunu yapısal kanıta dayanarak denetler. Görsel tatmin değil, **instance / tekrar / ham değer / token bağlama** odaklıdır.
+
+Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
+
+## F-MCP araç eşlemesi (resmi Figma MCP isimleri yerine)
+
+| Niyet | F-MCP Bridge |
+|--------|----------------|
+| Design context | `figma_get_design_context` |
+| Görsel doğrulama | `figma_capture_screenshot` veya `figma_take_screenshot` |
+| Variable / bağlılık | `figma_get_variables` (verbosity=`full`), gerekiyorsa `figma_get_styles` |
+| Yapı / iç içe instance haritası | `figma_get_file_data` (düşük `depth`), hedef node için `figma_get_component` veya `figma_get_design_context`; büyük tahta için `figma_get_file_data` (timeout riski — dikkat). **Not:** Bridge’te ayrı bir “yalnızca metadata” MCP aracı yok; yapı bu üç araçla alınır. |
+| Kod/dev spec ipucu | `figma_get_design_context` (`includeCodeReady=true`); uygunsa `figma_get_component_for_development` |
+| Kütüphanede aday bileşen | `figma_search_components`, özet için `figma_get_design_system_summary` |
+
+## F-MCP skill koordinasyonu
+
+| Bulgu sonrası | Ne zaman |
+|---------------|----------|
+| **fix-figma-design-system-finding** | Tek net bulgu, tek node veya dar küme |
+| **apply-figma-design-system** | Çoklu bulgu, ekran geneli veya bölüm bölüm reconcile |
+| **design-token-pipeline** | Rapor “token export / kod tarafı senkron” gerektiriyorsa |
+| **design-drift-detector** | Aynı ekranın **kod** ile parity’si de soruluyorsa (Figma audit’ten sonra) |
+| **code-design-mapper** | Eşleştirilecek bileşen aileleri netleştikten sonra mapping güncellemesi |
+| **ai-handoff-export** / **implement-design** | Audit “Pass” veya düzeltme sonrası koda geçiş |
+
+### Önerilen uçtan uca akış (özet)
+
+1. **audit-figma-design-system** (tuval DS uyumu)  
+2. **fix-figma-design-system-finding** (tek bulgu) *veya* **apply-figma-design-system** (çok bölüm)  
+3. **design-token-pipeline** (kod token dosyaları)  
+4. İsteğe bağlı **code-design-mapper**  
+5. **ai-handoff-export** → **implement-design**  
+6. **design-drift-detector** (kod–Figma parity)  
+7. Gerekirse **design-system-rules** ile repo kurallarını güncelle
+
+**FigJam** ve bu zincir zorunlu sıralı değildir.
+
+### Zincir performansı (tek oturum)
+
+- Aynı zincirde **tekrarlı** `figma_get_variables(verbosity="full")` ve `figma_get_design_context` çağrılarını azalt: önceki adımın çıktısı hâlâ geçerliyse yeniden çağırma; mümkünse `verbosity="summary"` ile başla, gerekince `full`.
+- `figma_search_components`: varsayılan **`currentPageOnly=true`**; `false` yalnızca gerektiğinde (büyük dosyada timeout riski).
+
+## Output format seçimi
+
+- Kullanıcı `--json` veya JSON isterse: şema altındaki JSON’u **markdown fence’siz**, ek metin yok.
+- Sohbet ortamı veya `--markdown`: insan okunur markdown rapor.
+- Belirsizse: markdown varsayılan.
+
+## Required Workflow
+
+1. **Girdi:** Figma URL veya `fileKey` + `nodeId`. `node-id=72-293` → `72:293` normalize et.
+2. **Bağlantı:** `figma_get_status()`.
+3. **Kanıt:** Hedef node için `figma_get_design_context`; `figma_capture_screenshot`; `figma_get_variables`. Büyük/hacimli yapıda `figma_get_file_data` (düşük `depth`) veya aynı node üzerinden `figma_get_component` / `figma_get_design_context`. Özel primitive için `figma_search_components`.
+4. **İnceleme:** Yerel frame ile yeniden icat edilmiş primitive, tekrarlayan kardeş yapılar, tokenize eşlerin yanında ham hex/spacing/typography, navigasyon gibi yüksek etkili custom yapılar, variant sapması.
+5. **Öneri:** Yalnızca `figma_search_components` ile **inandırıcı** aday bulunduğunda değiştirme öner; zayıf eşleşmede aday yazma.
+6. **Çıktı:** Seçilen formatta rapor; ardından yukarıdaki koordinasyon tablosuna göre sonraki skill’i öner.
+
+## Ne işaretlenir / ne işaretlenmez
+
+**İşaretle:** Ad-hoc frame ile yapılmış button/card/alert/chip vb.; tekrarlayan kardeş modüller; somut ham değer + tokenize komşular; global pattern’lerin custom olması; nominal component içi variant sapması.
+
+**İşaretleme:** Saf estetik; copy; makul ölçüde ekrana özgü layout; zaten instance + token ile doğru olan tek seferlik kompozisyonlar; belgesiz varsayımlar.
+
+## Kanıt standardı
+
+Her bulgu için: (1) Figma yapısında somut ne gösteriyor? (2) Bakım, tutarlılık, tema veya ölçeklenebilirlik için neden önemli?
+
+## JSON çıktı şeması ( `--json` )
+
+Tek JSON obje; markdown veya ek prose yok:
+
+```json
+{
+  "findings": [
+    {
+      "title": "<= 80 karakter, emir kipi>",
+      "body": "Markdown açıklama",
+      "confidence_score": 0.0,
+      "priority": 0,
+      "code_location": {
+        "absolute_file_path": "/figma/<fileKey>/nodes/<nodeId>",
+        "line_range": { "start": 1, "end": 1 }
+      }
+    }
+  ],
+  "overall_correctness": "patch is correct" | "patch is incorrect",
+  "overall_explanation": "1-3 cümle özet",
+  "overall_confidence_score": 0.0
+}
+```
+
+- En az bir bulgu varsa `overall_correctness`: `"patch is incorrect"`.
+- Bulgu yoksa `"patch is correct"`.
+- `code_location.absolute_file_path`: en spesifik sorunlu node için `/figma/<fileKey>/nodes/<nodeId>`.
+- `line_range` her zaman `1`.
+
+## Öncelik ve güven skorları
+
+- **priority:** 0 nit, 1 orta drift, 2 önemli primitive/token, 3 kütüphane/nav seviyesi kritik.
+- **confidence_score:** 0.9–1.0 doğrudan yapısal kanıt; 0.7–0.89 güçlü çıkarım; 0.5–0.69 zayıf — tercihen bulgu yazma.
+
+## Tetik örnekleri
+
+- "Bu ekranı design system entegrasyonu için denetle"
+- "Bu board'da eksik component kullanımı var mı?"
+- "Token'lar doğru bağlı mı — audit --json ile ver"
