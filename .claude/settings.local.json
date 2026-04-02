@@ -79,7 +79,14 @@
       "Bash(then echo:*)",
       "Bash(sed -i '' 's/\"\"1\\\\.5\\\\.1\"\"/\"\"1.5.2\"\"/g' src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
       "Bash(grep -rn '\"\"1\\\\.5\\\\.1\"\"' src/ .cursor-plugin/)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(ls -la /Users/abdussamed.tezer/FCM/*.json /Users/abdussamed.tezer/FCM/*.jsonc)",
+      "Bash(git -C /Users/abdussamed.tezer/FCM remote -v)",
+      "Bash(grep -A 5 \"WebSocket\\\\|reconnect\\\\|memory\\\\|large file\" /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(grep -E \"\\\\.md.*status|outdated|deprecat\" /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(sed -i '' 's/\"\"1\\\\.5\\\\.2\"\"/\"\"1.6.0\"\"/g' src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
+      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*/\\\\*\\\\*1.6.0\\\\*\\\\*/g' FUTURE.md)",
+      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.0\\\\*\\\\*\\)/g' README.md)"
     ],
     "deny": [],
     "ask": []

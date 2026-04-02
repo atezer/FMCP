@@ -89,7 +89,7 @@ export async function main() {
     bridge.start();
     const server = new McpServer({
         name: "F-MCP ATezer Bridge (Plugin-only)",
-        version: "1.5.2",
+        version: "1.6.0",
     });
     // ---- figma_list_connected_files (multi-client discovery) ----
     server.registerTool("figma_list_connected_files", {
@@ -871,6 +871,193 @@ export async function main() {
                         message: msg,
                         ...(startError && { startError }),
                         ...(portHint && { portHint }),
+                    }, null, 0),
+                }],
+        };
+    });
+    // ---- Node Creation Tools ----
+    server.registerTool("figma_create_frame", {
+        description: "Create a new frame node on the current page. Returns the created node ID.",
+        inputSchema: {
+            name: z.string().optional().default("Frame").describe("Frame name"),
+            x: z.number().optional().default(0),
+            y: z.number().optional().default(0),
+            width: z.number().optional().default(200),
+            height: z.number().optional().default(200),
+            fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'"),
+            parentId: z.string().optional().describe("Parent node ID (default: current page)"),
+        },
+    }, async ({ name, x, y, width, height, fillColor, parentId }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					const frame = figma.createFrame();
+					frame.name = ${JSON.stringify(name)};
+					frame.x = ${x}; frame.y = ${y};
+					frame.resize(${width}, ${height});
+					${fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(frame);` : ""}
+					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+        }
+    });
+    server.registerTool("figma_create_text", {
+        description: "Create a new text node on the current page. Returns the created node ID.",
+        inputSchema: {
+            text: z.string().describe("Text content"),
+            x: z.number().optional().default(0),
+            y: z.number().optional().default(0),
+            name: z.string().optional().describe("Node name (default: text content)"),
+            fontSize: z.number().optional().default(16),
+            fontFamily: z.string().optional().default("Inter"),
+            fontStyle: z.string().optional().default("Regular"),
+            fillColor: z.string().optional().describe("Text color hex e.g. '#000000'"),
+            parentId: z.string().optional().describe("Parent node ID"),
+        },
+    }, async ({ text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					const node = figma.createText();
+					await figma.loadFontAsync({ family: ${JSON.stringify(fontFamily)}, style: ${JSON.stringify(fontStyle)} });
+					node.characters = ${JSON.stringify(text)};
+					node.name = ${JSON.stringify(name || text.slice(0, 30))};
+					node.x = ${x}; node.y = ${y};
+					node.fontSize = ${fontSize};
+					${fillColor ? `node.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(node);` : ""}
+					return { id: node.id, name: node.name, characters: node.characters };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+        }
+    });
+    server.registerTool("figma_create_rectangle", {
+        description: "Create a new rectangle node on the current page.",
+        inputSchema: {
+            x: z.number().optional().default(0),
+            y: z.number().optional().default(0),
+            width: z.number().optional().default(100),
+            height: z.number().optional().default(100),
+            name: z.string().optional().default("Rectangle"),
+            fillColor: z.string().optional().default("#cccccc").describe("Hex color"),
+            cornerRadius: z.number().optional().describe("Corner radius"),
+            parentId: z.string().optional(),
+        },
+    }, async ({ x, y, width, height, name, fillColor, cornerRadius, parentId }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					const rect = figma.createRectangle();
+					rect.name = ${JSON.stringify(name)};
+					rect.x = ${x}; rect.y = ${y};
+					rect.resize(${width}, ${height});
+					${fillColor ? `rect.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${cornerRadius !== undefined ? `rect.cornerRadius = ${cornerRadius};` : ""}
+					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(rect);` : ""}
+					return { id: rect.id, name: rect.name };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+        }
+    });
+    server.registerTool("figma_create_group", {
+        description: "Group existing nodes into a new group. Provide node IDs to group.",
+        inputSchema: {
+            nodeIds: z.array(z.string()).min(1).describe("Array of node IDs to group"),
+            name: z.string().optional().default("Group"),
+        },
+    }, async ({ nodeIds, name }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					const nodes = [];
+					for (const id of ${JSON.stringify(nodeIds)}) {
+						const n = await figma.getNodeByIdAsync(id);
+						if (n) nodes.push(n);
+					}
+					if (nodes.length === 0) throw new Error("No valid nodes found");
+					const group = figma.group(nodes, nodes[0].parent || figma.currentPage);
+					group.name = ${JSON.stringify(name)};
+					return { id: group.id, name: group.name, childCount: group.children.length };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+        }
+    });
+    // ---- figma_search_assets (team library search via plugin) ----
+    server.registerTool("figma_search_assets", {
+        description: "Search for published team library components and styles available in the current file. " +
+            "Uses Figma's teamLibrary API via plugin. Returns available components from enabled libraries.",
+        inputSchema: {
+            query: z.string().optional().describe("Search query to filter by name"),
+        },
+        annotations: { readOnlyHint: true },
+    }, async ({ query }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					if (!figma.teamLibrary) return { success: false, error: "teamLibrary API not available" };
+					const availableLibs = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+					const availableComps = await figma.teamLibrary.getAvailableLibraryComponentsAsync ? [] : [];
+					return {
+						variableCollections: availableLibs.map(c => ({ name: c.name, key: c.key, libraryName: c.libraryName })),
+						note: "Use figma_search_components for file-local components. Team library component search requires REST API (figma_rest_api)."
+					};
+				`;
+            const result = await conn.executeCodeViaUI(code, 15000);
+            const data = result;
+            if (query && data.variableCollections && Array.isArray(data.variableCollections)) {
+                const q = query.toLowerCase();
+                data.variableCollections = data.variableCollections.filter((c) => (c.name || "").toLowerCase().includes(q) || (c.libraryName || "").toLowerCase().includes(q));
+            }
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }, null, 0) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+        }
+    });
+    // ---- figma_plugin_diagnostics ----
+    server.registerTool("figma_plugin_diagnostics", {
+        description: "Get diagnostic info about plugin connection health: uptime, connected clients, " +
+            "pending requests, bridge version, memory usage.",
+        inputSchema: {},
+        annotations: { readOnlyHint: true },
+    }, async () => {
+        const clients = bridge.listConnectedFiles();
+        const tokenInfo = bridge.getFigmaRestToken();
+        const mem = process.memoryUsage();
+        return {
+            content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        bridgePort: bridge.getPort(),
+                        bridgeListening: bridge.isListening(),
+                        connectedClients: bridge.connectedClientCount(),
+                        connectedFiles: clients.map((c) => ({ fileKey: c.fileKey, fileName: c.fileName })),
+                        uptime: Math.round(process.uptime()),
+                        memoryMB: {
+                            rss: Math.round(mem.rss / 1024 / 1024),
+                            heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+                            heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+                        },
+                        hasRestToken: !!tokenInfo,
+                        rateLimit: tokenInfo?.rateLimit || null,
+                        nodeVersion: process.version,
                     }, null, 0),
                 }],
         };
