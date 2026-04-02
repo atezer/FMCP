@@ -76,7 +76,10 @@
       "Bash(grep -o '`figma_[^`]*`')",
       "Bash(while read:*)",
       "Bash(do if:*)",
-      "Bash(then echo:*)"
+      "Bash(then echo:*)",
+      "Bash(sed -i '' 's/\"\"1\\\\.5\\\\.1\"\"/\"\"1.5.2\"\"/g' src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
+      "Bash(grep -rn '\"\"1\\\\.5\\\\.1\"\"' src/ .cursor-plugin/)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

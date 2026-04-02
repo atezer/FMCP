@@ -28,6 +28,9 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit -p tsconfig.local.json
 
+      - name: Run tests
+        run: npm test
+
       - name: Build (local)
         run: npm run build:local
 

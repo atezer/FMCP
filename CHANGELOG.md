@@ -12,6 +12,15 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.5.2] - 2026-04-02
+
+### Test altyapisi
+
+- **36 test:** response-guard.ts (18 test) + figma-url.ts (16 test) + basic (2 test)
+- **CI'a test adimi eklendi:** `npm test` her push/PR'da otomatik calisir
+- **Coverage config:** Plugin-only modula odakli; tam mod dosyalari haric tutuldu
+- **Test dosyalari:** `tests/core/response-guard.test.ts`, `tests/core/figma-url.test.ts`
+
 ## [1.5.1] - 2026-04-02
 
 ### TypeScript tip guvenligi
