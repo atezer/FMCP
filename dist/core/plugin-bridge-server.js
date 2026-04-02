@@ -27,6 +27,8 @@ export class PluginBridgeServer {
         this.requestTimeoutMs = 120000;
         this.heartbeatTimer = null;
         this.clientIdCounter = 0;
+        /** Figma REST API token (in-memory only, never written to disk). */
+        this.figmaRestToken = null;
         /** Last error message when bridge could not bind (port conflict, etc.) */
         this.startError = null;
         /** Internal resolve callback for async listen flow. */
@@ -48,10 +50,12 @@ export class PluginBridgeServer {
     getStartError() {
         return this.startError;
     }
-    /** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. */
+    /** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. Token is preserved across restart. */
     async restart(newPort) {
         const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, newPort));
+        const savedToken = this.figmaRestToken; // Preserve token across restart
         this.stop();
+        this.figmaRestToken = savedToken; // Restore after stop()
         this.startError = null;
         return this.tryListenAsync(clamped);
     }
@@ -243,7 +247,7 @@ export class PluginBridgeServer {
                             logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName }, "Plugin bridge: client registered (fileKey=%s, fileName=%s)", incomingFileKey, incomingFileName);
                             ws.send(JSON.stringify({
                                 type: "welcome",
-                                bridgeVersion: "1.3.1",
+                                bridgeVersion: "1.4.0",
                                 port: this.port,
                                 clientId,
                                 multiClient: true,
@@ -251,6 +255,19 @@ export class PluginBridgeServer {
                             return;
                         }
                         if (msg.type === "pong" || msg.type === "keepalive") {
+                            return;
+                        }
+                        if (msg.type === "setToken" && typeof msg.token === "string") {
+                            const token = msg.token;
+                            if (token) {
+                                this.setFigmaRestToken(token);
+                                logger.info({ clientId }, "Plugin bridge: REST API token set via plugin UI");
+                            }
+                            return;
+                        }
+                        if (msg.type === "clearToken") {
+                            this.clearFigmaRestToken();
+                            logger.info({ clientId }, "Plugin bridge: REST API token cleared via plugin UI");
                             return;
                         }
                         if (msg.id && this.pending.has(msg.id)) {
@@ -412,6 +429,49 @@ export class PluginBridgeServer {
             p.reject(new Error(`Plugin bridge request '${p.method}' failed: ${reason}`));
         }
         this.pending.clear();
+    }
+    // ---- Figma REST API token management (in-memory only) ----
+    setFigmaRestToken(token) {
+        this.figmaRestToken = { token, setAt: Date.now() };
+        logger.info("Figma REST API token set (in-memory)");
+        // Broadcast to all connected plugins
+        for (const client of this.clients.values()) {
+            if (client.ws.readyState === 1) {
+                try {
+                    client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true }));
+                }
+                catch { /* ignore */ }
+            }
+        }
+    }
+    clearFigmaRestToken() {
+        this.figmaRestToken = null;
+        logger.info("Figma REST API token cleared");
+        for (const client of this.clients.values()) {
+            if (client.ws.readyState === 1) {
+                try {
+                    client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: false }));
+                }
+                catch { /* ignore */ }
+            }
+        }
+    }
+    getFigmaRestToken() {
+        return this.figmaRestToken;
+    }
+    updateRateLimit(remaining, limit, resetAt) {
+        if (this.figmaRestToken) {
+            this.figmaRestToken.rateLimit = { remaining, limit, resetAt };
+            // Broadcast updated rate limit to all connected plugins
+            for (const client of this.clients.values()) {
+                if (client.ws.readyState === 1) {
+                    try {
+                        client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true, rateLimit: { remaining, limit, resetAt } }));
+                    }
+                    catch { /* ignore */ }
+                }
+            }
+        }
     }
     stop() {
         if (this.heartbeatTimer) {

@@ -36,6 +36,15 @@ export interface ConnectedFileInfo {
     fileName: string | null;
     connectedAt: number;
 }
+export interface FigmaRestTokenInfo {
+    token: string;
+    setAt: number;
+    rateLimit?: {
+        remaining: number;
+        limit: number;
+        resetAt: number;
+    };
+}
 export declare class PluginBridgeServer {
     private wss;
     private httpServer;
@@ -45,6 +54,8 @@ export declare class PluginBridgeServer {
     private heartbeatTimer;
     private auditLogPath;
     private clientIdCounter;
+    /** Figma REST API token (in-memory only, never written to disk). */
+    private figmaRestToken;
     /** User/config preferred port (before clamp and fallback). */
     private readonly preferredPort;
     constructor(port: number, options?: {
@@ -56,7 +67,7 @@ export declare class PluginBridgeServer {
     start(): void;
     /** Get last startup error (null if running fine). */
     getStartError(): string | null;
-    /** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. */
+    /** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. Token is preserved across restart. */
     restart(newPort: number): Promise<{
         success: boolean;
         port: number;
@@ -93,6 +104,10 @@ export declare class PluginBridgeServer {
     connectedClientCount(): number;
     private rejectPendingForClient;
     private rejectAllPending;
+    setFigmaRestToken(token: string): void;
+    clearFigmaRestToken(): void;
+    getFigmaRestToken(): FigmaRestTokenInfo | null;
+    updateRateLimit(remaining: number, limit: number, resetAt: number): void;
     stop(): void;
 }
 //# sourceMappingURL=plugin-bridge-server.d.ts.map

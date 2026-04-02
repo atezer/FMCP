@@ -19,6 +19,7 @@ import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
+import { truncateRestResponse, calculateSizeKB } from "./core/response-guard.js";
 
 const logger = createChildLogger({ component: "plugin-only-mcp" });
 
@@ -99,7 +100,7 @@ export async function main() {
 
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
-		version: "1.3.1",
+		version: "1.4.0",
 	});
 
 	// ---- figma_list_connected_files (multi-client discovery) ----
@@ -1118,6 +1119,280 @@ export async function main() {
 			} finally {
 				portChangeInProgress = false;
 			}
+		}
+	);
+
+	// ---- Figma REST API token management ----
+
+	server.registerTool(
+		"figma_set_rest_token",
+		{
+			description:
+				"Set Figma REST API token for REST API calls (export, comments, version history, etc.). " +
+				"Token is stored in memory only — never written to disk. Cleared on restart. " +
+				"Get a token from Figma → Settings → Personal access tokens (max 90 days).",
+			inputSchema: {
+				token: z.string().describe("Figma personal access token (figd_...)"),
+			},
+		},
+		async ({ token }) => {
+			if (!token.startsWith("figd_")) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "Token must start with 'figd_'" }, null, 0) }],
+					isError: true,
+				};
+			}
+			// Validate token with a lightweight API call
+			try {
+				const controller = new AbortController();
+				const timeout = setTimeout(() => controller.abort(), 10000);
+				const res = await fetch("https://api.figma.com/v1/me", {
+					headers: { "X-Figma-Token": token },
+					signal: controller.signal,
+				});
+				clearTimeout(timeout);
+				if (!res.ok) {
+					return {
+						content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: `Token validation failed: ${res.status} ${res.statusText}` }, null, 0) }],
+						isError: true,
+					};
+				}
+				const me = await res.json() as { handle?: string; email?: string };
+				bridge.setFigmaRestToken(token);
+
+				// Read rate limit headers
+				const remaining = parseInt(res.headers.get("x-ratelimit-remaining") || "0", 10);
+				const limit = parseInt(res.headers.get("x-ratelimit-limit") || "0", 10);
+				const resetAt = parseInt(res.headers.get("x-ratelimit-reset") || "0", 10);
+				if (limit > 0) bridge.updateRateLimit(remaining, limit, resetAt);
+
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						success: true,
+						user: me.handle || me.email || "unknown",
+						message: "Token set. REST API tools are now available.",
+						rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
+					}, null, 0) }],
+				};
+			} catch (err) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: `Token validation error: ${err instanceof Error ? err.message : String(err)}` }, null, 0) }],
+					isError: true,
+				};
+			}
+		}
+	);
+
+	server.registerTool(
+		"figma_clear_rest_token",
+		{
+			description: "Clear the stored Figma REST API token from memory.",
+			inputSchema: {},
+		},
+		async () => {
+			bridge.clearFigmaRestToken();
+			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: "Token cleared." }, null, 0) }] };
+		}
+	);
+
+	server.registerTool(
+		"figma_rest_api",
+		{
+			description:
+				"Call Figma REST API directly. Requires a token set via figma_set_rest_token. " +
+				"Use for: file export (SVG/PNG), comments, version history, team/project listing, " +
+				"image fills, and anything not available through the plugin bridge. " +
+				"Endpoint examples: GET /v1/files/:fileKey, GET /v1/images/:fileKey, GET /v1/files/:fileKey/comments",
+			inputSchema: {
+				endpoint: z.string().describe("REST API path, e.g. '/v1/files/abc123' or '/v1/me'"),
+				method: z.enum(["GET", "POST", "PUT", "DELETE"]).optional().default("GET").describe("HTTP method"),
+				body: z.string().optional().describe("JSON body for POST/PUT requests"),
+			},
+			annotations: { readOnlyHint: false },
+		},
+		async ({ endpoint, method, body }) => {
+			const tokenInfo = bridge.getFigmaRestToken();
+			if (!tokenInfo) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						success: false,
+						error: "No Figma REST API token set. Use figma_set_rest_token first. Or enter token in Figma plugin Advanced panel.",
+					}, null, 0) }],
+					isError: true,
+				};
+			}
+
+			// Rate limit pre-check
+			const rl = tokenInfo.rateLimit;
+			if (rl && rl.remaining === 0) {
+				const resetDate = new Date(rl.resetAt * 1000);
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						success: false,
+						error: `API rate limit exhausted (0/${rl.limit}). Resets at ${resetDate.toISOString()}. Wait and retry.`,
+						rateLimit: rl,
+					}, null, 0) }],
+					isError: true,
+				};
+			}
+
+			const url = endpoint.startsWith("http") ? endpoint : `https://api.figma.com${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+			const MAX_RETRIES = 3;
+			const BACKOFF_BASE_MS = 5000;
+			const MAX_TOTAL_MS = 45000;
+			const startTime = Date.now();
+
+			for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+				try {
+					const controller = new AbortController();
+					const timeout = setTimeout(() => controller.abort(), 30000);
+					const fetchOpts: RequestInit = {
+						method: method || "GET",
+						headers: {
+							"X-Figma-Token": tokenInfo.token,
+							"Content-Type": "application/json",
+						},
+						signal: controller.signal,
+					};
+					if (body && (method === "POST" || method === "PUT")) {
+						fetchOpts.body = body;
+					}
+
+					const res = await fetch(url, fetchOpts);
+					clearTimeout(timeout);
+
+					// Update rate limits
+					const remaining = parseInt(res.headers.get("x-ratelimit-remaining") || "0", 10);
+					const limit = parseInt(res.headers.get("x-ratelimit-limit") || "0", 10);
+					const resetAt = parseInt(res.headers.get("x-ratelimit-reset") || "0", 10);
+					if (limit > 0) bridge.updateRateLimit(remaining, limit, resetAt);
+
+					// 429 Rate Limited — retry with backoff
+					if (res.status === 429 && attempt < MAX_RETRIES) {
+						const retryAfter = parseInt(res.headers.get("retry-after") || "0", 10);
+						const delayMs = retryAfter > 0 ? retryAfter * 1000 : BACKOFF_BASE_MS * Math.pow(2, attempt);
+						const elapsed = Date.now() - startTime;
+						if (elapsed + delayMs > MAX_TOTAL_MS) {
+							return {
+								content: [{ type: "text" as const, text: JSON.stringify({
+									success: false, status: 429,
+									error: `Rate limited. ${attempt + 1} attempts, total ${Math.round(elapsed / 1000)}s. Retry later.`,
+									rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
+								}, null, 0) }],
+								isError: true,
+							};
+						}
+						logger.warn({ attempt, delayMs, endpoint }, "figma_rest_api: 429, retrying after %dms", delayMs);
+						await new Promise((r) => setTimeout(r, delayMs));
+						continue;
+					}
+
+					const responseText = await res.text();
+					let responseData: unknown;
+					try { responseData = JSON.parse(responseText); } catch { responseData = responseText; }
+
+					if (!res.ok) {
+						return {
+							content: [{ type: "text" as const, text: JSON.stringify({
+								success: false, status: res.status, statusText: res.statusText,
+								error: responseData,
+								rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
+							}, null, 0) }],
+							isError: true,
+						};
+					}
+
+					// Response size protection — truncate if > 200KB
+					const contentBlocks: Array<{ type: "text"; text: string }> = [];
+
+					// Rate limit warning
+					if (limit > 0 && remaining > 0 && remaining < 10) {
+						contentBlocks.push({
+							type: "text" as const,
+							text: `⚠️ API limit low: ${remaining}/${limit} requests remaining.`,
+						});
+					}
+
+					const result = truncateRestResponse(endpoint, responseData, 200);
+
+					if (result.wasTruncated) {
+						contentBlocks.push({
+							type: "text" as const,
+							text: `⚠️ Response truncated: ${Math.round(result.originalSizeKB)}KB → ${Math.round(result.truncatedSizeKB)}KB (${result.itemsRemoved} items removed). Use more specific endpoint or parameters for full data.`,
+						});
+					}
+
+					contentBlocks.push({
+						type: "text" as const,
+						text: JSON.stringify({
+							success: true, status: res.status,
+							data: result.data,
+							...(result.wasTruncated && { _responseGuard: { originalSizeKB: Math.round(result.originalSizeKB), truncatedSizeKB: Math.round(result.truncatedSizeKB) } }),
+							rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
+						}, null, 0),
+					});
+
+					return { content: contentBlocks };
+				} catch (err) {
+					if (attempt < MAX_RETRIES && (Date.now() - startTime) < MAX_TOTAL_MS) {
+						const delayMs = BACKOFF_BASE_MS * Math.pow(2, attempt);
+						logger.warn({ attempt, err, endpoint }, "figma_rest_api: fetch error, retrying");
+						await new Promise((r) => setTimeout(r, delayMs));
+						continue;
+					}
+					return {
+						content: [{ type: "text" as const, text: JSON.stringify({
+							success: false,
+							error: `REST API call failed after ${attempt + 1} attempts: ${err instanceof Error ? err.message : String(err)}`,
+						}, null, 0) }],
+						isError: true,
+					};
+				}
+			}
+			// Should not reach here
+			return {
+				content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "Unexpected: all retries exhausted" }, null, 0) }],
+				isError: true,
+			};
+		}
+	);
+
+	server.registerTool(
+		"figma_get_rest_token_status",
+		{
+			description: "Check if a Figma REST API token is set and view rate limit usage.",
+			inputSchema: {},
+			annotations: { readOnlyHint: true },
+		},
+		async () => {
+			const tokenInfo = bridge.getFigmaRestToken();
+			if (!tokenInfo) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						hasToken: false,
+						message: "No token set. Use figma_set_rest_token to add one.",
+					}, null, 0) }],
+				};
+			}
+			const rl = tokenInfo.rateLimit;
+			let warning: string | undefined;
+			if (rl && rl.limit > 0) {
+				const pct = (rl.remaining / rl.limit) * 100;
+				if (rl.remaining === 0) {
+					warning = `API limiti doldu (0/${rl.limit}). Reset: ${new Date(rl.resetAt * 1000).toISOString()}`;
+				} else if (pct <= 20) {
+					warning = `API limiti düşük: ${rl.remaining}/${rl.limit} (${Math.round(pct)}%)`;
+				}
+			}
+			return {
+				content: [{ type: "text" as const, text: JSON.stringify({
+					hasToken: true,
+					setAt: new Date(tokenInfo.setAt).toISOString(),
+					rateLimit: rl || null,
+					...(warning && { warning }),
+					message: warning || "Token is set. REST API tools are available.",
+				}, null, 0) }],
+			};
 		}
 	);
 

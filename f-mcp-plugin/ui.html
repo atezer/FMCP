@@ -218,6 +218,31 @@
         <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
       <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
+      <div class="api-token-section" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="figma-token" style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;">API Token</label>
+          <input type="password" id="figma-token" placeholder="figd_..." style="flex:1;font-size:11px;padding:3px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;outline:none;" aria-label="Figma REST API token" />
+          <select id="token-expiry" style="font-size:10px;padding:2px 3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.6);outline:none;" title="Token süresi (Figma'da seçtiğiniz süre)">
+            <option value="90">90g</option>
+            <option value="30">30g</option>
+            <option value="7">7g</option>
+            <option value="1">1g</option>
+          </select>
+          <button type="button" id="clear-token" style="font-size:10px;padding:2px 6px;background:rgba(255,100,100,0.15);border:1px solid rgba(255,100,100,0.2);border-radius:3px;color:rgba(255,100,100,0.8);cursor:pointer;" title="Token'ı temizle">x</button>
+        </div>
+        <div id="token-status" style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px;display:none;"></div>
+        <div id="token-expiry-info" style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;display:none;"></div>
+        <div id="rate-limit-bar" style="display:none;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,0.4);">
+            <span>API Limit</span>
+            <span id="rate-limit-text">—</span>
+          </div>
+          <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
+            <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
+          </div>
+          <div id="rate-limit-warning" style="display:none;font-size:9px;margin-top:2px;font-weight:600;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -597,6 +622,35 @@
           console.log('[F-MCP ATezer Bridge] File identity: ' + (msg.fileName || '?') + ' (' + (msg.fileKey || '?') + ')');
           break;
 
+        case 'RESTORE_TOKEN':
+          // Token restored from figma.clientStorage on plugin open
+          if (msg.token) {
+            var tokenEl = document.getElementById('figma-token');
+            if (tokenEl) tokenEl.value = msg.token;
+            var expiresAt = msg.expiresAt || 0;
+            __tokenExpiresAt = expiresAt;
+            var isExpired = expiresAt > 0 && expiresAt < Date.now();
+            if (isExpired) {
+              updateTokenUI(false, null, expiresAt);
+              // Auto-delete expired token
+              parent.postMessage({ pluginMessage: { type: 'DELETE_TOKEN' } }, '*');
+              if (tokenEl) tokenEl.value = '';
+            } else {
+              updateTokenUI(true, null, expiresAt);
+              window.__pendingRestoreToken = msg.token;
+            }
+            console.log('[F-MCP] Token restored from clientStorage' + (isExpired ? ' (EXPIRED)' : '') + (expiresAt ? ' expires: ' + new Date(expiresAt).toLocaleDateString() : ''));
+          }
+          break;
+
+        case 'TOKEN_SAVED':
+          console.log('[F-MCP] Token saved to clientStorage: ' + (msg.success ? 'OK' : 'FAIL'));
+          break;
+
+        case 'TOKEN_DELETED':
+          console.log('[F-MCP] Token deleted from clientStorage');
+          break;
+
         case 'VARIABLES_DATA':
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
@@ -815,6 +869,7 @@
     var MCP_BRIDGE_PORT_KEY = 'f-mcp-bridge-port';
     var MCP_BRIDGE_HOST_KEY = 'f-mcp-bridge-host';
     var MCP_ADVANCED_OPEN_KEY = 'f-mcp-bridge-advanced-open';
+
     var mcpBridgeWs = null;
     var mcpBridgeReconnectTimer = null;
     var mcpReconnectDelay = 1000;
@@ -856,6 +911,122 @@
         unlockAutoPortScan();
       }
       requestUiResize();
+    }
+
+    // ---- Token UI ----
+    function updateTokenUI(hasToken, rateLimit, expiresAt) {
+      var statusEl = document.getElementById('token-status');
+      var barEl = document.getElementById('rate-limit-bar');
+      var textEl = document.getElementById('rate-limit-text');
+      var fillEl = document.getElementById('rate-limit-fill');
+      var expiryEl = document.getElementById('token-expiry-info');
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent = hasToken ? 'Token aktif' : 'Token yok';
+        statusEl.style.color = hasToken ? 'rgba(78,205,196,0.8)' : 'rgba(255,255,255,0.35)';
+      }
+      // Expiry countdown
+      if (expiryEl) {
+        if (hasToken && expiresAt && expiresAt > 0) {
+          var now = Date.now();
+          var daysLeft = Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000));
+          if (daysLeft <= 0) {
+            expiryEl.style.display = 'block';
+            expiryEl.textContent = 'Token suresi dolmus!';
+            expiryEl.style.color = 'rgba(249,65,68,0.9)';
+            if (statusEl) { statusEl.textContent = 'Token suresi dolmus'; statusEl.style.color = 'rgba(249,65,68,0.8)'; }
+          } else {
+            expiryEl.style.display = 'block';
+            var expDate = new Date(expiresAt);
+            expiryEl.textContent = daysLeft + ' gun kaldi (' + expDate.toLocaleDateString('tr-TR') + ')';
+            expiryEl.style.color = daysLeft <= 7 ? 'rgba(249,193,79,0.8)' : 'rgba(255,255,255,0.35)';
+          }
+        } else {
+          expiryEl.style.display = 'none';
+        }
+      }
+      // Rate limit bar
+      if (rateLimit && rateLimit.limit > 0 && barEl && textEl && fillEl) {
+        barEl.style.display = 'block';
+        var pct = Math.round((rateLimit.remaining / rateLimit.limit) * 100);
+        textEl.textContent = rateLimit.remaining + ' / ' + rateLimit.limit;
+        fillEl.style.width = pct + '%';
+        fillEl.style.background = pct > 30 ? '#4ecdc4' : pct > 10 ? '#f9c74f' : '#f94144';
+        // Warning text
+        var warnEl = document.getElementById('rate-limit-warning');
+        if (warnEl) {
+          if (rateLimit.remaining === 0) {
+            warnEl.style.display = 'block';
+            warnEl.textContent = 'API limiti doldu!';
+            warnEl.style.color = '#f94144';
+          } else if (pct <= 5) {
+            warnEl.style.display = 'block';
+            warnEl.textContent = 'API limiti kritik!';
+            warnEl.style.color = '#f94144';
+            fillEl.style.animation = 'pulse 1s infinite';
+          } else if (pct <= 20) {
+            warnEl.style.display = 'block';
+            warnEl.textContent = 'Dusuk API limiti';
+            warnEl.style.color = '#f9c74f';
+            fillEl.style.animation = 'none';
+          } else {
+            warnEl.style.display = 'none';
+            fillEl.style.animation = 'none';
+          }
+        }
+      } else if (barEl) {
+        barEl.style.display = hasToken ? 'block' : 'none';
+        if (textEl) textEl.textContent = '—';
+        if (fillEl) { fillEl.style.width = '100%'; fillEl.style.animation = 'none'; }
+        var warnEl2 = document.getElementById('rate-limit-warning');
+        if (warnEl2) warnEl2.style.display = 'none';
+      }
+      requestUiResize();
+    }
+
+    // Track current token expiry for UI updates
+    var __tokenExpiresAt = 0;
+
+    function getSelectedExpiryDays() {
+      var sel = document.getElementById('token-expiry');
+      return sel ? parseInt(sel.value, 10) || 90 : 90;
+    }
+
+    function initTokenInput() {
+      var el = document.getElementById('figma-token');
+      var clearBtn = document.getElementById('clear-token');
+      if (el) {
+        el.addEventListener('change', function() {
+          var token = (el.value || '').trim();
+          if (token) {
+            var days = getSelectedExpiryDays();
+            var expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+            __tokenExpiresAt = expiresAt;
+            // Save to Figma clientStorage (persists across plugin close/reopen)
+            parent.postMessage({ pluginMessage: { type: 'SAVE_TOKEN', token: token, expiresAt: expiresAt } }, '*');
+            // Send to bridge
+            if (mcpBridgeWs && mcpBridgeWs.readyState === 1) {
+              mcpBridgeWs.send(JSON.stringify({ type: 'setToken', token: token }));
+            }
+            updateTokenUI(true, null, expiresAt);
+          } else {
+            updateTokenUI(false, null, 0);
+          }
+        });
+      }
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+          if (el) el.value = '';
+          __tokenExpiresAt = 0;
+          // Delete from Figma clientStorage
+          parent.postMessage({ pluginMessage: { type: 'DELETE_TOKEN' } }, '*');
+          // Clear from bridge
+          if (mcpBridgeWs && mcpBridgeWs.readyState === 1) {
+            mcpBridgeWs.send(JSON.stringify({ type: 'clearToken' }));
+          }
+          updateTokenUI(false, null, 0);
+        });
+      }
     }
 
     function initAdvancedPanel() {
@@ -1057,6 +1228,20 @@
               }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
               updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+              // Resend restored token to bridge after handshake
+              if (window.__pendingRestoreToken && currentWs && currentWs.readyState === 1) {
+                currentWs.send(JSON.stringify({ type: 'setToken', token: window.__pendingRestoreToken }));
+                console.log('[F-MCP] Sent restored token to bridge');
+              }
+              // Also check input field (user may have entered token before connection)
+              var tokenInput = document.getElementById('figma-token');
+              if (!window.__pendingRestoreToken && tokenInput && tokenInput.value && currentWs && currentWs.readyState === 1) {
+                currentWs.send(JSON.stringify({ type: 'setToken', token: tokenInput.value.trim() }));
+              }
+              return;
+            }
+            if (msg.type === 'tokenStatus') {
+              updateTokenUI(msg.hasToken, msg.rateLimit || null, __tokenExpiresAt);
               return;
             }
             if (msg.type === 'ping') {
@@ -1268,6 +1453,7 @@
     if (typeof WebSocket !== 'undefined') {
       initMcpHostInput();
       initMcpPortInput();
+      initTokenInput();
       initAdvancedPanel();
       try {
         var rememberedPort = parseInt(localStorage.getItem(MCP_BRIDGE_PORT_KEY) || '', 10);

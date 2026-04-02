@@ -12,6 +12,42 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.4.0] - 2026-04-02
+
+### Figma REST API entegrasyonu (YENi)
+
+- **`figma_set_rest_token`**: Figma REST API token girisi (figd_... formati). Token dogrulama (/v1/me), 10s timeout.
+- **`figma_rest_api`**: Direkt REST API cagrisi (export, comments, versions, teams). Endpoint-bazli akilli kirpma, 429 retry (3 deneme, exponential backoff), rate limit on kontrolu.
+- **`figma_get_rest_token_status`**: Token durumu, rate limit bilgisi, dusuk limit uyarisi.
+- **`figma_clear_rest_token`**: Token temizleme.
+
+### Response Guard — Context korumasi
+
+- **`response-guard.ts`**: Paylasimli cevap kirpma modulu. AI context penceresi tasmamasini onler.
+- **Endpoint-bazli kirpma**: comments → son 20, versions → son 10, files → ilk 20 sayfa (children stripped).
+- **Boyut limitleri**: 200KB ustu otomatik kirpma. Gercek test: 237KB → 10KB (comments), 533KB → 1KB (file).
+- **AI bilgilendirme**: Kirpilan cevaplara `_truncated` ve `_responseGuard` metadata eklenir.
+
+### 429 Rate Limit korumalari
+
+- **Otomatik retry**: 429 durumunda 3 deneme, Retry-After header veya exponential backoff (5s→10s→20s), max 45s.
+- **On kontrol**: remaining=0 → kisa devre hata; remaining<10 → cevaba uyari blogu.
+- **Rate limit broadcast**: Her REST cagrisindan sonra guncellenen limitler tum plugin'lere bildirilir.
+
+### Plugin UI — Token ve limit yonetimi
+
+- **Token girisi**: Advanced panelinde sifrelenmis input + sure secici (1/7/30/90 gun).
+- **Kalici depolama**: `figma.clientStorage` ile token plugin kapatilip acilsa bile kalir. Sure dolunca otomatik temizlenir.
+- **Otomatik restore**: Plugin acildiginda → clientStorage → UI + bridge otomatik gonderi.
+- **Rate limit gostergesi**: Kullanim bar'i (yesil/sari/kirmizi), dusuk limit uyarisi (%20), kritik uyari (%5, nabiz animasyonu), doldu mesaji.
+- **Token suresi**: Kalan gun sayaci + bitis tarihi; ≤7 gun sari uyari, dolmus → kirmizi + otomatik silme.
+
+### Kod kalitesi
+
+- **`response-guard.ts`** yeni modul: `estimateTokens()`, `calculateSizeKB()`, `truncateResponse()`, `truncateRestResponse()`.
+- **Port degisiminde token koruma**: `restart()` token'i save/restore eder.
+- **Token reconnect**: WebSocket yeniden baglandiginda kaydedilmis token otomatik gonderilir.
+
 ## [1.3.2] - 2026-04-02
 
 ### Bridge (hata duzeltmeleri)

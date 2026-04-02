@@ -44,7 +44,9 @@
       "Bash(grep -r \"1\\\\.1\\\\.[0-9]\\\\|1\\\\.2\\\\.[0-1]\" /Users/abdussamed.tezer/FCM/src /Users/abdussamed.tezer/FCM/CHANGELOG.md /Users/abdussamed.tezer/FCM/*.md)",
       "Bash(grep -r \"figma-style-extractor\" /Users/abdussamed.tezer/FCM/tsconfig*.json)",
       "Bash(npm run:*)",
-      "Bash(npm publish:*)"
+      "Bash(npm publish:*)",
+      "mcp__figma-mcp-bridge__figma_get_rest_token_status",
+      "mcp__figma-mcp-bridge__figma_rest_api"
     ],
     "deny": [],
     "ask": []
