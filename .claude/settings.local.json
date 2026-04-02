@@ -55,7 +55,22 @@
       "Bash(grep -rn .4.1 /Users/abdussamed.tezer/FCM --include=*.ts --include=*.js --include=*.md --include=*.json)",
       "Bash(grep -rn \"bridgeVersion\\\\|version\" /Users/abdussamed.tezer/FCM/src/ --include=*.ts)",
       "Bash(grep -rn @atezer/figma-mcp-bridge@1.[0-3]. /Users/abdussamed.tezer/FCM/docs/ /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/KURULUM.md)",
-      "Bash(grep -n 1.4.[012] /Users/abdussamed.tezer/FCM/dist/local-plugin-only.js /Users/abdussamed.tezer/FCM/dist/local.js /Users/abdussamed.tezer/FCM/dist/core/plugin-bridge-server.js)"
+      "Bash(grep -n 1.4.[012] /Users/abdussamed.tezer/FCM/dist/local-plugin-only.js /Users/abdussamed.tezer/FCM/dist/local.js /Users/abdussamed.tezer/FCM/dist/core/plugin-bridge-server.js)",
+      "Bash(grep -r ': any' /Users/abdussamed.tezer/FCM/src --include=*.ts)",
+      "Bash(grep -r \"console\\\\.\\\\\\(log\\\\|error\\\\|warn\\\\|debug\\\\\\)\" /Users/abdussamed.tezer/FCM/src --include=*.ts --include=*.js)",
+      "Bash(wc -l /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(grep -r process.env /Users/abdussamed.tezer/FCM/src --include=*.ts --include=*.js)",
+      "Bash(grep -r \"password\\\\|token\\\\|secret\\\\|key\\\\|credential\" /Users/abdussamed.tezer/FCM/src --include=*.ts --include=*.js -i)",
+      "Bash(grep -l \"TODO\\\\|FIXME\" /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(grep -r \"require.*import\\\\|import.*require\" /Users/abdussamed.tezer/FCM/src --include=*.ts --include=*.js)",
+      "Bash(grep -r \"\\\\/\\\\/ eslint-disable\\\\|\\\\/\\\\/ ts-ignore\\\\|@ts-ignore\\\\|// noinspection\" /Users/abdussamed.tezer/FCM/src --include=*.ts)",
+      "Bash(git -C /Users/abdussamed.tezer/FCM log --oneline)",
+      "Bash(git -C /Users/abdussamed.tezer/FCM log --all --oneline --graph)",
+      "Bash(ls -lh /Users/abdussamed.tezer/FCM/dist/*.js)",
+      "Bash(wc -l /Users/abdussamed.tezer/FCM/src/core/*.ts)",
+      "Bash(ls -la /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(ls /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(ls /Users/abdussamed.tezer/FCM/docs/archived/*.md)"
     ],
     "deny": [],
     "ask": []
