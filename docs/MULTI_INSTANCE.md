@@ -143,5 +143,5 @@ lsof -i :5454-5470 -sTCP:LISTEN
 ## İlgili dokümanlar
 
 - [ONBOARDING](ONBOARDING.md) — Kurulum
-- [CLAUDE_DESKTOP_CONFIG](CLAUDE_DESKTOP_CONFIG.md) — Claude Desktop yapılandırması
+- [SETUP](SETUP.md) — Kurulum ve yapılandırma
 - [PORT-5454-KAPALI](PORT-5454-KAPALI.md) — Port kapalı sorun giderme

@@ -121,7 +121,11 @@
       "Bash(/tmp/check_overlap.sh)",
       "Bash(/tmp/section_analysis.sh)",
       "Bash(grep -rn \"MODE_COMPARISON\\\\|NPX-INSTALLATION\\\\|NPX_INSTALLATION\\\\|npx-installation\" /Users/abdussamed.tezer/FCM/*.md /Users/abdussamed.tezer/FCM/docs/*.md /Users/abdussamed.tezer/FCM/README.md)",
-      "Bash(grep -rn \"PLUGIN-MCP-BAGLANTI\\\\|PLUGIN-NASIL-CALISIR\\\\|MODE_COMPARISON\\\\|NPX-INSTALLATION\\\\|PORT-5454-KAPALI\\\\|BITBUCKET-README\" /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/KURULUM.md /Users/abdussamed.tezer/FCM/CONTRIBUTING.md /Users/abdussamed.tezer/FCM/FUTURE.md /Users/abdussamed.tezer/FCM/docs/*.md)"
+      "Bash(grep -rn \"PLUGIN-MCP-BAGLANTI\\\\|PLUGIN-NASIL-CALISIR\\\\|MODE_COMPARISON\\\\|NPX-INSTALLATION\\\\|PORT-5454-KAPALI\\\\|BITBUCKET-README\" /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/KURULUM.md /Users/abdussamed.tezer/FCM/CONTRIBUTING.md /Users/abdussamed.tezer/FCM/FUTURE.md /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(wc -l /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/CHANGELOG.md /Users/abdussamed.tezer/FCM/FUTURE.md /Users/abdussamed.tezer/FCM/KURULUM.md /Users/abdussamed.tezer/FCM/CONTRIBUTING.md /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(grep -l \"OAUTH_SETUP\\\\|SELF_HOSTING\\\\|RECONSTRUCTION_FORMAT\\\\|FIGMA_USE_STRUCTURED_INTENT\\\\|FMCP_AGENT_CANVAS_COMPAT\\\\|FMCP_ENTERPRISE_WORKFLOWS\\\\|DEPLOYMENT_COMPARISON\" docs/*.md README.md)",
+      "Bash(grep -r \"OAUTH_SETUP\\\\|SELF_HOSTING\\\\|RECONSTRUCTION_FORMAT\\\\|FIGMA_USE_STRUCTURED_INTENT\" /Users/abdussamed.tezer/FCM --include=*.md)",
+      "Bash(grep -r 1.6.2 /Users/abdussamed.tezer/FCM/*.md)"
     ],
     "deny": [],
     "ask": []

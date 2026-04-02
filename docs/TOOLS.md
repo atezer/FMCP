@@ -18,7 +18,7 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 - Tasarım sistemi önbelleği: `figma_get_design_system_summary`, `figma_search_components`, `figma_get_component_details`, `figma_get_token_values`
 - Bileşen / node yazma: `figma_instantiate_component`, `figma_set_description`, `figma_add_component_property`, `figma_edit_component_property`, `figma_delete_component_property`
 - Geometri / görünüm: `figma_resize_node`, `figma_move_node`, `figma_set_fills`, `figma_set_strokes`, `figma_clone_node`, `figma_delete_node`, `figma_rename_node`, `figma_set_text`, `figma_create_child`
-- **Agent Canvas / resmi MCP eşlemesi:** Resmi `search_design_system` ihtiyacı için `figma_search_components` + `figma_get_design_system_summary` kullanılır. **`figma_search_assets`, `figma_get_code_connect` ve `figma_use` bu `local.js` build’inde `registerTool` ile kayıtlı değildir** (gelecek veya harici entegrasyon; bkz. [FMCP_AGENT_CANVAS_COMPAT.md](./FMCP_AGENT_CANVAS_COMPAT.md)). Yapılandırılmış tuval işlemleri için `figma_execute` kullanılır. Çoklu dosya: `fileKey` / `figmaUrl` ile connector yönlendirmesi.
+- **Kütüphane arama:** `figma_search_assets` (takım kütüphanesi), `figma_search_components` (dosya-içi). `figma_get_code_connect` ve `figma_use` henüz uygulanmamıştır (bkz. [FUTURE.md](../FUTURE.md)). Yapılandırılmış işlemler için `figma_execute` kullanılır. Çoklu dosya: `fileKey` / `figmaUrl` ile connector yönlendirmesi.
 
 ## `local-plugin-only.js` — `figma_*` araçları
 
@@ -29,7 +29,7 @@ Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js`
 - Konsol: `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`
 - `figma_set_description`, `figma_get_component_image`, `figma_get_component_for_development`
 - Toplu token: `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_arrange_component_set`, `figma_check_design_parity`, `figma_get_token_browser`, `figma_get_status`
-- **Agent Canvas notu:** `figma_search_assets`, `figma_get_code_connect`, `figma_use` **bu build’de yok**. DS keşfi: `figma_search_components` (çıktıda bileşen `key` — `figma_instantiate_component` için), `figma_get_design_system_summary`. Yapılandırılmış intent taslağı: [FIGMA_USE_STRUCTURED_INTENT.md](./FIGMA_USE_STRUCTURED_INTENT.md) (şu an yerine **`figma_execute`** kullanın).
+- **v1.6+ yeni araçlar:** `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group`, `figma_export_nodes` (SVG/PNG batch), `figma_search_assets` (kütüphane), `figma_plugin_diagnostics`, REST API araçları (`figma_set_rest_token`, `figma_rest_api`, `figma_get_rest_token_status`, `figma_clear_rest_token`). Tam liste: [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md).
 
 ## `figma-tools.js` (REST / tarayıcı tarafı)
 
