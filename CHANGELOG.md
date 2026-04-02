@@ -12,6 +12,15 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.3.2] - 2026-04-02
+
+### Bridge (hata duzeltmeleri)
+
+- **Hafiza sizintisi duzeltmesi:** `tryListenAsync()` timeout yolunda `_listenResolve` temizlenmiyordu; tekrarlanan port degisikliklerinde bellek sisiyordu.
+- **bridgeVersion:** Plugin welcome mesajinda `"1.1.0"` → `"1.3.2"` olarak guncellendi.
+- **Versiyon tutarliligi:** McpServer version, `.cursor-plugin/plugin.json`, `package-lock.json` hepsi senkronize edildi.
+- **Stale dist temizligi:** Silinen `figma-style-extractor` kaynak dosyasinin artik dist/ kopyalari kaldirildi.
+
 ## [1.3.1] - 2026-04-02
 
 ### Bridge (hata duzeltmeleri)
