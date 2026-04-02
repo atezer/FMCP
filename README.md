@@ -91,7 +91,7 @@ Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile y
 
 | Ne | Nerede |
 | --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.4.2**) |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.4.3**) |
 | **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
 | **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
 | **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |
@@ -111,7 +111,7 @@ Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalı
 
 ### En basit kurulum (NPX — repo indirmeden)
 
-Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@1.2.0`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
+Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@latest`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
 
 
 | Adım | Yapılacak                                                                                                    |
