@@ -12,6 +12,25 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.5.0] - 2026-04-02
+
+### Plugin optimizasyonu
+
+- **Plugin minify:** `f-mcp-plugin/code.js` esbuild ile minify (101KB→65KB, %37 kucuk). `build:plugin` script eklendi; `prepublishOnly` otomatik minify.
+
+### CI/CD guclendirme
+
+- **TypeScript tip kontrolu:** `tsc --noEmit` CI'a eklendi — derleme hatalari artik otomatik yakalaniyor.
+- **Build dogrulama:** `npm run build:local` CI'da calistirilir.
+- **Versiyon tutarlilik kontrolu:** CI, `package.json` versiyonunun `src/` dosyalariyla eslesip eslesmedigini otomatik kontrol ediyor.
+- **Guvenlik taramas:**: `npm audit` CI'a eklendi.
+
+### Temizlik
+
+- **Archive silindi:** 8.1 MB gereksiz dosya (eski zip, gorseller, eski surum dosyalari) — git gecmisinde mevcut.
+- **Belgeler arsivlendi:** 6 tekrar eden / eski belge `docs/archived/` klasorune tasinarak aktif belge sayisi 30→24'e indirildi.
+- **TODO'lar temizlendi:** `enrichment-service.ts` ve `style-resolver.ts`'deki 6 TODO/FIXME notu aciklayici yorumlarla degistirildi. Kaynak kodda sifir TODO.
+
 ## [1.4.4] - 2026-04-02
 
 ### Versiyon tutarliligi (kesin duzeltme)
