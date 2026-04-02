@@ -237,7 +237,7 @@
       </div>
       <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
     </div>
-    <div id="chat-port-hint" class="chat-port-hint" hidden>
+    <div id="chat-port-hint" class="chat-port-hint">
       <div id="chat-port-hint-text"></div>
       <button type="button" id="chat-port-copy" title="Claude / Cursor sohbetine yapıştırın">Sohbet için kopyala</button>
     </div>
@@ -913,6 +913,12 @@
       return v || 'localhost';
     }
 
+    function getMcpBridgePortRaw() {
+      var el = document.getElementById('mcp-port');
+      if (!el) return NaN;
+      return parseInt(el.value, 10);
+    }
+
     function getMcpBridgePort() {
       var el = document.getElementById('mcp-port');
       if (!el) return DEFAULT_MCP_PORT;
@@ -968,6 +974,7 @@
         el.addEventListener('change', function() {
           var host = getMcpBridgeHost();
           try { localStorage.setItem(MCP_BRIDGE_HOST_KEY, host); } catch (e) {}
+          refreshChatPortHint();
           forceDisconnectAndReconnect();
         });
       }
@@ -986,12 +993,17 @@
       } catch (e) {}
       var el = document.getElementById('mcp-port');
       if (el) {
+        function onPortFieldUpdated() {
+          refreshChatPortHint();
+        }
+        el.addEventListener('input', onPortFieldUpdated);
         el.addEventListener('change', function() {
           var port = getMcpBridgePort();
           try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(port)); } catch (e) {}
           manualPortLocked = true;
           candidatePorts = [port];
           candidatePortIndex = 0;
+          refreshChatPortHint();
           forceDisconnectAndReconnect();
         });
       }
@@ -1027,22 +1039,32 @@
     }
 
     var chatPortHintFullText = '';
-    function hideChatPortHint() {
+    /** Port alanı ne gösteriyorsa ona göre metin — bağlantı kopsa da kutu kaybolmaz. */
+    function refreshChatPortHint() {
       var box = document.getElementById('chat-port-hint');
-      if (box) box.setAttribute('hidden', 'hidden');
-      chatPortHintFullText = '';
-    }
-    function showChatPortHint(bridgePort) {
-      var box = document.getElementById('chat-port-hint');
-      var el = document.getElementById('chat-port-hint-text');
-      if (!box || !el || !bridgePort) return;
+      var textEl = document.getElementById('chat-port-hint-text');
+      if (!box || !textEl) return;
+      var raw = getMcpBridgePortRaw();
+      var host = getMcpBridgeHost();
+      if (isNaN(raw) || raw < MCP_PORT_MIN || raw > MCP_PORT_MAX) {
+        chatPortHintFullText = '';
+        textEl.textContent =
+          'Port alanına 5454–5470 arası bir sayı yazın. Sohbet satırı, seçtiğiniz portla eşleşecek şekilde güncellenir.';
+        requestUiResize();
+        return;
+      }
+      var p = raw;
+      var wsLive = mcpBridgeWs && mcpBridgeWs.readyState === 1;
+      var connected = wsLive && mcpHandshakeDone && mcpConnectedPort === p;
+      var head = connected
+        ? 'Bağlı — köprü port ' + p + '. '
+        : 'Seçilen port ' + p + ' (MCP sunucusu yok / bağlanıyor — normal; env ve plugin aynı portta olmalı). ';
       chatPortHintFullText =
-        'F-MCP bridge port: ' + bridgePort + '. ' +
-        'Sohbette belirtin; asistan figma_get_status({ expectedBridgePort: ' + bridgePort + ' }) ile doğrulasın. ' +
-        'Claude/Cursor MCP env: FIGMA_PLUGIN_BRIDGE_PORT=' + bridgePort + '. ' +
-        'Dosya: ' + (window.__figmaFileName || '?') + ' (' + (window.__figmaFileKey || '?') + ')';
-      el.textContent = chatPortHintFullText;
-      box.removeAttribute('hidden');
+        head +
+        'Sohbet: bridge port ' + p + '. Asistan: figma_get_status({ expectedBridgePort: ' + p + ' }). ' +
+        'Claude/Cursor MCP: FIGMA_PLUGIN_BRIDGE_PORT=' + p + ', ws://' + host + ':' + p + '. ' +
+        'Dosya: ' + (window.__figmaFileName || '?') + ' (' + (window.__figmaFileKey || '?') + ').';
+      textEl.textContent = chatPortHintFullText;
       requestUiResize();
     }
 
@@ -1067,6 +1089,7 @@
           mcpReconnectDelay = MCP_RECONNECT_MIN;
           console.log('[F-MCP ATezer Bridge] WebSocket opened to ' + url + ', waiting for handshake...');
           updateStatus('connecting...', false, false);
+          refreshChatPortHint();
           currentWs.send(JSON.stringify({
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
@@ -1077,7 +1100,7 @@
           mcpHandshakeTimer = setTimeout(function() {
             if (!mcpHandshakeDone && mcpBridgeWs === currentWs) {
               console.warn('[F-MCP ATezer Bridge] No welcome from server — wrong server or outdated bridge');
-              hideChatPortHint();
+              refreshChatPortHint();
               updateStatus('wrong server', false, true);
             }
           }, 5000);
@@ -1100,7 +1123,7 @@
               }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
               updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
-              showChatPortHint(mcpConnectedPort);
+              refreshChatPortHint();
               return;
             }
             if (msg.type === 'ping') {
@@ -1281,7 +1304,7 @@
           mcpBridgeWs = null;
           mcpConnecting = false;
           mcpConnectedPort = null;
-          hideChatPortHint();
+          refreshChatPortHint();
           if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
           if (autoPortProbeActive && candidatePortIndex < candidatePorts.length - 1) {
             candidatePortIndex += 1;
@@ -1296,7 +1319,7 @@
         };
       } catch (e) {
         mcpConnecting = false;
-        hideChatPortHint();
+        refreshChatPortHint();
         updateStatus('no server', false, true);
         scheduleReconnect();
       }
@@ -1331,6 +1354,7 @@
         }
       } catch (e) {}
       candidatePorts = listCandidatePorts();
+      refreshChatPortHint();
       connectMcpBridge();
       requestUiResize();
     }
