@@ -12,6 +12,15 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.6.2] - 2026-04-02
+
+### Dokumantasyon duzeltmeleri
+
+- README: 5 kirik archived link duzeltildi, figma_export_nodes eklendi, REST_API_GUIDE + CONTRIBUTING referanslari eklendi
+- README: "33 arac" → "46 arac", tekrar eden satirlar kaldirildi
+- FUTURE.md: 9 tamamlanan P0-P3 maddesi isaretlendi
+- KURULUM.md: versiyon 1.2.0 → 1.6.2
+
 ## [1.6.1] - 2026-04-02
 
 ### Batch Export (YENi — 1 tool)
