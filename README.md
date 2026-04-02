@@ -54,6 +54,7 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 | Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files`, `figma_set_port` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client), runtime port değişimi |
 | Figma REST API (token ile)        | `figma_set_rest_token`, `figma_rest_api`, `figma_get_rest_token_status`, `figma_clear_rest_token` | Token girişi, direkt REST API çağrıları (export, comments, versions), rate limit takibi, otomatik cevap kırpma (context koruması) |
 | Tasarım oluşturma                 | `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group` | Yeni frame, metin, dikdörtgen oluşturma ve gruplama |
+| Görsel export                     | `figma_export_nodes`, `figma_capture_screenshot` | SVG/PNG/JPG/PDF batch export (1-50 node, vektörel), screenshot |
 | Kütüphane ve tanılama             | `figma_search_assets`, `figma_plugin_diagnostics` | Takım kütüphanesi arama, plugin sağlık kontrolü (uptime, bellek, bağlantı) |
 
 
@@ -301,20 +302,20 @@ figma_get_design_context { "figmaUrl": "https://www.figma.com/board/XYZ/...", "d
 figma_get_design_context { "fileKey": "abc123...", "depth": 2 }
 ```
 
-**Plugin–MCP bağlantı özeti:** İki mod var; debug portu zorunlu değil. **Plugin-only (önerilen):** Config'te `dist/local-plugin-only.js`, Figma normal açılır, token yok. **Tam mod:** Config'te `dist/local.js`, Figma `--remote-debugging-port=9222` ile açılır (console/screenshot için). Ayrıntı: [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md).
+**Plugin–MCP bağlantı özeti:** İki mod var; debug portu zorunlu değil. **Plugin-only (önerilen):** Config'te `dist/local-plugin-only.js`, Figma normal açılır, token yok. **Tam mod:** Config'te `dist/local.js`, Figma `--remote-debugging-port=9222` ile açılır (console/screenshot için).
 
 ## Detaylı Rehber
 
 Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun giderme için:
 
 - **[Windows kurulum rehberi](docs/WINDOWS-INSTALLATION.md)** — Windows 10/11, Node veya Python bridge, Claude config, port, sorun giderme
-- **[Plugin–MCP Bağlantı Rehberi](docs/PLUGIN-MCP-BAGLANTI.md)** (mimari, kurulum, sözleşmeler)
-- **[Plugin Nasıl Çalışır?](docs/PLUGIN-NASIL-CALISIR.md)** (Worker/UI akışı, WebSocket vs CDP)
+- **[REST API Rehberi](docs/REST_API_GUIDE.md)** — Token kurulumu, örnekler, rate limit yönetimi
+- **[Katkıda Bulunma](CONTRIBUTING.md)** — Geliştirici rehberi, test, tool ekleme
 
 ## Repo İçeriği
 
 - `f-mcp-plugin/` – F-MCP ATezer Bridge plugin kaynağı (manifest, code.js, ui.html)
-- `docs/` – Kurulum, mod karşılaştırma, [Plugin nasıl çalışır](docs/PLUGIN-NASIL-CALISIR.md), sorun giderme
+- `docs/` – Kurulum, araç referansı, REST API rehberi, sorun giderme
 - `src/` – MCP sunucusu (local, plugin-only, Cloudflare Worker)
 - `python-bridge/` – **Python MCP bridge** (Node.js kurulumu olmayan ortamlar için); aynı WebSocket protokolü, port 5454
 
@@ -326,11 +327,10 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config              |
 | [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md)                 | **Windows kurulum** — Node veya Python bridge, Claude config (Windows yolu), port, sorun giderme |
 | [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                         |
-| [PLUGIN-MCP-BAGLANTI.md](docs/PLUGIN-MCP-BAGLANTI.md)                   | Plugin–MCP mimari ve kurulum                                                                     |
-| [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md)                 | Plugin Worker/UI akışı                                                                           |
-| [MODE_COMPARISON.md](docs/MODE_COMPARISON.md)                           | Mod karşılaştırma                                                                                |
-| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları referansı                                                                           |
-| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **33 araç tam liste** (referans, Claude ile doğrulanmış)                                         |
+| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları detaylı referansı                                                                   |
+| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **46 araç tam liste** (referans, Claude ile doğrulanmış)                                         |
+| [REST_API_GUIDE.md](docs/REST_API_GUIDE.md)                             | **REST API rehberi** — Token kurulumu, örnekler, rate limit                                      |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                       | **Katkıda bulunma** — Yerel kurulum, test, tool ekleme, PR süreci                               |
 | [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
 | [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                  |
@@ -342,8 +342,6 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                    |
 | [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                       |
 | [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                            |
-| [BITBUCKET-README.md](docs/BITBUCKET-README.md)                         | Bitbucket README şablonu                                                                         |
-| [PORT-5454-KAPALI.md](docs/PORT-5454-KAPALI.md)                         | Port 5454 kapalı sorun giderme                                                                   |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Paralel görevler & çoklu kullanıcı** — sabit port, paralel hatlar, Claude çoklu MCP           |
 | [CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md)               | Claude Desktop config örnekleri (tek ve çoklu MCP sunucusu)                                      |
 | [DEPENDENCY_LAYERS.md](docs/DEPENDENCY_LAYERS.md)                       | Bağımlılık katmanları (plugin-only / tam / Cloudflare) ve olası paket ayrımı taslağı            |
