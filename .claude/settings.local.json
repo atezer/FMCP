@@ -46,7 +46,8 @@
       "Bash(npm run:*)",
       "Bash(npm publish:*)",
       "mcp__figma-mcp-bridge__figma_get_rest_token_status",
-      "mcp__figma-mcp-bridge__figma_rest_api"
+      "mcp__figma-mcp-bridge__figma_rest_api",
+      "Bash(du -sh /Users/abdussamed.tezer/FCM/dist/local-plugin-only.* /Users/abdussamed.tezer/FCM/dist/local.*)"
     ],
     "deny": [],
     "ask": []
