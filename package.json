@@ -1,6 +1,6 @@
 {
 	"name": "@atezer/figma-mcp-bridge",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
 	"main": "dist/local.js",
@@ -18,6 +18,7 @@
 		"dist/local.js.map",
 		"dist/local.d.ts",
 		"dist/local.d.ts.map",
+		"dist/browser",
 		"dist/core",
 		"f-mcp-plugin",
 		"README.md",
