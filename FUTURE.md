@@ -1,7 +1,87 @@
 # F-MCP -- Kalan Adimlar (Future)
 
-> Son guncelleme: 2 Nisan 2026 (REST API, response guard, token yonetimi, context korumasi)
+> Son guncelleme: 2 Nisan 2026 (v1.5.2 — test altyapisi, tip guvenligi, REST API, response guard)
 > Paket surumu (`package.json`): **1.5.2**
+
+---
+
+## YUKSEK ONCELIKLI HEDEFLER (Plugin-Only Kullanicilar Icin)
+
+### P0 — Tasarim Olusturma Araclari (Node Creation)
+
+Simdi: Yeni frame/text/rectangle olusturmak icin `figma_execute` ile ham Plugin API kodu yazmak gerekiyor.
+Hedef: Ozel araclar ile kolay node olusturma.
+
+- [ ] `figma_create_frame` — x, y, width, height, name, parentId
+- [ ] `figma_create_text` — text, x, y, fontSize, fontFamily, parentId
+- [ ] `figma_create_rectangle` — geometry + fill/stroke
+- [ ] `figma_create_group` — children birlestirme
+
+Etki: Tasarim otomasyonu, bilesen uretimi, layout yeniden olusturma icin temel.
+
+### P0 — Asset Search ve Code Connect
+
+Simdi: Sadece dosya-icindeki bilesenler aranabiliyor (`figma_search_components`). Takim kutuphane arama yok.
+Hedef: Yayinlanmis kutuphane bilesen/variable arama + Code Connect eslemesi.
+
+- [ ] `figma_search_assets` — takim kutuphane arama (REST API gerektirir)
+- [ ] `figma_get_code_connect` — node icin kod eslesmesi
+- [ ] `figma_use` — yuksek seviyeli bilesen/token tuketim araci
+
+### P1 — Gorsel Export (SVG/PNG/Batch)
+
+Simdi: Sadece screenshot (bitmap PNG). SVG export ve toplu export yok.
+Hedef: Vektorel format desteyi + coklu node export.
+
+- [ ] `figma_export_nodes` — format: svg/png/pdf, scale, coklu node
+- [ ] REST API image export rehberi (`/v1/images/:fileKey`)
+
+### P1 — Guvenlik Denetimi (Enterprise)
+
+`docs/SECURITY_AUDIT.md` icindeki kritik maddeler:
+- [ ] K1: `figma_execute` eval limiti (kod enjeksiyonu onleme)
+- [ ] K2: Zod girdi dogrulama guclendir
+- [ ] Y1: Token log azaltma (hassas veri maskeleme)
+
+### P1 — REST API Kullanici Rehberi
+
+- [ ] `docs/REST_API_GUIDE.md` — token kurulumu, ornek cagrilar, rate limit yonetimi
+- [ ] Hibrit akis (plugin + REST) dokumantasyonu
+
+### P2 — WebSocket Yeniden Baglanti ve Teshis
+
+- [ ] `figma_plugin_diagnostics` — uptime, heartbeat, kuyruk derinligi
+- [ ] Plugin crash durumunda otomatik yeniden baglanti
+- [ ] Baglanti durumu UI gostergesi (iyilestirilmis)
+
+### P2 — Gelistirici Deneyimi
+
+- [ ] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR sureci
+- [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
+- [ ] IDE config ornekleri: VSCode, Windsurf, Zed
+
+### P3 — npm ve GitHub Gorünürlük
+
+- [ ] package.json keywords guncelle (design-system, design-tokens, zero-trust)
+- [ ] GitHub repo aciklamasi + topics ekle
+- [ ] README'ye CI badge, npm version badge ekle
+
+### P3 — Yeni Skiller
+
+- [ ] `design-to-code-generator` — tasarim → React/Vue/Svelte kod uretimi
+- [ ] `design-system-migrations` — variable toplu yeniden adlandirma, token guncelleme
+- [ ] `layout-reconstruction` — layout context'ten responsive grid olusturma
+
+---
+
+## TAMAMLANAN ASAMALAR
+
+- [x] **v1.5.2** — Test altyapisi (36 test, CI entegrasyonu)
+- [x] **v1.5.1** — TypeScript tip guvenligi (%90 any azaltma, types/figma.ts)
+- [x] **v1.5.0** — Plugin minify (geri alindi), CI guclendirme, archive/belge/TODO temizligi
+- [x] **v1.4.x** — Figma REST API (4 tool), Response Guard (context korumasi), token yonetimi
+- [x] **v1.3.x** — figma_set_port, coklu AI araci, port catismasi dayanikliligi
+- [x] **v1.2.x** — Sabit port, graceful shutdown, paralel gorevler
 
 **Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **figma_set_port** runtime port degisimi - **Port catismasi dayanikliligi** (crash yerine MCP ayakta kalir) - **Coklu AI araci** ayni anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context korumasi (237KB→10KB kirpma) - **429 retry** exponential backoff - **Plugin UI** token girisi + sure yonetimi + rate limit gostergesi - **figma.clientStorage** kalici token depolama.
 
