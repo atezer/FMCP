@@ -12,12 +12,19 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
-## [1.4.3] - 2026-04-02
+## [1.4.4] - 2026-04-02
+
+### Versiyon tutarliligi (kesin duzeltme)
+
+- Tum kaynak kod, dokuman, config ve dist dosyalarindaki versiyon string'leri 1.4.4 olarak senkronize.
+- npm paketi guncel dist ile yeniden yayinlandi (onceki 1.4.3 npm'de eski dist icerebiliyordu).
+- NPX ornekleri @latest kullanacak sekilde guncellendi.
+
+## [1.4.3] - 2026-04-02 [NOT: npm paketi eski dist icerebilir, 1.4.4 kullanin]
 
 ### Versiyon tutarliligi
 
-- Tum kaynak kod, dokuman ve config dosyalarindaki versiyon referanslari 1.4.2→1.4.3 senkronize edildi.
-- McpServer version, bridgeVersion, plugin.json, README, FUTURE hepsi guncel.
+- Tum kaynak kod, dokuman ve config dosyalarindaki versiyon referanslari senkronize edildi.
 
 ## [1.4.2] - 2026-04-02
 
