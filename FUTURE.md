@@ -1,6 +1,6 @@
 # F-MCP -- Kalan Adimlar (Future)
 
-> Son guncelleme: 2 Nisan 2026 (v1.5.2 — test altyapisi, tip guvenligi, REST API, response guard)
+> Son guncelleme: 2 Nisan 2026 (v1.6.2 — 46 arac, node creation, batch export, REST API, test altyapisi)
 > Paket surumu (`package.json`): **1.6.2**
 
 ---
