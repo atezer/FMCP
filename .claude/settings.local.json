@@ -89,7 +89,15 @@
       "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.0\\\\*\\\\*\\)/g' README.md)",
       "Bash(sed -i '' 's/\"\"1\\\\.6\\\\.0\"\"/\"\"1.6.1\"\"/g' package.json src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
       "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.0\\\\*\\\\*/\\\\*\\\\*1.6.1\\\\*\\\\*/g' FUTURE.md)",
-      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.6\\\\.0\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.1\\\\*\\\\*\\)/g' README.md)"
+      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.6\\\\.0\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.1\\\\*\\\\*\\)/g' README.md)",
+      "Bash(ls -la /Users/abdussamed.tezer/FCM/*.md)",
+      "Bash(grep -n \"| \\\\`figma_\" /Users/abdussamed.tezer/FCM/docs/TOOLS_FULL_LIST.md)",
+      "Bash(grep -rn 1.[0-5]. /Users/abdussamed.tezer/FCM/*.md /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(grep -n \"| \\\\`figma_export_nodes\\\\|| \\\\`figma_search_assets\\\\|| \\\\`figma_plugin_diagnostics\\\\|| \\\\`figma_create_frame\" /Users/abdussamed.tezer/FCM/docs/TOOLS_FULL_LIST.md)",
+      "Bash(grep \"^| \\\\`figma_\" /Users/abdussamed.tezer/FCM/docs/TOOLS_FULL_LIST.md)",
+      "Bash(grep -c \"^| \\\\`figma_\" /Users/abdussamed.tezer/FCM/README.md)",
+      "Bash(sed -i '' 's/ör\\\\. \\\\*\\\\*1\\\\.2\\\\.0\\\\*\\\\*/ör. \\\\*\\\\*1.6.1\\\\*\\\\*/g' KURULUM.md)",
+      "Bash(sed -i '' 's/\\\\*\\\\*Sürüm:\\\\*\\\\* 1\\\\.2\\\\.1/**Sürüm:** 1.6.1/g' KURULUM.md)"
     ],
     "deny": [],
     "ask": []

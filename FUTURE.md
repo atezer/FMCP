@@ -12,10 +12,10 @@
 Simdi: Yeni frame/text/rectangle olusturmak icin `figma_execute` ile ham Plugin API kodu yazmak gerekiyor.
 Hedef: Ozel araclar ile kolay node olusturma.
 
-- [ ] `figma_create_frame` — x, y, width, height, name, parentId
-- [ ] `figma_create_text` — text, x, y, fontSize, fontFamily, parentId
-- [ ] `figma_create_rectangle` — geometry + fill/stroke
-- [ ] `figma_create_group` — children birlestirme
+- [x] `figma_create_frame` — x, y, width, height, name, parentId (v1.6.0)
+- [x] `figma_create_text` — text, x, y, fontSize, fontFamily, parentId (v1.6.0)
+- [x] `figma_create_rectangle` — geometry + fill/stroke (v1.6.0)
+- [x] `figma_create_group` — children birlestirme (v1.6.0)
 
 Etki: Tasarim otomasyonu, bilesen uretimi, layout yeniden olusturma icin temel.
 
@@ -24,7 +24,7 @@ Etki: Tasarim otomasyonu, bilesen uretimi, layout yeniden olusturma icin temel.
 Simdi: Sadece dosya-icindeki bilesenler aranabiliyor (`figma_search_components`). Takim kutuphane arama yok.
 Hedef: Yayinlanmis kutuphane bilesen/variable arama + Code Connect eslemesi.
 
-- [ ] `figma_search_assets` — takim kutuphane arama (REST API gerektirir)
+- [x] `figma_search_assets` — takim kutuphane arama (plugin teamLibrary API, v1.6.0)
 - [ ] `figma_get_code_connect` — node icin kod eslesmesi
 - [ ] `figma_use` — yuksek seviyeli bilesen/token tuketim araci
 
@@ -33,7 +33,7 @@ Hedef: Yayinlanmis kutuphane bilesen/variable arama + Code Connect eslemesi.
 Simdi: Sadece screenshot (bitmap PNG). SVG export ve toplu export yok.
 Hedef: Vektorel format desteyi + coklu node export.
 
-- [ ] `figma_export_nodes` — format: svg/png/pdf, scale, coklu node
+- [x] `figma_export_nodes` — SVG/PNG/JPG/PDF batch export, 1-50 node (v1.6.1)
 - [ ] REST API image export rehberi (`/v1/images/:fileKey`)
 
 ### P1 — Guvenlik Denetimi (Enterprise)
@@ -45,24 +45,24 @@ Hedef: Vektorel format desteyi + coklu node export.
 
 ### P1 — REST API Kullanici Rehberi
 
-- [ ] `docs/REST_API_GUIDE.md` — token kurulumu, ornek cagrilar, rate limit yonetimi
+- [x] `docs/REST_API_GUIDE.md` — token kurulumu, ornek cagrilar, rate limit yonetimi (v1.6.0)
 - [ ] Hibrit akis (plugin + REST) dokumantasyonu
 
 ### P2 — WebSocket Yeniden Baglanti ve Teshis
 
-- [ ] `figma_plugin_diagnostics` — uptime, heartbeat, kuyruk derinligi
+- [x] `figma_plugin_diagnostics` — uptime, heartbeat, bellek, port (v1.6.0)
 - [ ] Plugin crash durumunda otomatik yeniden baglanti
 - [ ] Baglanti durumu UI gostergesi (iyilestirilmis)
 
 ### P2 — Gelistirici Deneyimi
 
-- [ ] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR sureci
+- [x] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR sureci (v1.6.0)
 - [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
 - [ ] IDE config ornekleri: VSCode, Windsurf, Zed
 
 ### P3 — npm ve GitHub Gorünürlük
 
-- [ ] package.json keywords guncelle (design-system, design-tokens, zero-trust)
+- [x] package.json keywords guncellendi (design-system, design-tokens, zero-trust, cursor, agent — v1.6.0)
 - [ ] GitHub repo aciklamasi + topics ekle
 - [ ] README'ye CI badge, npm version badge ekle
 
