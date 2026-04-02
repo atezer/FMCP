@@ -41,7 +41,7 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 
 ## F-MCP yetenekleri
 
-**33 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
+**34 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
 
 ### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
 
@@ -51,7 +51,7 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 | Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Özet, bileşen sayıları, token koleksiyonları; büyük dosyada varsayılan **currentPageOnly** (timeout önlemi) |
 | Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                                          |
 | Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri                  |
-| Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client)                                       |
+| Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files`, `figma_set_port` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client), runtime port değişimi                                       |
 
 
 ### Geliştiriciler
@@ -90,7 +90,7 @@ Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile y
 
 | Ne | Nerede |
 | --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.2.1**) |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.3.0**) |
 | **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
 | **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
 | **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |
@@ -147,10 +147,10 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncellem
 }
 ```
 
-**Cursor ve Claude aynı makinede:** İkisi de varsayılan 5454’ü kullandığı için “Port 5454 is already used” / “Server disconnected” alırsınız. Claude tarafında **ayrı port** kullanın; Figma plugin’de de aynı portu seçin.
+**Cursor ve Claude aynı makinede (v1.3.0+):** İkisi de varsayılan 5454’ü kullanır. İlk açılan portu alır; ikincisinin bridge’i port meşgul uyarısı verir ama **crash olmaz**. AI aracına “port 5456 kullan” dediğinizde `figma_set_port(5456)` ile runtime’da port değişir. Figma plugin’de de o portu seçin.
 
-- **Cursor:** Config’e dokunmayın (5454 kalır).
-- **Claude:** Config’te `figma-mcp-bridge` için `env` ekleyin; plugin’de Port’u **5455** yapın.
+- **Otomatik akış:** İlk araç 5454’ü alır → ikinci araçta `figma_get_status` “port meşgul” der → `figma_set_port(5456)` ile geçiş → plugin’de 5456 ayarla → bağlantı kurulur.
+- **Manuel:** Config’te `”env”: { “FIGMA_PLUGIN_BRIDGE_PORT”: “5455” }` ekleyerek önceden ayrı port atayabilirsiniz.
 
 ```json
 "figma-mcp-bridge": {
@@ -199,7 +199,7 @@ npm run dev:local
 
 Çıktıda `Plugin bridge server listening` geçen satırı görünce Figma'da plugin'i açın.
 
-> **Port çatışması:** Aynı porta iki F-MCP bridge bağlanamaz. Port meşgulse sunucu açık hata mesajı verir ve durur (sessiz port değiştirme yoktur). `lsof -i :5454` (macOS/Linux) veya `netstat -ano | findstr :5454` (Windows) ile mevcut process'i bulun ve kapatın.
+> **Port çatışması (v1.3.0+):** Aynı porta iki F-MCP bridge bağlanamaz. Port meşgulse bridge crash olmaz; `figma_set_port` ile runtime'da farklı porta geçebilirsiniz. Alternatif: `lsof -i :5454` (macOS/Linux) veya `netstat -ano | findstr :5454` (Windows) ile mevcut process'i bulun ve kapatın.
 
 ### Plugin'i Figma'ya yükleyin (ilk seferde)
 

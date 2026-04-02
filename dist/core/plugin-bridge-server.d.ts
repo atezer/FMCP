@@ -51,7 +51,23 @@ export declare class PluginBridgeServer {
         auditLogPath?: string;
     });
     private port;
+    /** Last error message when bridge could not bind (port conflict, etc.) */
+    private startError;
     start(): void;
+    /** Get last startup error (null if running fine). */
+    getStartError(): string | null;
+    /** Stop current WebSocket server (if any) and restart on a new port. */
+    restart(newPort: number): {
+        success: boolean;
+        port: number;
+        error?: string;
+    };
+    /** Synchronous-style listen attempt that returns result instead of calling process.exit. */
+    private tryListenSync;
+    /** Currently listening port (or preferred port if not yet listening). */
+    getPort(): number;
+    /** Whether WebSocket server is actively listening. */
+    isListening(): boolean;
     private generateClientId;
     private findClientByFileKey;
     private getDefaultClient;
