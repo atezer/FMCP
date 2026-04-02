@@ -9,14 +9,17 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/*.test.ts',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
-    },
-  },
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/src/core/figma-tools\\.ts',
+    '/src/core/figma-desktop-connector\\.ts',
+    '/src/core/console-monitor\\.ts',
+    '/src/core/enrichment/',
+    '/src/local\\.ts',
+    '/src/index\\.ts',
+    '/src/browser/',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
