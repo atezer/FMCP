@@ -40,7 +40,11 @@
       "Bash(git pull:*)",
       "Bash(git tag:*)",
       "Bash(gh release:*)",
-      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")"
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(grep -r \"1\\\\.1\\\\.[0-9]\\\\|1\\\\.2\\\\.[0-1]\" /Users/abdussamed.tezer/FCM/src /Users/abdussamed.tezer/FCM/CHANGELOG.md /Users/abdussamed.tezer/FCM/*.md)",
+      "Bash(grep -r \"figma-style-extractor\" /Users/abdussamed.tezer/FCM/tsconfig*.json)",
+      "Bash(npm run:*)",
+      "Bash(npm publish:*)"
     ],
     "deny": [],
     "ask": []

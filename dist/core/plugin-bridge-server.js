@@ -60,6 +60,7 @@ export class PluginBridgeServer {
         return new Promise((resolve) => {
             const TIMEOUT_MS = 5000;
             const timer = setTimeout(() => {
+                this._listenResolve = null;
                 resolve({ success: false, port, error: this.startError || `Port ${port} bind timeout (${TIMEOUT_MS}ms)` });
             }, TIMEOUT_MS);
             // Store original callback so tryListenFixed can notify us
@@ -242,7 +243,7 @@ export class PluginBridgeServer {
                             logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName }, "Plugin bridge: client registered (fileKey=%s, fileName=%s)", incomingFileKey, incomingFileName);
                             ws.send(JSON.stringify({
                                 type: "welcome",
-                                bridgeVersion: "1.1.0",
+                                bridgeVersion: "1.3.1",
                                 port: this.port,
                                 clientId,
                                 multiClient: true,
