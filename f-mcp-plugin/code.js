@@ -29,6 +29,24 @@ figma.ui.postMessage({
   fileName: figma.root.name || null
 });
 
+// Restore saved Figma REST API token from clientStorage (persists across plugin restarts)
+(async () => {
+  try {
+    var saved = await figma.clientStorage.getAsync('figmaRestToken');
+    if (saved && typeof saved === 'object' && saved.token) {
+      figma.ui.postMessage({
+        type: 'RESTORE_TOKEN',
+        token: saved.token,
+        savedAt: saved.savedAt || 0,
+        expiresAt: saved.expiresAt || 0
+      });
+      console.log('🌉 [F-MCP] Restored saved REST API token from clientStorage');
+    }
+  } catch (e) {
+    console.warn('🌉 [F-MCP] Could not restore token:', e && e.message ? e.message : String(e));
+  }
+})();
+
 // Immediately fetch and send variables data to UI
 (async () => {
   try {
@@ -172,6 +190,31 @@ function hexToFigmaRGB(hex) {
 
 // Listen for requests from UI (e.g., component data requests, write operations)
 figma.ui.onmessage = async (msg) => {
+  // Token persistence via figma.clientStorage (survives plugin close/reopen)
+  if (msg.type === 'SAVE_TOKEN') {
+    try {
+      await figma.clientStorage.setAsync('figmaRestToken', {
+        token: msg.token,
+        savedAt: Date.now(),
+        expiresAt: msg.expiresAt || 0
+      });
+      figma.ui.postMessage({ type: 'TOKEN_SAVED', success: true });
+      console.log('🌉 [F-MCP] Token saved to clientStorage');
+    } catch (e) {
+      figma.ui.postMessage({ type: 'TOKEN_SAVED', success: false, error: String(e) });
+    }
+    return;
+  }
+  if (msg.type === 'DELETE_TOKEN') {
+    try {
+      await figma.clientStorage.deleteAsync('figmaRestToken');
+      figma.ui.postMessage({ type: 'TOKEN_DELETED', success: true });
+      console.log('🌉 [F-MCP] Token deleted from clientStorage');
+    } catch (e) {
+      figma.ui.postMessage({ type: 'TOKEN_DELETED', success: false });
+    }
+    return;
+  }
   if (msg.type === 'RESIZE_UI') {
     try {
       var requestedWidth = Number(msg.width);
