@@ -86,7 +86,7 @@ If you prefer version stability:
     "figma-mcp-bridge": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@1.1.1"],
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest"],
       "env": {
         "FIGMA_ACCESS_TOKEN": "your_figma_access_token_here"
       }

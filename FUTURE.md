@@ -1,11 +1,11 @@
 # F-MCP -- Kalan Adimlar (Future)
 
 > Son guncelleme: 2 Nisan 2026 (REST API, response guard, token yonetimi, context korumasi)
-> Paket surumu (`package.json`): **1.4.2**
+> Paket surumu (`package.json`): **1.4.3**
 
 **Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **figma_set_port** runtime port degisimi - **Port catismasi dayanikliligi** (crash yerine MCP ayakta kalir) - **Coklu AI araci** ayni anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context korumasi (237KB→10KB kirpma) - **429 retry** exponential backoff - **Plugin UI** token girisi + sure yonetimi + rate limit gostergesi - **figma.clientStorage** kalici token depolama.
 
-**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.4.2** dogrulanabilir (yayim sonrasi).
+**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.4.3** dogrulanabilir (yayim sonrasi).
 
 ---
 
@@ -75,7 +75,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | Dosya | Durum |
 |-------|--------|
 | `.mcp.json` | Mevcut (kok) |
-| `.cursor-plugin/plugin.json` | Mevcut; surum **1.2.0**, aciklama `docs/TOOLS.md` referansli |
+| `.cursor-plugin/plugin.json` | Mevcut; surum **1.4.3**, aciklama `docs/TOOLS.md` referansli |
 
 ---
 
@@ -150,7 +150,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 - [x] Multi-instance -- `docs/MULTI_INSTANCE.md` sabit port ve paralel gorevler dokumantasyonu tamamlandi; `check-ports.sh` teshis scripti eklendi
 - [x] Port env -- `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Sabit port stratejisi uygulanmis; otomatik port taramasi kaldirilmis.
 - [x] **figma_set_port** -- Runtime port degisimi (v1.3.0). Port mesgulse crash yerine MCP ayakta kalir; `figma_set_port(5456)` ile farkli porta gecis. Claude + Cursor ayni anda kullanim destegi.
-- [x] **npm paket optimizasyonu** -- dist/cloudflare paketten cikarildi; 284KB→234KB (%18), 128→104 dosya (v1.4.1→v1.4.2).
+- [x] **npm paket optimizasyonu** -- dist/cloudflare paketten cikarildi; 284KB→234KB (%18), 128→104 dosya (v1.4.1→v1.4.3).
 - [x] Enterprise audit log -- `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); ornek log senaryolari / test istege bagli
 - [x] Graceful shutdown -- `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi; port serbest birakma sorunu cozuldu
 

@@ -49,7 +49,13 @@
       "mcp__figma-mcp-bridge__figma_rest_api",
       "Bash(du -sh /Users/abdussamed.tezer/FCM/dist/local-plugin-only.* /Users/abdussamed.tezer/FCM/dist/local.*)",
       "Bash(grep -rn \"browser\\\\|cloudflare\" /Users/abdussamed.tezer/FCM/dist/core/*.js)",
-      "Bash(npm pack:*)"
+      "Bash(npm pack:*)",
+      "Bash(grep -rn 1.4.[012] /Users/abdussamed.tezer/FCM/src/ /Users/abdussamed.tezer/FCM/docs/ /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/FUTURE.md /Users/abdussamed.tezer/FCM/KURULUM.md)",
+      "Bash(grep -rn version.*1.4.[01] /Users/abdussamed.tezer/FCM --include=*.ts --include=*.md --include=*.json)",
+      "Bash(grep -rn .4.1 /Users/abdussamed.tezer/FCM --include=*.ts --include=*.js --include=*.md --include=*.json)",
+      "Bash(grep -rn \"bridgeVersion\\\\|version\" /Users/abdussamed.tezer/FCM/src/ --include=*.ts)",
+      "Bash(grep -rn @atezer/figma-mcp-bridge@1.[0-3]. /Users/abdussamed.tezer/FCM/docs/ /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/KURULUM.md)",
+      "Bash(grep -n 1.4.[012] /Users/abdussamed.tezer/FCM/dist/local-plugin-only.js /Users/abdussamed.tezer/FCM/dist/local.js /Users/abdussamed.tezer/FCM/dist/core/plugin-bridge-server.js)"
     ],
     "deny": [],
     "ask": []
