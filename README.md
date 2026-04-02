@@ -41,7 +41,7 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 
 ## F-MCP yetenekleri
 
-**39 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
+**45 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
 
 ### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
 
@@ -53,6 +53,8 @@ REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede ku
 | Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri                  |
 | Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files`, `figma_set_port` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client), runtime port değişimi |
 | Figma REST API (token ile)        | `figma_set_rest_token`, `figma_rest_api`, `figma_get_rest_token_status`, `figma_clear_rest_token` | Token girişi, direkt REST API çağrıları (export, comments, versions), rate limit takibi, otomatik cevap kırpma (context koruması) |
+| Tasarım oluşturma                 | `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group` | Yeni frame, metin, dikdörtgen oluşturma ve gruplama |
+| Kütüphane ve tanılama             | `figma_search_assets`, `figma_plugin_diagnostics` | Takım kütüphanesi arama, plugin sağlık kontrolü (uptime, bellek, bağlantı) |
 
 
 ### Geliştiriciler
@@ -91,7 +93,7 @@ Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile y
 
 | Ne | Nerede |
 | --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.5.2**) |
+| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.6.0**) |
 | **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
 | **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
 | **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |

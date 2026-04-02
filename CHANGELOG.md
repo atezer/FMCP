@@ -12,6 +12,28 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.6.0] - 2026-04-02
+
+### Tasarim Olusturma Araclari (YENi — 4 tool)
+
+- **`figma_create_frame`**: Yeni frame olusturma (x, y, boyut, renk, parentId)
+- **`figma_create_text`**: Yeni metin node'u (font, boyut, renk)
+- **`figma_create_rectangle`**: Dikdortgen olusturma (boyut, renk, cornerRadius)
+- **`figma_create_group`**: Mevcut node'lari gruplama
+
+### Kutüphane ve Tanilama (YENi — 2 tool)
+
+- **`figma_search_assets`**: Takim kutuphanesi variable collection arama (plugin teamLibrary API)
+- **`figma_plugin_diagnostics`**: Plugin saglik kontrolu (uptime, bellek, baglanti, port, rate limit)
+
+### Dokumantasyon
+
+- **CONTRIBUTING.md**: Yerel kurulum, test, tool ekleme, versiyon guncelleme rehberi
+- **docs/REST_API_GUIDE.md**: Token kurulumu, ornek cagrilar, hibrit akis, rate limit yonetimi
+- **npm keywords**: design-system, design-tokens, ui-automation, zero-trust, cursor, agent eklendi
+
+### Toplam: 45 arac (onceki: 39)
+
 ## [1.5.2] - 2026-04-02
 
 ### Test altyapisi

@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adimlar (Future)
 
 > Son guncelleme: 2 Nisan 2026 (v1.5.2 — test altyapisi, tip guvenligi, REST API, response guard)
-> Paket surumu (`package.json`): **1.5.2**
+> Paket surumu (`package.json`): **1.6.0**
 
 ---
 
@@ -85,7 +85,7 @@ Hedef: Vektorel format desteyi + coklu node export.
 
 **Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **figma_set_port** runtime port degisimi - **Port catismasi dayanikliligi** (crash yerine MCP ayakta kalir) - **Coklu AI araci** ayni anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context korumasi (237KB→10KB kirpma) - **429 retry** exponential backoff - **Plugin UI** token girisi + sure yonetimi + rate limit gostergesi - **figma.clientStorage** kalici token depolama.
 
-**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.5.2** dogrulanabilir (yayim sonrasi).
+**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.6.0** dogrulanabilir (yayim sonrasi).
 
 ---
 
@@ -155,7 +155,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | Dosya | Durum |
 |-------|--------|
 | `.mcp.json` | Mevcut (kok) |
-| `.cursor-plugin/plugin.json` | Mevcut; surum **1.5.2**, aciklama `docs/TOOLS.md` referansli |
+| `.cursor-plugin/plugin.json` | Mevcut; surum **1.6.0**, aciklama `docs/TOOLS.md` referansli |
 
 ---
 

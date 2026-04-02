@@ -13,6 +13,10 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_capture_screenshot` | Node’dan ekran görüntüsü (base64) |
 | `figma_check_design_parity` | Figma token’ları ile kod token’larını karşılaştır (design–code gap) |
 | `figma_clear_console` | Plugin console log buffer’ını temizle |
+| `figma_create_frame` | Yeni frame oluştur (x, y, width, height, fillColor, parentId) |
+| `figma_create_group` | Mevcut node'ları grupla (nodeIds dizisi) |
+| `figma_create_rectangle` | Yeni dikdörtgen oluştur (boyut, renk, cornerRadius) |
+| `figma_create_text` | Yeni metin node'u oluştur (text, fontSize, fontFamily, fillColor) |
 | `figma_create_variable` | Yeni değişken oluştur |
 | `figma_create_variable_collection` | Yeni koleksiyon oluştur |
 | `figma_delete_variable` | Değişken sil |
@@ -45,8 +49,10 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_rest_api` | Direkt REST API çağrısı (export, comments, versions). Otomatik cevap kırpma (200KB üstü), 429 retry |
 | `figma_get_rest_token_status` | Token durumu + rate limit bilgisi + düşük limit uyarısı |
 | `figma_clear_rest_token` | REST API token’ı bellekten temizle |
+| `figma_search_assets` | Takım kütüphanesi variable collection arama (plugin teamLibrary API) |
+| `figma_plugin_diagnostics` | Plugin sağlık kontrolü (uptime, bellek, bağlantı durumu, port) |
 
-**Toplam: 39 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
+**Toplam: 45 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
