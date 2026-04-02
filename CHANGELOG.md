@@ -12,6 +12,17 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.6.1] - 2026-04-02
+
+### Batch Export (YENi — 1 tool)
+
+- **`figma_export_nodes`**: SVG/PNG/JPG/PDF batch export (1-50 node). Plugin exportAsync kullanir, REST token gerektirmez. Base64 ciktisi, olceklendirilebilir (0.5-4x). SVG vektorel koruma, outline text ve node ID options.
+- **`BATCH_EXPORT_NODES`** plugin handler eklendi (code.js). Promise.all ile paralel export, node basina hata yonetimi.
+- **Connector**: `batchExportNodes()` metodu eklendi.
+- **Tip tanimlari**: `PluginExportResult`, `PluginBatchExportPayload` (types/figma.ts).
+
+### Toplam: 46 arac (onceki: 45)
+
 ## [1.6.0] - 2026-04-02
 
 ### Tasarim Olusturma Araclari (YENi — 4 tool)

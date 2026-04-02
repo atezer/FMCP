@@ -38,6 +38,23 @@ export declare class PluginBridgeConnector {
         currentPageOnly?: boolean;
         limit?: number;
     }): Promise<PluginComponentPayload>;
+    batchExportNodes(params: {
+        nodeIds: string[];
+        format?: "PNG" | "SVG" | "JPG" | "PDF";
+        scale?: number;
+        svgOutlineText?: boolean;
+        svgIncludeId?: boolean;
+        svgSimplifyStroke?: boolean;
+    }): Promise<{
+        results: Array<{
+            nodeId: string;
+            name?: string;
+            format?: string;
+            base64?: string;
+            byteLength?: number;
+            error?: string;
+        }>;
+    }>;
     instantiateComponent(componentKey: string, options?: {
         nodeId?: string;
         position?: {

@@ -154,6 +154,21 @@ export interface PluginDocumentStructure {
 	fileName?: string;
 }
 
+// ---- Batch export types ----
+
+export interface PluginExportResult {
+	nodeId: string;
+	name: string;
+	format: string;
+	base64: string;
+	byteLength: number;
+	error?: string;
+}
+
+export interface PluginBatchExportPayload {
+	results: PluginExportResult[];
+}
+
 // ---- Design system summary ----
 
 export interface DesignSystemSummary {

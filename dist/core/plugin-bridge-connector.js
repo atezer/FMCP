@@ -67,6 +67,9 @@ export class PluginBridgeConnector {
             params.limit = opts.limit;
         return this.bridge.request("getLocalComponents", params, this.fileKey);
     }
+    async batchExportNodes(params) {
+        return this.bridge.request("batchExportNodes", params, this.fileKey);
+    }
     async instantiateComponent(componentKey, options) {
         return this.bridge.request("instantiateComponent", { componentKey, options }, this.fileKey);
     }

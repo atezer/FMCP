@@ -86,7 +86,10 @@
       "Bash(grep -E \"\\\\.md.*status|outdated|deprecat\" /Users/abdussamed.tezer/FCM/docs/*.md)",
       "Bash(sed -i '' 's/\"\"1\\\\.5\\\\.2\"\"/\"\"1.6.0\"\"/g' src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
       "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*/\\\\*\\\\*1.6.0\\\\*\\\\*/g' FUTURE.md)",
-      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.0\\\\*\\\\*\\)/g' README.md)"
+      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.5\\\\.2\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.0\\\\*\\\\*\\)/g' README.md)",
+      "Bash(sed -i '' 's/\"\"1\\\\.6\\\\.0\"\"/\"\"1.6.1\"\"/g' package.json src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
+      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.0\\\\*\\\\*/\\\\*\\\\*1.6.1\\\\*\\\\*/g' FUTURE.md)",
+      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.6\\\\.0\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.1\\\\*\\\\*\\)/g' README.md)"
     ],
     "deny": [],
     "ask": []
