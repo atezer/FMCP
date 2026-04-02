@@ -155,10 +155,6 @@ export declare function validateReconstructionSpec(spec: any): {
     errors: string[];
 };
 /**
- * Extract a specific variant from a COMPONENT_SET by name
- */
-export declare function extractVariant(componentSet: any, variantName: string): NodeSpecification;
-/**
  * Get list of available variants in a COMPONENT_SET
  */
 export declare function listVariants(componentSet: any): string[];

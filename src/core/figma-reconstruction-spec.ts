@@ -552,30 +552,6 @@ export function validateReconstructionSpec(spec: any): { valid: boolean; errors:
 }
 
 /**
- * Extract a specific variant from a COMPONENT_SET by name
- */
-export function extractVariant(componentSet: any, variantName: string): NodeSpecification {
-  if (!componentSet.children || !Array.isArray(componentSet.children)) {
-    throw new Error('Invalid COMPONENT_SET: no children array');
-  }
-
-  const variant = componentSet.children.find(
-    (child: any) => child.type === 'COMPONENT' && child.name === variantName
-  );
-
-  if (!variant) {
-    const availableVariants = componentSet.children
-      .filter((c: any) => c.type === 'COMPONENT')
-      .map((c: any) => c.name);
-    throw new Error(
-      `Variant "${variantName}" not found. Available variants: ${availableVariants.join(', ')}`
-    );
-  }
-
-  return extractNodeSpec(variant);
-}
-
-/**
  * Get list of available variants in a COMPONENT_SET
  */
 export function listVariants(componentSet: any): string[] {

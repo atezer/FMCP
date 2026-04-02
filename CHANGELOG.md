@@ -12,6 +12,31 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.3.1] - 2026-04-02
+
+### Bridge (hata duzeltmeleri)
+
+- **`restart()` race condition duzeltmesi:** `tryListenSync()` fire-and-forget yaklasimi yerine async Promise tabanli `tryListenAsync()` — port bind sonucu kesin olarak beklenir (500ms sabit delay kaldirildi).
+- **`figma_set_port` concurrent koruma:** Mutex flag ile esanli cagrilarda "devam ediyor" hatasi; ikinci cagri onceki tamamlanmadan baslamaz.
+- **`probePort().then()` eksik `.catch()`:** Probe hatalarinda `startError` set edilir, sessiz hata onlenir.
+- **`_listenResolve` callback:** Basarili/basarisiz bind sonrasi async restart akisini bilgilendirir.
+
+### Versiyon tutarliligi
+
+- McpServer version: `"1.1.2"` → `"1.3.0"` (`local-plugin-only.ts`, `local.ts`)
+- `.cursor-plugin/plugin.json`: `"1.2.1"` → `"1.3.0"`
+- `package-lock.json` senkronize edildi
+
+### Dokumantasyon
+
+- `docs/TOOLS_FULL_LIST.md`: `figma_set_port` eklendi; arac sayisi 34 → 35
+
+### Temizlik
+
+- **Atil kod:** `figma-style-extractor.ts` (hic import edilmiyor) silindi; `extractVariant()` (hic cagrilmiyor) silindi
+- **Orphan script'ler:** `launch-figma-debug.ps1/.sh`, `launch-figma-with-plugin.sh`, `plugin-ac.py` silindi
+- **Archive duplicate:** `archive/skills-root-duplicate/` silindi (`.cursor/skills/f-mcp/` ile ayni)
+
 ## [1.3.0] - 2026-04-02
 
 ### Bridge (port yonetimi)

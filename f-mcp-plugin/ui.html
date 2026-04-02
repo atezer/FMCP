@@ -172,24 +172,6 @@
       opacity: 0.9;
     }
 
-    .chat-port-hint {
-      margin-top: 6px;
-      padding: 6px 8px;
-      font-size: 10px;
-      line-height: 1.35;
-      color: var(--figma-color-text, #444);
-      background: var(--figma-color-bg-secondary, #f5f5f5);
-      border-radius: 4px;
-      border: 1px solid var(--figma-color-border, #e0e0e0);
-      max-width: 280px;
-    }
-    .chat-port-hint button {
-      margin-top: 4px;
-      font-size: 10px;
-      padding: 2px 8px;
-      cursor: pointer;
-    }
-
     /* Light theme support */
     @media (prefers-color-scheme: light) {
       body {
@@ -236,10 +218,6 @@
         <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
       <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
-    </div>
-    <div id="chat-port-hint" class="chat-port-hint">
-      <div id="chat-port-hint-text"></div>
-      <button type="button" id="chat-port-copy" title="Claude / Cursor sohbetine yapıştırın">Sohbet için kopyala</button>
     </div>
   </div>
 
@@ -913,12 +891,6 @@
       return v || 'localhost';
     }
 
-    function getMcpBridgePortRaw() {
-      var el = document.getElementById('mcp-port');
-      if (!el) return NaN;
-      return parseInt(el.value, 10);
-    }
-
     function getMcpBridgePort() {
       var el = document.getElementById('mcp-port');
       if (!el) return DEFAULT_MCP_PORT;
@@ -974,7 +946,6 @@
         el.addEventListener('change', function() {
           var host = getMcpBridgeHost();
           try { localStorage.setItem(MCP_BRIDGE_HOST_KEY, host); } catch (e) {}
-          refreshChatPortHint();
           forceDisconnectAndReconnect();
         });
       }
@@ -993,17 +964,12 @@
       } catch (e) {}
       var el = document.getElementById('mcp-port');
       if (el) {
-        function onPortFieldUpdated() {
-          refreshChatPortHint();
-        }
-        el.addEventListener('input', onPortFieldUpdated);
         el.addEventListener('change', function() {
           var port = getMcpBridgePort();
           try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(port)); } catch (e) {}
           manualPortLocked = true;
           candidatePorts = [port];
           candidatePortIndex = 0;
-          refreshChatPortHint();
           forceDisconnectAndReconnect();
         });
       }
@@ -1038,36 +1004,6 @@
       if (mcpKeepAliveTimer) { clearInterval(mcpKeepAliveTimer); mcpKeepAliveTimer = null; }
     }
 
-    var chatPortHintFullText = '';
-    /** Port alanı ne gösteriyorsa ona göre metin — bağlantı kopsa da kutu kaybolmaz. */
-    function refreshChatPortHint() {
-      var box = document.getElementById('chat-port-hint');
-      var textEl = document.getElementById('chat-port-hint-text');
-      if (!box || !textEl) return;
-      var raw = getMcpBridgePortRaw();
-      var host = getMcpBridgeHost();
-      if (isNaN(raw) || raw < MCP_PORT_MIN || raw > MCP_PORT_MAX) {
-        chatPortHintFullText = '';
-        textEl.textContent =
-          'Port alanına 5454–5470 arası bir sayı yazın. Sohbet satırı, seçtiğiniz portla eşleşecek şekilde güncellenir.';
-        requestUiResize();
-        return;
-      }
-      var p = raw;
-      var wsLive = mcpBridgeWs && mcpBridgeWs.readyState === 1;
-      var connected = wsLive && mcpHandshakeDone && mcpConnectedPort === p;
-      var head = connected
-        ? 'Bağlı — köprü port ' + p + '. '
-        : 'Seçilen port ' + p + ' (MCP sunucusu yok / bağlanıyor — normal; env ve plugin aynı portta olmalı). ';
-      chatPortHintFullText =
-        head +
-        'Sohbet: bridge port ' + p + '. Asistan: figma_get_status({ expectedBridgePort: ' + p + ' }). ' +
-        'Claude/Cursor MCP: FIGMA_PLUGIN_BRIDGE_PORT=' + p + ', ws://' + host + ':' + p + '. ' +
-        'Dosya: ' + (window.__figmaFileName || '?') + ' (' + (window.__figmaFileKey || '?') + ').';
-      textEl.textContent = chatPortHintFullText;
-      requestUiResize();
-    }
-
     function connectMcpBridge() {
       if (mcpConnecting) return;
       if (mcpBridgeWs && (mcpBridgeWs.readyState === 0 || mcpBridgeWs.readyState === 1)) return;
@@ -1089,7 +1025,6 @@
           mcpReconnectDelay = MCP_RECONNECT_MIN;
           console.log('[F-MCP ATezer Bridge] WebSocket opened to ' + url + ', waiting for handshake...');
           updateStatus('connecting...', false, false);
-          refreshChatPortHint();
           currentWs.send(JSON.stringify({
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
@@ -1100,7 +1035,6 @@
           mcpHandshakeTimer = setTimeout(function() {
             if (!mcpHandshakeDone && mcpBridgeWs === currentWs) {
               console.warn('[F-MCP ATezer Bridge] No welcome from server — wrong server or outdated bridge');
-              refreshChatPortHint();
               updateStatus('wrong server', false, true);
             }
           }, 5000);
@@ -1123,7 +1057,6 @@
               }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
               updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
-              refreshChatPortHint();
               return;
             }
             if (msg.type === 'ping') {
@@ -1304,7 +1237,6 @@
           mcpBridgeWs = null;
           mcpConnecting = false;
           mcpConnectedPort = null;
-          refreshChatPortHint();
           if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
           if (autoPortProbeActive && candidatePortIndex < candidatePorts.length - 1) {
             candidatePortIndex += 1;
@@ -1319,7 +1251,6 @@
         };
       } catch (e) {
         mcpConnecting = false;
-        refreshChatPortHint();
         updateStatus('no server', false, true);
         scheduleReconnect();
       }
@@ -1338,15 +1269,6 @@
       initMcpHostInput();
       initMcpPortInput();
       initAdvancedPanel();
-      var copyBtn = document.getElementById('chat-port-copy');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', function() {
-          if (!chatPortHintFullText) return;
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(chatPortHintFullText).catch(function() {});
-          }
-        });
-      }
       try {
         var rememberedPort = parseInt(localStorage.getItem(MCP_BRIDGE_PORT_KEY) || '', 10);
         if (rememberedPort >= MCP_PORT_MIN && rememberedPort <= MCP_PORT_MAX) {
@@ -1354,7 +1276,6 @@
         }
       } catch (e) {}
       candidatePorts = listCandidatePorts();
-      refreshChatPortHint();
       connectMcpBridge();
       requestUiResize();
     }

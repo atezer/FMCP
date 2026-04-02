@@ -2,7 +2,10 @@
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "bash",
-      "args": ["${workspaceFolder}/scripts/cursor-mcp-plugin-bridge.sh"]
+      "args": ["${workspaceFolder}/scripts/cursor-mcp-plugin-bridge.sh"],
+      "env": {
+        "FIGMA_PLUGIN_BRIDGE_PORT": "5455"
+      }
     }
   }
 }
