@@ -12,6 +12,15 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.4.1] - 2026-04-02
+
+### npm paket optimizasyonu
+
+- **Paket boyutu:** 284 KB → 230 KB (%19 kucuk), acik 1.7 MB → 1.2 MB (%30 kucuk)
+- **Dosya sayisi:** 128 → 96 (32 gereksiz dosya cikarildi)
+- **Cikarilan:** `dist/cloudflare/` (440 KB), `dist/browser/` (44 KB) — plugin-only modda kullanilmiyordu
+- **Korunan:** `dist/local.js` (tam mod), `dist/core/` (paylasimli), `f-mcp-plugin/`
+
 ## [1.4.0] - 2026-04-02
 
 ### Figma REST API entegrasyonu (YENi)
