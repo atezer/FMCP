@@ -12,7 +12,13 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
-## [1.4.1] - 2026-04-02
+## [1.4.2] - 2026-04-02
+
+### Kritik duzeltme
+
+- **dist/browser pakete geri eklendi:** v1.4.1'de tam mod (local.js) `dist/browser/local.js`'i import ediyordu ama dosya paketten cikarilmisti → MODULE_NOT_FOUND hatasi. `dist/cloudflare/` haric tutuldu (bu kullanilmiyor).
+
+## [1.4.1] - 2026-04-02 [YANLIS — tam mod kirik, 1.4.2 kullanin]
 
 ### npm paket optimizasyonu
 
