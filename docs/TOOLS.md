@@ -292,7 +292,7 @@ figma_reload_plugin({
 ## 🎨 Design System Tools
 
 > **Plugin-only modda** (WebSocket, debug portu yok): **Token gerekmez.** Plugin açık ve MCP’ye bağlı olsun; variables, components, file data plugin üzerinden alınır.  
-> **Remote / CDP modda** token gerekebilir. Bkz. [SETUP.md](SETUP.md), [NPX-INSTALLATION.md](NPX-INSTALLATION.md).
+> **Remote / CDP modda** token gerekebilir. Bkz. [SETUP.md](SETUP.md).
 
 ### `figma_get_variables`
 

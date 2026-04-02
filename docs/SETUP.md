@@ -195,7 +195,7 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 - ✅ **Reliable component descriptions** (bypasses API bugs)
 - ✅ **Optional:** Debug port (9222) for console log tools; token optional when using plugin for variables
 
-**See [MODE_COMPARISON.md](MODE_COMPARISON.md) for detailed feature breakdown.**
+**See [DEPLOYMENT_COMPARISON.md](DEPLOYMENT_COMPARISON.md) for detailed feature breakdown.**
 
 ---
 
@@ -216,7 +216,7 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 **"Variables API requires Enterprise" error:**
 - ✅ Expected if you don't have Enterprise plan
 - ✅ Solution: Switch to Local Mode + F-MCP ATezer Bridge plugin
-- ✅ See [MODE_COMPARISON.md](MODE_COMPARISON.md) for details
+- ✅ See [DEPLOYMENT_COMPARISON.md](DEPLOYMENT_COMPARISON.md) for details
 
 ### Local Mode Issues
 
@@ -286,4 +286,4 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 - 📖 [Full Documentation](../README.md)
 - 🐛 [Report Issues](https://github.com/atezer/FMCP/issues)
 - 💬 [Discussions](https://github.com/atezer/FMCP/discussions)
-- 📊 [Mode Comparison](MODE_COMPARISON.md)
+- 📊 [Deployment Comparison](DEPLOYMENT_COMPARISON.md)

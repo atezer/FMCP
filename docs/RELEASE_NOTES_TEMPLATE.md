@@ -48,4 +48,4 @@
 
 - Release gövdesinde kalıcı link için: `https://github.com/atezer/FMCP/blob/vX.Y.Z/…` (tag’e sabitlenmiş dosya).
 - Kullanıcılar için kısa **İngilizce** özet + isteğe bağlı **Türkçe** blok yeterli.
-- npm yayını: `npm publish` (2FA **auth-and-writes** / **auth-only** ise `npm publish --otp=<authenticator>`). Sonra `npm view @atezer/figma-mcp-bridge version` ile sürümü doğrulayın. Ayrıntı: [NPX-INSTALLATION.md](NPX-INSTALLATION.md) yayın bölümü.
+- npm yayını: `npm publish` (2FA **auth-and-writes** / **auth-only** ise `npm publish --otp=<authenticator>`). Sonra `npm view @atezer/figma-mcp-bridge version` ile sürümü doğrulayın. Ayrıntı: [CONTRIBUTING.md](../CONTRIBUTING.md) versiyon ve yayın bölümü.

@@ -183,8 +183,8 @@ npm run build:local
 
 - **Proje (kaynak):** [GitHub – atezer/FMCP](https://github.com/atezer/FMCP) — npm paketi `@atezer/figma-mcp-bridge` bu depodan üretilir.
 - **Sürüm notları:** [CHANGELOG.md](CHANGELOG.md) · [GitHub Releases](https://github.com/atezer/FMCP/releases)
-- **Dokümantasyon:** [docs/](https://github.com/atezer/FMCP/tree/main/docs) (SETUP, PLUGIN-MCP-BAGLANTI, TROUBLESHOOTING)
-- **Plugin nasıl çalışır:** [PLUGIN-NASIL-CALISIR.md](docs/PLUGIN-NASIL-CALISIR.md) (Worker/UI, WebSocket vs CDP)
+- **Dokümantasyon:** [docs/](https://github.com/atezer/FMCP/tree/main/docs) (SETUP, TOOLS, TROUBLESHOOTING)
+- **Sorun giderme:** [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **MCP protokolü:** [modelcontextprotocol.io](https://modelcontextprotocol.io)
 
 ---

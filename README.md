@@ -227,7 +227,7 @@ npm run dev:local
 
 ## Claude / Cursor ile bağlama (detay)
 
-**NPX:** Paket npm'de **@atezer/figma-mcp-bridge** adıyla yayınlı. Plugin-only için: `npx -y @atezer/figma-mcp-bridge@latest figma-mcp-bridge-plugin` (tam mod için son argümanı atlayıp varsayılan `figma-mcp-bridge` binary’si kullanılır). Bkz. [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md).
+**NPX:** Paket npm’de **@atezer/figma-mcp-bridge** adıyla yayınlı. Plugin-only için: `npx -y @atezer/figma-mcp-bridge@latest figma-mcp-bridge-plugin` (tam mod için son argümanı atlayıp varsayılan `figma-mcp-bridge` binary’si kullanılır).
 
 **Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
 
@@ -333,7 +333,6 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [CONTRIBUTING.md](CONTRIBUTING.md)                                       | **Katkıda bulunma** — Yerel kurulum, test, tool ekleme, PR süreci                               |
 | [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
-| [NPX-INSTALLATION.md](docs/NPX-INSTALLATION.md)                         | NPX ile kurulum                                                                                  |
 | [CHANGELOG.md](CHANGELOG.md)                                           | **Sürüm geçmişi** — npm/GitHub Releases ile birlikte referans                                    |
 | [RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md)               | **Yeni sürüm yayını** — GitHub Release gövdesi şablonu ve `gh release create` ipuçları          |
 | [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                            |
