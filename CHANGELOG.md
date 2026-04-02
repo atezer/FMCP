@@ -12,6 +12,13 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.4.3] - 2026-04-02
+
+### Versiyon tutarliligi
+
+- Tum kaynak kod, dokuman ve config dosyalarindaki versiyon referanslari 1.4.2→1.4.3 senkronize edildi.
+- McpServer version, bridgeVersion, plugin.json, README, FUTURE hepsi guncel.
+
 ## [1.4.2] - 2026-04-02
 
 ### Kritik duzeltme
