@@ -12,9 +12,20 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
-## [Unreleased]
+## [1.3.0] - 2026-04-02
 
 ### Bridge (port yonetimi)
+
+- **`figma_set_port` araci (YENi):** Runtime'da WebSocket bridge portunu degistirme. Port mesgulse AI araci (Claude/Cursor) `figma_set_port(5456)` cagirarak baska bir porta gecer; Figma plugin'de ayni portu secince baglanti kurulur. Aralik: 5454-5470.
+- **Port catismasi artik oldurucu degil:** Port mesgulse `process.exit(1)` yerine MCP stdio sunucusu ayakta kalir ve `figma_get_status` uzerinden hata mesaji doner. Kullanici `figma_set_port` ile farkli porta gecebilir.
+- **`figma_get_status` genisledi:** `bridgeListening`, `startError` alanlari eklendi; bridge dinlemiyorsa net hata mesaji ve port degistirme yonlendirmesi.
+- **`PluginBridgeServer` yeni API'ler:** `restart(port)`, `getPort()`, `isListening()`, `getStartError()` metodlari eklendi.
+
+### Coklu AI araci (ayni anda Claude + Cursor)
+
+- Claude Desktop ve Cursor ayni anda calistiginda port catismasini cozen akis: ilk acilan varsayilan portu (5454) alir, ikinci acilan `figma_set_port` ile farkli porta gecer. Her AI araci kendi bridge'i uzerinden bagimsiz calisir.
+
+### Bridge (onceki unreleased)
 
 - **Sabit port stratejisi:** Otomatik port taramasi (5454-5470 sirali deneme) kaldirildi. Bridge artik yapilandirilan porta dogrudan baglanir; port mesgulse HTTP health-check ile canli F-MCP / olu surec / farkli servis ayirt edilir; olu port icin kisa gecikmeli tek retry.
 - **Graceful shutdown:** `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi -- IDE veya Claude kapandiginda `bridge.stop()` cagrilarak port aninda serbest birakilir (olu port sorununun ana duzeltmesi).

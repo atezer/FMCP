@@ -97,17 +97,6 @@ export async function main() {
 	const bridge = new PluginBridgeServer(port, { auditLogPath });
 	bridge.start();
 
-	const bridgeBindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
-	const bridgeSessionMeta = () => ({
-		bridgePort: port,
-		bridgeHost: bridgeBindHost,
-		bridgeWebSocketUrl: `ws://${bridgeBindHost}:${port}`,
-		/** Claude/Cursor mcp.json / env — bu süreç bu portta dinler */
-		mcpEnvHint: `FIGMA_PLUGIN_BRIDGE_PORT=${port}`,
-		parallelSessionsHint:
-			"Birden fazla izole AI hattı (ör. Cursor + Claude veya iki sohbet) için her hatta ayrı MCP süreci ve plugin'de aynı port gerekir. Kullanıcı sohbette port yazdıysa figma_get_status ile expectedBridgePort göndererek eşleşmeyi doğrulayın.",
-	});
-
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
 		version: "1.1.2",
@@ -117,7 +106,7 @@ export async function main() {
 	server.registerTool(
 		"figma_list_connected_files",
 		{
-			description: "List all currently connected Figma/FigJam plugin instances (Figma Desktop, FigJam browser, Figma browser). Includes this MCP instance's bridgePort so the user/assistant can align with the port written in chat. Pass fileKey or figmaUrl on other tools to target a file when multiple projects are connected to the same bridge.",
+			description: "List all currently connected Figma/FigJam plugin instances (Figma Desktop, FigJam browser, Figma browser). Returns fileKey, fileName, and connection time for each. Use when multiple windows or agents are active. Pass the returned fileKey (or a Figma/FigJam URL via figmaUrl) to other tools to target a specific file.",
 			inputSchema: {},
 			annotations: { readOnlyHint: true },
 		},
@@ -128,7 +117,6 @@ export async function main() {
 					type: "text" as const,
 					text: JSON.stringify({
 						success: true,
-						...bridgeSessionMeta(),
 						connectedFiles: files,
 						totalConnections: files.length,
 						message: files.length === 0
@@ -1018,58 +1006,108 @@ export async function main() {
 	server.registerTool(
 		"figma_get_status",
 		{
-			description:
-				"Bridge health: plugin bağlı mı, kaç pencere, bu MCP sürecinin dinlediği port. Kullanıcı sohbette port yazdıysa (örn. 5456) expectedBridgePort ile gönderin: yanlış hat/ölü port uyumsuzluğu anında görünür. Paralel AI oturumları için her oturumda ayrı MCP + FIGMA_PLUGIN_BRIDGE_PORT; Figma penceresinde plugin Port'u aynı olmalı.",
-			inputSchema: {
-				expectedBridgePort: z
-					.number()
-					.int()
-					.min(5454)
-					.max(5470)
-					.optional()
-					.describe(
-						"Kullanıcının sohbette belirttiği bridge portu. Bu MCP örneğinin portu ile karşılaştırılır; uyuşmazsa yanlış connector veya yanlış Figma plugin portu vardır.",
-					),
-			},
+			description: "Check if F-MCP ATezer Bridge plugin is connected and list all connected files. No REST API or token.",
+			inputSchema: {},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ expectedBridgePort }) => {
+		async () => {
 			const connected = bridge.isConnected();
 			const connectedFiles = bridge.listConnectedFiles();
 			const clientCount = bridge.connectedClientCount();
-			const msg = connected
-				? `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected. You can use all figma_* tools.`
-				: PLUGIN_NOT_CONNECTED;
+			const listening = bridge.isListening();
+			const currentPort = bridge.getPort();
+			const startError = bridge.getStartError();
+
+			let msg: string;
+			if (!listening) {
+				msg = startError
+					? `Bridge is NOT listening. ${startError}`
+					: "Bridge is starting up...";
+			} else if (connected) {
+				msg = `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected on port ${currentPort}. You can use all figma_* tools.`;
+			} else {
+				msg = PLUGIN_NOT_CONNECTED;
+			}
+
 			const portHint =
-				clientCount === 0
-					? `Bu Claude/Cursor MCP süreci bridge'i port ${port}'ta dinliyor. Figma plugin'de Host localhost ve Port ${port} olmalı ("ready (:${port})"). Başka bir AI hattı için ayrı MCP tanımında FIGMA_PLUGIN_BRIDGE_PORT (ör. 5455) kullanın; o Figma penceresinde plugin portunu aynı yapın.`
+				!listening || clientCount === 0
+					? `Bridge port: ${currentPort}. ${!listening ? "Use figma_set_port to switch to an available port." : `Figma plugin'de Port: ${currentPort} ayarlayın.`}`
 					: undefined;
-			const meta = bridgeSessionMeta();
-			const portCheck =
-				expectedBridgePort !== undefined
-					? {
-							expectedBridgePort,
-							portMatchesExpected: expectedBridgePort === port,
-							portMismatch:
-								expectedBridgePort !== port
-									? `Bu sohbetin MCP süreci port ${port}'ta dinliyor; kullanıcı ${expectedBridgePort} bekliyor. Çözüm: (1) Bu sohbeti ${port} kullanan connector'a bağlayın veya (2) plugin/Figma penceresinde Port'u ${port} yapın veya (3) ${expectedBridgePort} için FIGMA_PLUGIN_BRIDGE_PORT=${expectedBridgePort} ile ayrı bir MCP sunucusu ekleyin.`
-									: undefined,
-						}
-					: {};
+
 			return {
 				content: [{
 					type: "text" as const,
 					text: JSON.stringify({
 						pluginConnected: connected,
+						bridgeListening: listening,
 						connectedClients: clientCount,
 						connectedFiles,
+						bridgePort: currentPort,
 						message: msg,
-						...meta,
+						...(startError && { startError }),
 						...(portHint && { portHint }),
-						...portCheck,
 					}, null, 0),
 				}],
 			};
+		}
+	);
+
+	// ---- figma_set_port (runtime port change) ----
+	server.registerTool(
+		"figma_set_port",
+		{
+			description:
+				"Change the WebSocket bridge port at runtime. Stops the current bridge and restarts on the new port. " +
+				"Use when the default port is busy (e.g. another AI tool holds it). " +
+				"After calling this, the Figma plugin must reconnect to the new port. " +
+				"Valid range: 5454–5470.",
+			inputSchema: {
+				port: z.number().min(5454).max(5470).describe("New WebSocket bridge port (5454–5470)"),
+			},
+		},
+		async ({ port: newPort }) => {
+			const oldPort = bridge.getPort();
+			const wasListening = bridge.isListening();
+
+			logger.info({ oldPort, newPort, wasListening }, "figma_set_port: switching bridge port");
+
+			// Restart on new port
+			bridge.restart(newPort);
+
+			// Give it a moment to bind
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			const nowListening = bridge.isListening();
+			const error = bridge.getStartError();
+			const currentPort = bridge.getPort();
+
+			if (nowListening) {
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: true,
+							previousPort: oldPort,
+							newPort: currentPort,
+							message: `Bridge restarted on port ${currentPort}. Figma plugin'de Port: ${currentPort} ayarlayın ve bağlanmasını bekleyin.`,
+						}, null, 0),
+					}],
+				};
+			} else {
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: false,
+							previousPort: oldPort,
+							attemptedPort: newPort,
+							error: error || "Port bind failed",
+							message: `Port ${newPort} bağlanamadı. Başka bir port deneyin (5454–5470).`,
+						}, null, 0),
+					}],
+					isError: true,
+				};
+			}
 		}
 	);
 

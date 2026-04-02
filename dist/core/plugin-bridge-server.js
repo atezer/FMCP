@@ -27,6 +27,8 @@ export class PluginBridgeServer {
         this.requestTimeoutMs = 120000;
         this.heartbeatTimer = null;
         this.clientIdCounter = 0;
+        /** Last error message when bridge could not bind (port conflict, etc.) */
+        this.startError = null;
         const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, port));
         this.preferredPort = clamped;
         this.port = clamped;
@@ -37,7 +39,38 @@ export class PluginBridgeServer {
             logger.debug({ port: this.port }, "Plugin bridge server already running");
             return;
         }
+        this.startError = null;
         this.tryListenFixed(this.preferredPort, false);
+    }
+    /** Get last startup error (null if running fine). */
+    getStartError() {
+        return this.startError;
+    }
+    /** Stop current WebSocket server (if any) and restart on a new port. */
+    restart(newPort) {
+        const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, newPort));
+        this.stop();
+        this.startError = null;
+        return this.tryListenSync(clamped);
+    }
+    /** Synchronous-style listen attempt that returns result instead of calling process.exit. */
+    tryListenSync(port) {
+        // We'll use tryListenFixed but capture the result via startError
+        this.tryListenFixed(port, false);
+        // tryListenFixed is async due to probe, but for immediate EADDRINUSE we set startError
+        // For the restart flow, we return optimistically — caller checks getStartError() after a delay
+        if (this.wss) {
+            return { success: true, port };
+        }
+        return { success: false, port, error: this.startError || "Starting..." };
+    }
+    /** Currently listening port (or preferred port if not yet listening). */
+    getPort() {
+        return this.port;
+    }
+    /** Whether WebSocket server is actively listening. */
+    isListening() {
+        return this.wss !== null;
     }
     generateClientId() {
         return `client_${Date.now()}_${++this.clientIdCounter}`;
@@ -108,20 +141,22 @@ export class PluginBridgeServer {
             if (err.code === "EADDRINUSE") {
                 server.close();
                 if (isRetry) {
-                    console.error(`\n❌ Port ${port} is still busy after retry.\n` +
-                        `   A process may be holding this port. Find and stop it:\n` +
-                        `     lsof -i :${port}   (macOS/Linux)\n` +
-                        `   Then restart, or set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
-                    process.exit(1);
+                    const msg = `Port ${port} is still busy after retry. ` +
+                        `Use figma_set_port to try a different port (${MIN_PORT}–${MAX_PORT}), ` +
+                        `or free the port: lsof -i :${port}`;
+                    this.startError = msg;
+                    console.error(`\n⚠️  ${msg}\n`);
+                    logger.warn({ port }, msg);
                     return;
                 }
                 const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
                 this.probePort(port, probeHost).then((status) => {
                     if (status === "fmcp") {
-                        console.error(`\n⚠️  Port ${port} is already in use by another F-MCP bridge instance.\n` +
-                            `   One bridge is enough for all Figma/FigJam windows.\n` +
-                            `   If you need a separate session, set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
-                        process.exit(1);
+                        const msg = `Port ${port} is already in use by another F-MCP bridge instance. ` +
+                            `Use figma_set_port to switch to a different port (${MIN_PORT}–${MAX_PORT}).`;
+                        this.startError = msg;
+                        console.error(`\n⚠️  ${msg}\n`);
+                        logger.warn({ port }, msg);
                     }
                     else if (status === "dead") {
                         console.error(`\n⚠️  Port ${port} is busy but not responding (stale process).\n` +
@@ -129,9 +164,11 @@ export class PluginBridgeServer {
                         setTimeout(() => this.tryListenFixed(port, true), STALE_PORT_RETRY_DELAY_MS);
                     }
                     else {
-                        console.error(`\n❌ Port ${port} is in use by a different service (not F-MCP).\n` +
-                            `   Free the port or set FIGMA_PLUGIN_BRIDGE_PORT to a different value (${MIN_PORT}–${MAX_PORT}).\n`);
-                        process.exit(1);
+                        const msg = `Port ${port} is in use by a different service (not F-MCP). ` +
+                            `Use figma_set_port to switch to a different port (${MIN_PORT}–${MAX_PORT}).`;
+                        this.startError = msg;
+                        console.error(`\n⚠️  ${msg}\n`);
+                        logger.warn({ port }, msg);
                     }
                 });
                 return;
