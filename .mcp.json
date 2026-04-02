@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "figma-mcp-bridge": {
-      "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/cursor-mcp-plugin-bridge.sh"]
     }
   }
 }
