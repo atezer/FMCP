@@ -10,7 +10,7 @@ Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI as
 
 **Eski kurulum:** MCP `args` içinde `…/f-mcp-bridge/dist/...` varsa `…/<clone-kökü>/dist/...` yapın. Launch Agent, `.app` ve ayrıntılı adımlar için [KURULUM.md](KURULUM.md) içindeki **«Eski f-mcp-bridge alt yolundan geçiş»** bölümüne bakın.
 
-**Claude Desktop config:** `env.FIGMA_PLUGIN_BRIDGE_PORT` kullanıyorsanız Figma plugin’deki port ile aynı olmalı; tam örnekler [docs/CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md).
+**Claude Desktop config:** `env.FIGMA_PLUGIN_BRIDGE_PORT` kullanıyorsanız Figma plugin’deki port ile aynı olmalı; örnekler aşağıdaki [Hızlı başlangıç](#hızlı-başlangıç) bölümünde.
 
 ### Figma API token tüketmiyor
 
@@ -334,20 +334,11 @@ Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun gi
 | [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
 | [CHANGELOG.md](CHANGELOG.md)                                           | **Sürüm geçmişi** — npm/GitHub Releases ile birlikte referans                                    |
-| [RELEASE_NOTES_TEMPLATE.md](docs/RELEASE_NOTES_TEMPLATE.md)               | **Yeni sürüm yayını** — GitHub Release gövdesi şablonu ve `gh release create` ipuçları          |
-| [OAUTH_SETUP.md](docs/OAUTH_SETUP.md)                                   | OAuth (remote sunucu)                                                                            |
-| [SELF_HOSTING.md](docs/SELF_HOSTING.md)                                 | Kendi sunucunda host                                                                             |
-| [DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)               | Dağıtım karşılaştırma                                                                            |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                    |
 | [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                       |
-| [RECONSTRUCTION_FORMAT.md](docs/RECONSTRUCTION_FORMAT.md)               | Reconstruction format                                                                            |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Paralel görevler & çoklu kullanıcı** — sabit port, paralel hatlar, Claude çoklu MCP           |
-| [CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md)               | Claude Desktop config örnekleri (tek ve çoklu MCP sunucusu)                                      |
-| [DEPENDENCY_LAYERS.md](docs/DEPENDENCY_LAYERS.md)                       | Bağımlılık katmanları (plugin-only / tam / Cloudflare) ve olası paket ayrımı taslağı            |
 | [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
-| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)                           | **Güvenlik denetimi** — bulgular checklist ([FUTURE.md](FUTURE.md) §10)                            |
-| [PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md)                             | **Publish plugin** — Figma'da yayınlama: Data security cevapları, final details, Plugin ID       |
-|                                                                         |                                                                                                  |
+| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)                             | **Güvenlik denetimi** — bulgular checklist                                                       |
 
 
 ## Yaygınlaştırma: Organization (private) plugin

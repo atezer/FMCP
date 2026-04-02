@@ -40,7 +40,7 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
 > | `dist` yok | Depo kökünde `npm run build:local` çalıştırın. |
 > | Plugin’de **MCP no server** | Bridge **hangi portta** dinliyorsa (varsayılan 5454 veya `FIGMA_PLUGIN_BRIDGE_PORT`) Figma plugin **Advanced → Port** ile **aynı** olmalı. İsterseniz `env` içindeki portu kaldırıp her iki tarafta 5454 kullanın. |
 >
-> Tam örnekler ve `env` açıklaması: [docs/CLAUDE_DESKTOP_CONFIG.md](docs/CLAUDE_DESKTOP_CONFIG.md)
+> Tam örnekler ve `env` açıklaması: [README.md](README.md#hızlı-başlangıç) Hızlı başlangıç bölümü
 
 **Plugin-only mod (önerilen: debug portu yok, REST token yok, Puppeteer yok):**
 ```json
