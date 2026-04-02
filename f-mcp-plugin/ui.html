@@ -172,6 +172,52 @@
       opacity: 0.9;
     }
 
+    .mcp-ai-config {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .mcp-ai-config-header {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.95;
+    }
+    .mcp-ai-config-hint {
+      font-size: 10px;
+      line-height: 1.35;
+      margin: 0 0 8px 0;
+      opacity: 0.75;
+    }
+    .mcp-config-pre {
+      margin: 0;
+      padding: 8px;
+      font-size: 10px;
+      line-height: 1.3;
+      font-family: ui-monospace, monospace;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 6px;
+      max-height: 140px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .mcp-config-copy-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: inherit;
+      cursor: pointer;
+    }
+    .mcp-config-copy-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
     /* Light theme support */
     @media (prefers-color-scheme: light) {
       body {
@@ -185,6 +231,22 @@
       .advanced-panel {
         background: #fff;
         border-color: #e5e5e5;
+      }
+      .mcp-ai-config {
+        border-top-color: #e5e5e5;
+      }
+      .mcp-config-pre {
+        background: #f0f0f0;
+        border-color: #ddd;
+        color: #222;
+      }
+      .mcp-config-copy-btn {
+        border-color: #ccc;
+        background: #eee;
+        color: #222;
+      }
+      .mcp-config-copy-btn:hover {
+        background: #e0e0e0;
       }
       .status-text .label {
         color: #666;
@@ -218,6 +280,12 @@
         <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
       <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
+      <div class="mcp-ai-config" title="Plugin’deki port ile AI istemcisindeki FIGMA_PLUGIN_BRIDGE_PORT aynı olmalıdır.">
+        <div class="mcp-ai-config-header">Claude App / Cursor MCP</div>
+        <p class="mcp-ai-config-hint">Bu pencere <strong id="mcp-config-port-label">5454</strong> portuna bağlanır. Farklı proje veya sohbet için burada port seçin; aşağıdaki JSON’u ilgili uygulamanın MCP ayarına ekleyin (sunucu adını benzersiz tutun). nvm kullanıyorsanız <code>command</code> için tam <code>node</code> yolu kullanın.</p>
+        <pre id="mcp-config-snippet" class="mcp-config-pre" aria-label="MCP yapılandırma örneği"></pre>
+        <button type="button" id="mcp-config-copy" class="mcp-config-copy-btn">JSON’u panoya kopyala</button>
+      </div>
     </div>
   </div>
 
@@ -852,6 +920,7 @@
         if (mainScroller && typeof mainScroller.scrollTop === 'number') {
           mainScroller.scrollTop = 0;
         }
+        refreshMcpConfigSnippet();
       } else if (!opts.skipUnlock) {
         unlockAutoPortScan();
       }
@@ -897,6 +966,46 @@
       var n = parseInt(el.value, 10);
       if (isNaN(n) || n < MCP_PORT_MIN || n > MCP_PORT_MAX) return DEFAULT_MCP_PORT;
       return n;
+    }
+
+    /** Seçili porta göre Claude Desktop / Cursor mcp.json için tek sunucu bloğu (birleştirip yapıştırın). */
+    function buildMcpClientSnippetJson(port) {
+      var name = 'figma-mcp-bridge-p' + port;
+      var wrap = { mcpServers: {} };
+      wrap.mcpServers[name] = {
+        command: 'npx',
+        args: ['-y', '@atezer/figma-mcp-bridge@latest', 'figma-mcp-bridge-plugin'],
+        env: { FIGMA_PLUGIN_BRIDGE_PORT: String(port) }
+      };
+      return JSON.stringify(wrap, null, 2);
+    }
+
+    function refreshMcpConfigSnippet() {
+      var pre = document.getElementById('mcp-config-snippet');
+      var label = document.getElementById('mcp-config-port-label');
+      if (!pre) return;
+      var port = getMcpBridgePort();
+      pre.textContent = buildMcpClientSnippetJson(port);
+      if (label) label.textContent = String(port);
+      requestUiResize();
+    }
+
+    function initMcpConfigSnippetUi() {
+      var copyBtn = document.getElementById('mcp-config-copy');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          var text = buildMcpClientSnippetJson(getMcpBridgePort());
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+              var prev = copyBtn.textContent;
+              copyBtn.textContent = 'Kopyalandı';
+              setTimeout(function() { copyBtn.textContent = prev; }, 1500);
+            }).catch(function() { window.prompt('Kopyalayın (Cmd/Ctrl+C):', text); });
+          } else {
+            window.prompt('Kopyalayın (Cmd/Ctrl+C):', text);
+          }
+        });
+      }
     }
 
     function listCandidatePorts() {
@@ -964,12 +1073,17 @@
       } catch (e) {}
       var el = document.getElementById('mcp-port');
       if (el) {
+        var onPortFieldChange = function() {
+          refreshMcpConfigSnippet();
+        };
+        el.addEventListener('input', onPortFieldChange);
         el.addEventListener('change', function() {
           var port = getMcpBridgePort();
           try { localStorage.setItem(MCP_BRIDGE_PORT_KEY, String(port)); } catch (e) {}
           manualPortLocked = true;
           candidatePorts = [port];
           candidatePortIndex = 0;
+          refreshMcpConfigSnippet();
           forceDisconnectAndReconnect();
         });
       }
@@ -1057,6 +1171,7 @@
               }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
               updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+              refreshMcpConfigSnippet();
               return;
             }
             if (msg.type === 'ping') {
@@ -1268,7 +1383,9 @@
     if (typeof WebSocket !== 'undefined') {
       initMcpHostInput();
       initMcpPortInput();
+      initMcpConfigSnippetUi();
       initAdvancedPanel();
+      refreshMcpConfigSnippet();
       try {
         var rememberedPort = parseInt(localStorage.getItem(MCP_BRIDGE_PORT_KEY) || '', 10);
         if (rememberedPort >= MCP_PORT_MIN && rememberedPort <= MCP_PORT_MAX) {
