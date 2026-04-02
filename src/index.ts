@@ -46,7 +46,7 @@ export class FigmaMCP extends McpAgent {
 		refreshToken?: string;
 		expiresAt: number;
 	}> {
-		const env = this.env as Env;
+		const env = this.env as unknown as Env;
 
 		if (!env.FIGMA_OAUTH_CLIENT_ID || !env.FIGMA_OAUTH_CLIENT_SECRET) {
 			throw new Error("OAuth not configured on server");
@@ -171,7 +171,7 @@ export class FigmaMCP extends McpAgent {
 		await this.ensureSessionId();
 
 		// @ts-ignore - this.env is available in Agent/Durable Object context
-		const env = this.env as Env;
+		const env = this.env as unknown as Env;
 
 		// Try OAuth first (per-user authentication)
 		try {
@@ -236,7 +236,7 @@ export class FigmaMCP extends McpAgent {
 				logger.info({ sessionId }, "No OAuth token found - user needs to authenticate");
 
 				// No authentication available - direct user to OAuth flow
-				const baseUrl = (this.env as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
+				const baseUrl = (this.env as unknown as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
 				const authUrl = `${baseUrl.replace(/\/$/, "")}/oauth/authorize?session_id=${sessionId}`;
 
 				// Only use PAT fallback if explicitly configured AND no OAuth token exists
@@ -260,7 +260,7 @@ export class FigmaMCP extends McpAgent {
 			// For other OAuth errors (expired token, refresh failed, etc.), do NOT fall back to PAT
 			logger.error({ error, sessionId }, "OAuth token retrieval failed - re-authentication required");
 
-			const baseUrl = (this.env as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
+			const baseUrl = (this.env as unknown as Env).MCP_OAUTH_BASE_URL || "https://your-deployment.workers.dev";
 			const authUrl = `${baseUrl.replace(/\/$/, "")}/oauth/authorize?session_id=${sessionId}`;
 
 			throw new Error(
@@ -287,7 +287,7 @@ export class FigmaMCP extends McpAgent {
 
 				// Access env from Durable Object context
 				// @ts-ignore - this.env is available in Agent/Durable Object context
-				const env = this.env as Env;
+				const env = this.env as unknown as Env;
 
 				if (!env) {
 					throw new Error("Environment not available - this.env is undefined");
