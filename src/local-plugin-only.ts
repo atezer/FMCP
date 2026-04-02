@@ -97,6 +97,17 @@ export async function main() {
 	const bridge = new PluginBridgeServer(port, { auditLogPath });
 	bridge.start();
 
+	const bridgeBindHost = process.env.FIGMA_BRIDGE_HOST || "127.0.0.1";
+	const bridgeSessionMeta = () => ({
+		bridgePort: port,
+		bridgeHost: bridgeBindHost,
+		bridgeWebSocketUrl: `ws://${bridgeBindHost}:${port}`,
+		/** Claude/Cursor mcp.json / env — bu süreç bu portta dinler */
+		mcpEnvHint: `FIGMA_PLUGIN_BRIDGE_PORT=${port}`,
+		parallelSessionsHint:
+			"Birden fazla izole AI hattı (ör. Cursor + Claude veya iki sohbet) için her hatta ayrı MCP süreci ve plugin'de aynı port gerekir. Kullanıcı sohbette port yazdıysa figma_get_status ile expectedBridgePort göndererek eşleşmeyi doğrulayın.",
+	});
+
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
 		version: "1.1.2",
@@ -106,7 +117,7 @@ export async function main() {
 	server.registerTool(
 		"figma_list_connected_files",
 		{
-			description: "List all currently connected Figma/FigJam plugin instances (Figma Desktop, FigJam browser, Figma browser). Returns fileKey, fileName, and connection time for each. Use when multiple windows or agents are active. Pass the returned fileKey (or a Figma/FigJam URL via figmaUrl) to other tools to target a specific file.",
+			description: "List all currently connected Figma/FigJam plugin instances (Figma Desktop, FigJam browser, Figma browser). Includes this MCP instance's bridgePort so the user/assistant can align with the port written in chat. Pass fileKey or figmaUrl on other tools to target a file when multiple projects are connected to the same bridge.",
 			inputSchema: {},
 			annotations: { readOnlyHint: true },
 		},
@@ -117,6 +128,7 @@ export async function main() {
 					type: "text" as const,
 					text: JSON.stringify({
 						success: true,
+						...bridgeSessionMeta(),
 						connectedFiles: files,
 						totalConnections: files.length,
 						message: files.length === 0
@@ -1006,11 +1018,22 @@ export async function main() {
 	server.registerTool(
 		"figma_get_status",
 		{
-			description: "Check if F-MCP ATezer Bridge plugin is connected and list all connected files. No REST API or token.",
-			inputSchema: {},
+			description:
+				"Bridge health: plugin bağlı mı, kaç pencere, bu MCP sürecinin dinlediği port. Kullanıcı sohbette port yazdıysa (örn. 5456) expectedBridgePort ile gönderin: yanlış hat/ölü port uyumsuzluğu anında görünür. Paralel AI oturumları için her oturumda ayrı MCP + FIGMA_PLUGIN_BRIDGE_PORT; Figma penceresinde plugin Port'u aynı olmalı.",
+			inputSchema: {
+				expectedBridgePort: z
+					.number()
+					.int()
+					.min(5454)
+					.max(5470)
+					.optional()
+					.describe(
+						"Kullanıcının sohbette belirttiği bridge portu. Bu MCP örneğinin portu ile karşılaştırılır; uyuşmazsa yanlış connector veya yanlış Figma plugin portu vardır.",
+					),
+			},
 			annotations: { readOnlyHint: true },
 		},
-		async () => {
+		async ({ expectedBridgePort }) => {
 			const connected = bridge.isConnected();
 			const connectedFiles = bridge.listConnectedFiles();
 			const clientCount = bridge.connectedClientCount();
@@ -1019,8 +1042,20 @@ export async function main() {
 				: PLUGIN_NOT_CONNECTED;
 			const portHint =
 				clientCount === 0
-					? `Bu uygulama (Claude/Cursor) bridge'i port ${port}'ta dinliyor. Figma'da plugini açıp Port alanına ${port} yazın → "ready (:${port})" görünmeli. Claude ile 5455 kullanıyorsanız plugin'de Port: 5455 olmalı.`
+					? `Bu Claude/Cursor MCP süreci bridge'i port ${port}'ta dinliyor. Figma plugin'de Host localhost ve Port ${port} olmalı ("ready (:${port})"). Başka bir AI hattı için ayrı MCP tanımında FIGMA_PLUGIN_BRIDGE_PORT (ör. 5455) kullanın; o Figma penceresinde plugin portunu aynı yapın.`
 					: undefined;
+			const meta = bridgeSessionMeta();
+			const portCheck =
+				expectedBridgePort !== undefined
+					? {
+							expectedBridgePort,
+							portMatchesExpected: expectedBridgePort === port,
+							portMismatch:
+								expectedBridgePort !== port
+									? `Bu sohbetin MCP süreci port ${port}'ta dinliyor; kullanıcı ${expectedBridgePort} bekliyor. Çözüm: (1) Bu sohbeti ${port} kullanan connector'a bağlayın veya (2) plugin/Figma penceresinde Port'u ${port} yapın veya (3) ${expectedBridgePort} için FIGMA_PLUGIN_BRIDGE_PORT=${expectedBridgePort} ile ayrı bir MCP sunucusu ekleyin.`
+									: undefined,
+						}
+					: {};
 			return {
 				content: [{
 					type: "text" as const,
@@ -1028,9 +1063,10 @@ export async function main() {
 						pluginConnected: connected,
 						connectedClients: clientCount,
 						connectedFiles,
-						bridgePort: port,
 						message: msg,
+						...meta,
 						...(portHint && { portHint }),
+						...portCheck,
 					}, null, 0),
 				}],
 			};

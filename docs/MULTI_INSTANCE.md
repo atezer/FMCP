@@ -8,18 +8,21 @@ Aynı makinede veya farklı makinelerde **birden fazla kişi** aynı anda F-MCP 
 
 **Çoğu kullanıcı için ikinci bir MCP süreci başlatmaya gerek yoktur.** Farklı portlara ihtiyaç yalnızca birden fazla *kişi* veya birden fazla *izole AI oturumu* istendiğinde doğar.
 
-## Plugin’den porta göre Claude App / Cursor yapılandırması
-
-**F-MCP Bridge** plugin’inde **Advanced** panelinde, seçtiğiniz **Port** için hazır bir **`mcpServers`** JSON bloğu üretilir; **JSON’u panoya kopyala** ile Claude Desktop (`claude_desktop_config.json`) veya Cursor (`mcp.json`) dosyanızdaki mevcut `mcpServers` nesnesine **ekleyin** (sunucu adı `figma-mcp-bridge-p<port>` şeklinde benzersiz kalır).
-
-- **Kural:** Plugin’de gördüğünüz port = ilgili AI uygulamasında `FIGMA_PLUGIN_BRIDGE_PORT` = MCP sürecinin dinlediği port. Hepsi aynı sayı olmalı.
-- **Paralel hatlar:** Proje A → port 5454, Proje B → 5455 gibi: her Figma/FigJam penceresinde plugin **Advanced** ile o hatta ait portu seçin; her AI istemcisinde (Claude App sohbeti, Cursor, başka MCP destekli araç) **kendi** MCP tanımınızı ve **kendi** portunuzu kullanın. İstemciyi yeniden başlatın.
-- **nvm / `node` bulunamıyor:** Kopyalanan örnek `npx` kullanır; sorun sürerse [CLAUDE_DESKTOP_CONFIG.md](CLAUDE_DESKTOP_CONFIG.md) bölümündeki gibi `command` için tam `node` yolunu yazın.
-
 ## Nasıl çalışır?
 
 - **Tek kullanıcı:** Varsayılan port **5454**. Claude'u açar, Figma'da plugin'i açar; plugin 5454'e bağlanır. Birden fazla Figma/FigJam penceresi aynı porta bağlanır.
 - **Çoklu kullanıcı:** Her kullanıcı kendi portunu kullanır (5454, 5455, 5456, … 5470). Port aralığı **5454–5470** (en fazla 17 eşzamanlı örnek).
+
+## Sohbette port ve doğrulama (Claude / Cursor)
+
+Kullanıcı veya tasarımcı, **hangi Figma penceresinin hangi AI hattına** ait olduğunu sohbette port numarasıyla yazabilir (örn. «5455 hattındayım»). Asistan **ilk adımda** `figma_get_status` çağırırken isteğe bağlı **`expectedBridgePort`** parametresini gönderir:
+
+- **Eşleşirse** (`portMatchesExpected: true`): Bu MCP süreci doğru köprüdedir; «ölü port» uyumsuzluğu yoktur.
+- **Eşleşmezse** (`portMismatch` metni): Yanlış MCP connector seçilmiş veya Figma plugin portu Claude/Cursor’daki `FIGMA_PLUGIN_BRIDGE_PORT` ile uyumsuzdur; kullanıcıya net düzeltme adımı döner.
+
+`figma_list_connected_files` yanıtı da **`bridgePort`**, **`bridgeWebSocketUrl`** ve **`mcpEnvHint`** içerir; aynı makinede birden fazla proje **aynı köprüye** bağlıysa hedefi **`fileKey` / `figmaUrl`** ile seçmeye devam edin.
+
+Plugin arayüzünde bağlantı **ready** olduktan sonra **«Sohbet için kopyala»** ile port + `expectedBridgePort` + env ipucunu tek metin olarak panoya alabilirsiniz.
 
 ## Adımlar (her kullanıcı için)
 
