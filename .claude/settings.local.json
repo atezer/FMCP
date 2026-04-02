@@ -115,7 +115,13 @@
       "Bash(grep \"\"\"version\"\"\" /Users/abdussamed.tezer/FCM/package.json)",
       "Bash(grep \"\"\"version\"\"\" /Users/abdussamed.tezer/FCM/.cursor-plugin/plugin.json)",
       "Bash(sed -i '' 's/ör\\\\. \\\\*\\\\*1\\\\.6\\\\.1\\\\*\\\\*/ör. \\\\*\\\\*1.6.2\\\\*\\\\*/g' KURULUM.md)",
-      "Bash(sed -i '' 's/\\\\*\\\\*Sürüm:\\\\*\\\\* 1\\\\.6\\\\.1/**Sürüm:** 1.6.2/g' KURULUM.md)"
+      "Read(//Users/abdussamed.tezer/FCM/**)",
+      "Bash(/tmp/analyze_md.sh)",
+      "Bash(ls -lh /Users/abdussamed.tezer/FCM/docs/*.md)",
+      "Bash(/tmp/check_overlap.sh)",
+      "Bash(/tmp/section_analysis.sh)",
+      "Bash(grep -rn \"MODE_COMPARISON\\\\|NPX-INSTALLATION\\\\|NPX_INSTALLATION\\\\|npx-installation\" /Users/abdussamed.tezer/FCM/*.md /Users/abdussamed.tezer/FCM/docs/*.md /Users/abdussamed.tezer/FCM/README.md)",
+      "Bash(grep -rn \"PLUGIN-MCP-BAGLANTI\\\\|PLUGIN-NASIL-CALISIR\\\\|MODE_COMPARISON\\\\|NPX-INSTALLATION\\\\|PORT-5454-KAPALI\\\\|BITBUCKET-README\" /Users/abdussamed.tezer/FCM/README.md /Users/abdussamed.tezer/FCM/KURULUM.md /Users/abdussamed.tezer/FCM/CONTRIBUTING.md /Users/abdussamed.tezer/FCM/FUTURE.md /Users/abdussamed.tezer/FCM/docs/*.md)"
     ],
     "deny": [],
     "ask": []
