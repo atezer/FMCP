@@ -12,6 +12,15 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.6.3] - 2026-04-03
+
+### Dokumantasyon temizligi
+
+- **28→21 aktif dokuman:** 10 dosya arsivlendi (OAUTH_SETUP, SELF_HOSTING, DEPLOYMENT_COMPARISON, CLAUDE_DESKTOP_CONFIG, FIGMA_USE, FMCP_AGENT_CANVAS_COMPAT, RECONSTRUCTION_FORMAT, PUBLISH-PLUGIN, DEPENDENCY_LAYERS, RELEASE_NOTES_TEMPLATE + root: SECURITY_FIXES_ANALYSIS, HANDOFF_TEMPLATE)
+- **Kirik link: 0** — tum referanslar guncellendi veya kaldirildi
+- **README sadeleştirildi:** Dokuman tablosu kullanici odakli, gereksiz satirlar kaldirildi
+- **TOOLS.md:** Agent Canvas referanslari v1.6 araclariyla guncellendi
+
 ## [1.6.2] - 2026-04-02
 
 ### Dokumantasyon duzeltmeleri
