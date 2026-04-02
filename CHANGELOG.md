@@ -12,6 +12,16 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.5.1] - 2026-04-02
+
+### TypeScript tip guvenligi
+
+- **Yeni tip dosyasi:** `src/core/types/figma.ts` — RGBColor, FigmaVariable, FigmaVariableCollection, FigmaPaintStyle, FigmaTextStyle, FigmaComponent, PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload vb.
+- **Plugin-only `any` azaltma:** 34 → 5 (%85 azalma). Kalan 5: Zod sema (z.any) ve resolvedType cast.
+- **Connector `any` azaltma:** 46 → 1 (%98 azalma). Tum Promise<any> donusleri tipli hale getirildi.
+- **Bridge server `any` azaltma:** 3 → 1 (%67). WebSocket mesaj tipleri iyilestirildi.
+- **Plugin minify geri alindi:** esbuild minify Figma sandbox'inda "Syntax error" olusturuyordu. Orijinal code.js geri yuklendi.
+
 ## [1.5.0] - 2026-04-02
 
 ### Plugin optimizasyonu

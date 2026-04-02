@@ -60,7 +60,7 @@ class LocalFigmaMCP {
 	constructor() {
 		this.server = new McpServer({
 			name: "F-MCP ATezer (Local)",
-			version: "1.5.0",
+			version: "1.5.1",
 		});
 	}
 
@@ -2300,10 +2300,10 @@ After instantiating components, use figma_take_screenshot to verify the result l
 						overrides,
 						variant,
 						parentId,
-					});
+					}) as Record<string, unknown>;
 
 					if (!result.success) {
-						throw new Error(result.error || "Failed to instantiate component");
+						throw new Error(String(result.error || "Failed to instantiate component"));
 					}
 
 					return {
