@@ -105,7 +105,7 @@ export async function main() {
 
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
-		version: "1.6.0",
+		version: "1.6.1",
 	});
 
 	// ---- figma_list_connected_files (multi-client discovery) ----
@@ -1195,6 +1195,78 @@ export async function main() {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...(result as Record<string, unknown>) }, null, 0) }] };
 			} catch (err) {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+			}
+		}
+	);
+
+	// ---- figma_export_nodes (batch SVG/PNG/JPG/PDF export) ----
+
+	server.registerTool(
+		"figma_export_nodes",
+		{
+			description:
+				"Export one or multiple nodes as SVG, PNG, JPG, or PDF. Returns base64-encoded data for each node. " +
+				"Supports batch export (up to 50 nodes). No REST API token needed — uses plugin exportAsync. " +
+				"SVG preserves vectors; PNG/JPG are rasterized at configurable scale.",
+			inputSchema: {
+				nodeIds: z.array(z.string()).min(1).max(50).describe("Node IDs to export (1-50)"),
+				format: z.enum(["PNG", "SVG", "JPG", "PDF"]).optional().default("PNG").describe("Export format"),
+				scale: z.number().min(0.5).max(4).optional().default(2).describe("Scale factor (0.5-4, default 2)"),
+				svgOutlineText: z.boolean().optional().describe("SVG: render text as outlines (default true)"),
+				svgIncludeId: z.boolean().optional().describe("SVG: include node IDs in attributes"),
+			},
+		},
+		async ({ nodeIds, format, scale, svgOutlineText, svgIncludeId }) => {
+			try {
+				const conn = getConnector(bridge);
+				const result = await conn.batchExportNodes({
+					nodeIds,
+					format: format as "PNG" | "SVG" | "JPG" | "PDF",
+					scale,
+					svgOutlineText,
+					svgIncludeId,
+				});
+
+				const results = result?.results || [];
+				const successful = results.filter((r) => !r.error);
+				const failed = results.filter((r) => r.error);
+				const totalBytes = successful.reduce((sum, r) => sum + (r.byteLength || 0), 0);
+
+				const contentBlocks: Array<{ type: "text"; text: string }> = [];
+
+				if (totalBytes > 5 * 1024 * 1024) {
+					contentBlocks.push({
+						type: "text" as const,
+						text: `⚠️ Large export: ${Math.round(totalBytes / 1024 / 1024)}MB total. Consider fewer nodes or lower scale.`,
+					});
+				}
+
+				contentBlocks.push({
+					type: "text" as const,
+					text: JSON.stringify({
+						success: true,
+						format,
+						scale,
+						exported: successful.length,
+						failed: failed.length,
+						totalBytes,
+						results: results.map((r) => ({
+							nodeId: r.nodeId,
+							name: r.name,
+							format: r.format,
+							byteLength: r.byteLength,
+							...(r.base64 && { base64: r.base64 }),
+							...(r.error && { error: r.error }),
+						})),
+					}, null, 0),
+				});
+
+				return { content: contentBlocks };
+			} catch (err) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }],
+					isError: true,
+				};
 			}
 		}
 	);

@@ -129,6 +129,17 @@ export interface PluginDocumentStructure {
     fileKey?: string;
     fileName?: string;
 }
+export interface PluginExportResult {
+    nodeId: string;
+    name: string;
+    format: string;
+    base64: string;
+    byteLength: number;
+    error?: string;
+}
+export interface PluginBatchExportPayload {
+    results: PluginExportResult[];
+}
 export interface DesignSystemSummary {
     variableCollections?: Array<{
         name: string;

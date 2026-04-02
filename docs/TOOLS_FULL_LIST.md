@@ -49,10 +49,11 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_rest_api` | Direkt REST API çağrısı (export, comments, versions). Otomatik cevap kırpma (200KB üstü), 429 retry |
 | `figma_get_rest_token_status` | Token durumu + rate limit bilgisi + düşük limit uyarısı |
 | `figma_clear_rest_token` | REST API token’ı bellekten temizle |
+| `figma_export_nodes` | Batch SVG/PNG/JPG/PDF export (1-50 node, scale 0.5-4, base64). Token gerektirmez |
 | `figma_search_assets` | Takım kütüphanesi variable collection arama (plugin teamLibrary API) |
 | `figma_plugin_diagnostics` | Plugin sağlık kontrolü (uptime, bellek, bağlantı durumu, port) |
 
-**Toplam: 45 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
+**Toplam: 46 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.

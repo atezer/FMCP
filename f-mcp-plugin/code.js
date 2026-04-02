@@ -2361,6 +2361,81 @@ figma.ui.onmessage = async (msg) => {
   }
 
   // ============================================================================
+  // BATCH_EXPORT_NODES - Export multiple nodes as SVG/PNG/JPG/PDF with base64
+  // ============================================================================
+  else if (msg.type === 'BATCH_EXPORT_NODES') {
+    try {
+      var nodeIds = msg.nodeIds || [];
+      var format = (msg.format || 'PNG').toUpperCase();
+      var scale = msg.scale || 2;
+      var maxNodes = 50;
+
+      if (nodeIds.length === 0) {
+        throw new Error('nodeIds array is empty');
+      }
+      if (nodeIds.length > maxNodes) {
+        nodeIds = nodeIds.slice(0, maxNodes);
+      }
+
+      // SVG-specific options
+      var svgOptions = {};
+      if (format === 'SVG') {
+        svgOptions = {
+          svgOutlineText: msg.svgOutlineText !== false,
+          svgIdAttribute: !!msg.svgIncludeId,
+          svgSimplifyStroke: !!msg.svgSimplifyStroke
+        };
+      }
+
+      var exportPromises = nodeIds.map(function(nodeId) {
+        return (async function() {
+          try {
+            var node = await figma.getNodeByIdAsync(nodeId);
+            if (!node) return { nodeId: nodeId, error: 'Node not found' };
+            if (!('exportAsync' in node)) return { nodeId: nodeId, name: node.name, error: 'Node type ' + node.type + ' does not support export' };
+
+            var settings = { format: format, constraint: { type: 'SCALE', value: scale } };
+            if (format === 'SVG') {
+              settings = Object.assign({}, settings, svgOptions);
+            }
+
+            var bytes = await node.exportAsync(settings);
+            var base64 = figma.base64Encode(bytes);
+
+            return {
+              nodeId: node.id,
+              name: node.name,
+              format: format,
+              base64: base64,
+              byteLength: bytes.length
+            };
+          } catch (e) {
+            return { nodeId: nodeId, error: e && e.message ? e.message : String(e) };
+          }
+        })();
+      });
+
+      var results = await Promise.all(exportPromises);
+
+      figma.ui.postMessage({
+        type: 'BATCH_EXPORT_NODES_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        data: { results: results }
+      });
+
+    } catch (error) {
+      var errorMsg = error && error.message ? error.message : String(error);
+      figma.ui.postMessage({
+        type: 'BATCH_EXPORT_NODES_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errorMsg
+      });
+    }
+  }
+
+  // ============================================================================
   // SET_INSTANCE_PROPERTIES - Update component properties on an instance
   // Uses instance.setProperties() to update TEXT, BOOLEAN, INSTANCE_SWAP, VARIANT
   // ============================================================================

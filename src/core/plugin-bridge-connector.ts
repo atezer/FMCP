@@ -100,6 +100,17 @@ export class PluginBridgeConnector {
 		return this.bridge.request("getLocalComponents", params, this.fileKey);
 	}
 
+	async batchExportNodes(params: {
+		nodeIds: string[];
+		format?: "PNG" | "SVG" | "JPG" | "PDF";
+		scale?: number;
+		svgOutlineText?: boolean;
+		svgIncludeId?: boolean;
+		svgSimplifyStroke?: boolean;
+	}): Promise<{ results: Array<{ nodeId: string; name?: string; format?: string; base64?: string; byteLength?: number; error?: string }> }> {
+		return this.bridge.request("batchExportNodes", params, this.fileKey);
+	}
+
 	async instantiateComponent(
 		componentKey: string,
 		options?: {
