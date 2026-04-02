@@ -53,7 +53,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_search_assets` | Takım kütüphanesi variable collection arama (plugin teamLibrary API) |
 | `figma_plugin_diagnostics` | Plugin sağlık kontrolü (uptime, bellek, bağlantı durumu, port) |
 
-**Toplam: 46 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
+**Toplam: 46 araç.** (Plugin-only `registerTool` ile uyumlu. `figma_get_code_connect` ve `figma_use` henüz uygulanmamıştır — [FUTURE.md](../FUTURE.md) yol haritasında.)
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
