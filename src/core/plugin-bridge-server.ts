@@ -97,25 +97,38 @@ export class PluginBridgeServer {
 		return this.startError;
 	}
 
-	/** Stop current WebSocket server (if any) and restart on a new port. */
-	restart(newPort: number): { success: boolean; port: number; error?: string } {
+	/** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. */
+	async restart(newPort: number): Promise<{ success: boolean; port: number; error?: string }> {
 		const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, newPort));
 		this.stop();
 		this.startError = null;
-		return this.tryListenSync(clamped);
+		return this.tryListenAsync(clamped);
 	}
 
-	/** Synchronous-style listen attempt that returns result instead of calling process.exit. */
-	private tryListenSync(port: number): { success: boolean; port: number; error?: string } {
-		// We'll use tryListenFixed but capture the result via startError
-		this.tryListenFixed(port, false);
-		// tryListenFixed is async due to probe, but for immediate EADDRINUSE we set startError
-		// For the restart flow, we return optimistically — caller checks getStartError() after a delay
-		if (this.wss) {
-			return { success: true, port };
-		}
-		return { success: false, port, error: this.startError || "Starting..." };
+	/** Async listen attempt — resolves when port binds successfully or fails. */
+	private tryListenAsync(port: number): Promise<{ success: boolean; port: number; error?: string }> {
+		return new Promise((resolve) => {
+			const TIMEOUT_MS = 5000;
+			const timer = setTimeout(() => {
+				resolve({ success: false, port, error: this.startError || `Port ${port} bind timeout (${TIMEOUT_MS}ms)` });
+			}, TIMEOUT_MS);
+
+			// Store original callback so tryListenFixed can notify us
+			this._listenResolve = (success: boolean) => {
+				clearTimeout(timer);
+				if (success) {
+					resolve({ success: true, port: this.port });
+				} else {
+					resolve({ success: false, port, error: this.startError || "Port bind failed" });
+				}
+			};
+
+			this.tryListenFixed(port, false);
+		});
 	}
+
+	/** Internal resolve callback for async listen flow. */
+	private _listenResolve: ((success: boolean) => void) | null = null;
 
 	/** Currently listening port (or preferred port if not yet listening). */
 	getPort(): number {
@@ -209,6 +222,8 @@ export class PluginBridgeServer {
 					this.startError = msg;
 					console.error(`\n⚠️  ${msg}\n`);
 					logger.warn({ port }, msg);
+					this._listenResolve?.(false);
+					this._listenResolve = null;
 					return;
 				}
 				const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
@@ -220,6 +235,8 @@ export class PluginBridgeServer {
 						this.startError = msg;
 						console.error(`\n⚠️  ${msg}\n`);
 						logger.warn({ port }, msg);
+						this._listenResolve?.(false);
+						this._listenResolve = null;
 					} else if (status === "dead") {
 						console.error(
 							`\n⚠️  Port ${port} is busy but not responding (stale process).\n` +
@@ -233,7 +250,15 @@ export class PluginBridgeServer {
 						this.startError = msg;
 						console.error(`\n⚠️  ${msg}\n`);
 						logger.warn({ port }, msg);
+						this._listenResolve?.(false);
+						this._listenResolve = null;
 					}
+				}).catch((err) => {
+					const msg = `Port probe failed: ${err instanceof Error ? err.message : String(err)}`;
+					this.startError = msg;
+					logger.error({ err, port }, msg);
+					this._listenResolve?.(false);
+					this._listenResolve = null;
 				});
 				return;
 			}
@@ -338,6 +363,10 @@ export class PluginBridgeServer {
 			});
 
 			logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s) — multi-client enabled", bindHost, this.port);
+
+			// Notify async restart() that binding succeeded
+			this._listenResolve?.(true);
+			this._listenResolve = null;
 
 			this.heartbeatTimer = setInterval(() => {
 				for (const [clientId, info] of this.clients) {

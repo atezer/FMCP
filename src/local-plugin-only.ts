@@ -99,7 +99,7 @@ export async function main() {
 
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
-		version: "1.1.2",
+		version: "1.3.0",
 	});
 
 	// ---- figma_list_connected_files (multi-client discovery) ----
@@ -1053,6 +1053,8 @@ export async function main() {
 	);
 
 	// ---- figma_set_port (runtime port change) ----
+	let portChangeInProgress = false;
+
 	server.registerTool(
 		"figma_set_port",
 		{
@@ -1066,47 +1068,55 @@ export async function main() {
 			},
 		},
 		async ({ port: newPort }) => {
-			const oldPort = bridge.getPort();
-			const wasListening = bridge.isListening();
-
-			logger.info({ oldPort, newPort, wasListening }, "figma_set_port: switching bridge port");
-
-			// Restart on new port
-			bridge.restart(newPort);
-
-			// Give it a moment to bind
-			await new Promise((resolve) => setTimeout(resolve, 500));
-
-			const nowListening = bridge.isListening();
-			const error = bridge.getStartError();
-			const currentPort = bridge.getPort();
-
-			if (nowListening) {
-				return {
-					content: [{
-						type: "text" as const,
-						text: JSON.stringify({
-							success: true,
-							previousPort: oldPort,
-							newPort: currentPort,
-							message: `Bridge restarted on port ${currentPort}. Figma plugin'de Port: ${currentPort} ayarlayın ve bağlanmasını bekleyin.`,
-						}, null, 0),
-					}],
-				};
-			} else {
+			if (portChangeInProgress) {
 				return {
 					content: [{
 						type: "text" as const,
 						text: JSON.stringify({
 							success: false,
-							previousPort: oldPort,
-							attemptedPort: newPort,
-							error: error || "Port bind failed",
-							message: `Port ${newPort} bağlanamadı. Başka bir port deneyin (5454–5470).`,
+							error: "Port değişikliği zaten devam ediyor. Lütfen tamamlanmasını bekleyin.",
 						}, null, 0),
 					}],
 					isError: true,
 				};
+			}
+
+			portChangeInProgress = true;
+			try {
+				const oldPort = bridge.getPort();
+				logger.info({ oldPort, newPort }, "figma_set_port: switching bridge port");
+
+				const result = await bridge.restart(newPort);
+
+				if (result.success) {
+					return {
+						content: [{
+							type: "text" as const,
+							text: JSON.stringify({
+								success: true,
+								previousPort: oldPort,
+								newPort: result.port,
+								message: `Bridge restarted on port ${result.port}. Figma plugin'de Port: ${result.port} ayarlayın ve bağlanmasını bekleyin.`,
+							}, null, 0),
+						}],
+					};
+				} else {
+					return {
+						content: [{
+							type: "text" as const,
+							text: JSON.stringify({
+								success: false,
+								previousPort: oldPort,
+								attemptedPort: newPort,
+								error: result.error || "Port bind failed",
+								message: `Port ${newPort} bağlanamadı. Başka bir port deneyin (5454–5470).`,
+							}, null, 0),
+						}],
+						isError: true,
+					};
+				}
+			} finally {
+				portChangeInProgress = false;
 			}
 		}
 	);

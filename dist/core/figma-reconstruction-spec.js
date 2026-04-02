@@ -374,22 +374,6 @@ export function validateReconstructionSpec(spec) {
     };
 }
 /**
- * Extract a specific variant from a COMPONENT_SET by name
- */
-export function extractVariant(componentSet, variantName) {
-    if (!componentSet.children || !Array.isArray(componentSet.children)) {
-        throw new Error('Invalid COMPONENT_SET: no children array');
-    }
-    const variant = componentSet.children.find((child) => child.type === 'COMPONENT' && child.name === variantName);
-    if (!variant) {
-        const availableVariants = componentSet.children
-            .filter((c) => c.type === 'COMPONENT')
-            .map((c) => c.name);
-        throw new Error(`Variant "${variantName}" not found. Available variants: ${availableVariants.join(', ')}`);
-    }
-    return extractNodeSpec(variant);
-}
-/**
  * Get list of available variants in a COMPONENT_SET
  */
 export function listVariants(componentSet) {

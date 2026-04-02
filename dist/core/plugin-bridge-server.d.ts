@@ -56,14 +56,16 @@ export declare class PluginBridgeServer {
     start(): void;
     /** Get last startup error (null if running fine). */
     getStartError(): string | null;
-    /** Stop current WebSocket server (if any) and restart on a new port. */
-    restart(newPort: number): {
+    /** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. */
+    restart(newPort: number): Promise<{
         success: boolean;
         port: number;
         error?: string;
-    };
-    /** Synchronous-style listen attempt that returns result instead of calling process.exit. */
-    private tryListenSync;
+    }>;
+    /** Async listen attempt — resolves when port binds successfully or fails. */
+    private tryListenAsync;
+    /** Internal resolve callback for async listen flow. */
+    private _listenResolve;
     /** Currently listening port (or preferred port if not yet listening). */
     getPort(): number;
     /** Whether WebSocket server is actively listening. */

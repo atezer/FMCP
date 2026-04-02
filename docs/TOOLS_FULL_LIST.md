@@ -37,11 +37,12 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_search_components` | İsimle bileşen arama; varsayılan currentPageOnly (büyük dosyada timeout önlemi); çıktıda **`key`** (`componentKey`) — `figma_instantiate_component` ile uyum |
 | `figma_set_description` | Component/set/style node’a description (markdown destekli) |
 | `figma_set_instance_properties` | Instance özelliklerini değiştir (TEXT, BOOLEAN, VARIANT) |
+| `figma_set_port` | Runtime’da WebSocket bridge portunu değiştir (5454–5470). Port meşgulse farklı porta geç |
 | `figma_setup_design_tokens` | Atomik: koleksiyon + modlar + variable’lar (rollback destekli) |
 | `figma_update_variable` | Değişken değerini güncelle |
 | `figma_watch_console` | Yeni console log’ları timeout’a kadar stream et |
 
-**Toplam: 34 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
+**Toplam: 35 araç.** (Plugin-only `registerTool` ile uyumlu; `figma_search_assets` / `figma_get_code_connect` / `figma_use` bu listede yoktur.)  
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
