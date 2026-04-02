@@ -70,7 +70,13 @@
       "Bash(wc -l /Users/abdussamed.tezer/FCM/src/core/*.ts)",
       "Bash(ls -la /Users/abdussamed.tezer/FCM/docs/*.md)",
       "Bash(ls /Users/abdussamed.tezer/FCM/docs/*.md)",
-      "Bash(ls /Users/abdussamed.tezer/FCM/docs/archived/*.md)"
+      "Bash(ls /Users/abdussamed.tezer/FCM/docs/archived/*.md)",
+      "Bash(npm -v)",
+      "Bash(grep -rn console.log /Users/abdussamed.tezer/FCM/src/ --include=*.ts)",
+      "Bash(grep -o '`figma_[^`]*`')",
+      "Bash(while read:*)",
+      "Bash(do if:*)",
+      "Bash(then echo:*)"
     ],
     "deny": [],
     "ask": []

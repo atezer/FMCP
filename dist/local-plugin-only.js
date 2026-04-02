@@ -89,7 +89,7 @@ export async function main() {
     bridge.start();
     const server = new McpServer({
         name: "F-MCP ATezer Bridge (Plugin-only)",
-        version: "1.5.0",
+        version: "1.5.1",
     });
     // ---- figma_list_connected_files (multi-client discovery) ----
     server.registerTool("figma_list_connected_files", {
@@ -670,7 +670,7 @@ export async function main() {
                 const name = s.name || s.id;
                 const fills = s.paints || [];
                 const solid = fills.find((p) => p.type === "SOLID");
-                figmaMap.set(name, solid ? rgbaToHex(solid.color) : "");
+                figmaMap.set(name, solid?.color ? rgbaToHex(solid.color) : "");
             }
             // Text styles: name -> fontSize or "fontStyle"
             const textStyles = stylesPayload?.textStyles || [];
@@ -791,7 +791,7 @@ export async function main() {
                 });
             }
             for (const v of variables) {
-                const c = collectionById.get(v.variableCollectionId);
+                const c = collectionById.get(v.variableCollectionId || "");
                 if (!c)
                     continue;
                 const entry = {

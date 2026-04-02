@@ -6,37 +6,38 @@
  * Supports optional fileKey routing for multi-client scenarios.
  */
 import type { PluginBridgeServer } from "./plugin-bridge-server.js";
+import type { PluginVariablesPayload, PluginComponentPayload } from "./types/figma.js";
 export declare class PluginBridgeConnector {
     private bridge;
     private fileKey?;
     constructor(bridge: PluginBridgeServer, fileKey?: string);
     setFileKey(fileKey: string | undefined): void;
     initialize(): Promise<void>;
-    getVariablesFromPluginUI(fileKey?: string): Promise<any>;
-    getComponentFromPluginUI(nodeId: string): Promise<any>;
-    getVariables(fileKey?: string): Promise<any>;
-    getComponentByNodeId(nodeId: string): Promise<any>;
-    executeCodeViaUI(code: string, timeout?: number): Promise<any>;
-    updateVariable(variableId: string, modeId: string, value: any): Promise<any>;
+    getVariablesFromPluginUI(fileKey?: string): Promise<PluginVariablesPayload>;
+    getComponentFromPluginUI(nodeId: string): Promise<PluginComponentPayload>;
+    getVariables(fileKey?: string): Promise<PluginVariablesPayload>;
+    getComponentByNodeId(nodeId: string): Promise<PluginComponentPayload>;
+    executeCodeViaUI(code: string, timeout?: number): Promise<unknown>;
+    updateVariable(variableId: string, modeId: string, value: unknown): Promise<unknown>;
     createVariable(name: string, collectionId: string, resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN", options?: {
-        valuesByMode?: Record<string, any>;
+        valuesByMode?: Record<string, unknown>;
         description?: string;
         scopes?: string[];
-    }): Promise<any>;
+    }): Promise<unknown>;
     createVariableCollection(name: string, options?: {
         initialModeName?: string;
         additionalModes?: string[];
-    }): Promise<any>;
-    deleteVariable(variableId: string): Promise<any>;
-    deleteVariableCollection(collectionId: string): Promise<any>;
-    renameVariable(variableId: string, newName: string): Promise<any>;
-    addMode(collectionId: string, modeName: string): Promise<any>;
-    renameMode(collectionId: string, modeId: string, newName: string): Promise<any>;
-    refreshVariables(): Promise<any>;
+    }): Promise<unknown>;
+    deleteVariable(variableId: string): Promise<unknown>;
+    deleteVariableCollection(collectionId: string): Promise<unknown>;
+    renameVariable(variableId: string, newName: string): Promise<unknown>;
+    addMode(collectionId: string, modeName: string): Promise<unknown>;
+    renameMode(collectionId: string, modeId: string, newName: string): Promise<unknown>;
+    refreshVariables(): Promise<unknown>;
     getLocalComponents(opts?: {
         currentPageOnly?: boolean;
         limit?: number;
-    }): Promise<any>;
+    }): Promise<PluginComponentPayload>;
     instantiateComponent(componentKey: string, options?: {
         nodeId?: string;
         position?: {
@@ -47,38 +48,38 @@ export declare class PluginBridgeConnector {
             width: number;
             height: number;
         };
-        overrides?: Record<string, any>;
+        overrides?: Record<string, unknown>;
         variant?: Record<string, string>;
         parentId?: string;
-    }): Promise<any>;
-    setNodeDescription(nodeId: string, description: string, descriptionMarkdown?: string): Promise<any>;
-    addComponentProperty(nodeId: string, propertyName: string, type: "BOOLEAN" | "TEXT" | "INSTANCE_SWAP" | "VARIANT", defaultValue: any, options?: {
-        preferredValues?: any[];
-    }): Promise<any>;
+    }): Promise<unknown>;
+    setNodeDescription(nodeId: string, description: string, descriptionMarkdown?: string): Promise<unknown>;
+    addComponentProperty(nodeId: string, propertyName: string, type: "BOOLEAN" | "TEXT" | "INSTANCE_SWAP" | "VARIANT", defaultValue: unknown, options?: {
+        preferredValues?: unknown[];
+    }): Promise<unknown>;
     editComponentProperty(nodeId: string, propertyName: string, newValue: {
         name?: string;
-        defaultValue?: any;
-        preferredValues?: any[];
-    }): Promise<any>;
-    deleteComponentProperty(nodeId: string, propertyName: string): Promise<any>;
-    resizeNode(nodeId: string, width: number, height: number, withConstraints?: boolean): Promise<any>;
-    moveNode(nodeId: string, x: number, y: number): Promise<any>;
-    setNodeFills(nodeId: string, fills: any[]): Promise<any>;
-    setNodeStrokes(nodeId: string, strokes: any[], strokeWeight?: number): Promise<any>;
-    setNodeOpacity(nodeId: string, opacity: number): Promise<any>;
-    setNodeCornerRadius(nodeId: string, radius: number): Promise<any>;
-    cloneNode(nodeId: string): Promise<any>;
-    deleteNode(nodeId: string): Promise<any>;
-    renameNode(nodeId: string, newName: string): Promise<any>;
+        defaultValue?: unknown;
+        preferredValues?: unknown[];
+    }): Promise<unknown>;
+    deleteComponentProperty(nodeId: string, propertyName: string): Promise<unknown>;
+    resizeNode(nodeId: string, width: number, height: number, withConstraints?: boolean): Promise<unknown>;
+    moveNode(nodeId: string, x: number, y: number): Promise<unknown>;
+    setNodeFills(nodeId: string, fills: unknown[]): Promise<unknown>;
+    setNodeStrokes(nodeId: string, strokes: unknown[], strokeWeight?: number): Promise<unknown>;
+    setNodeOpacity(nodeId: string, opacity: number): Promise<unknown>;
+    setNodeCornerRadius(nodeId: string, radius: number): Promise<unknown>;
+    cloneNode(nodeId: string): Promise<unknown>;
+    deleteNode(nodeId: string): Promise<unknown>;
+    renameNode(nodeId: string, newName: string): Promise<unknown>;
     setTextContent(nodeId: string, text: string, options?: {
         fontSize?: number;
-    }): Promise<any>;
-    createChildNode(parentId: string, nodeType: "RECTANGLE" | "ELLIPSE" | "FRAME" | "TEXT" | "LINE" | "POLYGON" | "STAR" | "VECTOR", properties?: Record<string, unknown>): Promise<any>;
+    }): Promise<unknown>;
+    createChildNode(parentId: string, nodeType: "RECTANGLE" | "ELLIPSE" | "FRAME" | "TEXT" | "LINE" | "POLYGON" | "STAR" | "VECTOR", properties?: Record<string, unknown>): Promise<unknown>;
     captureScreenshot(nodeId: string | null, options?: {
         format?: string;
         scale?: number;
-    }): Promise<any>;
-    setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<any>;
+    }): Promise<unknown>;
+    setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<unknown>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;
         includeLayout?: boolean;
@@ -86,7 +87,7 @@ export declare class PluginBridgeConnector {
         includeTypography?: boolean;
         includeCodeReady?: boolean;
         outputHint?: "react" | "tailwind";
-    }): Promise<any>;
+    }): Promise<unknown>;
     getNodeContext(nodeId: string, depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;
         includeLayout?: boolean;
@@ -94,8 +95,8 @@ export declare class PluginBridgeConnector {
         includeTypography?: boolean;
         includeCodeReady?: boolean;
         outputHint?: "react" | "tailwind";
-    }): Promise<any>;
-    getLocalStyles(verbosity?: string): Promise<any>;
+    }): Promise<unknown>;
+    getLocalStyles(verbosity?: string): Promise<unknown>;
     getConsoleLogs(limit?: number): Promise<{
         logs: Array<{
             level: string;
@@ -144,7 +145,7 @@ export declare class PluginBridgeConnector {
             value?: unknown;
             values?: Record<string, unknown>;
         }> | Record<string, unknown>;
-    }): Promise<any>;
+    }): Promise<unknown>;
     arrangeComponentSet(nodeIds: string[]): Promise<{
         nodeId: string;
         name: string;

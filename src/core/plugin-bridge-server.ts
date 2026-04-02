@@ -335,7 +335,7 @@ export class PluginBridgeServer {
 
 							ws.send(JSON.stringify({
 								type: "welcome",
-								bridgeVersion: "1.5.0",
+								bridgeVersion: "1.5.1",
 								port: this.port,
 								clientId,
 								multiClient: true,
@@ -347,8 +347,8 @@ export class PluginBridgeServer {
 							return;
 						}
 
-						if (msg.type === "setToken" && typeof (msg as any).token === "string") {
-							const token = (msg as any).token as string;
+						if (msg.type === "setToken" && typeof (msg as unknown as Record<string, unknown>).token === "string") {
+							const token = (msg as unknown as Record<string, unknown>).token as string;
 							if (token) {
 								this.setFigmaRestToken(token);
 								logger.info({ clientId }, "Plugin bridge: REST API token set via plugin UI");

@@ -169,11 +169,11 @@ export class PluginBridgeConnector {
     }
     async batchCreateVariables(items) {
         const res = await this.bridge.request("batchCreateVariables", { items }, this.fileKey);
-        return res ?? { created: [], failed: [] };
+        return (res ?? { created: [], failed: [] });
     }
     async batchUpdateVariables(items) {
         const res = await this.bridge.request("batchUpdateVariables", { items }, this.fileKey);
-        return res ?? { updated: [], failed: [] };
+        return (res ?? { updated: [], failed: [] });
     }
     async setupDesignTokens(payload) {
         const tokens = Array.isArray(payload.tokens)

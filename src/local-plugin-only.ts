@@ -20,6 +20,11 @@ import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, calculateSizeKB } from "./core/response-guard.js";
+import type {
+	RGBColor, FigmaVariable, FigmaVariableCollection, FigmaVariableMode,
+	FigmaComponent, FigmaPaintStyle, FigmaTextStyle, FigmaFill,
+	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload, PluginScreenshotPayload,
+} from "./core/types/figma.js";
 
 const logger = createChildLogger({ component: "plugin-only-mcp" });
 
@@ -48,17 +53,17 @@ function resolveDesignContextParams(params: {
 	return { fileKey, nodeId: nodeId || undefined };
 }
 
-function rgbaToHex(color: { r?: number; g?: number; b?: number; a?: number }): string {
+function rgbaToHex(color: RGBColor): string {
 	if (!color || typeof color !== "object") return "";
-	const r = Math.round((Number((color as any).r) ?? 0) * 255);
-	const g = Math.round((Number((color as any).g) ?? 0) * 255);
-	const b = Math.round((Number((color as any).b) ?? 0) * 255);
+	const r = Math.round((Number(color.r) ?? 0) * 255);
+	const g = Math.round((Number(color.g) ?? 0) * 255);
+	const b = Math.round((Number(color.b) ?? 0) * 255);
 	return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeTokenValue(value: unknown, resolvedType?: string): string {
 	if (value === undefined || value === null) return "";
-	if (typeof value === "object" && "r" in (value as object)) return rgbaToHex(value as any);
+	if (typeof value === "object" && "r" in (value as object)) return rgbaToHex(value as RGBColor);
 	if (typeof value === "number") return String(value);
 	if (typeof value === "boolean") return value ? "true" : "false";
 	return String(value).trim();
@@ -100,7 +105,7 @@ export async function main() {
 
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
-		version: "1.5.0",
+		version: "1.5.1",
 	});
 
 	// ---- figma_list_connected_files (multi-client discovery) ----
@@ -261,17 +266,17 @@ export async function main() {
 			if (!raw || !raw.variables) {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "Variables not loaded" }) }] };
 			}
-			const out: any = {
+			const out: Record<string, unknown> = {
 				success: true,
 				source: "plugin",
 				variables: raw.variables,
 				variableCollections: raw.variableCollections || [],
 			};
 			if (verbosity === "inventory") {
-				out.variables = raw.variables.map((v: any) => ({ id: v.id, name: v.name }));
-				out.variableCollections = (raw.variableCollections || []).map((c: any) => ({ id: c.id, name: c.name }));
+				out.variables = raw.variables.map((v: FigmaVariable) => ({ id: v.id, name: v.name }));
+				out.variableCollections = (raw.variableCollections || []).map((c: FigmaVariableCollection) => ({ id: c.id, name: c.name }));
 			} else if (verbosity === "summary") {
-				out.variables = raw.variables.map((v: any) => ({
+				out.variables = raw.variables.map((v: FigmaVariable) => ({
 					id: v.id,
 					name: v.name,
 					resolvedType: v.resolvedType,
@@ -506,12 +511,12 @@ export async function main() {
 				conn.getVariablesFromPluginUI(),
 				conn.getLocalComponents({ currentPageOnly, limit }),
 			]);
-			const compData = (components as any)?.data;
+			const compData = (components as PluginComponentPayload)?.data;
 			const out = {
 				success: true,
 				source: "plugin",
 				currentPageOnly: currentPageOnly,
-				variableCollections: (vars?.variableCollections || []).map((c: any) => ({ id: c.id, name: c.name, variableCount: c.variableIds?.length || 0 })),
+				variableCollections: (vars?.variableCollections || []).map((c: FigmaVariableCollection) => ({ id: c.id, name: c.name, variableCount: c.variableIds?.length || 0 })),
 				components: compData?.totalComponents ?? 0,
 				componentSets: compData?.totalComponentSets ?? 0,
 			};
@@ -535,7 +540,7 @@ export async function main() {
 		},
 		async ({ figmaUrl, fileKey, query, currentPageOnly, limit }) => {
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-			const result = (await conn.getLocalComponents({ currentPageOnly, limit })) as any;
+			const result = (await conn.getLocalComponents({ currentPageOnly, limit })) as PluginComponentPayload;
 			const data = result?.data;
 			if (!data) {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "No component data" }) }] };
@@ -543,9 +548,9 @@ export async function main() {
 			let list = [...(data.components || []), ...(data.componentSets || [])];
 			if (query && query.trim()) {
 				const q = query.trim().toLowerCase();
-				list = list.filter((c: any) => (c.name || "").toLowerCase().includes(q));
+				list = list.filter((c: FigmaComponent) => (c.name || "").toLowerCase().includes(q));
 			}
-			const summary = list.map((c: any) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
+			const summary = list.map((c: FigmaComponent) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, components: summary }, null, 0) }] };
 		}
 	);
@@ -693,8 +698,8 @@ export async function main() {
 				conn.getComponentFromPluginUI(nodeId),
 				conn.captureScreenshot(nodeId, { scale, format }),
 			]);
-			const comp = (component as any)?.component ?? component;
-			const out = { success: true, component: comp, image: (screenshot as any)?.image ?? (screenshot as any)?.data };
+			const comp = (component as PluginComponentPayload)?.component ?? component;
+			const out = { success: true, component: comp, image: (screenshot as PluginScreenshotPayload)?.image ?? (screenshot as PluginScreenshotPayload)?.data };
 			return { content: [{ type: "text" as const, text: JSON.stringify(out, null, 0) }] };
 		}
 	);
@@ -807,8 +812,8 @@ export async function main() {
 				const figmaMap = new Map<string, string>();
 
 				// Variables: name -> first mode value (normalized string)
-				const variables = (varsPayload as any)?.variables || [];
-				const collections = (varsPayload as any)?.variableCollections || [];
+				const variables = (varsPayload as PluginVariablesPayload)?.variables || [];
+				const collections = (varsPayload as PluginVariablesPayload)?.variableCollections || [];
 				const collectionNames = new Map<string, string>();
 				for (const c of collections) {
 					collectionNames.set(c.id, c.name || c.id);
@@ -821,16 +826,16 @@ export async function main() {
 				}
 
 				// Paint styles: name -> color string
-				const paintStyles = (stylesPayload as any)?.paintStyles || [];
+				const paintStyles = (stylesPayload as PluginStylesPayload)?.paintStyles || [];
 				for (const s of paintStyles) {
 					const name = s.name || s.id;
 					const fills = s.paints || [];
-					const solid = fills.find((p: any) => p.type === "SOLID");
-					figmaMap.set(name, solid ? rgbaToHex(solid.color) : "");
+					const solid = fills.find((p: FigmaFill) => p.type === "SOLID");
+					figmaMap.set(name, solid?.color ? rgbaToHex(solid.color) : "");
 				}
 
 				// Text styles: name -> fontSize or "fontStyle"
-				const textStyles = (stylesPayload as any)?.textStyles || [];
+				const textStyles = (stylesPayload as PluginStylesPayload)?.textStyles || [];
 				for (const s of textStyles) {
 					const name = s.name || s.id;
 					const fontSize = s.fontSize ?? s.style?.fontSize;
@@ -943,24 +948,24 @@ export async function main() {
 					conn.getLocalStyles(verbosity === "full" ? "full" : "summary"),
 				]);
 
-				const variables = (varsPayload as any)?.variables || [];
-				const collections = (varsPayload as any)?.variableCollections || [];
-				const paintStyles = (stylesPayload as any)?.paintStyles || [];
-				const textStyles = (stylesPayload as any)?.textStyles || [];
+				const variables = (varsPayload as PluginVariablesPayload)?.variables || [];
+				const collections = (varsPayload as PluginVariablesPayload)?.variableCollections || [];
+				const paintStyles = (stylesPayload as PluginStylesPayload)?.paintStyles || [];
+				const textStyles = (stylesPayload as PluginStylesPayload)?.textStyles || [];
 
-				const collectionById = new Map<string, any>();
+				const collectionById = new Map<string, { id: string; name: string; modes: Array<{ id: string; name: string }>; variables: Array<Record<string, unknown>> }>();
 				for (const c of collections) {
 					collectionById.set(c.id, {
 						id: c.id,
 						name: c.name,
-						modes: (c.modes || []).map((m: any) => ({ id: m.id, name: m.name })),
+						modes: (c.modes || []).map((m: FigmaVariableMode) => ({ id: m.id, name: m.name })),
 						variables: [],
 					});
 				}
 				for (const v of variables) {
-					const c = collectionById.get(v.variableCollectionId);
+					const c = collectionById.get(v.variableCollectionId || "");
 					if (!c) continue;
-					const entry: any = {
+					const entry: Record<string, unknown> = {
 						id: v.id,
 						name: v.name,
 						resolvedType: v.resolvedType,
@@ -980,12 +985,12 @@ export async function main() {
 					source: "plugin",
 					tokenBrowser: {
 						variableCollections: Array.from(collectionById.values()),
-						paintStyles: paintStyles.map((s: any) =>
+						paintStyles: paintStyles.map((s: FigmaPaintStyle) =>
 							verbosity === "full"
 								? s
 								: { id: s.id, name: s.name, paints: s.paints }
 						),
-						textStyles: textStyles.map((s: any) =>
+						textStyles: textStyles.map((s: FigmaTextStyle) =>
 							verbosity === "full"
 								? s
 								: { id: s.id, name: s.name, fontSize: s.fontSize ?? s.style?.fontSize, fontName: s.fontName ?? s.style?.fontName }
