@@ -97,7 +97,9 @@
       "Bash(grep \"^| \\\\`figma_\" /Users/abdussamed.tezer/FCM/docs/TOOLS_FULL_LIST.md)",
       "Bash(grep -c \"^| \\\\`figma_\" /Users/abdussamed.tezer/FCM/README.md)",
       "Bash(sed -i '' 's/ör\\\\. \\\\*\\\\*1\\\\.2\\\\.0\\\\*\\\\*/ör. \\\\*\\\\*1.6.1\\\\*\\\\*/g' KURULUM.md)",
-      "Bash(sed -i '' 's/\\\\*\\\\*Sürüm:\\\\*\\\\* 1\\\\.2\\\\.1/**Sürüm:** 1.6.1/g' KURULUM.md)"
+      "Bash(sed -i '' 's/\"\"1\\\\.6\\\\.1\"\"/\"\"1.6.2\"\"/g' package.json src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
+      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.1\\\\*\\\\*/\\\\*\\\\*1.6.2\\\\*\\\\*/g' FUTURE.md)",
+      "Bash(sed -i '' 's/\\(ör\\\\. \\\\*\\\\*1\\\\.6\\\\.1\\\\*\\\\*\\)/\\(ör. \\\\*\\\\*1.6.2\\\\*\\\\*\\)/g' README.md)"
     ],
     "deny": [],
     "ask": []
