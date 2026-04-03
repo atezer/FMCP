@@ -220,7 +220,7 @@ figma.ui.onmessage = async (msg) => {
       var requestedWidth = Number(msg.width);
       var requestedHeight = Number(msg.height);
       var width = Math.max(220, Math.min(520, Math.round(isNaN(requestedWidth) ? 280 : requestedWidth)));
-      var height = Math.max(72, Math.min(420, Math.round(isNaN(requestedHeight) ? 96 : requestedHeight)));
+      var height = Math.max(72, Math.min(700, Math.round(isNaN(requestedHeight) ? 96 : requestedHeight)));
       figma.ui.resize(width, height);
     } catch (error) {
       console.warn('🌉 [F-MCP ATezer Bridge] UI resize failed:', error && error.message ? error.message : String(error));
