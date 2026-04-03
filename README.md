@@ -22,7 +22,7 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 - **Figma API token tüketmez\*** — Varsayılan olarak plugin üzerinden çalışır, Figma API kotanızı kullanmaz
 - **Veri güvenliği** — Tasarım verisi sadece kendi bilgisayarınızda kalır (Zero Trust)
 - **Çoklu dosya** — Aynı anda birden fazla Figma/FigJam dosyası ile çalışabilirsiniz
-- **Çoklu AI aracı** — Claude ve Cursor aynı anda kullanılabilir (farklı portlarda)
+- **Çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda (otomatik port tarama, elle değiştirmeye gerek yok)
 - **SVG/PNG export** — Vektörel veya bitmap, toplu export (1-50 node)
 - **REST API desteği** — İsteğe bağlı token ile yorum okuma, versiyon geçmişi, görsel export
 - **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
@@ -117,19 +117,23 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 Tam araç listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | Detaylı referans: [TOOLS.md](docs/TOOLS.md)
 
-## Claude + Cursor aynı anda kullanma
+## Claude + Cursor aynı anda kullanma (v1.7.0+)
 
-Her iki araç da varsayılan 5454 portunu kullanır. İlk açılan portu alır, ikincisi için:
+Plugin tüm portları (5454-5470) **otomatik tarar** ve bulunan bridge'lere sessizce bağlanır. Elle port değiştirmenize gerek yok.
 
-1. AI aracına "port 5456 kullan" deyin → `figma_set_port(5456)` çalışır
-2. Figma plugin'de portu **5456** yapın
-3. Her iki araç aynı anda bağımsız çalışır
+**Nasıl çalışır:**
+1. Claude Desktop, Cursor veya Claude Code'u açın — her biri kendi portunda bridge başlatır
+2. Figma'da plugin'i açın — otomatik olarak tüm bridge'leri bulur ve bağlanır
+3. Plugin'de **(i)** ikonuna tıklayın — bağlı araçları görün
+4. **◀ ▶** ok tuşlarıyla araçlar arasında geçiş yapın
 
-Ya da config'te önceden farklı port belirleyin:
-
-```json
-"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }
 ```
+● 5454 (Claude) ← aktif
+○ 5455 (Cursor)
+○ 5457 (Claude Code)
+```
+
+AI aracı adı otomatik tespit edilir — config'e bir şey eklemenize gerek yok.
 
 ## Çoklu dosya desteği
 
