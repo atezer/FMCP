@@ -29,7 +29,11 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 > \* **REST API isteğe bağlıdır.** Temel araçlar (okuma, yazma, export, variable) token olmadan plugin üzerinden çalışır. Yorum okuma, versiyon geçmişi gibi ek özellikler için Figma API token'ı ekleyebilirsiniz — plugin'deki Advanced panelinden girin, kalan API limitinizi plugin üzerinde takip edin.
 
-## Hızlı başlangıç (3 adım)
+## Hızlı başlangıç
+
+> 💡 **En kolay yol:** AI aracınıza (Claude, Cursor) şunu söyleyin:
+> *"https://github.com/atezer/FMCP — gerekli kurulumları yap ve Figma'ya bağlan"*
+> AI bu sayfayı okur, kurulumu yapar, sizi bağlar. Aşağıdaki adımlar elle yapmak isteyenler için.
 
 ### 1. Node.js kurun (bir kerelik)
 
@@ -38,8 +42,6 @@ F-MCP Bridge'in çalışması için bilgisayarınızda Node.js olması gerekiyor
 **Kurulu mu kontrol edin:** Terminal açıp `node -v` yazın. Versiyon görüyorsanız kurulu demektir.
 
 **Kurulu değilse:** [nodejs.org](https://nodejs.org) → **LTS** butonuna tıklayın → indirin → kurun. Sadece "İleri"ye tıklayarak kurulum tamamlanır.
-
-> 💡 **İpucu:** AI aracınıza "Node.js'i kur" diyerek de kurulum yapabilirsiniz.
 
 ### 2. AI aracınıza config ekleyin
 
