@@ -217,7 +217,11 @@
         <label for="mcp-port">Port</label>
         <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
       </div>
-      <button type="button" id="auto-port-reset" class="auto-port-reset" title="Tek porta kilitlenmeyi kaldırır; 5454–5470 yeniden taranır (Claude config portu ile eşleşmeli)." aria-label="5454 ile 5470 arası otomatik port taraması">Otomatik tara</button>
+      <div id="port-switcher" style="display:flex;align-items:center;gap:4px;margin-top:4px;">
+        <button type="button" id="port-prev" onclick="switchActivePort(-1)" style="font-size:10px;padding:1px 5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.5);cursor:pointer;">◀</button>
+        <span id="port-label" style="font-size:10px;color:rgba(255,255,255,0.4);flex:1;text-align:center;">—</span>
+        <button type="button" id="port-next" onclick="switchActivePort(1)" style="font-size:10px;padding:1px 5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.5);cursor:pointer;">▶</button>
+      </div>
       <div class="api-token-section" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <label for="figma-token" style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;">API Token</label>
@@ -1649,6 +1653,64 @@
           connectToExtraPort(p, host);
         }
       }
+      // Port label güncelle (tarama sonrası)
+      setTimeout(updatePortLabel, 2000);
+    }
+
+    /**
+     * Bağlı portlar arasında geçiş — ◀▶ butonları ile.
+     * mcpBridgeWs aktif porta çevrilir (mevcut fonksiyonlar uyumlu kalır).
+     */
+    function switchActivePort(direction) {
+      var ports = [];
+      mcpConnections.forEach(function(conn, port) {
+        if (conn.status === 'ready' && conn.ws && conn.ws.readyState === 1) {
+          ports.push({ port: port, clientName: conn.clientName });
+        }
+      });
+      if (ports.length <= 1) return;
+      ports.sort(function(a, b) { return a.port - b.port; });
+      var currentIdx = -1;
+      for (var i = 0; i < ports.length; i++) {
+        if (ports[i].port === mcpActivePort) { currentIdx = i; break; }
+      }
+      var nextIdx = (currentIdx + direction + ports.length) % ports.length;
+      mcpActivePort = ports[nextIdx].port;
+      // Geriye uyumluluk: mcpBridgeWs aktif bağlantıya çevir
+      var activeConn = mcpConnections.get(mcpActivePort);
+      if (activeConn && activeConn.ws) {
+        mcpBridgeWs = activeConn.ws;
+        mcpConnectedPort = mcpActivePort;
+      }
+      updatePortLabel();
+      updateStatus('ready (:' + mcpActivePort + ' ' + (ports[nextIdx].clientName || '') + ')', true, false);
+    }
+
+    /**
+     * Port label güncelle — bağlı port sayısı ve aktif port bilgisi.
+     */
+    function updatePortLabel() {
+      var label = document.getElementById('port-label');
+      if (!label) return;
+      var ports = [];
+      mcpConnections.forEach(function(conn, port) {
+        if (conn.status === 'ready' && conn.ws && conn.ws.readyState === 1) {
+          ports.push({ port: port, clientName: conn.clientName });
+        }
+      });
+      if (ports.length === 0) {
+        label.textContent = '—';
+        label.style.color = 'rgba(255,255,255,0.3)';
+      } else if (ports.length === 1) {
+        label.textContent = ports[0].port + ' (' + ports[0].clientName + ')';
+        label.style.color = 'rgba(78,205,196,0.8)';
+      } else {
+        var active = ports.find(function(p) { return p.port === mcpActivePort; });
+        var name = active ? active.clientName : ports[0].clientName;
+        label.textContent = (mcpActivePort || ports[0].port) + ' (' + name + ') [' + ports.length + ']';
+        label.style.color = 'rgba(78,205,196,0.8)';
+      }
+      requestUiResize();
     }
 
     if (typeof document !== 'undefined' && document.addEventListener) {
