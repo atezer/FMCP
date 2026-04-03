@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adimlar (Future)
 
 > Son guncelleme: 2 Nisan 2026 (v1.6.2 — 46 arac, node creation, batch export, REST API, test altyapisi)
-> Paket surumu (`package.json`): **1.6.5**
+> Paket surumu (`package.json`): **1.7.0**
 
 ---
 
@@ -33,14 +33,14 @@ Plugin acilir → 5454-5470 tarar → bulunan bridge'lere baglanir
 - `f-mcp-plugin/ui.html` — port gecis UI (ok tuslari + etiket)
 
 **Ek UI degisiklikleri:**
-- [ ] "Otomatik tara" butonu kaldir (gereksiz, coklu port bunu otomatik yapar)
+- [x] "Otomatik tara" butonu kaldirildi (v1.7.0)
 - [ ] Host alani: simdilik kalsin, ileride gelistirilecek
 
-- [ ] Bridge: clientName otomatik tespit (parent process)
-- [ ] Plugin: coklu port baglantisi (5454-5470 sessiz tarama)
-- [ ] Plugin UI: ◀ port (AI araci adi) ▶ gecis
-- [ ] "Otomatik tara" butonu kaldir
-- [ ] Test: Claude + Cursor ayni anda, plugin'de gecis
+- [x] Bridge: clientName otomatik tespit — env var + process tree walking (v1.7.0)
+- [x] Plugin: coklu port baglantisi — 5454-5470 periyodik tarama, 10s (v1.7.0)
+- [x] Plugin UI: ◀ port (AI araci adi) ▶ gecis + (i) info paneli (v1.7.0)
+- [x] "Otomatik tara" butonu kaldirildi (v1.7.0)
+- [x] Test: Claude + Cursor + Claude Code ayni anda, plugin'de gecis (v1.7.0)
 
 ### P0 — Tasarim Olusturma Araclari (Node Creation)
 
@@ -127,7 +127,7 @@ Node.js olmadan F-MCP kullanabilme. Detayli analiz ve plan: [STANDALONE_PLAN.md]
 
 **Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **figma_set_port** runtime port degisimi - **Port catismasi dayanikliligi** (crash yerine MCP ayakta kalir) - **Coklu AI araci** ayni anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context korumasi (237KB→10KB kirpma) - **429 retry** exponential backoff - **Plugin UI** token girisi + sure yonetimi + rate limit gostergesi - **figma.clientStorage** kalici token depolama.
 
-**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.6.5** dogrulanabilir (yayim sonrasi).
+**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.7.0** dogrulanabilir (yayim sonrasi).
 
 ---
 
@@ -197,7 +197,7 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | Dosya | Durum |
 |-------|--------|
 | `.mcp.json` | Mevcut (kok) |
-| `.cursor-plugin/plugin.json` | Mevcut; surum **1.6.5**, aciklama `docs/TOOLS.md` referansli |
+| `.cursor-plugin/plugin.json` | Mevcut; surum **1.7.0**, aciklama `docs/TOOLS.md` referansli |
 
 ---
 

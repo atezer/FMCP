@@ -12,6 +12,20 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.0] - 2026-04-03
+
+### Coklu Port + Otomatik AI Araci Tespiti (YENi)
+
+- **Plugin coklu port baglantisi:** 5454-5470 arasini periyodik tarar (10s), bulunan tum bridge'lere sessizce baglanir.
+- **AI araci otomatik tespiti:** Bridge parent process'ten (Claude, Cursor, Claude Code, Windsurf) veya `FIGMA_MCP_CLIENT_NAME` env var'dan otomatik tespit. Welcome mesajinda `clientName` gonderilir.
+- **Port gecis UI:** ◀▶ ok tuslariyla bagli portlar arasi gecis. Status bar'da "Ready" + aktif port etiketi.
+- **(i) info paneli:** Tiklaninca bagli portlar listesi acilir (● aktif ○ digerleri).
+- **"Otomatik tara" butonu kaldirildi:** Coklu port bunu otomatik yapar.
+- **SVG/PNG export duzeltmesi:** `batchExportNodes` handler + result case eklendi (timeout sorunu cozuldu).
+- **Token disabled:** Token girildikten sonra input + sure secici disabled (sadece sil + yeniden ekle).
+- **Responsive layout:** Icerik tasma onlendi, sabit genislik sadece yukseklik dinamik.
+- **Plugin max height:** 420→700 (icerik kesilmez).
+
 ## [1.6.3] - 2026-04-03
 
 ### Dokumantasyon temizligi
