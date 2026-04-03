@@ -19,13 +19,15 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 ## Öne çıkan özellikler
 
 - **46 araç** — okuma, yazma, export, variable yönetimi, bileşen arama ve daha fazlası
-- **Figma API token tüketmez** — Plugin üzerinden çalışır, Figma REST API kullanmaz
+- **Figma API token tüketmez\*** — Varsayılan olarak plugin üzerinden çalışır, Figma API kotanızı kullanmaz
 - **Veri güvenliği** — Tasarım verisi sadece kendi bilgisayarınızda kalır (Zero Trust)
 - **Çoklu dosya** — Aynı anda birden fazla Figma/FigJam dosyası ile çalışabilirsiniz
 - **Çoklu AI aracı** — Claude ve Cursor aynı anda kullanılabilir (farklı portlarda)
 - **SVG/PNG export** — Vektörel veya bitmap, toplu export (1-50 node)
-- **REST API desteği** — Token ile yorum okuma, versiyon geçmişi, görsel export
+- **REST API desteği** — İsteğe bağlı token ile yorum okuma, versiyon geçmişi, görsel export
 - **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
+
+> \* **REST API isteğe bağlıdır.** Temel araçlar (okuma, yazma, export, variable) token olmadan plugin üzerinden çalışır. Yorum okuma, versiyon geçmişi gibi ek özellikler için Figma API token'ı ekleyebilirsiniz — plugin'deki Advanced panelinden girin, kalan API limitinizi plugin üzerinde takip edin.
 
 ## Hızlı başlangıç (3 adım)
 
