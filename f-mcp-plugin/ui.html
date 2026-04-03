@@ -10,9 +10,10 @@
     }
 
     html, body {
-      width: auto;
+      width: 100%;
       height: auto;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     body {
@@ -20,7 +21,8 @@
       font-size: 11px;
       background: var(--figma-color-bg, #2c2c2c);
       color: var(--figma-color-text, rgba(255, 255, 255, 0.9));
-      width: auto;
+      width: 100%;
+      max-width: 100%;
       height: auto;
       padding: 8px;
       user-select: none;
@@ -227,7 +229,7 @@
       <div class="api-token-section" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <label for="figma-token" style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;">API Token</label>
-          <input type="password" id="figma-token" placeholder="figd_..." style="flex:1;font-size:11px;padding:3px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;outline:none;" aria-label="Figma REST API token" />
+          <input type="password" id="figma-token" placeholder="figd_..." style="flex:1;min-width:0;font-size:11px;padding:3px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;outline:none;" aria-label="Figma REST API token" />
           <select id="token-expiry" style="font-size:10px;padding:2px 3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.6);outline:none;" title="Token süresi (Figma'da seçtiğiniz süre)">
             <option value="90">90g</option>
             <option value="30">30g</option>
@@ -660,6 +662,10 @@
             } else {
               updateTokenUI(true, null, expiresAt);
               window.__pendingRestoreToken = msg.token;
+              // Restored token — disable input
+              if (tokenEl) { tokenEl.disabled = true; tokenEl.style.opacity = '0.5'; }
+              var expSel2 = document.getElementById('token-expiry');
+              if (expSel2) { expSel2.disabled = true; expSel2.style.opacity = '0.5'; }
             }
             console.log('[F-MCP] Token restored from clientStorage' + (isExpired ? ' (EXPIRED)' : '') + (expiresAt ? ' expires: ' + new Date(expiresAt).toLocaleDateString() : ''));
           }
@@ -1046,6 +1052,11 @@
               mcpBridgeWs.send(JSON.stringify({ type: 'setToken', token: token }));
             }
             updateTokenUI(true, null, expiresAt);
+            // Token girildi — input ve süre seçici disabled
+            el.disabled = true;
+            el.style.opacity = '0.5';
+            var expSel = document.getElementById('token-expiry');
+            if (expSel) { expSel.disabled = true; expSel.style.opacity = '0.5'; }
           } else {
             updateTokenUI(false, null, 0);
           }
@@ -1053,7 +1064,9 @@
       }
       if (clearBtn) {
         clearBtn.addEventListener('click', function() {
-          if (el) el.value = '';
+          if (el) { el.value = ''; el.disabled = false; el.style.opacity = '1'; }
+          var expSel = document.getElementById('token-expiry');
+          if (expSel) { expSel.disabled = false; expSel.style.opacity = '1'; }
           __tokenExpiresAt = 0;
           // Delete from Figma clientStorage
           parent.postMessage({ pluginMessage: { type: 'DELETE_TOKEN' } }, '*');
