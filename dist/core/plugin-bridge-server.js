@@ -281,7 +281,7 @@ export class PluginBridgeServer {
                             logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName }, "Plugin bridge: client registered (fileKey=%s, fileName=%s)", incomingFileKey, incomingFileName);
                             ws.send(JSON.stringify({
                                 type: "welcome",
-                                bridgeVersion: "1.6.5",
+                                bridgeVersion: "1.7.0",
                                 port: this.port,
                                 clientId,
                                 multiClient: true,

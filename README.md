@@ -165,7 +165,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Güncel sürüm | **1.6.5** ([package.json](package.json)) |
+| Güncel sürüm | **1.7.0** ([package.json](package.json)) |
 | Değişiklik geçmişi | [CHANGELOG.md](CHANGELOG.md) |
 | GitHub sürümleri | [Releases](https://github.com/atezer/FMCP/releases) |
 | npm paketi | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
