@@ -202,6 +202,10 @@
       <div class="status-text">
         <span class="label">MCP</span>
         <span class="state" id="status-state">connecting</span>
+        <span id="status-info-btn" onclick="var p=document.getElementById('connections-panel');if(p)p.style.display=p.style.display==='block'?'none':'block';" style="display:none;cursor:pointer;margin-left:4px;font-size:9px;width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);text-align:center;line-height:13px;user-select:none;">i</span>
+      </div>
+      <div id="connections-panel" style="display:none;padding:4px 8px;margin-top:2px;background:rgba(255,255,255,0.03);border-radius:4px;font-size:9px;color:rgba(255,255,255,0.4);line-height:1.5;">
+        <div id="connections-panel-list">—</div>
       </div>
     </div>
     <div class="advanced-wrap">
@@ -253,8 +257,6 @@
             <div>&#x25CF; Variable/token yonetimi</div>
             <div>&#x25CF; Bilesen arama, export (plugin)</div>
             <div>&#x25CF; Screenshot, frame olusturma</div>
-            <div id="connected-ports-info" style="margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);">Bagli portlar:</div>
-            <div id="connected-ports-list" style="color:rgba(255,255,255,0.35);"></div>
           </div>
           <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
             <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
@@ -284,9 +286,11 @@
     function updateStatus(state, isActive, isError) {
       const dot = document.getElementById('status-dot');
       const stateText = document.getElementById('status-state');
+      const infoBtn = document.getElementById('status-info-btn');
 
       dot.className = 'status-indicator ' + (isError ? 'error' : (isActive ? 'active' : 'loading'));
       stateText.textContent = state;
+      if (infoBtn) infoBtn.style.display = isActive ? 'inline-block' : 'none';
       requestUiResize();
     }
 
@@ -1717,7 +1721,7 @@
         label.style.color = 'rgba(78,205,196,0.8)';
       }
       // Bağlı portlar listesini info panelinde güncelle
-      var portsList = document.getElementById('connected-ports-list');
+      var portsList = document.getElementById('connections-panel-list');
       if (portsList) {
         if (ports.length === 0) {
           portsList.innerHTML = '<div>—</div>';
