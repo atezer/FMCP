@@ -303,7 +303,7 @@
         var bodyStyle = window.getComputedStyle(document.body);
         var padX = (parseFloat(bodyStyle.paddingLeft) || 0) + (parseFloat(bodyStyle.paddingRight) || 0);
         var padY = (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0);
-        var width = 200;
+        var width = Math.min(300, Math.max(200, Math.ceil(root.scrollWidth + padX + 6)));
         var height = Math.ceil(Math.max(root.scrollHeight, rect.height) + padY + 6);
         parent.postMessage({ pluginMessage: { type: 'RESIZE_UI', width: width, height: height } }, '*');
       });
