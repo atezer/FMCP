@@ -458,6 +458,14 @@ npx wrangler deploy --env staging
 }
 ```
 
+### FMCP Cloud Mode (plugin relay)
+
+?lk deploy sonras? `wrangler.jsonc` içinde **`FmcpRelaySession`** için migration (`v2-fmcp-relay`) uygulan?r; ek KV namespace gerekmez — pairing/bind anahtarlar? mevcut **`OAUTH_STATE`** KV’sinde `fmcp_*` önekleriyle tutulur.
+
+- **`MCP_OAUTH_BASE_URL`**: Worker kök URL’si (örn. `https://figma-mcp-bridge.workers.dev`). `fmcp_generate_pairing_code` ç?kt?s?ndaki `pluginWebSocketUrl` için kullan?l?r.
+- **`FMCP_PAIRING_TOKEN`** (iste?e ba?l?): Ayarlan?rsa `POST /fmcp-cloud/pairing` ça?r?lar? `Authorization: Bearer <token>` ister.
+- **Figma plugin:** Kendi Worker alan ad?n?z? [`f-mcp-plugin/manifest.json`](../f-mcp-plugin/manifest.json) `networkAccess.allowedDomains` listesine `https://` ve `wss://` olarak ekleyin.
+
 ### Durable Objects (Persistent Sessions)
 
 For multi-user sessions, enable Durable Objects:

@@ -17,7 +17,11 @@ import { createChildLogger } from "./core/logger.js";
 import { testBrowserRendering } from "./test-browser.js";
 import { FigmaAPI, extractFileKey } from "./core/figma-api.js";
 import { registerFigmaAPITools } from "./core/figma-tools.js";
+import { FmcpRelaySession } from "./cloud-relay-session.js";
+import { handleCloudModeRoutes, maybeTightenMcpCors } from "./cloud-mode-routes.js";
+import { clientIp, deleteBind, deletePairing, FMCP_RL_PREFIX, generatePairingCode, generatePairingSecret, getBind, getPairing, PAIRING_TTL_SEC, putBind, putPairing, rateLimitAllow, } from "./cloud-mode-kv.js";
 const logger = createChildLogger({ component: "mcp-server" });
+export { FmcpRelaySession };
 /**
  * F-MCP ATezer Agent
  * Extends McpAgent to provide Figma-specific debugging tools
@@ -25,6 +29,8 @@ const logger = createChildLogger({ component: "mcp-server" });
 export class FigmaMCP extends McpAgent {
     constructor() {
         super(...arguments);
+        // Root @modelcontextprotocol/sdk vs agents' nested copy — types diverge; runtime is compatible.
+        // @ts-expect-error TS2416 — McpServer duplicate package resolution
         this.server = new McpServer({
             name: "F-MCP ATezer",
             version: "0.1.0",
@@ -134,6 +140,44 @@ export class FigmaMCP extends McpAgent {
             logger.warn({ sessionId: this.sessionId }, "Session ID not initialized, generated ephemeral ID");
         }
         return this.sessionId;
+    }
+    /**
+     * Streamable HTTP transport session id (isolated per MCP client). Distinct from OAuth FIXED_SESSION_ID.
+     */
+    getMcpTransportSessionId() {
+        const raw = this.name;
+        if (!raw?.includes(":"))
+            return null;
+        const [prefix, sid] = raw.split(":");
+        if (prefix !== "streamable-http" || !sid)
+            return null;
+        return sid;
+    }
+    async relayPluginRpc(options) {
+        const env = this.env;
+        const sid = this.getMcpTransportSessionId();
+        if (!sid) {
+            throw new Error("Cloud relay requires streamable HTTP MCP session (e.g. claude.ai remote connector).");
+        }
+        const bind = await getBind(env.OAUTH_STATE, sid);
+        if (!bind?.code) {
+            throw new Error("No cloud relay bound. Run fmcp_generate_pairing_code, enter code+secret in the Figma plugin (Cloud Mode), then call fmcp_cloud_bind with the same code and secret.");
+        }
+        const stub = env.FMCP_RELAY.get(env.FMCP_RELAY.idFromName(`pair:${bind.code}`));
+        const res = await stub.fetch(new Request("http://relay/rpc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                method: options.method,
+                params: options.params ?? {},
+                fileKey: options.fileKey,
+            }),
+        }));
+        const j = (await res.json());
+        if (!res.ok || !j.ok) {
+            throw new Error(j.error || "relay_rpc_failed");
+        }
+        return j.result;
     }
     /**
      * Get or create Figma API client with OAuth token from session
@@ -650,6 +694,176 @@ export class FigmaMCP extends McpAgent {
                 };
             }
         });
+        // ---- FMCP Cloud Mode (plugin relay via FMCP_RELAY Durable Object) ----
+        this.server.tool("fmcp_generate_pairing_code", "Generate a 6-character pairing code and secret for Cloud Mode. User pastes code + secret into the F-MCP Bridge plugin (Cloud Mode) so the plugin connects to this deployment via WebSocket. Then call fmcp_cloud_bind with the same values. Codes expire in 5 minutes. Isolated per MCP streamable-http session after bind.", {}, async () => {
+            const env = this.env;
+            const sid = this.getMcpTransportSessionId();
+            if (!sid) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
+                                error: "Pairing tool requires streamable HTTP MCP session (remote connector).",
+                            }),
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+            const rlOk = await rateLimitAllow(env.OAUTH_STATE, `${FMCP_RL_PREFIX}tool_pair:${sid}`, 15, 3600);
+            if (!rlOk) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({ error: "Rate limited: too many pairing codes for this session." }),
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+            const code = generatePairingCode();
+            const secret = generatePairingSecret();
+            const record = { secret, createdAt: Date.now() };
+            await putPairing(env.OAUTH_STATE, code, record);
+            let origin = (env.MCP_OAUTH_BASE_URL || "").replace(/\/$/, "").trim();
+            if (!origin)
+                origin = "https://your-worker.workers.dev";
+            const wsOrigin = origin.startsWith("https://")
+                ? `wss://${origin.slice("https://".length)}`
+                : origin.startsWith("http://")
+                    ? `ws://${origin.slice("http://".length)}`
+                    : `wss://${origin}`;
+            const pluginWsUrl = `${wsOrigin}/fmcp-cloud/plugin?code=${encodeURIComponent(code)}&secret=${encodeURIComponent(secret)}`;
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            code,
+                            secret,
+                            expiresInSeconds: PAIRING_TTL_SEC,
+                            pluginWebSocketUrl: pluginWsUrl,
+                            nextStep: "1) Open F-MCP Bridge plugin → enable Cloud Mode → paste code and secret. 2) Call fmcp_cloud_bind with the same code and secret.",
+                        }, null, 2),
+                    },
+                ],
+            };
+        });
+        this.server.tool("fmcp_cloud_bind", "Bind this MCP session to a pairing code after the Figma plugin has connected (or is about to connect) using fmcp_generate_pairing_code output. Validates secret; pairing slot is consumed.", {
+            code: z.string().min(4).max(8).describe("6-character pairing code (case-insensitive)"),
+            secret: z.string().min(8).describe("Secret string returned with the pairing code"),
+        }, async ({ code, secret }) => {
+            const env = this.env;
+            const sid = this.getMcpTransportSessionId();
+            if (!sid) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ error: "Requires streamable HTTP session." }) }],
+                    isError: true,
+                };
+            }
+            const c = code.trim().toUpperCase();
+            const pair = await getPairing(env.OAUTH_STATE, c);
+            if (!pair || pair.secret !== secret) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({ error: "Invalid or expired pairing code / secret." }),
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+            await putBind(env.OAUTH_STATE, sid, { code: c, boundAt: Date.now() });
+            await deletePairing(env.OAUTH_STATE, c);
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            message: "Session bound to relay. Use fmcp_cloud_status or fmcp_plugin_bridge_request / REST tools as needed.",
+                        }),
+                    },
+                ],
+            };
+        });
+        this.server.tool("fmcp_cloud_status", "Return whether this MCP session is bound to a cloud relay and whether the Figma plugin WebSocket is connected.", {}, async () => {
+            const env = this.env;
+            const sid = this.getMcpTransportSessionId();
+            if (!sid) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ bound: false, reason: "not_streamable_http" }) }],
+                };
+            }
+            const bind = await getBind(env.OAUTH_STATE, sid);
+            if (!bind?.code) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ bound: false, pluginConnected: false }) }],
+                };
+            }
+            const stub = env.FMCP_RELAY.get(env.FMCP_RELAY.idFromName(`pair:${bind.code}`));
+            const res = await stub.fetch(new Request("http://relay/status", { method: "GET" }));
+            const st = (await res.json());
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            bound: true,
+                            pairingCodeSuffix: bind.code.slice(-2),
+                            pluginConnected: !!st.pluginConnected,
+                        }),
+                    },
+                ],
+            };
+        });
+        this.server.tool("fmcp_cloud_disconnect", "Unbind this MCP session from the cloud relay and ask the relay to close plugin WebSockets.", {}, async () => {
+            const env = this.env;
+            const sid = this.getMcpTransportSessionId();
+            if (!sid) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "not_streamable_http" }) }],
+                    isError: true,
+                };
+            }
+            const bind = await getBind(env.OAUTH_STATE, sid);
+            if (bind?.code) {
+                const stub = env.FMCP_RELAY.get(env.FMCP_RELAY.idFromName(`pair:${bind.code}`));
+                await stub.fetch(new Request("http://relay/disconnect", { method: "POST" }));
+            }
+            await deleteBind(env.OAUTH_STATE, sid);
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: true, message: "Cloud relay unbound." }),
+                    },
+                ],
+            };
+        });
+        this.server.tool("fmcp_plugin_bridge_request", "Forward a single Plugin Bridge RPC to the connected Figma plugin (same protocol as local WebSocket bridge). Requires fmcp_cloud_bind and an active plugin connection. Example methods: getVariables, executeCodeViaUI, getDocumentStructure — see PluginBridgeConnector.", {
+            method: z.string().describe("Bridge method name, e.g. getVariables, executeCodeViaUI"),
+            params: z.record(z.unknown()).optional().describe("Method parameters object"),
+            fileKey: z.string().optional().describe("Optional file key for multi-file routing (same as local bridge)"),
+        }, async ({ method, params, fileKey }) => {
+            try {
+                const result = await this.relayPluginRpc({ method, params: params ?? {}, fileKey });
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ success: true, result }, null, 2) }],
+                };
+            }
+            catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                    isError: true,
+                };
+            }
+        });
         // Register Figma API tools (Tools 8-14)
         registerFigmaAPITools(this.server, async () => await this.getFigmaAPI(), () => this.browserManager?.getCurrentUrl() || null, () => this.consoleMonitor || null, () => this.browserManager || null, () => this.ensureInitialized());
     }
@@ -661,13 +875,29 @@ export class FigmaMCP extends McpAgent {
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
+        const cloudRes = await handleCloudModeRoutes(request, env);
+        if (cloudRes)
+            return cloudRes;
         // SSE endpoint for remote MCP clients
         if (url.pathname === "/sse" || url.pathname === "/sse/message") {
-            return FigmaMCP.serveSSE("/sse").fetch(request, env, ctx);
+            const r = await FigmaMCP.serveSSE("/sse").fetch(request, env, ctx);
+            return maybeTightenMcpCors(request, r);
         }
-        // HTTP endpoint for direct MCP communication
+        // HTTP endpoint for direct MCP communication (Streamable HTTP — default in agents McpAgent.serve)
         if (url.pathname === "/mcp") {
-            return FigmaMCP.serve("/mcp").fetch(request, env, ctx);
+            if (request.method === "POST" || request.method === "GET") {
+                const ip = clientIp(request);
+                const mcpOk = await rateLimitAllow(env.OAUTH_STATE, `${FMCP_RL_PREFIX}mcp:${ip}`, 180, 60);
+                if (!mcpOk) {
+                    return new Response(JSON.stringify({
+                        jsonrpc: "2.0",
+                        error: { code: -32_603, message: "Rate limited" },
+                        id: null,
+                    }), { status: 429, headers: { "Content-Type": "application/json" } });
+                }
+            }
+            const r = await FigmaMCP.serve("/mcp").fetch(request, env, ctx);
+            return maybeTightenMcpCors(request, r);
         }
         // OAuth authorization initiation
         if (url.pathname === "/oauth/authorize") {
@@ -898,7 +1128,16 @@ export default {
                 status: "healthy",
                 service: "F-MCP ATezer",
                 version: "0.1.0",
-                endpoints: ["/sse", "/mcp", "/test-browser", "/oauth/authorize", "/oauth/callback"],
+                endpoints: [
+                    "/sse",
+                    "/mcp",
+                    "/fmcp-cloud/plugin",
+                    "/fmcp-cloud/pairing",
+                    "/fmcp-cloud/health",
+                    "/test-browser",
+                    "/oauth/authorize",
+                    "/oauth/callback",
+                ],
                 oauth_configured: !!env.FIGMA_OAUTH_CLIENT_ID
             }), {
                 headers: { "Content-Type": "application/json" },
