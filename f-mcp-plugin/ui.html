@@ -232,14 +232,16 @@
         </div>
         <div id="token-status" style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px;display:none;"></div>
         <div id="token-expiry-info" style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;display:none;"></div>
+        <div id="token-expiry-note" style="font-size:8px;color:rgba(255,255,255,0.2);margin-top:1px;display:none;">Figma'daki token suresiyle eslestiginden emin olun</div>
         <div id="rate-limit-bar" style="display:none;margin-top:4px;">
-          <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,0.4);">
-            <span>API Limit</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;color:rgba(255,255,255,0.4);">
+            <span style="display:flex;align-items:center;gap:3px;">API Limit <span id="rate-limit-info" title="Sadece REST API cagrilari (figma_rest_api) limit tuketir. Plugin araclari (okuma, yazma, export) limit tuketmez." style="cursor:help;display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);font-size:7px;color:rgba(255,255,255,0.3);">i</span></span>
             <span id="rate-limit-text">—</span>
           </div>
           <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
             <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
           </div>
+          <div id="rate-limit-note" style="font-size:8px;color:rgba(255,255,255,0.2);margin-top:2px;display:none;">REST API cagrisi sonrasi guncellenir</div>
           <div id="rate-limit-warning" style="display:none;font-size:9px;margin-top:2px;font-weight:600;"></div>
         </div>
       </div>
@@ -974,13 +976,22 @@
             fillEl.style.animation = 'none';
           }
         }
+        // Hide "no data" note when real data exists
+        var noteEl = document.getElementById('rate-limit-note');
+        if (noteEl) noteEl.style.display = 'none';
       } else if (barEl) {
         barEl.style.display = hasToken ? 'block' : 'none';
         if (textEl) textEl.textContent = '—';
         if (fillEl) { fillEl.style.width = '100%'; fillEl.style.animation = 'none'; }
         var warnEl2 = document.getElementById('rate-limit-warning');
         if (warnEl2) warnEl2.style.display = 'none';
+        // Show "no data" note when token exists but no rate limit data
+        var noteEl2 = document.getElementById('rate-limit-note');
+        if (noteEl2) noteEl2.style.display = hasToken ? 'block' : 'none';
       }
+      // Token expiry note
+      var expiryNoteEl = document.getElementById('token-expiry-note');
+      if (expiryNoteEl) expiryNoteEl.style.display = (hasToken && expiresAt > 0) ? 'block' : 'none';
       requestUiResize();
     }
 
