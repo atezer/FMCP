@@ -4,128 +4,38 @@
 
 # F-MCP (Figma MCP Bridge)
 
-Figma tasarım verilerini ve işlemlerini Model Context Protocol (MCP) ile AI asistanlarına (Claude, Cursor vb.) açan MCP sunucusu ve Figma plugin'i. Bu repo MCP sunucusu ve **F-MCP Bridge** Figma plugin kaynağını içerir.
+Figma'daki tasarımlarınızı AI araçlarına (Claude, Cursor) bağlayan bir köprü. Figma'da bir plugin açarsınız, AI aracınız bu plugin üzerinden tasarımlarınızı okur, değiştirir ve export eder.
 
-**Proje düzeni:** `src/`, `dist/` ve `f-mcp-plugin` bu depo **kökündedir.** Yerel MCP config ve dokümanlardaki yollar `…/<clone>/dist/...` ve `…/<clone>/f-mcp-plugin/...` şeklinde olmalıdır.
+**Ne işe yarar?** AI'a "Bu dosyadaki Button bileşenini göster", "Yeni bir frame oluştur", "SVG olarak export et" gibi komutlar verirsiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
-**Eski kurulum:** MCP `args` içinde `…/f-mcp-bridge/dist/...` varsa `…/<clone-kökü>/dist/...` yapın. Launch Agent, `.app` ve ayrıntılı adımlar için [KURULUM.md](KURULUM.md) içindeki **«Eski f-mcp-bridge alt yolundan geçiş»** bölümüne bakın.
+## Nasıl çalışır?
 
-**Claude Desktop config:** `env.FIGMA_PLUGIN_BRIDGE_PORT` kullanıyorsanız Figma plugin’deki port ile aynı olmalı; örnekler aşağıdaki [Hızlı başlangıç](#hızlı-başlangıç) bölümünde.
+```
+Siz (Claude/Cursor) → F-MCP Bridge → Figma Plugin → Figma dosyanız
+```
 
-### Figma API token tüketmiyor
+Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderilmez.
 
-figma-mcp-bridge, Figma'nın **REST API'sini kullanmıyor**. Akış:
+## Öne çıkan özellikler
 
-**Claude (MCP) → figma-mcp-bridge → Plugin → Figma (Desktop veya Tarayıcı)**
+- **46 araç** — okuma, yazma, export, variable yönetimi, bileşen arama ve daha fazlası
+- **Figma API token tüketmez** — Plugin üzerinden çalışır, Figma REST API kullanmaz
+- **Veri güvenliği** — Tasarım verisi sadece kendi bilgisayarınızda kalır (Zero Trust)
+- **Çoklu dosya** — Aynı anda birden fazla Figma/FigJam dosyası ile çalışabilirsiniz
+- **Çoklu AI aracı** — Claude ve Cursor aynı anda kullanılabilir (farklı portlarda)
+- **SVG/PNG export** — Vektörel veya bitmap, toplu export (1-50 node)
+- **REST API desteği** — Token ile yorum okuma, versiyon geçmişi, görsel export
+- **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
 
-Sorgular doğrudan Figma içinde çalışan plugin üzerinden gider — hem masaüstü uygulaması hem tarayıcı sürümü (figma.com) desteklenir. Bu sayede:
+## Hızlı başlangıç (3 adım)
 
-- Figma API token tüketimi **yok** (REST API hiç çağrılmıyor)
-- Rate limit yok
-- Figma tarafında ücretlendirme yok
-- Desktop'ta internet bağlantısı gerekmez; tarayıcı Figma'da yalnızca figma.com erişimi yeterli
+### 1. Node.js kurun
 
-**Ne tüketiliyor?** Sadece AI tarafı: bu konuşmadaki context token'ları. Her tool call'ın request/response'u context penceresine girer. Büyük dosyalarda çok derin sorgular (örn. `depth: 3`, `verbosity: full`) Claude context'ini hızlı doldurabilir; Figma tarafında ek maliyet oluşmaz.
+[nodejs.org](https://nodejs.org) adresinden LTS sürümünü indirip kurun.
 
-### Zero Trust
+### 2. AI aracınıza config ekleyin
 
-Veri **yalnızca sizin ortamınızda** kalır. Tasarım içeriği Figma bulutuna MCP üzerinden **gönderilmez**; akış Claude → MCP (yerel) → Plugin (yerel) → Figma (Desktop veya Tarayıcı). 
-
-REST API çağrısı ve Figma'ya tasarım verisi aktarımı yoktur. Bu sayede kurumsal güvenlik ve gizlilik politikalarına uyum kolaylaşır (Zero Trust: sunucuya güvenme, yerelde doğrula).
-
-### Kurumlar için özet
-
-- **Debug modu kapalı.** Figma'yı normal açarsınız; ekstra debug portu veya geliştirici ayarı gerekmez.
-- **Kendi plugin story'nizde yayınlama.** Plugin'i Figma Organization (veya Enterprise) altında kendi plugin story'nize yayınladığınızda tüm kullanıcılar **Plugins** menüsünden tek tıkla erişir; "manifest import" zorunluluğu kalkar, merkezi ve erişilebilir bir mimari olur.
-- **KVKK / GDPR uyumu.** Tasarım verisi yalnızca kullanıcının makinesinde (MCP + Plugin + Figma Desktop) kalır; Figma bulutuna veya üçüncü tarafa MCP üzerinden gönderilmez. Veri minimizasyonu ve yerelde işleme, hassas kurumsal ekipler ve denetim gereksinimleri için uygun bir model sunar.
-
-## F-MCP yetenekleri
-
-**46 araç** (config'te `dist/local-plugin-only.js` kullanıldığında tamamı aktif). Tam liste: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md). Aşağıda rollerine göre özet.
-
-### Ürün yöneticileri (analiz, kabul kriterleri, kurumsal süreçler)
-
-
-| Kullanım                          | Araçlar                                                           | Açıklama                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Tasarım envanteri ve analiz       | `figma_get_design_system_summary`, `figma_get_file_data`          | Özet, bileşen sayıları, token koleksiyonları; büyük dosyada varsayılan **currentPageOnly** (timeout önlemi) |
-| Kabul kriterleri ve dokümantasyon | `figma_get_component_for_development`, `figma_capture_screenshot` | Bileşen spec + görsel; test ve kabul için referans                                                          |
-| Design–code uyumu (gap analizi)   | `figma_check_design_parity`                                       | Figma token'ları ile kod token'larını karşılaştırır; kurumsal raporlama ve test kriterleri                  |
-| Keşif ve durum                    | `figma_search_components`, `figma_get_status`, `figma_list_connected_files`, `figma_set_port` | Bileşen arama, bağlantı kontrolü, bağlı dosya listesi (multi-client), runtime port değişimi |
-| Figma REST API (token ile)        | `figma_set_rest_token`, `figma_rest_api`, `figma_get_rest_token_status`, `figma_clear_rest_token` | Token girişi, direkt REST API çağrıları (export, comments, versions), rate limit takibi, otomatik cevap kırpma (context koruması) |
-| Tasarım oluşturma                 | `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group` | Yeni frame, metin, dikdörtgen oluşturma ve gruplama |
-| Görsel export                     | `figma_export_nodes`, `figma_capture_screenshot` | SVG/PNG/JPG/PDF batch export (1-50 node, vektörel), screenshot |
-| Kütüphane ve tanılama             | `figma_search_assets`, `figma_plugin_diagnostics` | Takım kütüphanesi arama, plugin sağlık kontrolü (uptime, bellek, bağlantı) |
-
-
-### Geliştiriciler
-
-
-| Kullanım                      | Araçlar                                                                                                                                                   | Açıklama                                                                                                                       |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Bileşen ve implementasyon     | `figma_get_component`, `figma_get_component_for_development`, `figma_get_component_image`, `figma_instantiate_component`, `figma_set_instance_properties` | Metadata, screenshot, instance oluşturma ve property güncelleme                                                                |
-| Token ve stil kodu            | `figma_get_variables`, `figma_get_styles`                                                                                                                 | Değişkenler ve stiller (CSS/Tailwind/TS export)                                                                                |
-| Dosya yapısı / design context | `figma_get_file_data`, `figma_get_design_context`                                                                                                         | Yapı, metin, layout, renk, font; SUI bileşen/token adı, layoutSummary, colorHex, fillVariableNames; outputHint: react/tailwind |
-| Çalıştırma ve doğrulama       | `figma_execute`, `figma_capture_screenshot`, `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`                                       | Plugin API'de JS, screenshot, console log okuma/izleme/temizleme                                                               |
-
-
-### DesignOps ve tasarımcılar
-
-
-| Kullanım                  | Araçlar                                                                                                                                                                                                                                                                        | Açıklama                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| DesignOps (kritik)        | `figma_check_design_parity`, `figma_setup_design_tokens`, `figma_batch_create_variables`, `figma_batch_update_variables`                                                                                                                                                       | Design–code gap, koleksiyon+modlar+variable (rollback), toplu token yönetimi                          |
-| Değişken ve stil yönetimi | `figma_get_variables`, `figma_get_styles`, `figma_create_variable_collection`, `figma_create_variable`, `figma_update_variable`, `figma_delete_variable`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_get_token_browser` | Tüm variable/stil CRUD ve Token Browser                                                               |
-| Bileşen kütüphanesi       | `figma_get_design_system_summary`, `figma_search_components`, `figma_arrange_component_set`, `figma_set_description`                                                                                                                                                           | Özet/arama (currentPageOnly varsayılan; SUI/büyük dosyada timeout önlemi), variant set, dokümantasyon |
-
-
-Kurulum: **En basit (repo indirmeden):** aşağıdaki [En basit kurulum](#en-basit-kurulum-npx--repo-indirmeden) adımları. **Detaylı:** [Kurulum rehberi (Onboarding)](docs/ONBOARDING.md). **Windows:** [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) (Node veya Python bridge).
-
-### Çalışma modları (hangi binary?)
-
-| Mod | NPM / `node` girişi | Ne zaman |
-| --- | --- | --- |
-| **Plugin-only (önerilen)** | `figma-mcp-bridge-plugin` veya `dist/local-plugin-only.js` | Figma’da **F-MCP ATezer Bridge** plugin’i ile çalışmak; REST token gerekmez; debug portu gerekmez. |
-| **Tam (CDP + REST)** | `figma-mcp-bridge` veya `dist/local.js` | Console log, ekran görüntüsü CDP üzerinden, `FIGMA_ACCESS_TOKEN`, Figma `--remote-debugging-port=9222` vb. |
-
-Varsayılan NPM `main` ve `figma-mcp-bridge` komutu **tam mod**dur; plugin ile yetiniyorsanız config’te **`figma-mcp-bridge-plugin`** kullanın (NPX örnekleri aşağıda).
-
-## Sürüm ve güncellemeler
-
-| Ne | Nerede |
-| --- | --- |
-| **Sürüm numarası** | [`package.json`](package.json) içindeki `version` (ör. **1.6.3**) |
-| **Değişiklik özeti** | [CHANGELOG.md](CHANGELOG.md) |
-| **Yayın bildirimi** | GitHub’da [Releases](https://github.com/atezer/FMCP/releases) — *Watch* → *Custom* → *Releases* ile e-posta bildirimi |
-| **npm paketi** | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) — sürüm geçmişi npm sayfasında |
-
-**Zaten kurulu yapıyı güncellemek (özet):**
-
-- **Repo clone + `node …/dist/local-plugin-only.js`:** `git pull` → gerekirse `npm install` → `npm run build:local` → Cursor/Claude’u yeniden başlatın. Figma plugin kaynağı (`f-mcp-plugin/`) değiştiyse Development’tan manifest’i yeniden import edin veya plugin’i yeniden çalıştırın.
-- **NPX:** Config’te `@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra bir sonraki MCP başlatmada indirilir; takılmada yukarıdaki önbellek notuna bakın. Sabit sürüm kullanıyorsanız `package.json`/CHANGELOG ile uyumlu sürüm numarasını elle güncelleyin.
-
-Ayrıntılı adımlar: [KURULUM.md — Sürüm takibi ve güncelleme notları](KURULUM.md#sürüm-takibi-ve-güncelleme-notları).
-
-## Hızlı başlangıç
-
-Plugin'in **"ready (:5454)"** olması için **önce** MCP bridge sunucusu çalışıyor olmalı; **sonra** Figma'da plugin'i açarsınız.
-
-> **⚠️ Önemli:** Cursor veya Claude Desktop kullanıyorsanız `npm run dev:local` **çalıştırMAYIN**. MCP sunucusu bu uygulamalar tarafından otomatik başlatılır. İki sunucu aynı anda çalışırsa port çatışması oluşur ve plugin yanlış sunucuya bağlanabilir.
-
-### En basit kurulum (NPX — repo indirmeden)
-
-Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncelleme:** `@latest` bir sonraki çalıştırmada genelde yeni sürümü indirir; `npx` önbelleği eski paketi tutuyorsa `npx clear-npx-cache` (veya belirli sürüm: `@atezer/figma-mcp-bridge@latest`) kullanın. Ayrıntı: [Sürüm ve güncellemeler](#sürüm-ve-güncellemeler).
-
-
-| Adım | Yapılacak                                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------------------------ |
-| 1    | **Node.js kur** — [nodejs.org](https://nodejs.org) LTS. Terminalde `node -v` ile kontrol edin.               |
-| 2    | **MCP config ekle** — Aşağıdaki JSON bloğunu Cursor veya Claude config dosyasına ekleyin.                    |
-| 3    | **Cursor veya Claude'u yeniden başlatın** — köprü varsayılan olarak **5454**’te dinler (meşgulse **5454–5470** arasında sabit port; port mesgulse acik hata mesaji verir). Farkli porta gecmek icin `FIGMA_PLUGIN_BRIDGE_PORT` env var kullanin. |
-| 4    | **Figma'da plugini açın** — Plugins → **F-MCP ATezer Bridge** → **"ready (:5454)"** görünene kadar bekleyin. |
-
-
-**Cursor** — Proje kökünde veya kullanıcı dizininde `.cursor/mcp.json`:
+**Cursor** — Proje kökünde `.cursor/mcp.json` dosyası oluşturun:
 
 ```json
 {
@@ -138,7 +48,7 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncellem
 }
 ```
 
-**Claude Desktop** — macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` | Windows: `%APPDATA%\Claude\claude_desktop_config.json`:
+**Claude Desktop** — Config dosyasını açın (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -151,215 +61,147 @@ Repo klonlamadan, sadece Node.js ve tek bir config ile kurulum. **NPX güncellem
 }
 ```
 
-**Cursor ve Claude aynı makinede (v1.3.0+):** İkisi de varsayılan 5454’ü kullanır. İlk açılan portu alır; ikincisinin bridge’i port meşgul uyarısı verir ama **crash olmaz**. AI aracına “port 5456 kullan” dediğinizde `figma_set_port(5456)` ile runtime’da port değişir. Figma plugin’de de o portu seçin.
+### 3. Figma'da plugin'i açın
 
-- **Otomatik akış:** İlk araç 5454’ü alır → ikinci araçta `figma_get_status` “port meşgul” der → `figma_set_port(5456)` ile geçiş → plugin’de 5456 ayarla → bağlantı kurulur.
-- **Manuel:** Config’te `”env”: { “FIGMA_PLUGIN_BRIDGE_PORT”: “5455” }` ekleyerek önceden ayrı port atayabilirsiniz.
+1. Cursor veya Claude Desktop'ı yeniden başlatın
+2. Figma'yı açın → **Plugins** → **F-MCP ATezer Bridge**
+3. Plugin'de **"ready (:5454)"** yazısını görene kadar bekleyin
+4. Artık AI aracınız Figma'ya bağlı!
+
+> **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin.
+
+## 46 araçla neler yapabilirsiniz?
+
+### Tasarımcılar için
+
+| Ne yapabilirsiniz | Araçlar |
+|-------------------|---------|
+| Dosya yapısını görme | `figma_get_file_data`, `figma_get_design_context` |
+| Bileşen bulma ve inceleme | `figma_search_components`, `figma_get_component` |
+| Screenshot alma | `figma_capture_screenshot` |
+| SVG/PNG export | `figma_export_nodes` (toplu, vektörel) |
+| Yeni tasarım elemanı oluşturma | `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group` |
+| Variable ve token yönetimi | `figma_get_variables`, `figma_create_variable`, `figma_update_variable` |
+| Design system özeti | `figma_get_design_system_summary`, `figma_get_token_browser` |
+| Takım kütüphanesi arama | `figma_search_assets` |
+
+### Geliştiriciler için
+
+| Ne yapabilirsiniz | Araçlar |
+|-------------------|---------|
+| Bileşen detayı + görsel | `figma_get_component_for_development`, `figma_get_component_image` |
+| Token ve stil çıkarma | `figma_get_variables`, `figma_get_styles` |
+| Instance oluşturma | `figma_instantiate_component`, `figma_set_instance_properties` |
+| Kod çalıştırma | `figma_execute` (Figma Plugin API ile doğrudan JS) |
+| Konsol izleme | `figma_get_console_logs`, `figma_watch_console` |
+
+### DesignOps için
+
+| Ne yapabilirsiniz | Araçlar |
+|-------------------|---------|
+| Design-code uyumu kontrolü | `figma_check_design_parity` |
+| Toplu token oluşturma | `figma_setup_design_tokens`, `figma_batch_create_variables` |
+| Variable CRUD (oluştur/güncelle/sil) | Tam variable yönetim seti (12 araç) |
+| Bileşen variant yönetimi | `figma_arrange_component_set`, `figma_set_description` |
+
+### REST API (isteğe bağlı, token gerektirir)
+
+| Ne yapabilirsiniz | Araçlar |
+|-------------------|---------|
+| Token girişi | `figma_set_rest_token` (plugin UI'dan veya AI aracından) |
+| API çağrısı | `figma_rest_api` (yorumlar, versiyonlar, görsel export) |
+| Limit takibi | `figma_get_rest_token_status` |
+| Bağlantı durumu | `figma_plugin_diagnostics` |
+
+Tam araç listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | Detaylı referans: [TOOLS.md](docs/TOOLS.md)
+
+## Claude + Cursor aynı anda kullanma
+
+Her iki araç da varsayılan 5454 portunu kullanır. İlk açılan portu alır, ikincisi için:
+
+1. AI aracına "port 5456 kullan" deyin → `figma_set_port(5456)` çalışır
+2. Figma plugin'de portu **5456** yapın
+3. Her iki araç aynı anda bağımsız çalışır
+
+Ya da config'te önceden farklı port belirleyin:
 
 ```json
-"figma-mcp-bridge": {
-  "command": "npx",
-  "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"],
-  "env": {
-    "FIGMA_PLUGIN_BRIDGE_PORT": "5455"
-  }
-}
+"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }
 ```
 
-Repo ile (clone + build) kullanıyorsanız: `"command": "node"`, `"args": ["<PROJE-YOLU>/dist/local-plugin-only.js"]` ile aynı `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin. Claude’u yeniden başlatın; Figma’da plugini açıp Port alanına **5455** yazın → **"ready (:5455)"** görünmeli.
+## Çoklu dosya desteği
 
-İlk çalıştırmada `npx` paketi indirir; sonraki açılışlarda cache'den çalışır. **Plugin'i Figma'da ilk kez kullanıyorsanız** [Plugin'i Figma'ya yükleyin](#plugini-figmaya-yükleyin-ilk-seferde) adımına bakın.
+Aynı anda birden fazla Figma/FigJam dosyasında plugin'i açabilirsiniz:
 
-### A) Clone + build ile (Cursor / Claude)
+- **Figma Desktop** — tasarım dosyası
+- **Figma Browser** — tarayıcıda figma.com
+- **FigJam** — whiteboard/diyagram
 
-Repo'yu indirip kendi makinenizde build etmek isterseniz (ör. ağ erişimi kısıtlı ortam):
+Hangi linki verirseniz, AI o dosyaya yönlendirilir. `figma_list_connected_files` ile bağlı dosyaları görebilirsiniz.
 
-**1. Build (bir kez):**
+## Plugin durum göstergeleri
 
-```bash
-cd <proje-yolu>
-npm install
-npm run build:local
-```
+| Plugin'de ne görüyorsunuz | Anlamı |
+|---------------------------|--------|
+| `ready (:5454)` | Bağlantı kuruldu, kullanmaya hazır |
+| `connecting...` | Bağlanmaya çalışıyor |
+| `no server` | AI aracı çalışmıyor veya port uyuşmuyor |
+| `wrong server` | Farklı bir sunucuya bağlandı |
 
-**2. MCP config** — `command`: `"node"`, `args`: `["<PROJE-YOLU>/dist/local-plugin-only.js"]` (tam yolu yazın).
+## Sorun mu yaşıyorsunuz?
 
-**Cursor** — `.cursor/mcp.json` | **Claude** — `claude_desktop_config.json` (yolu yukarıdaki gibi).
+| Sorun | Çözüm |
+|-------|-------|
+| Plugin "no server" diyor | AI aracınızı (Claude/Cursor) yeniden başlatın |
+| Port çakışması | `figma_set_port` ile farklı porta geçin veya `lsof -i :5454` ile portu kontrol edin |
+| "Server disconnected" | Config'deki node yolunu kontrol edin: `which node` ile tam yolu bulun |
+| Plugin'de 0 bağlantı | Plugin'deki port ile AI aracının portu aynı olmalı |
 
-**3. Cursor/Claude'u yeniden başlatın.**  
-**4. Figma'da plugini çalıştırın** → **"ready (:5454)"** bekleyin.
+Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
-> **Permission denied?** `"command": "bash"`, `"args": ["-c", "cd <PROJE-YOLU> && exec node dist/local-plugin-only.js"]` kullanın.
+## Sürüm bilgisi
 
-### B) Manuel geliştirme / debug
+| Bilgi | Kaynak |
+|-------|--------|
+| Güncel sürüm | **1.6.4** ([package.json](package.json)) |
+| Değişiklik geçmişi | [CHANGELOG.md](CHANGELOG.md) |
+| GitHub sürümleri | [Releases](https://github.com/atezer/FMCP/releases) |
+| npm paketi | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 
-> **Bu yöntem sadece bridge/plugin geliştirmesi veya debug içindir.** Cursor/Claude Desktop ile aynı anda **kullanmayın**.
+**Güncelleme:** NPX ile `@latest` kullanıyorsanız otomatik güncellenir. Repo ile kurduysanız: `git pull` → `npm run build:local` → AI aracını yeniden başlatın.
 
-```bash
-cd <proje-yolu>
-npm install
-npm run dev:local
-```
+## Dokümanlar
 
-Çıktıda `Plugin bridge server listening` geçen satırı görünce Figma'da plugin'i açın.
+| Doküman | Açıklama |
+|---------|----------|
+| [ONBOARDING.md](docs/ONBOARDING.md) | Adım adım kurulum rehberi |
+| [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) | Windows kurulumu |
+| [SETUP.md](docs/SETUP.md) | Detaylı kurulum (Local / Remote) |
+| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | **46 araç tam listesi** |
+| [TOOLS.md](docs/TOOLS.md) | Araçların detaylı açıklamaları |
+| [REST_API_GUIDE.md](docs/REST_API_GUIDE.md) | REST API kullanım rehberi |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Projeye katkıda bulunma rehberi |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Sorun giderme |
+| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) | Çoklu kullanıcı ve port yönetimi |
+| [ENTERPRISE.md](docs/ENTERPRISE.md) | Kurumsal özellikler (audit log, air-gap) |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
+| [USE_CASES.md](docs/USE_CASES.md) | Örnek kullanım senaryoları |
+| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | Güvenlik denetimi |
 
-> **Port çatışması (v1.3.0+):** Aynı porta iki F-MCP bridge bağlanamaz. Port meşgulse bridge crash olmaz; `figma_set_port` ile runtime'da farklı porta geçebilirsiniz. Alternatif: `lsof -i :5454` (macOS/Linux) veya `netstat -ano | findstr :5454` (Windows) ile mevcut process'i bulun ve kapatın.
+## Güvenlik ve gizlilik
 
-### Plugin'i Figma'ya yükleyin (ilk seferde)
+- Tasarım verileri **sadece bilgisayarınızda** kalır
+- Figma bulutuna veya üçüncü taraflara veri **gönderilmez**
+- REST API token'ı bellekte tutulur, diske **yazılmaz**
+- **KVKK / GDPR uyumlu** mimari
+- Detay: [PRIVACY.md](PRIVACY.md)
 
-1. Figma'yı açın.
-2. **Plugins** → **Development** → **Import plugin from manifest…**
-3. Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin.
-4. Plugin listede "F-MCP ATezer Bridge" olarak görünür.
+## Kurumsal kullanım
 
-### Plugin durum göstergeleri
+Plugin'i Figma Organization altında **private plugin** olarak yayınlayabilirsiniz. Böylece ekip üyeleri Plugins menüsünden tek tıkla erişir. Detay: [ENTERPRISE.md](docs/ENTERPRISE.md)
 
+## Lisans
 
-| Durum           | Anlam                                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| `connecting...` | WebSocket açıldı, sunucudan handshake bekleniyor                        |
-| `ready (:5454)` | F-MCP bridge'e başarıyla bağlandı (port numarası gösterilir)            |
-| `wrong server`  | Bağlantı kuruldu ama karşıdaki F-MCP bridge değil (eski/yanlış process) |
-| `no server`     | Sunucu kapalı veya erişilemiyor                                         |
+MIT tabanlı — kişisel kullanım için. Detay: [LICENSE](LICENSE)
 
-
----
-
-## Claude / Cursor ile bağlama (detay)
-
-**NPX:** Paket npm’de **@atezer/figma-mcp-bridge** adıyla yayınlı. Plugin-only için: `npx -y @atezer/figma-mcp-bridge@latest figma-mcp-bridge-plugin` (tam mod için son argümanı atlayıp varsayılan `figma-mcp-bridge` binary’si kullanılır).
-
-**Tam mod (console/screenshot):** Config'te `dist/local-plugin-only.js` yerine `dist/local.js` kullanın; Figma'yı `--remote-debugging-port=9222` ile açın.
-
-**Paralel görevler / çoklu kullanıcı:** Aynı anda farklı Figma dosyalarında (Figma Desktop + FigJam + Figma Browser gibi) paralel AI görevleri çalıştırabilirsiniz. Her hat için ayrı port (5454, 5455, 5456, …) ve ayrı bridge process başlatın. MCP config'e `"env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5455" }` ekleyin, plugin'de aynı portu girin. Port durumunu kontrol: `npm run check-ports`. Detay: [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md).
-
-**Enterprise:** Audit log (`FIGMA_MCP_AUDIT_LOG_PATH`), air-gap kurulum ve Organization plugin: [ENTERPRISE.md](docs/ENTERPRISE.md).
-
-**"Server disconnected" / "wrong server"?** (1) Port 5454'te başka bir process var mı kontrol edin: `lsof -i :5454`. (2) Cursor/Claude Desktop kullanıyorsanız `npm run dev:local` çalışmıyor olmalı. (3) Build güncel mi: `npm run build:local`.
-
-**Claude'da "connectedClients: 0" / "Plugin Figma Desktop'ta çalışmıyor"?** Claude, Cursor ile aynı anda kullanılıyorsa 5455 portunda çalışır. Plugin ise varsayılan 5454'e bağlanır (Cursor’un bridge’i). Bu yüzden Claude tarafında 0 bağlantı görünür. **Çözüm:** Figma’da plugini açın → **Port** alanına **5455** yazın → Bağlan’a tıklayın. "ready (:5455)" görününce Claude’daki araçlar çalışır. Sadece Claude kullanıyorsanız ve port 5454 ise, pluginde Port’un **5454** olduğundan emin olun.
-
-**Birden fazla dosya/board açık, hepsi "ready" ama link verince hep aynı dosya dönüyor?** Plugin'in `fileKey` gönderebilmesi için manifest'te `enablePrivatePluginApi: true` gerekir (bu repoda ekli). Plugin'i **Development → Import plugin from manifest** ile yeniden seçin; sonra her iki sekmede de plugini tekrar çalıştırıp "ready" yapın. Böylece board ve design dosyası ayrı fileKey ile kaydedilir, URL ile doğru dosyaya yönlenir.
-
-### Browser Figma desteği
-
-Plugin, Figma'nın **tarayıcı sürümünde** de (figma.com) çalışır. Desktop uygulaması zorunlu değildir.
-
-**Aynı makinede (tarayıcı + MCP bridge aynı bilgisayarda):**
-
-1. MCP bridge sunucusunu başlatın (Cursor/Claude Desktop açın veya `npm run dev:local`).
-2. Figma'yı tarayıcıda açın → Plugin'i çalıştırın.
-3. Plugin UI'da Host: `localhost`, Port: `5454` → **"ready (:5454)"** göründüğünde hazır.
-
-**Uzak makinede (tarayıcı bir bilgisayarda, MCP bridge başka bir makinede):**
-
-1. MCP bridge makinesinde `FIGMA_BRIDGE_HOST=0.0.0.0` env var ile sunucuyu başlatın (tüm ağ arayüzlerinden erişim açılır).
-2. Plugin UI'da Host alanına MCP bridge makinesinin IP adresini girin (örn. `192.168.1.50`), Port: `5454`.
-3. **Manifest güncellemesi gerekir:** Uzak IP'yi `manifest.json` dosyasındaki `networkAccess.allowedDomains` dizisine ekleyin (örn. `"ws://192.168.1.50:5454"`). Organization plugin olarak dağıtıldığında admin bunu yapılandırır.
-4. Firewall'da port 5454'ün açık olduğundan emin olun.
-
-> **Güvenlik:** Default olarak sunucu yalnızca `127.0.0.1`'de dinler (Zero Trust). Uzak erişim için `FIGMA_BRIDGE_HOST=0.0.0.0` **bilinçli olarak** ayarlanmalı ve firewall ile korunmalıdır.
-
----
-
-## Design / Dev Mode / FigJam
-
-**Design seat olmayan, sadece Dev Mode erişimi olan kullanıcılar da bu MCP'yi kullanabilir.** Plugin Design, Dev Mode ve **FigJam** dahil tüm editör tiplerinde çalışır (`editorType: ["figma", "figjam", "dev"]`). MCP bağlantısı için mod farkı engel değildir.
-
-- **Dev Mode kullanıcıları (SEM, PO, Dev):** Dosyayı Dev Mode'da açın → sağ panelde **Plugins** sekmesi → **F-MCP ATezer Bridge** ile çalıştırın.
-- **FigJam kullanıcıları:** FigJam dosyasını açın → **Plugins** → **F-MCP ATezer Bridge** ile çalıştırın. FigJam'de brainstorm, flow ve diyagram verilerine MCP üzerinden erişebilirsiniz.
-
-Detay: [ONBOARDING.md](docs/ONBOARDING.md) (Dev Mode bölümü).
-
-### Multi-client: Aynı anda birden fazla dosya
-
-F-MCP Bridge **aynı anda birden fazla Figma/FigJam plugin bağlantısını** destekler. Üç ortam birlikte kullanılabilir:
-
-- **Figma Desktop** — bir veya daha fazla design dosyasında plugin açık
-- **FigJam browser** — tarayıcıda FigJam board'unda plugin açık
-- **Figma browser** — tarayıcıda figma.com design dosyasında plugin açık
-
-Hangi **linki** verirseniz, istek o linkteki dosyaya yönlendirilir; diğer pencereler etkilenmez. **Çoklu ajan:** Farklı dosya linkleri kullanarak birden fazla ajan veya oturum aynı anda farklı dosyalarda çalışabilir.
-
-**Link ile kullanım:** Verdiğiniz Figma veya FigJam linki, ilgili tool çağrılarında `figmaUrl` parametresi olarak verilebilir; bridge linkten dosyayı tespit edip o dosyadaki plugin'e yönlendirir. Örneğin: "Bu FigJam linkine bak: https://figma.com/board/XYZ/..." → AI `figma_get_design_context({ figmaUrl: "https://..." })` ile çağırır.
-
-**Manuel fileKey:** Her plugin bağlantısı kendini `fileKey` ile tanıtır. `figma_list_connected_files` ile bağlı dosyaları listeleyip, diğer tool'larda `fileKey` parametresi ile hedef dosyayı belirtebilirsiniz. `fileKey` ve `figmaUrl` belirtilmezse en son bağlanan dosyaya gider (geriye uyumlu).
-
-**Kullanım:**
-
-1. Birden fazla Figma/FigJam dosyasında (Desktop veya tarayıcı) plugin'i açın → her biri **"ready (:5454)"** gösterir.
-2. İstediğiniz dosyanın linkini Claude/Cursor'a verin veya `figma_list_connected_files` ile bağlı dosyaları listeleyin.
-3. Tool çağrılarında `figmaUrl` (link) veya `fileKey` ile hedef dosyayı belirtin.
-
-```
-// Bağlı dosyaları listele
-figma_list_connected_files
-
-// Link ile: belirli dosyadaki design context
-figma_get_design_context { "figmaUrl": "https://www.figma.com/board/XYZ/...", "depth": 2 }
-
-// veya fileKey ile
-figma_get_design_context { "fileKey": "abc123...", "depth": 2 }
-```
-
-**Plugin–MCP bağlantı özeti:** İki mod var; debug portu zorunlu değil. **Plugin-only (önerilen):** Config'te `dist/local-plugin-only.js`, Figma normal açılır, token yok. **Tam mod:** Config'te `dist/local.js`, Figma `--remote-debugging-port=9222` ile açılır (console/screenshot için).
-
-## Detaylı Rehber
-
-Plugin'in MCP ile nasıl konuştuğu, veri akışı, Design/Dev mode ve sorun giderme için:
-
-- **[Windows kurulum rehberi](docs/WINDOWS-INSTALLATION.md)** — Windows 10/11, Node veya Python bridge, Claude config, port, sorun giderme
-- **[REST API Rehberi](docs/REST_API_GUIDE.md)** — Token kurulumu, örnekler, rate limit yönetimi
-- **[Katkıda Bulunma](CONTRIBUTING.md)** — Geliştirici rehberi, test, tool ekleme
-
-## Repo İçeriği
-
-- `f-mcp-plugin/` – F-MCP ATezer Bridge plugin kaynağı (manifest, code.js, ui.html)
-- `docs/` – Kurulum, araç referansı, REST API rehberi, sorun giderme
-- `src/` – MCP sunucusu (local, plugin-only, Cloudflare Worker)
-- `python-bridge/` – **Python MCP bridge** (Node.js kurulumu olmayan ortamlar için); aynı WebSocket protokolü, port 5454
-
-### Tüm dokümanlar (docs/)
-
-
-| Dosya                                                                   | Açıklama                                                                                         |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [ONBOARDING.md](docs/ONBOARDING.md)                                     | **Kurulum rehberi (Onboarding)** — Plugin yükle, Node.js, MCP başlat, Claude config              |
-| [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md)                 | **Windows kurulum** — Node veya Python bridge, Claude config (Windows yolu), port, sorun giderme |
-| [SETUP.md](docs/SETUP.md)                                               | Kurulum (Remote / Local)                                                                         |
-| [TOOLS.md](docs/TOOLS.md)                                               | MCP araçları detaylı referansı                                                                   |
-| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)                           | **46 araç tam liste** (referans, Claude ile doğrulanmış)                                         |
-| [REST_API_GUIDE.md](docs/REST_API_GUIDE.md)                             | **REST API rehberi** — Token kurulumu, örnekler, rate limit                                      |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                       | **Katkıda bulunma** — Yerel kurulum, test, tool ekleme, PR süreci                               |
-| [DEVELOPER_FIGMA_CAPABILITIES.md](docs/DEVELOPER_FIGMA_CAPABILITIES.md) | **Cursor + F-MCP:** Neyi alır/almaz, birebir çıkartma, code-ready/SUI/token referansı, ileride   |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)                           | Sorun giderme                                                                                    |
-| [CHANGELOG.md](CHANGELOG.md)                                           | **Sürüm geçmişi** — npm/GitHub Releases ile birlikte referans                                    |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                                 | Teknik mimari                                                                                    |
-| [USE_CASES.md](docs/USE_CASES.md)                                       | Örnek kullanım senaryoları                                                                       |
-| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md)                             | **Paralel görevler & çoklu kullanıcı** — sabit port, paralel hatlar, Claude çoklu MCP           |
-| [ENTERPRISE.md](docs/ENTERPRISE.md)                                     | **Enterprise** — Audit log, air-gap, Organization plugin                                         |
-| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)                             | **Güvenlik denetimi** — bulgular checklist                                                       |
-
-
-## Yaygınlaştırma: Organization (private) plugin
-
-Çalışma biçimini ekip/organizasyon içinde kolaylaştırmak için **Figma Organization private plugin** olarak yayınlamak mantıklı bir ilk adım. Enterprise odaklı özellikler (audit log, air-gap, org plugin detayı): [ENTERPRISE.md](docs/ENTERPRISE.md).
-
-**Avantajlar:**
-
-- Herkesin "Import plugin from manifest" yapması gerekmez; plugin organizasyonun plugin listesinde görünür.
-- Sadece **Plugins** menüsünden (veya Resources → Plugins) ekleyip çalıştırırlar; MCP bridge'i (Claude config) kendi makinede kurmaları yeterli.
-- Review süreci yok (private plugin); yayınladıktan kısa süre sonra kullanılabilir.
-
-**Gereksinimler:**
-
-- Figma **Organization** veya **Enterprise** planı ([Figma: Create private organization plugins](https://help.figma.com/hc/en-us/articles/4404228629655-Create-private-organization-plugins)).
-- Yayınlama: [Publish plugins](https://help.figma.com/hc/en-us/articles/360042293394) adımlarını izleyin; **Publish to** kısmında **organization**'ı seçin (Community değil).
-
-**Özet:** Önce organization private plugin yapmak, "plugin'i herkese tek tıkla ulaştırma" adımını çözer; MCP tarafında (Claude config, build, port) kurulum aynı kalır. Sonrasında isteğe bağlı olarak Community'e açmak veya self-host MCP ile tam entegrasyon düşünülebilir.
-
-## Lisans ve Destek
-
-- **Lisans:** MIT tabanlı, ek kısıt: ticari amaçlı kullanılmaz; sadece kişisel kullanım içindir (bkz. [LICENSE](LICENSE))
-- **Sorun bildirimi:** [GitHub Issues](https://github.com/atezer/FMCP/issues)
-
+**Sorun mu var?** [GitHub Issues](https://github.com/atezer/FMCP/issues)
