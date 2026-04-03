@@ -202,11 +202,11 @@
       <div class="status-text">
         <span class="label">MCP</span>
         <span class="state" id="status-state">connecting</span>
-        <span id="status-info-btn" onclick="var p=document.getElementById('connections-panel');if(p)p.style.display=p.style.display==='block'?'none':'block';" style="display:none;cursor:pointer;margin-left:4px;font-size:9px;width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);text-align:center;line-height:13px;user-select:none;">i</span>
+        <span id="status-info-btn" onclick="var p=document.getElementById('connections-panel');if(p){p.style.display=p.style.display==='block'?'none':'block';requestUiResize();}" style="display:none;cursor:pointer;margin-left:4px;font-size:9px;width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);text-align:center;line-height:13px;user-select:none;">i</span>
       </div>
-      <div id="connections-panel" style="display:none;padding:4px 8px;margin-top:2px;background:rgba(255,255,255,0.03);border-radius:4px;font-size:9px;color:rgba(255,255,255,0.4);line-height:1.5;">
-        <div id="connections-panel-list">—</div>
-      </div>
+    </div>
+    <div id="connections-panel" style="display:none;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:5px;font-size:9px;color:rgba(255,255,255,0.4);line-height:1.6;">
+      <div id="connections-panel-list">—</div>
     </div>
     <div class="advanced-wrap">
       <button id="advanced-toggle" class="advanced-toggle" type="button">Advanced</button>
