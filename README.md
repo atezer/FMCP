@@ -196,9 +196,25 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **KVKK / GDPR uyumlu** mimari
 - Detay: [PRIVACY.md](PRIVACY.md)
 
-## Kurumsal kullanım
+## Kurumsal kullanım (Tüm şirkette tek seferde)
 
-Plugin'i Figma Organization altında **private plugin** olarak yayınlayabilirsiniz. Böylece ekip üyeleri Plugins menüsünden tek tıkla erişir. Detay: [ENTERPRISE.md](docs/ENTERPRISE.md)
+Plugin'i herkesin tek tek yüklemesi gerekmez. Figma Organization hesabınız varsa plugin'i **private plugin** olarak yayınlayabilirsiniz:
+
+**Publish plugin** → **Publish to** → **Organizasyon adınız (Private)** seçin.
+
+Yayınladıktan sonra:
+- Tüm ekip üyeleri **Plugins** menüsünden tek tıkla erişir
+- Kimsenin "manifest import" yapmasına gerek kalmaz
+- Plugin güncellemelerini merkezden yönetirsiniz
+- Review süreci yok (private plugin) — yayınladıktan hemen sonra kullanılabilir
+
+**Gereksinimler:**
+- Figma **Organization** veya **Enterprise** planı
+- Yayınlama: Figma → Plugins → Publish → **Publish to** kısmında organizasyonunuzu seçin
+
+> Her kullanıcının kendi bilgisayarında sadece AI aracı config'ini (Claude/Cursor) ayarlaması yeterli. Plugin zaten şirketin Figma'sında hazır olur.
+
+Kurumsal özellikler (audit log, air-gap, org plugin detayı): [ENTERPRISE.md](docs/ENTERPRISE.md)
 
 ## Lisans
 
