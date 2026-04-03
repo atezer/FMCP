@@ -238,7 +238,18 @@
             <span style="display:flex;align-items:center;gap:3px;">API Limit <span id="rate-limit-info" onclick="var t=document.getElementById('rate-limit-tip');if(t)t.style.display=t.style.display==='block'?'none':'block';" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);font-size:7px;color:rgba(255,255,255,0.4);user-select:none;">i</span></span>
             <span id="rate-limit-text">—</span>
           </div>
-          <div id="rate-limit-tip" style="display:none;font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px;line-height:1.4;">Sadece REST API cagrilari limit tuketir. Plugin araclari (okuma, yazma, export) limit tuketmez.</div>
+          <div id="rate-limit-tip" style="display:none;font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px;line-height:1.5;">
+            <div style="margin-bottom:3px;color:rgba(255,255,255,0.5);">Limiti ne tuketir?</div>
+            <div>&#x25CB; Yorum okuma/yazma</div>
+            <div>&#x25CB; Versiyon gecmisi</div>
+            <div>&#x25CB; Gorsel export (REST ile)</div>
+            <div>&#x25CB; Dosya bilgisi (REST ile)</div>
+            <div style="margin-top:3px;color:rgba(255,255,255,0.5);">Limiti tuketmeyen (sinirsiz):</div>
+            <div>&#x25CF; Dosya okuma, yazma, silme</div>
+            <div>&#x25CF; Variable/token yonetimi</div>
+            <div>&#x25CF; Bilesen arama, export (plugin)</div>
+            <div>&#x25CF; Screenshot, frame olusturma</div>
+          </div>
           <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
             <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
           </div>
