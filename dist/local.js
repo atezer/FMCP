@@ -48,7 +48,7 @@ class LocalFigmaMCP {
         this.variablesCache = new Map();
         this.server = new McpServer({
             name: "F-MCP ATezer (Local)",
-            version: "1.6.4",
+            version: "1.6.5",
         });
     }
     /**
