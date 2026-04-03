@@ -78,6 +78,9 @@ export class PluginBridgeServer {
 	/** Figma REST API token (in-memory only, never written to disk). */
 	private figmaRestToken: FigmaRestTokenInfo | null = null;
 
+	/** AI client name detected from parent process (Claude, Cursor, etc.) */
+	private readonly clientName: string;
+
 	/** User/config preferred port (before clamp and fallback). */
 	private readonly preferredPort: number;
 
@@ -86,6 +89,22 @@ export class PluginBridgeServer {
 		this.preferredPort = clamped;
 		this.port = clamped;
 		this.auditLogPath = options?.auditLogPath;
+		this.clientName = this.detectClientName();
+	}
+
+	/** Detect AI client name from parent process. */
+	private detectClientName(): string {
+		try {
+			const { execSync } = require("child_process");
+			const cmd = execSync(`ps -p ${process.ppid} -o comm=`, { timeout: 1000 }).toString().trim();
+			if (/[Cc]laude/i.test(cmd) && /[Cc]ode/i.test(cmd)) return "Claude Code";
+			if (/[Cc]laude/i.test(cmd)) return "Claude";
+			if (/[Cc]ursor/i.test(cmd)) return "Cursor";
+			if (/[Ww]indsurf/i.test(cmd)) return "Windsurf";
+			return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
+		} catch {
+			return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
+		}
 	}
 	private port: number;
 
@@ -339,6 +358,7 @@ export class PluginBridgeServer {
 								port: this.port,
 								clientId,
 								multiClient: true,
+								clientName: this.clientName,
 							}));
 							return;
 						}
