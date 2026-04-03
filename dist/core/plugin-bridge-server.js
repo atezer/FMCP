@@ -12,6 +12,7 @@
  */
 import { WebSocketServer } from "ws";
 import { createServer, get as httpGet } from "http";
+import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 const HEARTBEAT_INTERVAL_MS = 3000;
@@ -39,19 +40,25 @@ export class PluginBridgeServer {
         this.auditLogPath = options?.auditLogPath;
         this.clientName = this.detectClientName();
     }
-    /** Detect AI client name from parent process. */
+    /** Detect AI client name by walking up the process tree. */
     detectClientName() {
         try {
-            const { execSync } = require("child_process");
-            const cmd = execSync(`ps -p ${process.ppid} -o comm=`, { timeout: 1000 }).toString().trim();
-            if (/[Cc]laude/i.test(cmd) && /[Cc]ode/i.test(cmd))
-                return "Claude Code";
-            if (/[Cc]laude/i.test(cmd))
-                return "Claude";
-            if (/[Cc]ursor/i.test(cmd))
-                return "Cursor";
-            if (/[Ww]indsurf/i.test(cmd))
-                return "Windsurf";
+            // Walk up process tree (max 5 levels) to find known AI client
+            let pid = process.ppid;
+            for (let i = 0; i < 5 && pid > 1; i++) {
+                const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
+                const comm = line.replace(/^\s*\d+\s+/, ""); // strip ppid prefix
+                const ppidMatch = line.match(/^\s*(\d+)/);
+                if (/[Cc]laude/i.test(comm) && /[Cc]ode/i.test(comm))
+                    return "Claude Code";
+                if (/[Cc]laude/i.test(comm))
+                    return "Claude";
+                if (/[Cc]ursor/i.test(comm))
+                    return "Cursor";
+                if (/[Ww]indsurf/i.test(comm))
+                    return "Windsurf";
+                pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
+            }
             return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
         }
         catch {
