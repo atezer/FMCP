@@ -66,6 +66,13 @@ Hedef: Vektorel format desteyi + coklu node export.
 - [ ] GitHub repo aciklamasi + topics ekle
 - [ ] README'ye CI badge, npm version badge ekle
 
+### P4 — Node.js Bagimliligi Kaldirma (Standalone)
+
+Node.js olmadan F-MCP kullanabilme. Detayli analiz ve plan: [STANDALONE_PLAN.md](docs/STANDALONE_PLAN.md)
+
+- [ ] Python bridge 10→46 araca genisletme (dusuk risk, 2-3 gun)
+- [ ] Standalone binary (pkg ile, yuksek risk, 3-4 hafta, opsiyonel)
+
 ### P3 — Yeni Skiller
 
 - [ ] `design-to-code-generator` — tasarim → React/Vue/Svelte kod uretimi
