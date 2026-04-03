@@ -37,6 +37,26 @@ export class PluginBridgeServer {
         this.preferredPort = clamped;
         this.port = clamped;
         this.auditLogPath = options?.auditLogPath;
+        this.clientName = this.detectClientName();
+    }
+    /** Detect AI client name from parent process. */
+    detectClientName() {
+        try {
+            const { execSync } = require("child_process");
+            const cmd = execSync(`ps -p ${process.ppid} -o comm=`, { timeout: 1000 }).toString().trim();
+            if (/[Cc]laude/i.test(cmd) && /[Cc]ode/i.test(cmd))
+                return "Claude Code";
+            if (/[Cc]laude/i.test(cmd))
+                return "Claude";
+            if (/[Cc]ursor/i.test(cmd))
+                return "Cursor";
+            if (/[Ww]indsurf/i.test(cmd))
+                return "Windsurf";
+            return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
+        }
+        catch {
+            return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
+        }
     }
     start() {
         if (this.wss) {
@@ -251,6 +271,7 @@ export class PluginBridgeServer {
                                 port: this.port,
                                 clientId,
                                 multiClient: true,
+                                clientName: this.clientName,
                             }));
                             return;
                         }
