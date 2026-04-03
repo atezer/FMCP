@@ -31,13 +31,19 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 ## Hızlı başlangıç (3 adım)
 
-### 1. Node.js kurun
+### 1. Node.js kurun (bir kerelik)
 
-[nodejs.org](https://nodejs.org) adresinden LTS sürümünü indirip kurun.
+F-MCP Bridge'in çalışması için bilgisayarınızda Node.js olması gerekiyor. Zaten kuruluysa bu adımı atlayın.
+
+**Kurulu mu kontrol edin:** Terminal açıp `node -v` yazın. Versiyon görüyorsanız kurulu demektir.
+
+**Kurulu değilse:** [nodejs.org](https://nodejs.org) → **LTS** butonuna tıklayın → indirin → kurun. Sadece "İleri"ye tıklayarak kurulum tamamlanır.
 
 ### 2. AI aracınıza config ekleyin
 
-**Cursor** — Proje kökünde `.cursor/mcp.json` dosyası oluşturun:
+Aşağıdaki JSON bloğunu AI aracınızın config dosyasına ekleyin. Bu, AI aracına "Figma ile nasıl konuşacağını" öğretir.
+
+**Cursor** — Proje klasörünüzde `.cursor/mcp.json` dosyası oluşturun (yoksa yeni dosya açın):
 
 ```json
 {
@@ -50,7 +56,7 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 }
 ```
 
-**Claude Desktop** — Config dosyasını açın (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
+**Claude Desktop** — Settings → Developer → Edit Config tıklayın (veya macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` açın):
 
 ```json
 {
@@ -65,12 +71,15 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 ### 3. Figma'da plugin'i açın
 
-1. Cursor veya Claude Desktop'ı yeniden başlatın
-2. Figma'yı açın → **Plugins** → **F-MCP ATezer Bridge**
-3. Plugin'de **"ready (:5454)"** yazısını görene kadar bekleyin
-4. Artık AI aracınız Figma'ya bağlı!
+1. **Cursor veya Claude Desktop'ı yeniden başlatın** (config'i okuması için)
+2. **Figma'yı açın** → herhangi bir dosyayı açın
+3. **Plugins** menüsünden **F-MCP ATezer Bridge** seçin
+4. Plugin'de yeşil **"Ready"** yazısını görene kadar bekleyin
+5. AI aracınızdan Figma'ya komut verebilirsiniz!
 
 > **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin.
+>
+> **Kurumsal kullanım:** Plugin'i organizasyonunuzda private plugin olarak yayınlarsanız herkes Plugins menüsünden tek tıkla erişir — tek tek yüklemeye gerek kalmaz.
 
 ## 46 araçla neler yapabilirsiniz?
 
