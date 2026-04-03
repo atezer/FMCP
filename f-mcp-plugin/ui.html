@@ -676,7 +676,7 @@
           window.__figmaVariablesReady = true;
           if (mcpConnectedPort) {
             var _cn = mcpConnections.get(mcpConnectedPort);
-            updateStatus('Ready: ' + mcpConnectedPort + ' ' + (_cn ? _cn.clientName : ''), true, false);
+            updateStatus('Ready', true, false);
           } else {
             updateStatus('Ready', true, false);
           }
@@ -1262,7 +1262,7 @@
                 candidatePortIndex = 0;
               }
               console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort + ' (' + (msg.clientName || 'MCP') + ')');
-              updateStatus('Ready: ' + mcpConnectedPort + ' ' + (msg.clientName || ''), true, false);
+              updateStatus('Ready', true, false);
               // Resend restored token to bridge after handshake
               if (window.__pendingRestoreToken && currentWs && currentWs.readyState === 1) {
                 currentWs.send(JSON.stringify({ type: 'setToken', token: window.__pendingRestoreToken }));
@@ -1689,7 +1689,7 @@
         mcpConnectedPort = mcpActivePort;
       }
       updatePortLabel();
-      updateStatus('Ready: ' + mcpActivePort + ' ' + (ports[nextIdx].clientName || ''), true, false);
+      updateStatus('Ready', true, false);
     }
 
     /**
