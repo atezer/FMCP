@@ -7,6 +7,41 @@
 
 ## YUKSEK ONCELIKLI HEDEFLER (Plugin-Only Kullanicilar Icin)
 
+### P0 — Plugin Coklu Port + Otomatik AI Araci Tespiti
+
+**Branch:** `feature/multi-port-plugin` (ayri branch, mevcut yapi bozulmaz)
+
+Simdi: Kullanici Claude/Cursor'dan "baglan" dediginde portu elle degistirmek zorunda.
+Hedef: Plugin tum portlari (5454-5470) sessizce dinler, AI araci otomatik tespit edilir.
+
+**Akis:**
+```
+Plugin acilir → 5454-5470 tarar → bulunan bridge'lere baglanir
+→ Her bridge welcome mesajinda clientName gonderir (otomatik tespit)
+→ Plugin UI: ◀ 5454 (Cursor) ▶ veya ◀ 5456 (Claude) ▶
+→ Kullanici ok tuslariyla gecis yapar
+```
+
+**Teknik:**
+- Bridge: parent process'ten AI araci adi tespit edilir (Claude.app, Cursor.app, claude-code)
+- Plugin: coklu WebSocket baglantisi (tek yerine dizi)
+- UI: ok tuslariyla port/client gecisi, bagli olana etiket
+
+**Degisecek dosyalar:**
+- `src/core/plugin-bridge-server.ts` — welcome mesajina `clientName` ekle
+- `f-mcp-plugin/code.js` — coklu WebSocket baglanti yonetimi
+- `f-mcp-plugin/ui.html` — port gecis UI (ok tuslari + etiket)
+
+**Ek UI degisiklikleri:**
+- [ ] "Otomatik tara" butonu kaldir (gereksiz, coklu port bunu otomatik yapar)
+- [ ] Host alani: simdilik kalsin, ileride gelistirilecek
+
+- [ ] Bridge: clientName otomatik tespit (parent process)
+- [ ] Plugin: coklu port baglantisi (5454-5470 sessiz tarama)
+- [ ] Plugin UI: ◀ port (AI araci adi) ▶ gecis
+- [ ] "Otomatik tara" butonu kaldir
+- [ ] Test: Claude + Cursor ayni anda, plugin'de gecis
+
 ### P0 — Tasarim Olusturma Araclari (Node Creation)
 
 Simdi: Yeni frame/text/rectangle olusturmak icin `figma_execute` ile ham Plugin API kodu yazmak gerekiyor.
