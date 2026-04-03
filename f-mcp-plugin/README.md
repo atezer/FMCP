@@ -51,6 +51,14 @@ You can use MCP **without** launching Figma with a debug port. When the plugin r
 
 Port is configurable via `FIGMA_PLUGIN_BRIDGE_PORT` or config `local.pluginBridgePort` (default 5454).
 
+#### Figma Desktop, FigJam, and browser Figma — same port
+
+The bridge is **one** WebSocket server on **one** port (default **5454**). It supports **multiple simultaneous plugin connections** (`multiClient: true`): Desktop, FigJam, and Figma-in-browser can all connect to `ws://localhost:5454` at the same time. MCP tools route by `fileKey` / `figma_list_connected_files`.
+
+**Do not** assign different ports per app (e.g. 5454 Desktop, 5455 FigJam, 5456 browser) unless you run **separate** Node bridge processes with different `FIGMA_PLUGIN_BRIDGE_PORT` values. If only one MCP server is running on 5454, plugins pointed at 5455 or 5456 will show **no server**.
+
+**Recommended:** Use **localhost** and **5454** everywhere (or leave Advanced closed so auto-scan finds the live port).
+
 ### Plugin-only mode (recommended: no REST API, no token)
 
 You can run **without** the full MCP server (figma-mcp-bridge) and **without** any Figma REST API token:

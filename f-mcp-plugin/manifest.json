@@ -28,8 +28,10 @@
       "http://localhost:5467", "ws://localhost:5467",
       "http://localhost:5468", "ws://localhost:5468",
       "http://localhost:5469", "ws://localhost:5469",
-      "http://localhost:5470", "ws://localhost:5470"
+      "http://localhost:5470", "ws://localhost:5470",
+      "https://figma-mcp-bridge.workers.dev",
+      "wss://figma-mcp-bridge.workers.dev"
     ],
-    "reasoning": "Connect to local MCP server (no Figma debug port needed)"
+    "reasoning": "Local MCP WebSocket (5454–5470) and optional FMCP Cloud Mode (Workers); add your custom worker host here if different."
   }
 }

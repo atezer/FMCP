@@ -14,14 +14,19 @@ const logger = createChildLogger({ component: 'browser-manager' });
  */
 export interface Env {
 	BROWSER: Fetcher;
+	/** Branded types differ from wrangler-generated Env; use untyped namespace at runtime. */
 	MCP_OBJECT: DurableObjectNamespace;
+	/** Per pairing-code plugin WebSocket relay (Cloud Mode). */
+	FMCP_RELAY: DurableObjectNamespace;
 	OAUTH_TOKENS: KVNamespace; // KV for OAuth tokens (accessible across Durable Objects)
-	OAUTH_STATE: KVNamespace; // KV for OAuth state CSRF tokens (short-lived, 10 minute TTL)
+	OAUTH_STATE: KVNamespace; // KV for OAuth state CSRF tokens (short-lived, 10 minute TTL); also FMCP Cloud pairing/bind/rate-limit keys
 	FIGMA_ACCESS_TOKEN?: string; // Optional Figma API token for data extraction (deprecated, use OAuth)
 	FIGMA_OAUTH_CLIENT_ID?: string; // OAuth client ID for user authentication
 	FIGMA_OAUTH_CLIENT_SECRET?: string; // OAuth client secret for token exchange
 	/** Base URL for OAuth (e.g. https://your-worker.workers.dev). Required for auth_url in errors when no request context. */
 	MCP_OAUTH_BASE_URL?: string;
+	/** If set, POST /fmcp-cloud/pairing requires Authorization: Bearer <this token>. */
+	FMCP_PAIRING_TOKEN?: string;
 }
 
 /**
