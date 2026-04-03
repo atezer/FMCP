@@ -41,6 +41,7 @@ Plugin acilir → 5454-5470 tarar → bulunan bridge'lere baglanir
 - [x] Plugin UI: ◀ port (AI araci adi) ▶ gecis + (i) info paneli (v1.7.0)
 - [x] "Otomatik tara" butonu kaldirildi (v1.7.0)
 - [x] Test: Claude + Cursor + Claude Code ayni anda, plugin'de gecis (v1.7.0)
+- [ ] (i) info panelinde bagli dosyalari goster (Chrome'daki Figma/FigJam dosya adlari, bridge'den listConnectedFiles verisi ile)
 
 ### P0 — Tasarim Olusturma Araclari (Node Creation)
 
