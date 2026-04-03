@@ -1,6 +1,6 @@
 # Node.js Bağımlılığını Kaldırma — Analiz ve Plan
 
-> Durum: BEKLEMEDE — Değerlendirme aşamasında
+> Durum: BEKLEMEDE — Düşük öncelik. Claude Desktop ve Cursor Node.js taşımıyor, kullanıcının kurması gerekiyor ama tek seferlik basit kurulum.
 > İlgili: [FUTURE.md](../FUTURE.md)
 
 ## Sorun
