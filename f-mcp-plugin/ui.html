@@ -899,6 +899,11 @@
     var candidatePorts = [];
     var candidatePortIndex = 0;
 
+    // Multi-port connection tracking (Adım 2: tanım, henüz kullanılmaz)
+    // ConnectionState: { ws, port, clientName, status, handshakeTimer, keepaliveTimer }
+    var mcpConnections = new Map();
+    var mcpActivePort = null;
+
     /** Port alanı elle değiştirilince manualPortLocked=true olur; bu kilit 5454–5470 taramasını durdurur. */
     function unlockAutoPortScan() {
       manualPortLocked = false;
