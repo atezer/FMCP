@@ -1278,8 +1278,11 @@
                 status: 'ready'
               });
               mcpActivePort = mcpConnectedPort;
-              // Adım 4: Ana bağlantı hazır — diğer portları da tara
+              // Adım 4: Ana bağlantı hazır — diğer portları da tara (ilk + periyodik)
               setTimeout(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 500);
+              if (!extraPortScanTimer) {
+                extraPortScanTimer = setInterval(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 10000);
+              }
               return;
             }
             if (msg.type === 'tokenStatus') {
