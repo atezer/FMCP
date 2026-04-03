@@ -130,7 +130,9 @@
       "Bash(git hash-object:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(sed -i '' 's/\"\"1\\\\.6\\\\.3\"\"/\"\"1.6.4\"\"/g' package.json src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
+      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.3\\\\*\\\\*/\\\\*\\\\*1.6.4\\\\*\\\\*/g' FUTURE.md)"
     ],
     "deny": [],
     "ask": []
