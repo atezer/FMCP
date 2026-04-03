@@ -253,6 +253,8 @@
             <div>&#x25CF; Variable/token yonetimi</div>
             <div>&#x25CF; Bilesen arama, export (plugin)</div>
             <div>&#x25CF; Screenshot, frame olusturma</div>
+            <div id="connected-ports-info" style="margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);">Bagli portlar:</div>
+            <div id="connected-ports-list" style="color:rgba(255,255,255,0.35);"></div>
           </div>
           <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
             <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
@@ -673,9 +675,10 @@
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
           if (mcpConnectedPort) {
-            updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+            var _cn = mcpConnections.get(mcpConnectedPort);
+            updateStatus('Ready: ' + mcpConnectedPort + ' ' + (_cn ? _cn.clientName : ''), true, false);
           } else {
-            updateStatus('ready', true, false);
+            updateStatus('Ready', true, false);
           }
           console.log('[F-MCP ATezer Bridge] Active - ' + (msg.data.variables?.length || 0) + ' vars');
           break;
@@ -1258,8 +1261,8 @@
                 candidatePorts = [mcpConnectedPort];
                 candidatePortIndex = 0;
               }
-              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort);
-              updateStatus('ready (:' + mcpConnectedPort + ')', true, false);
+              console.log('[F-MCP ATezer Bridge] Handshake OK — bridge v' + (msg.bridgeVersion || '?') + ' on port ' + mcpConnectedPort + ' (' + (msg.clientName || 'MCP') + ')');
+              updateStatus('Ready: ' + mcpConnectedPort + ' ' + (msg.clientName || ''), true, false);
               // Resend restored token to bridge after handshake
               if (window.__pendingRestoreToken && currentWs && currentWs.readyState === 1) {
                 currentWs.send(JSON.stringify({ type: 'setToken', token: window.__pendingRestoreToken }));
@@ -1686,7 +1689,7 @@
         mcpConnectedPort = mcpActivePort;
       }
       updatePortLabel();
-      updateStatus('ready (:' + mcpActivePort + ' ' + (ports[nextIdx].clientName || '') + ')', true, false);
+      updateStatus('Ready: ' + mcpActivePort + ' ' + (ports[nextIdx].clientName || ''), true, false);
     }
 
     /**
@@ -1712,6 +1715,18 @@
         var name = active ? active.clientName : ports[0].clientName;
         label.textContent = (mcpActivePort || ports[0].port) + ' (' + name + ')';
         label.style.color = 'rgba(78,205,196,0.8)';
+      }
+      // Bağlı portlar listesini info panelinde güncelle
+      var portsList = document.getElementById('connected-ports-list');
+      if (portsList) {
+        if (ports.length === 0) {
+          portsList.innerHTML = '<div>—</div>';
+        } else {
+          portsList.innerHTML = ports.map(function(p) {
+            var isActive = p.port === mcpActivePort;
+            return '<div>' + (isActive ? '● ' : '○ ') + p.port + ' (' + p.clientName + ')' + (isActive ? ' ← aktif' : '') + '</div>';
+          }).join('');
+        }
       }
       requestUiResize();
     }
