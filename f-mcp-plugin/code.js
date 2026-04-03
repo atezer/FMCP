@@ -20,7 +20,7 @@ console.error = function() { _pushLog('error', arguments); _origError.apply(cons
 console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 
 // Start compact; UI asks for dynamic resize based on content.
-figma.showUI(__html__, { width: 280, height: 96, visible: true, themeColors: true });
+figma.showUI(__html__, { width: 200, height: 96, visible: true, themeColors: true });
 
 // Send file identity to UI so it can include it in the WebSocket handshake
 figma.ui.postMessage({
@@ -219,7 +219,7 @@ figma.ui.onmessage = async (msg) => {
     try {
       var requestedWidth = Number(msg.width);
       var requestedHeight = Number(msg.height);
-      var width = Math.max(220, Math.min(520, Math.round(isNaN(requestedWidth) ? 280 : requestedWidth)));
+      var width = Math.max(200, Math.min(520, Math.round(isNaN(requestedWidth) ? 200 : requestedWidth)));
       var height = Math.max(72, Math.min(700, Math.round(isNaN(requestedHeight) ? 96 : requestedHeight)));
       figma.ui.resize(width, height);
     } catch (error) {
