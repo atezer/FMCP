@@ -39,6 +39,8 @@ F-MCP Bridge'in çalışması için bilgisayarınızda Node.js olması gerekiyor
 
 **Kurulu değilse:** [nodejs.org](https://nodejs.org) → **LTS** butonuna tıklayın → indirin → kurun. Sadece "İleri"ye tıklayarak kurulum tamamlanır.
 
+> 💡 **İpucu:** AI aracınıza "Node.js'i kur" diyerek de kurulum yapabilirsiniz.
+
 ### 2. AI aracınıza config ekleyin
 
 Aşağıdaki JSON bloğunu AI aracınızın config dosyasına ekleyin. Bu, AI aracına "Figma ile nasıl konuşacağını" öğretir.
