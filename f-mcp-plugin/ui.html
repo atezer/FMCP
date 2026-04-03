@@ -1266,6 +1266,14 @@
               if (!window.__pendingRestoreToken && tokenInput && tokenInput.value && currentWs && currentWs.readyState === 1) {
                 currentWs.send(JSON.stringify({ type: 'setToken', token: tokenInput.value.trim() }));
               }
+              // Adım 3: Bağlantıyı connections Map'e kaydet (gözlemci, hiçbir fonksiyon okumaz)
+              mcpConnections.set(mcpConnectedPort, {
+                ws: currentWs,
+                port: mcpConnectedPort,
+                clientName: msg.clientName || 'MCP',
+                status: 'ready'
+              });
+              mcpActivePort = mcpConnectedPort;
               return;
             }
             if (msg.type === 'tokenStatus') {
@@ -1446,6 +1454,8 @@
         };
         mcpBridgeWs.onclose = function() {
           stopKeepAlive();
+          // Adım 3: Bağlantıyı Map'ten sil
+          if (mcpConnectedPort) mcpConnections.delete(mcpConnectedPort);
           if (mcpBridgeWs !== currentWs) return;
           mcpBridgeWs = null;
           mcpConnecting = false;
