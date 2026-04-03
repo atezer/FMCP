@@ -1707,7 +1707,7 @@
       } else {
         var active = ports.find(function(p) { return p.port === mcpActivePort; });
         var name = active ? active.clientName : ports[0].clientName;
-        label.textContent = (mcpActivePort || ports[0].port) + ' (' + name + ') [' + ports.length + ']';
+        label.textContent = (mcpActivePort || ports[0].port) + ' (' + name + ')';
         label.style.color = 'rgba(78,205,196,0.8)';
       }
       requestUiResize();
