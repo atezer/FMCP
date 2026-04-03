@@ -1274,6 +1274,8 @@
                 status: 'ready'
               });
               mcpActivePort = mcpConnectedPort;
+              // Adım 4: Ana bağlantı hazır — diğer portları da tara
+              setTimeout(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 500);
               return;
             }
             if (msg.type === 'tokenStatus') {
@@ -1476,6 +1478,176 @@
         mcpConnecting = false;
         updateStatus('no server', false, true);
         scheduleReconnect();
+      }
+    }
+
+    // ---- Adım 4: Ek portlara bağlantı (mevcut connectMcpBridge DEĞİŞMEZ) ----
+
+    var extraPortScanTimer = null;
+
+    /**
+     * Ek porta bağlan — connectMcpBridge'in basitleştirilmiş kopyası.
+     * Kendi ws/closure/timer'ına sahip. Mevcut mcpBridgeWs'e DOKUNMAZ.
+     * Başarısız olursa sessizce kapanır (retry yok).
+     */
+    function connectToExtraPort(port, host) {
+      if (mcpConnections.has(port)) return; // zaten bağlı
+      if (port === mcpConnectedPort) return; // ana bağlantı bunu yönetiyor
+      var url = 'ws://' + (host || getMcpBridgeHost()) + ':' + port;
+      var handshakeOk = false;
+      var handshakeTimer = null;
+      var keepaliveTimer = null;
+      try {
+        var ws = new WebSocket(url);
+
+        ws.onopen = function() {
+          ws.send(JSON.stringify({
+            type: 'ready',
+            fileKey: window.__figmaFileKey || null,
+            fileName: window.__figmaFileName || null
+          }));
+          handshakeTimer = setTimeout(function() {
+            if (!handshakeOk) { try { ws.close(); } catch(e) {} }
+          }, 3000);
+        };
+
+        ws.onmessage = function(event) {
+          try {
+            var msg = JSON.parse(event.data);
+
+            if (msg.type === 'welcome') {
+              handshakeOk = true;
+              if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
+              var connPort = msg.port || port;
+              mcpConnections.set(connPort, {
+                ws: ws,
+                port: connPort,
+                clientName: msg.clientName || 'MCP',
+                status: 'ready'
+              });
+              // Token gönder (per-connection)
+              var tokenInput = document.getElementById('figma-token');
+              if (tokenInput && tokenInput.value && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'setToken', token: tokenInput.value.trim() }));
+              }
+              // Keepalive başlat
+              keepaliveTimer = setInterval(function() {
+                if (ws.readyState === 1) {
+                  try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch(e) {}
+                }
+              }, 5000);
+              console.log('[F-MCP] Extra port connected: ' + connPort + ' (' + (msg.clientName || 'MCP') + ')');
+              return;
+            }
+
+            if (msg.type === 'ping') {
+              if (ws.readyState === 1) {
+                try { ws.send(JSON.stringify({ type: 'pong' })); } catch(e) {}
+              }
+              return;
+            }
+
+            if (msg.type === 'tokenStatus') return; // UI güncelleme sadece ana bağlantıda
+
+            // Request handler — wsRef olarak BU bağlantının ws'ini kullan
+            if (!msg.id || !msg.method) return;
+            var id = msg.id;
+            var method = msg.method;
+            var params = msg.params || {};
+            // run() fonksiyonu ana onmessage ile AYNI — window.* fonksiyonlarını çağırır
+            var run = function() {
+              if (method === 'getVariablesFromPluginUI') return window.refreshVariables().then(function(r) { if (r && r.success === false) return r; if (!window.__figmaVariablesData) return { success: false, error: 'Variables not loaded' }; return { success: true, variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections }; });
+              if (method === 'getComponentFromPluginUI' || method === 'getComponentByNodeId') return window.requestComponentData(params.nodeId).then(function(d) { return { success: true, component: d }; });
+              if (method === 'getVariables') { if (!window.__figmaVariablesReady || !window.__figmaVariablesData) return { success: false, error: 'Variables not loaded' }; return { success: true, timestamp: Date.now(), variables: window.__figmaVariablesData.variables, variableCollections: window.__figmaVariablesData.variableCollections }; }
+              if (method === 'executeCodeViaUI') return window.executeCode(params.code, params.timeout);
+              if (method === 'updateVariable') return window.updateVariable(params.variableId, params.modeId, params.value);
+              if (method === 'createVariable') return window.createVariable(params.name, params.collectionId, params.resolvedType, params.options);
+              if (method === 'createVariableCollection') return window.createVariableCollection(params.name, params.options);
+              if (method === 'deleteVariable') return window.deleteVariable(params.variableId);
+              if (method === 'deleteVariableCollection') return window.deleteVariableCollection(params.collectionId);
+              if (method === 'renameVariable') return window.renameVariable(params.variableId, params.newName);
+              if (method === 'addMode') return window.addMode(params.collectionId, params.modeName);
+              if (method === 'renameMode') return window.renameMode(params.collectionId, params.modeId, params.newName);
+              if (method === 'refreshVariables') return window.refreshVariables();
+              if (method === 'getLocalComponents') return window.getLocalComponents(params.currentPageOnly, params.limit);
+              if (method === 'searchLibraryAssets') return window.searchLibraryAssets(params.query, params.assetTypes, params.limit, params.currentPageOnly);
+              if (method === 'instantiateComponent') return window.instantiateComponent(params.componentKey, params.options);
+              if (method === 'setNodeDescription') return window.setNodeDescription(params.nodeId, params.description, params.descriptionMarkdown);
+              if (method === 'captureScreenshot') return window.captureScreenshot(params.nodeId, params.options);
+              if (method === 'setInstanceProperties') return window.setInstanceProperties(params.nodeId, params.properties);
+              if (method === 'getDocumentStructure') return window.getDocumentStructure(params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
+              if (method === 'getNodeContext') return window.getNodeContext(params.nodeId, params.depth, params.verbosity, params.includeLayout, params.includeVisual, params.includeTypography, params.includeCodeReady, params.outputHint);
+              if (method === 'getLocalStyles') return window.getLocalStyles(params.verbosity);
+              if (method === 'getConsoleLogs') return window.getConsoleLogs(params.limit);
+              if (method === 'clearConsole') return window.clearConsole();
+              if (method === 'batchCreateVariables') return window.batchCreateVariables(params.items);
+              if (method === 'batchUpdateVariables') return window.batchUpdateVariables(params.items);
+              if (method === 'setupDesignTokens') return window.setupDesignTokens(params);
+              if (method === 'arrangeComponentSet') return window.arrangeComponentSet(params.nodeIds);
+              if (method === 'addComponentProperty') return window.addComponentProperty(params.nodeId, params.propertyName, params.type, params.defaultValue, params.options);
+              if (method === 'editComponentProperty') return window.editComponentProperty(params.nodeId, params.propertyName, params.newValue);
+              if (method === 'deleteComponentProperty') return window.deleteComponentProperty(params.nodeId, params.propertyName);
+              if (method === 'resizeNode') return window.resizeNode(params.nodeId, params.width, params.height, params.withConstraints);
+              if (method === 'moveNode') return window.moveNode(params.nodeId, params.x, params.y);
+              if (method === 'setNodeFills') return window.setNodeFills(params.nodeId, params.fills);
+              if (method === 'setNodeStrokes') return window.setNodeStrokes(params.nodeId, params.strokes, params.strokeWeight);
+              if (method === 'setNodeOpacity') return window.setNodeOpacity(params.nodeId, params.opacity);
+              if (method === 'setNodeCornerRadius') return window.setNodeCornerRadius(params.nodeId, params.radius);
+              if (method === 'cloneNode') return window.cloneNode(params.nodeId);
+              if (method === 'deleteNode') return window.deleteNode(params.nodeId);
+              if (method === 'renameNode') return window.renameNode(params.nodeId, params.newName);
+              if (method === 'setTextContent') return window.setTextContent(params.nodeId, params.text, params.options);
+              if (method === 'createChildNode') return window.createChildNode(params.parentId, params.nodeType, params.properties);
+              return { success: false, error: 'Unknown method: ' + method };
+            };
+            // wsRef = BU bağlantının ws'i (closure ile güvenli)
+            var wsRef = ws;
+            Promise.resolve(run()).then(function(result) {
+              if (wsRef && wsRef.readyState === 1) {
+                try { wsRef.send(JSON.stringify({ id: id, result: result })); } catch (_) {}
+              }
+            }).catch(function(err) {
+              if (wsRef && wsRef.readyState === 1) {
+                try { wsRef.send(JSON.stringify({ id: id, error: err.message || String(err) })); } catch (_) {}
+              }
+            });
+          } catch (e) {
+            if (ws && ws.readyState === 1 && msg && msg.id) {
+              try { ws.send(JSON.stringify({ id: msg.id, error: e.message || String(e) })); } catch (_) {}
+            }
+          }
+        };
+
+        ws.onclose = function() {
+          if (keepaliveTimer) { clearInterval(keepaliveTimer); keepaliveTimer = null; }
+          if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
+          mcpConnections.delete(port);
+          console.log('[F-MCP] Extra port disconnected: ' + port);
+        };
+
+        ws.onerror = function() {
+          // Sessiz — ek port bulunamadı, normal durum
+        };
+
+        // 1.5s içinde bağlanamazsa kapat
+        setTimeout(function() {
+          if (ws.readyState === 0) { try { ws.close(); } catch(e) {} }
+        }, 1500);
+      } catch (e) {
+        // Bağlantı hatası — sessiz
+      }
+    }
+
+    /**
+     * Diğer portları tara — ana bağlantı başarılı olduktan sonra çağrılır.
+     * Mevcut bağlantı dışındaki portlara connectToExtraPort ile bağlanır.
+     */
+    function scanOtherPorts() {
+      var host = getMcpBridgeHost();
+      for (var p = MCP_PORT_MIN; p <= MCP_PORT_MAX; p++) {
+        if (p !== mcpConnectedPort && !mcpConnections.has(p)) {
+          connectToExtraPort(p, host);
+        }
       }
     }
 
