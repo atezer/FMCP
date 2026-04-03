@@ -61,8 +61,8 @@ Simdi: Sadece dosya-icindeki bilesenler aranabiliyor (`figma_search_components`)
 Hedef: Yayinlanmis kutuphane bilesen/variable arama + Code Connect eslemesi.
 
 - [x] `figma_search_assets` — takim kutuphane arama (plugin teamLibrary API, v1.6.0)
-- [ ] `figma_get_code_connect` — node icin kod eslesmesi
-- [ ] `figma_use` — yuksek seviyeli bilesen/token tuketim araci
+- [ ] `figma_get_code_connect` — node icin kod eslesmesi. Detayli plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
+- [ ] `figma_use` — yuksek seviyeli bilesen/token tuketim araci. Detayli plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
 
 ### P1 — Gorsel Export (SVG/PNG/Batch)
 
