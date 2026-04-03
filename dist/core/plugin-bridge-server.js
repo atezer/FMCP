@@ -40,30 +40,37 @@ export class PluginBridgeServer {
         this.auditLogPath = options?.auditLogPath;
         this.clientName = this.detectClientName();
     }
-    /** Detect AI client name by walking up the process tree. */
+    /** Detect AI client name by env vars and process tree. */
     detectClientName() {
+        // 1. Explicit env var (highest priority)
+        if (process.env.FIGMA_MCP_CLIENT_NAME)
+            return process.env.FIGMA_MCP_CLIENT_NAME;
+        // 2. Claude Code env detection
+        if (process.env.CLAUDECODE === "1")
+            return "Claude Code";
+        // 3. Cursor env detection
+        if (process.env.CURSOR_TRACE_ID || process.env.VSCODE_PID) {
+            if (process.env.CURSOR_TRACE_ID)
+                return "Cursor";
+        }
+        // 4. Walk up process tree (max 5 levels)
         try {
-            // Walk up process tree (max 5 levels) to find known AI client
             let pid = process.ppid;
             for (let i = 0; i < 5 && pid > 1; i++) {
                 const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
-                const comm = line.replace(/^\s*\d+\s+/, ""); // strip ppid prefix
+                const comm = line.replace(/^\s*\d+\s+/, "");
                 const ppidMatch = line.match(/^\s*(\d+)/);
-                if (/[Cc]laude/i.test(comm) && /[Cc]ode/i.test(comm))
-                    return "Claude Code";
-                if (/[Cc]laude/i.test(comm))
-                    return "Claude";
                 if (/[Cc]ursor/i.test(comm))
                     return "Cursor";
+                if (/[Cc]laude/i.test(comm))
+                    return "Claude";
                 if (/[Ww]indsurf/i.test(comm))
                     return "Windsurf";
                 pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
             }
-            return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
         }
-        catch {
-            return process.env.FIGMA_MCP_CLIENT_NAME || "MCP";
-        }
+        catch { /* ignore */ }
+        return "MCP";
     }
     start() {
         if (this.wss) {

@@ -63,7 +63,7 @@ export declare class PluginBridgeServer {
     constructor(port: number, options?: {
         auditLogPath?: string;
     });
-    /** Detect AI client name by walking up the process tree. */
+    /** Detect AI client name by env vars and process tree. */
     private detectClientName;
     private port;
     /** Last error message when bridge could not bind (port conflict, etc.) */
