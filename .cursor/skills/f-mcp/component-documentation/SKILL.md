@@ -11,127 +11,103 @@ metadata:
 
 # Component Documentation
 
-## ZORUNLU: Format Secimi
+## Workflow
 
-Bu skill tetiklendiginde, bilesen analizi yapildiktan sonra ve HERHANGI bir frame olusturmadan ONCE kullaniciya asagidaki secenekler sunulmali:
+1. **Standart kontrolu:** `reference_industry_design_standards.md` oku. "Son guncelleme" 1 yildan eskiyse kullaniciya guncelleme oner (kaynak listesi asagida).
+2. **Bilesen analizi:** figma_get_component_for_development + figma_get_design_context (depth=2, full) + figma_get_variables
+3. **KULLANICIYA FORMAT SEC:** Asagidaki 2 secenegi icerik ozetiyle sun. Onay olmadan frame OLUSTURMA.
+4. Secime gore frame olustur. Eski ayni isimli frame varsa sil.
+5. Height bug fix: `primaryAxisSizingMode` FIXED→AUTO toggle.
+6. Viewport'u frame'e odakla.
+
+---
+
+## Format Secenekleri
+
+### Standard (~2400px, 780px genis)
+
+| # | Bolum | Icerik |
+|---|-------|--------|
+| 1 | Intro | Baslik (26px Bold) + 2 satirlik tanitim |
+| 2 | Variantlar | Kart: gri bg, instance (130px fixed) + isim + aciklama (FILL) |
+| 3 | Kurallar | Do/Dont metin kutulari (yesil/kirmizi, 3+3 madde) + gorsel ornekler (gercek instance'larla dogru/yanlis cift kartlar) |
+| 4 | Standartlar | Kaynak chip'leri (M3, HIG, WCAG, shadcn) + info kutu (touch, kontrast, hiyerarsi, boyut, states) |
+| 5 | Props | Satir bazli: prop adi (mavi) + tip/default (gri) + aciklama (FILL) |
+| 6 | A11y | Info kutu: touch, focus, label, disabled |
+| 7 | Tokenlar | Renk + boyut token satirlari, dark mode notu |
+| 8 | Kod | Tek koyu blok: React, SwiftUI, Compose |
+
+### Compact (~1300px, 720px genis)
+
+| # | Bolum | Icerik |
+|---|-------|--------|
+| 1 | Baslik | 24px Bold + tek satirlik tanitim |
+| 2 | Variantlar | Satir bazli: instance + "Name — aciklama" |
+| 3 | Kurallar | Do/Dont minimal: 3+3 madde (gorsel ornek yok) |
+| 4 | Teknik | TEK KUTU: touch, kontrast, padding, states, props hepsi icinde |
+| 5 | Tokenlar | 2 satir, bullet-separated |
+| 6 | Kod | Tek koyu blok |
+
+---
+
+## Gorsel Do/Don't Ornekleri (Sadece Standard)
+
+Kurallar bolumune metin kutularindan SONRA eklenir. Her ornek cift kart (dogru + yanlis) yan yana:
 
 ```
-Dokumantasyon icin 2 format var:
-
-Standard (780px genis, ~1900px uzun)
-├── Bilesen tanitimi (2 cumle)
-├── Variant kartlari (gorsel instance + aciklama)
-├── Do / Don't kutulari (yan yana)
-├── Endustri standartlari (M3, HIG, WCAG chip'leri + ozet)
-├── Props tablosu
-├── Erisebilirlik ozeti
-├── Token haritasi
-└── Kod ornekleri (React, SwiftUI, Compose)
-
-Compact (720px genis, ~1300px uzun)
-├── Baslik + tek satirlik tanitim
-├── Variant satirlari (instance + tek cumle)
-├── Do / Don't (3+3 madde, minimal)
-├── Teknik ozet (tek kutu: touch, kontrast, padding, states)
-├── Token satirlari (2 satir)
-└── Kod blogu (tek blok, 3 platform)
-
-Hangisini istersin? Ikisini birden de yapabilirim.
+HORIZONTAL row (FILL):
+  ├── Dogru kart: yesil bg + border, gercek instance'lar, kisa aciklama
+  └── Yanlis kart: kirmizi bg + border, gercek instance'lar, kisa aciklama
 ```
 
-Kullanici secim yapana kadar frame OLUSTURULMAZ.
+Ornek ciftler (bilesen tipine gore adapte et):
+- Hiyerarsi dogru/yanlis: Primary+Secondary vs 2x Primary
+- Etiket dogru/yanlis: "Giris Yap" vs "Tikla"
+- Variant kullanimi dogru/yanlis: Primary+Outline+Ghost vs hepsi ayni
 
-## Ortak Kurallar (Her Iki Format)
+Her kartta:
+- Baslik: 13px Bold, yesil/kirmizi
+- Instance satiri: gercek component instance'lari yan yana
+- Aciklama: 12px, tek satir
+
+---
+
+## Ortak Kurallar
 
 ### Dil
-- Sade Turkce, junior-friendly
-- Teknik terim kullanirsan yanina aciklama ekle
+- Sade, junior-friendly — teknik terimlerin yanina aciklama ekle
+- Her kural 1 satir — neden gerekliyse parantez icinde
 - "CTA" degil "ana aksiyon butonu"
-- Her kural 1 satir — neden gerekliyse parantez icinde ekle
 
 ### Layout
 - Ana frame: VERTICAL, genislik FIXED, yukseklik AUTO
-- Tum child'lar: `layoutSizingHorizontal = "FILL"`
-- Tum metinler: `textAutoResize = "HEIGHT"` — ASLA sabit yukseklik
-- Do/Dont: HORIZONTAL parent, iki FILL child — ASLA sabit genislik
-- Frame olusturduktan sonra `primaryAxisSizingMode` FIXED→AUTO toggle yap (height bug fix)
+- Child'lar: `layoutSizingHorizontal = "FILL"`
+- Metinler: `textAutoResize = "HEIGHT"` — ASLA sabit yukseklik
+- Do/Dont: HORIZONTAL parent, FILL child'lar — ASLA sabit genislik
 - Font: Inter (Regular, Medium, Semi Bold, Bold)
 
-### Endustri Standartlari Referansi
-- Hafiza dosyasi: `reference_industry_design_standards.md`
+### Standart Referansi
+- Hafiza: `reference_industry_design_standards.md` (14 bolum)
 - Bilesene uygun bolumler secilir, tamami yazilmaz
 - Chip'lerle kaynak goster: M3, HIG, WCAG 2.2, shadcn/ui
 
-## Standard Format Detayi
+---
 
-### Frame: `Docs / <COMPONENT_NAME>`
-- Genislik: 780px, padding: 36px, item spacing: 32px
-- Corner radius: 12, stroke: 1px gray
+## Standart Guncelleme Kaynaklari (Yillik)
 
-### Bolumler (8 adet)
-
-1. **Intro** — Baslik (26px Bold) + 2 satirlik aciklama (15px)
-2. **Variantlar** — Her variant icin kart: gri bg, radius 10, instance (130px fixed) + isim+aciklama (FILL)
-3. **Kurallar** — Do/Dont yan yana kutular: yesil/kirmizi border 2px, 3 madde her biri
-4. **Standartlar** — Kaynak chip'leri + info kutu (5-6 satir: touch, kontrast, hiyerarsi, boyut, states)
-5. **Props** — Satir bazli: prop adi (mavi) + tipi/default (gri) + aciklama (FILL)
-6. **A11y** — Tek info kutu: 4 satir (touch, focus, label, disabled)
-7. **Tokenlar** — 3 satir: renk tokenlari, boyut tokenlari (bullet-separated)
-8. **Kod** — Tek koyu blok, 3 platform (React, SwiftUI, Compose)
-
-### Hedef Yukseklik: ~1900px
-
-## Compact Format Detayi
-
-### Frame: `Docs / <COMPONENT_NAME> — Compact`
-- Genislik: 720px, padding: 32px, item spacing: 24px
-
-### Bolumler (6 adet, birlesmis)
-
-1. **Baslik** — 24px Bold + tek satirlik aciklama
-2. **Variantlar** — Satir bazli: instance + "Name — aciklama" (divider yok, sade)
-3. **Kurallar** — Do/Dont minimal: 3+3 madde, kucuk kutular
-4. **Teknik** — TEK KUTU: touch, kontrast, padding, radius, font, states, props — hepsi icinde
-5. **Tokenlar** — 2 satir bullet-separated
-6. **Kod** — Tek koyu blok
-
-### Hedef Yukseklik: ~1300px
-
-## Workflow
-
-1. **ENDUSTRI STANDARTLARINI GUNCELLE** (her calistirmada):
-   - `reference_industry_design_standards.md` oku
-   - Icerigindeki "Son guncelleme" tarihini kontrol et
-   - 1 yildan eskiyse kullaniciya uyar:
-     "Endustri standartlari referansi [tarih]'den beri guncellenmedi. Guncellemek ister misin?
-      Kontrol edilecek kaynaklar: shadcn.com, tailwindcss.com, m3.material.io, radix-ui.com, lucide.dev,
-      developer.apple.com/design, w3.org/TR/WCAG22, designtokens.org"
-   - Kullanici onaylarsa: kaynaklari tara, hafiza dosyasini guncelle, tarihi yenile
-   - Onaylamazsa: mevcut bilgilerle devam et
-2. Bilesen analizi yap (figma_get_component_for_development + figma_get_design_context + figma_get_variables)
-3. **KULLANICIYA FORMAT SECENEKLERINI SUN** — icerik ozetleriyle birlikte
-4. Secime gore frame(ler) olustur
-5. Eski ayni isimli frame varsa sil
-6. Yeni frame'i uygun pozisyona yerlestir
-7. Height bug fix: primaryAxisSizingMode FIXED→AUTO toggle
-8. Viewport'u frame'e odakla
-
-## Endustri Standartlari Guncelleme Kaynaklari
-
-Bu skill her tetiklendiginde `reference_industry_design_standards.md` hafiza dosyasindaki bilgiler kullanilir.
-Asagidaki kaynaklar yillik (veya major versiyon degisikliklerinde) kontrol edilmeli:
-
-| Kaynak | URL | Ne Kontrol Edilir |
-|--------|-----|-------------------|
-| shadcn/ui | shadcn.com | Yeni bilesenler, variant degisiklikleri, tema tokenlari |
-| Tailwind CSS | tailwindcss.com | Varsayilan degerler, yeni ozellikler (v4 breaking changes) |
+| Kaynak | URL | Kontrol |
+|--------|-----|---------|
+| shadcn/ui | shadcn.com | Yeni bilesenler, tema tokenlari |
+| Tailwind CSS | tailwindcss.com | Varsayilan degerler, breaking changes |
 | Radix UI | radix-ui.com | Yeni primitive'ler, a11y kaliplari |
-| Lucide Icons | lucide.dev | Grid/stroke degisiklikleri, yeni ikonlar |
-| Material Design | m3.material.io | M3 Expressive, yeni bilesen specleri |
-| Apple HIG | developer.apple.com/design | Liquid Glass, yeni platform kurallari |
-| WCAG | w3.org/TR/WCAG22 | Yeni SC'ler, hedef boyut guncellemeleri |
-| W3C Design Tokens | designtokens.org | DTCG format degisiklikleri, yeni tipler |
-| Carbon DS | carbondesignsystem.com | Bilesen checklist guncellemeleri |
+| Lucide Icons | lucide.dev | Grid/stroke degisiklikleri |
+| Material Design 3 | m3.material.io | M3 Expressive, bilesen specleri |
+| Apple HIG | developer.apple.com/design | Liquid Glass, platform kurallari |
+| WCAG | w3.org/TR/WCAG22 | Yeni SC'ler, hedef boyut |
+| W3C Design Tokens | designtokens.org | DTCG format, yeni tipler |
+| Carbon DS | carbondesignsystem.com | Bilesen checklist |
+
+---
 
 ## Skill Koordinasyonu
 
