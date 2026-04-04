@@ -6,9 +6,9 @@
  * (e.g. Figma Desktop + FigJam browser + Figma browser — all on one port).
  * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  *
- * Port strategy: no auto-scanning. If the configured port is busy, the server
- * probes it to distinguish a live F-MCP instance from a stale/dead process.
- * Stale ports get one automatic retry after a short delay.
+ * Port strategy: graceful takeover. If the configured port is busy with another
+ * F-MCP instance, the server sends a /shutdown request to the old bridge and
+ * retries after it exits. Stale ports get one automatic retry after a short delay.
  */
 import { type WebSocket } from "ws";
 export interface BridgeRequest {
@@ -96,6 +96,11 @@ export declare class PluginBridgeServer {
      * Returns "fmcp" | "other" | "dead".
      */
     private probePort;
+    /**
+     * Send a POST /shutdown to an old F-MCP bridge on the given port,
+     * wait for it to exit, then retry binding to the same port.
+     */
+    private requestShutdownAndRetry;
     private tryListenFixed;
     /**
      * Send a request to a plugin and wait for the response.

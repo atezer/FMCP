@@ -67,6 +67,9 @@ export class PluginBridgeConnector {
             params.limit = opts.limit;
         return this.bridge.request("getLocalComponents", params, this.fileKey);
     }
+    async batchExportNodes(params) {
+        return this.bridge.request("batchExportNodes", params, this.fileKey);
+    }
     async instantiateComponent(componentKey, options) {
         return this.bridge.request("instantiateComponent", { componentKey, options }, this.fileKey);
     }
@@ -169,11 +172,11 @@ export class PluginBridgeConnector {
     }
     async batchCreateVariables(items) {
         const res = await this.bridge.request("batchCreateVariables", { items }, this.fileKey);
-        return res ?? { created: [], failed: [] };
+        return (res ?? { created: [], failed: [] });
     }
     async batchUpdateVariables(items) {
         const res = await this.bridge.request("batchUpdateVariables", { items }, this.fileKey);
-        return res ?? { updated: [], failed: [] };
+        return (res ?? { updated: [], failed: [] });
     }
     async setupDesignTokens(payload) {
         const tokens = Array.isArray(payload.tokens)

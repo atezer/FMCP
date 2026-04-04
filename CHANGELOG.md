@@ -12,6 +12,18 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.4] - 2026-04-04
+
+### Graceful Port Takeover — Oturum Gecisi Sorunu Cozuldu
+
+**Bridge (plugin-bridge-server.ts):**
+- **Graceful shutdown endpoint (`POST /shutdown`):** HTTP server'a `/shutdown` endpoint'i eklendi. Yeni bridge instance'i eskisine shutdown istegi gonderir, eski bridge gracefully kapanir.
+- **`requestShutdownAndRetry()` metodu (YENi):** Port mesgulse ve baska bir F-MCP bridge tespit edilirse, otomatik olarak shutdown istegi gonderir + ayni portu devralir. Plugin port degisikligi gerektirmez.
+- **Port stratejisi guncellendi:** "no auto-scanning" → "graceful takeover". Eski oturum kapandiginda yeni oturum ayni portu (varsayilan 5454) devralir, plugin otomatik baglanir.
+- **Eski davranis (kaldirildi):** Port mesgulse hata verip kullanicidan `figma_set_port` cagrisi bekliyordu. Artik otomatik devralma yapiyor.
+
+**Etki:** Claude Code / Cursor'da yeni oturum baslatildiginda eski oturumun bridge'i portu tutuyordu. Kullanicinin plugin'de portu elle degistirmesi gerekiyordu. Artik yeni bridge eskisini otomatik kapatip portu devralir.
+
 ## [1.7.2] - 2026-04-04
 
 ### Kapsamli Entegrasyon Testi + 11 Skill Guncelleme + Code-Only Props

@@ -75,7 +75,7 @@ export class StyleValueResolver {
             if (modes.length === 0) {
                 return null;
             }
-            const defaultMode = modes[0]; // TODO: Support mode selection
+            const defaultMode = modes[0]; // Uses first mode; multi-mode selection requires page-level mode context
             const value = variable.valuesByMode[defaultMode];
             // Check if this is an alias (reference to another variable)
             if (typeof value === "object" && value.type === "VARIABLE_ALIAS") {
@@ -258,8 +258,8 @@ export class StyleValueResolver {
      * This would be called via the Figma API client
      */
     async getStyleData(style) {
-        // TODO: Implement actual Figma API call
-        // For now, return the style object itself
+        // Style data comes from plugin bridge (getLocalStyles), not REST API
+        // Return the style object as-is — full detail already available
         return style;
     }
     /**
