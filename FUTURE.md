@@ -254,6 +254,22 @@ Hedef: Figma Dev Mode'da dogrudan gorunur gelistirici notlari, olcumleri ve kod 
 - Annotations: Plugin API ile node uzerine teknik not eklenir
 - Dev Mode CSS/iOS/Android code snippets: figma_execute ile okunabilir
 
+### P2 — Component Documentation Skill Testi (Diger Bilesenler)
+
+`component-documentation` skill'i su an sadece Button bileseninde test edildi.
+Diger bilesen tiplerinde de test edilerek skill template'i genellestirilmeli.
+
+- [ ] Input/TextField bileseni — form elemani, farkli state'ler (error, focused, disabled, helper text)
+- [ ] Card bileseni — container/organism seviyesi, slot yapisi, responsive davranis
+- [ ] Modal/Dialog bileseni — overlay, focus trap, klavye yonetimi, a11y gereksinimleri
+- [ ] Navigation/Tab bileseni — aktif/pasif state, responsive collapse, icon+label
+
+Her testte kontrol edilecekler:
+- Skill'in 2 format secenegi (Standard/Compact) dogru calisiyor mu?
+- Variant sayisi degisken olanlarda kart layoutu bozuluyor mu?
+- Token referanslari bilesen bazli dogru cekilebiliyor mu?
+- Endustri standartlari bilesen tipine gore dogru adapte ediliyor mu?
+
 ### P3 — Yeni Skiller
 
 - [ ] `design-to-code-generator` — tasarim → React/Vue/Svelte kod uretimi
