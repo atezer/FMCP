@@ -105,7 +105,7 @@ return {
   boundVariableCount,
   unboundFillCount: unboundCount,
   uniqueComponents: [...uniqueComponents.values()],
-  dsComplianceRate: Math.round((instances.length / Math.max(frames.length, 1)) * 100)
+  dsComplianceRate: Math.round(((instances.length + boundVariableCount) / Math.max(allNodes.length, 1)) * 100)
 };
 ```
 

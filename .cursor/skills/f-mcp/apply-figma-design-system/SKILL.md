@@ -30,7 +30,7 @@ Her bölüm tam olarak biri:
 | Niyet | F-MCP Bridge |
 |--------|----------------|
 | Özet / sayfa yapısı | `figma_get_file_data`, `figma_get_design_system_summary` |
-| Görsel | `figma_capture_screenshot`, `figma_take_screenshot` |
+| Görsel | `figma_capture_screenshot` |
 | Yapı envanteri | `figma_get_file_data`, `figma_get_design_context`, `figma_execute` (instance → mainComponent keşfi) |
 | Aday bileşen | Önce aynı dosyadaki referans ekranlar; sonra `figma_search_components` |
 | Token | `figma_get_variables`, `figma_get_styles` |

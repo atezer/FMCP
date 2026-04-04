@@ -181,11 +181,124 @@ Mevcut bir ekranı güncellerken:
 - `figma_search_components`: varsayılan `currentPageOnly=true`; `false` yalnızca gerektiğinde (timeout riski)
 - Her `figma_execute` çağrısı küçük ve odaklı olmalı — 50+ satır kod riski yüksek
 
+## Responsive Boyut Presetleri (ZORUNLU)
+
+Her ekran **minimum 3 boyutta** oluşturulmalı:
+
+| Cihaz | Genişlik | Yükseklik | Padding | Notlar |
+|-------|---------|-----------|---------|--------|
+| Mobile | 390px | HUG | 24px | iPhone 14 referans. Touch target min 44px |
+| Tablet | 768px | HUG | 120px | iPad referans. İçerik max 528px genişlik |
+| Web | 1440px | HUG | 480px | Desktop referans. İçerik max 480px genişlik |
+
+**Uygulama (3 adım):**
+
+**Adım 1: Breakpoint token'ları oluştur (bir kerelik)**
+
+Primitives collection'a ekran boyut token'ları ekle:
+```
+screen/mobile-width: 390    screen/tablet-width: 768    screen/web-width: 1440
+screen/tablet-padding: 120  screen/web-padding: 480
+screen/top-padding-mobile: 80  screen/top-padding-tablet: 160
+screen/bottom-padding: 40
+```
+
+Semantic collection'a alias'lar ekle:
+```
+layout/screen-mobile-width → screen/mobile-width
+layout/screen-tablet-width → screen/tablet-width
+layout/screen-web-width → screen/web-width
+layout/screen-tablet-padding → screen/tablet-padding
+layout/screen-web-padding → screen/web-padding
+```
+
+**Adım 2: Ekranları oluştur ve klonla**
+
+```js
+// figma_execute — Mobile (master)
+const mobile = figma.createFrame();
+mobile.name = "Screen / Mobile";
+mobile.layoutMode = "VERTICAL";
+// ... içerik ekle ...
+```
+
+Tablet ve Web klonla → resize et.
+
+**Adım 3: Ekran boyutlarını token'lara bağla (ZORUNLU)**
+
+Her ekranın width ve padding'i variable'a bağlanmalı. Hard-coded değer KABUL EDİLMEZ:
+
+```js
+// figma_execute — Token binding (her ekran için)
+const semVars = {}; // semantic variable'ları yükle
+
+// Mobile
+const mobile = await figma.getNodeByIdAsync("<MOBILE_ID>");
+mobile.setBoundVariable("width", semVars["layout/screen-mobile-width"]);
+mobile.setBoundVariable("paddingLeft", semVars["layout/page-padding"]);
+mobile.setBoundVariable("paddingRight", semVars["layout/page-padding"]);
+mobile.setBoundVariable("paddingTop", semVars["layout/screen-top-padding-mobile"]);
+mobile.setBoundVariable("paddingBottom", semVars["layout/screen-bottom-padding"]);
+
+// Tablet
+const tablet = await figma.getNodeByIdAsync("<TABLET_ID>");
+tablet.setBoundVariable("width", semVars["layout/screen-tablet-width"]);
+tablet.setBoundVariable("paddingLeft", semVars["layout/screen-tablet-padding"]);
+tablet.setBoundVariable("paddingRight", semVars["layout/screen-tablet-padding"]);
+tablet.setBoundVariable("paddingTop", semVars["layout/screen-top-padding-tablet"]);
+
+// Web
+const web = await figma.getNodeByIdAsync("<WEB_ID>");
+web.setBoundVariable("width", semVars["layout/screen-web-width"]);
+web.setBoundVariable("paddingLeft", semVars["layout/screen-web-padding"]);
+web.setBoundVariable("paddingRight", semVars["layout/screen-web-padding"]);
+```
+
+**Min Height bağlama (ZORUNLU):**
+
+Ekranın minimum yüksekliği de token'a bağlanmalı. Figma'da "Fixed height (900)" yerine "Add min height..." → "Apply variable..." kullanılmalı:
+
+```js
+// Her ekran için minHeight bağla
+mobile.setBoundVariable("minHeight", primVars["screen/mobile-height"]); // 844
+tablet.setBoundVariable("minHeight", primVars["screen/tablet-height"]); // 1024
+web.setBoundVariable("minHeight", primVars["screen/web-height"]);       // 900
+```
+
+**Kural:** Figma'da tüm boyut değerleri (width, minHeight, padding) "Apply variable..." ile token bağlı görünmeli. Hard-coded değer KABUL EDİLMEZ. Bu, breakpoint değiştiğinde tüm ekranların otomatik güncellenmesini sağlar.
+
+## Dark Mode (ZORUNLU)
+
+Her ekran **Light ve Dark** tema olarak oluşturulmalı.
+
+### Free Plan (1 mode sınırı):
+Ayrı "Primitives Dark" collection oluştur, aynı token isimleriyle dark değerler ver. Ekranı klonla ve dark renkleri uygula:
+
+```js
+// figma_execute — Dark mode uygulama
+const lightScreen = await figma.getNodeByIdAsync("<LIGHT_NODE_ID>");
+const darkScreen = lightScreen.clone();
+darkScreen.name = lightScreen.name + " / Dark";
+// Arka planı dark yapSet background and traverse children to apply dark palette
+```
+
+### Professional+ Plan (çoklu mode):
+Semantic collection'a "Dark" mode ekle, alias'ları dark primitive'lere yönlendir. Figma'nın native mode switching'i kullanılır.
+
+### Toplam Ekran Matrisi:
+```
+Mobile Light | Mobile Dark
+Tablet Light | Tablet Dark
+Web Light    | Web Dark
+= 6 ekran minimum
+```
+
 ## Çıktı Formatı
 
-- Oluşturulan ekranın Figma node ID'si
+- Oluşturulan tüm ekranların Figma node ID'leri (6 ekran)
 - DS uyum özeti (kaç instance, kaç variable bağlı)
-- Screenshot
+- Responsive doğrulama: her boyutta screenshot
+- Dark/Light tema screenshot karşılaştırma
 
 ## Evolution Triggers
 

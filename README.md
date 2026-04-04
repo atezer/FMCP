@@ -197,7 +197,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Güncel sürüm | **1.7.0** ([package.json](package.json)) |
+| Güncel sürüm | **1.7.2** ([package.json](package.json)) |
 | Değişiklik geçmişi | [CHANGELOG.md](CHANGELOG.md) |
 | GitHub sürümleri | [Releases](https://github.com/atezer/FMCP/releases) |
 | npm paketi | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
@@ -221,7 +221,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
 | [USE_CASES.md](docs/USE_CASES.md) | Örnek kullanım senaryoları |
 | [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | Güvenlik denetimi |
-| [TEST_REPORT.md](docs/TEST_REPORT.md) | 46 araç test raporu ve plan bazlı yetenek matrisi |
+| [TEST_REPORT.md](docs/TEST_REPORT.md) | Kapsamli entegrasyon testi: 46 arac, 17 skill, 120 token, 6 ekran |
 
 ## Güvenlik ve gizlilik
 

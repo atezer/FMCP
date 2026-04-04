@@ -58,7 +58,38 @@ Seçilen bulgu çözülene, **blocked** veya **needs-follow-up** raporlanana kad
 4. **Minimal kanıt:** `figma_capture_screenshot`; yapı için `figma_get_design_context` veya `figma_get_file_data` (dar kapsam); token bulgusuysa `figma_get_variables` / `figma_get_styles`; gerekirse `figma_search_components`.
 5. **Remediasyon modu (tek seç):** `swap-instance` \| `compose-from-primitives` \| `bind-tokens` \| `align-variant` \| `blocked`. En küçük yeterli değişiklik.
 6. **Yedek:** Yıkıcı düzenlemeden önce yalnızca etkilenen alt ağacı veya minimal üst section’ı çoğalt; net isimlendir (`Backup - Fix finding …`). Mümkünse ayrı `figma_execute` çağrısı; dönen node id’yi not et.
-7. **Uygula:** `figma_execute` ile adım adım; mümkünse `swapComponent` benzeri koruyucu yollar; karşılaştırmalı rebuild gerekiyorsa orijinalin yanında inşa et.
+7. **Uygula:** `figma_execute` ile adım adım. Remediasyon modu örnekleri:
+
+   **swap-instance** (mevcut node'u kütüphane bileşeniyle değiştir):
+   ```js
+   const node = await figma.getNodeByIdAsync("<NODE_ID>");
+   const comp = await figma.importComponentByKeyAsync("<COMPONENT_KEY>");
+   // veya local: figma.root.findOne(n => n.type === "COMPONENT" && n.name === "<NAME>");
+   const instance = comp.createInstance();
+   instance.x = node.x; instance.y = node.y;
+   instance.resize(node.width, node.height);
+   if (node.parent) node.parent.insertChild(node.parent.children.indexOf(node), instance);
+   node.remove();
+   return { swapped: instance.id, replacedName: node.name };
+   ```
+
+   **bind-tokens** (hard-coded değeri variable'a bağla):
+   ```js
+   const node = await figma.getNodeByIdAsync("<NODE_ID>");
+   const variable = await figma.variables.getVariableByIdAsync("<VAR_ID>");
+   const fills = [...node.fills];
+   const boundPaint = figma.variables.setBoundVariableForPaint(fills[0], "color", variable);
+   node.fills = [boundPaint];
+   return { bound: node.name, variable: variable.name };
+   ```
+
+   **align-variant** (yanlış variant'ı doğrusuyla değiştir):
+   ```js
+   const instance = await figma.getNodeByIdAsync("<INSTANCE_ID>");
+   instance.setProperties({ "Variant": "Primary" });
+   return { aligned: instance.id, newVariant: "Primary" };
+   ```
+
 8. **Doğrula:** Bulgunun özellikle çözüldüğünü screenshot ve yapı ile kanıtla; global pattern dokunduysa genişlet.
 9. **İsteğe bağlı:** Regresyon için **audit-figma-design-system** ile aynı kapsamı yeniden çalıştır (özellikle çok adımlı fix sonrası).
 

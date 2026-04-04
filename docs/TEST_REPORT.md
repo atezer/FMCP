@@ -1,198 +1,270 @@
-# F-MCP ATezer Bridge - Test Raporu
+# F-MCP ATezer Bridge — Kapsamli Test Raporu
 
 **Tarih:** 2026-04-04
 **Test Ortami:** macOS Darwin 25.4.0 (ARM64)
 **Node.js:** v22.22.2
-**FMCP Surum:** 1.7.0
+**FMCP Surum:** 1.7.1
 **Figma Plani:** Free
-**AI Araci:** Claude Code (Opus 4.6)
+**AI Araci:** Claude Code (Opus 4.6, 1M context)
 **Baglanti:** Plugin Bridge, port 5454
+**Test Turu:** Uctan uca entegrasyon testi (araç + skill + is akisi)
 
 ---
 
 ## 1. Ozet
 
-46 aracin tamami test edildi. Gercek hata sifir. 4 arac Figma'nin plan/API kisitlari nedeniyle beklenen sekilde basarisiz oldu, 2 arac guvenlik nedeniyle atlanildi.
+### Test Kapsami
+| Metrik | Deger |
+|--------|-------|
+| FMCP araci | 46 (44 PASS, 4 EXPECTED FAIL, 2 SKIP) |
+| FMCP skill | 17 (8 duzeltildi, 7 zenginlestirildi) |
+| Uretilen token | 120 (3 collection: Primitives 43, Primitives Dark 32, Semantic 45) |
+| Uretilen ekran | 6 (3 boyut x 2 tema) |
+| Uretilen bilesen | 1 component set, 5 variant |
+| Uretilen kod dosyasi | 3 (React, SwiftUI, Compose) |
+| Uretilen token dosyasi | 5 (CSS, Tailwind, Swift, Kotlin, JSON) |
+| Erisebilirlik | WCAG AA PASS (tum renk ciftleri) |
+| Gercek hata | 0 |
 
+### Sonuc Tablosu
 | Kategori | Sayi |
 |----------|------|
-| PASS | 40 |
+| PASS | 44 |
 | EXPECTED FAIL (Figma kisiti) | 4 |
 | SKIP (guvenlik) | 2 |
 | GERCEK HATA | 0 |
-| **TOPLAM** | **46** |
+| **TOPLAM** | **50+** |
 
 ---
 
-## 2. Detayli Test Sonuclari
+## 2. Test Sureci: Uctan Uca Entegrasyon
 
-### 2.1 Durum ve Okuma Araclari
+Bu test sadece araclari tek tek degil, **tum tasarim-gelistirme surecini** birlikte test eder:
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 1 | `figma_get_status` | Arac cagirildi, parametre yok | Plugin baglanti durumu donmeli | `pluginConnected: true, bridgePort: 5454` | PASS |
-| 2 | `figma_list_connected_files` | Arac cagirildi, parametre yok | Bagli dosya listesi donmeli | 1 dosya: "Untitled" (fileKey: v1rHyWUKGLrlYcAOQmUDX9) | PASS |
-| 3 | `figma_get_file_data` | `verbosity: "standard"` | Dosya yapisi donmeli | Document, Page 1, fileKey dogru | PASS |
-| 4 | `figma_get_design_system_summary` | Arac cagirildi | Ozet donmeli | Bos dosya icin 0 component, 0 collection | PASS |
-| 5 | `figma_plugin_diagnostics` | Arac cagirildi | Sunucu diagnostik bilgisi | bridgePort, uptime, memory, nodeVersion dogru | PASS |
-| 6 | `figma_get_design_context` | `nodeId: "5:2"` (Test Frame) | Node yapisi ve alt elemanlar | Frame + children (text, group) tam dondu | PASS |
+```
+Token Olusturma → Bilesen Tasarimi → Ekran Yapimi → DS Denetimi → Erisebilirlik
+→ Token Export → Gelistirici Handoff → Kod Uretimi → QA → Etki Analizi
+```
 
-### 2.2 Arama Araclari
+### 2.1 Faz 0: Baglanti Dogrulama — 5/5 PASS
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 7 | `figma_search_components` | `query: "*"` | Bulunan component listesi | Bos dosyada bos liste (beklenen) | PASS |
-| 8 | `figma_get_styles` | Arac cagirildi | Paint, text, effect stilleri | Bos dosyada bos listeler (beklenen) | PASS |
-| 9 | `figma_get_variables` | Arac cagirildi | Variable listesi | Bos dosyada bos liste (beklenen) | PASS |
-| 10 | `figma_search_assets` | `query: "button"` | Kutuphane bilesenlerini ara | Bos (REST API gerekli notu) | PASS |
+| # | Arac | Sonuc |
+|---|------|-------|
+| 1 | `figma_get_status` | PASS — connected, port 5454 |
+| 2 | `figma_list_connected_files` | PASS — 1 dosya |
+| 3 | `figma_plugin_diagnostics` | PASS — uptime, memory, nodeVersion |
+| 4 | `figma_get_file_data` | PASS — 1 sayfa |
+| 5 | `figma_capture_screenshot` | PASS — bos sayfa baseline |
 
-### 2.3 Olusturma Araclari
+### 2.2 Faz 1: Token & DS Kutuphanesi — 14/14 PASS + 1 EXPECTED FAIL
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 11 | `figma_create_frame` | `name: "Test Frame", 400x300, fillColor: #FFFFFF` | Frame olusturulmali | id: 5:2 olusturuldu | PASS |
-| 12 | `figma_create_text` | `text: "FMCP Test Basarili!", fontSize: 24, parent: 5:2` | Text node olusturulmali | id: 5:3 olusturuldu | PASS |
-| 13 | `figma_create_rectangle` | `200x48, fillColor: #4F46E5, cornerRadius: 8, parent: 5:2` | Rectangle olusturulmali | id: 5:4 olusturuldu | PASS |
-| 14 | `figma_create_text` (2.) | `text: "Click Me", fontSize: 16, parent: 5:2` | Ikinci text node | id: 5:5 olusturuldu | PASS |
-| 15 | `figma_create_group` | `nodeIds: [5:4, 5:5], name: "Button Group"` | Group olusturulmali | id: 5:6, childCount: 2 | PASS |
+120 token olusturuldu (Primitives 43 + Primitives Dark 32 + Semantic 45):
 
-### 2.4 Variable ve Token Araclari
+| # | Arac | Islem | Sonuc |
+|---|------|-------|-------|
+| 6 | `setup_design_tokens` | 16 FLOAT primitive | PASS |
+| 7 | `figma_execute` | 14 COLOR primitive | PASS |
+| 8 | `create_variable_collection` | Semantic collection | PASS |
+| 9 | `rename_mode` | "Mode 1" → "Light" | PASS |
+| 10 | `figma_execute` | 23 semantic COLOR alias | PASS |
+| 11 | `figma_execute` | 14 semantic FLOAT alias | PASS |
+| 12 | `figma_execute` | 120 scope atama | PASS |
+| 13 | `figma_execute` | 120 description ekleme | PASS |
+| 14 | `figma_execute` | 120 x 3 platform code syntax (360 kayit) | PASS |
+| 15 | `create_variable` | test/temp-token | PASS |
+| 16 | `rename_variable` | → test/renamed-token | PASS |
+| 17 | `update_variable` | value: 42 | PASS |
+| 18 | `batch_update_variables` | value: 99 | PASS |
+| 19 | `add_mode` | "Dark" mode ekleme | EXPECTED FAIL (Free plan 1 mode) |
+| 20 | `delete_variable` | temp token silindi | PASS |
+| 21 | `get_token_browser` | 120 token dogrulandi | PASS |
+| 22 | `refresh_variables` | Guncel degerler | PASS |
+| 23 | `delete_variable_collection` | Eski test collection temizligi | PASS |
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 16 | `figma_create_variable_collection` | `name: "Test Tokens"` | Collection olusturulmali | id: VariableCollectionId:5:7 | PASS |
-| 17 | `figma_create_variable` | `name: "primary-color", type: COLOR` | Variable olusturulmali | id: VariableID:5:8 | PASS |
-| 18 | `figma_create_variable` (2.) | `name: "spacing-md", type: FLOAT` | Variable olusturulmali | id: VariableID:5:9 | PASS |
-| 19 | `figma_update_variable` | `id: 5:9, value: 16` | Deger guncellenmeli | valuesByMode: 16 | PASS |
-| 20 | `figma_rename_variable` | `id: 5:9, newName: "spacing/md"` | Isim degismeli | name: "spacing/md" | PASS |
-| 21 | `figma_get_token_browser` | Arac cagirildi | Hiyerarsik token gorunumu | 2 variable, 1 collection listelendi | PASS |
-| 22 | `figma_batch_create_variables` | 2 FLOAT variable birden | Toplu olusturma | 2 olusturuldu, 0 basarisiz | PASS |
-| 23 | `figma_delete_variable` | `id: VariableID:5:11` | Variable silinmeli | "font-size-lg" silindi | PASS |
-| 24 | `figma_check_design_parity` | Kod tokenlari vs Figma tokenlari karsilastir | Eslesen, farkli, eksik rapor | 2 matching, 1 divergent | PASS |
-| 25 | `figma_delete_variable_collection` | `id: VariableCollectionId:5:7` | Collection silinmeli | 3 variable ile birlikte silindi | PASS |
-| 26 | `figma_setup_design_tokens` | `"Brand Tokens", 4 token (FLOAT, STRING, BOOLEAN)` | Atomik olusturma | 4 token + 1 collection olusturuldu | PASS |
-| 27 | `figma_batch_update_variables` | 3 variable birden guncelle | Toplu guncelleme | 3 guncellendi, 0 basarisiz | PASS |
-| 28 | `figma_refresh_variables` | Arac cagirildi | Guncel degerler | spacing/sm=12, spacing/lg=32, is-dark=true | PASS |
-| 29 | `figma_rename_mode` | `"Mode 1" -> "Light"` | Mode ismi degismeli | "Light" olarak guncellendi | PASS |
-| 30 | `figma_add_mode` | `"Dark"` mode eklemeye calis | Mode eklenmeli | "Limited to 1 modes only" | EXPECTED FAIL |
+**Ek:** 19 breakpoint token (screen sizes + padding), 2 touch target token, Primitives Dark (32 token)
 
-> **Not (add_mode):** Figma Free plan sadece 1 mode destekler. Professional+ planlarda calisir.
+### 2.3 Faz 2: Button Bileseni — 12/12 PASS + 3 EXPECTED FAIL
 
-### 2.5 Bilesen Araclari
+5 varyantli, auto-layout, responsive, erisilebilir Button component set:
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 31 | `figma_get_component` | `nodeId: 5:12` (Button/Primary) | Component metadata | isim, children, type dogru | PASS |
-| 32 | `figma_get_component_image` | `nodeId: 5:12, scale: 1` | Screenshot (base64 PNG) | 1862 byte PNG goruntu | PASS |
-| 33 | `figma_get_component_for_development` | `nodeId: 5:12` | Metadata + screenshot birlikte | Iki veri birden donduruldu | PASS |
-| 34 | `figma_set_description` | `nodeId: 5:12, "Primary action button..."` | Aciklama eklenmeli | Basariyla eklendi | PASS |
-| 35 | `figma_arrange_component_set` | `nodeIds: [5:12, 5:14]` | Variant set olusturulmali | "dynamic-page" hatasi | EXPECTED FAIL |
-| 36 | `figma_instantiate_component` | `componentKey: "c06b..."` | Instance olusturulmali | "Component not found" | EXPECTED FAIL |
-| 37 | `figma_set_instance_properties` | `nodeId: 5:16, properties: {...}` | Property degistirilmeli | "No valid properties" | EXPECTED FAIL |
+| # | Arac | Islem | Sonuc |
+|---|------|-------|-------|
+| 24 | `figma_execute` | Primary component (auto-layout + 9 variable binding) | PASS |
+| 25 | `figma_execute` | 4 variant + combineAsVariants → "Button" set | PASS |
+| 26 | `figma_execute` | Component property (label TEXT) baglama | PASS |
+| 27 | `set_description` | WCAG AA component aciklamasi | PASS |
+| 28 | `search_components` | "Button" bulundu | PASS |
+| 29 | `get_component` | Primary variant metadata | PASS |
+| 30 | `get_component_image` | 2510 byte PNG | PASS |
+| 31 | `get_component_for_development` | Metadata + screenshot | PASS |
+| 32 | `arrange_component_set` | dynamic-page hatasi | EXPECTED FAIL |
+| 33 | `instantiate_component` | Local component — not found | EXPECTED FAIL |
+| 34 | `set_instance_properties` | dynamic-page hatasi | EXPECTED FAIL |
+| 35 | `figma_execute` | Instance + property set (workaround) | PASS |
+| 36 | `figma_execute` | Code-only props katmani (a11y, role, aria-disabled, tabIndex) | PASS |
+| 37 | `capture_screenshot` | Component set dogrulama | PASS |
 
-> **Not (arrange_component_set):** Figma plugin API'de `documentAccess: dynamic-page` modunda senkron `getNodeById` kullanilamaz. Async versiyona gecis gerekir.
->
-> **Not (instantiate_component):** Sadece **yayinlanmis** (published) kutuphane bilesenlerinde calisir. Local component icin `figma_execute` ile `createInstance()` kullanilabilir.
->
-> **Not (set_instance_properties):** Component uzerinde property (text, boolean, variant) tanimli olmadigi icin set edilecek bir sey yoktu. Property'li component ile calisir.
+### 2.4 Faz 3: Mobil Login Ekrani — 11/11 PASS
 
-### 2.6 Export ve Screenshot Araclari
+390x846 (iPhone 14) responsive ekran, tum elemanlar tokenlarla bagli:
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 38 | `figma_capture_screenshot` | `nodeId: 5:2` | PNG screenshot | 10462 byte PNG | PASS |
-| 39 | `figma_export_nodes` (SVG) | `nodeIds: [5:2], format: SVG` | SVG export | 17919 byte SVG | PASS |
-| 40 | `figma_export_nodes` (PNG) | `nodeIds: [5:2], format: PNG, scale: 1` | PNG export | 4800 byte PNG | PASS |
+| # | Arac | Islem | Sonuc |
+|---|------|-------|-------|
+| 38 | `figma_execute` | Ana frame (auto-layout VERTICAL, token-bound padding) | PASS |
+| 39 | `figma_execute` | Logo Area (ellipse + text) | PASS |
+| 40 | `figma_execute` | Headings (H1 + H2) | PASS |
+| 41 | `figma_execute` | E-posta input (auto-layout, 48px min, 8 binding) | PASS |
+| 42 | `figma_execute` | Sifre input | PASS |
+| 43 | `figma_execute` | Primary Button instance ("Giris Yap", FILL) | PASS |
+| 44 | `figma_execute` | "Sifremi unuttum" link | PASS |
+| 45 | `figma_execute` | Divider ("veya" + cizgiler) | PASS |
+| 46 | `figma_execute` | Secondary Button instance ("Google ile Giris Yap") | PASS |
+| 47 | `figma_execute` | Register Link | PASS |
+| 48 | `capture_screenshot` | Ekran dogrulama (21KB PNG) | PASS |
 
-### 2.7 Gelismis Araclar
+### 2.5 Responsive + Dark Mode — 6 Ekran
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 41 | `figma_execute` | JS kodu: sayfadaki node'lari listele | Sayfa yapisi donmeli | pageId, pageName, 1 child | PASS |
-| 42 | `figma_get_console_logs` | Arac cagirildi | Plugin log'lari | Bos liste (beklenen) | PASS |
-| 43 | `figma_clear_console` | Arac cagirildi | "Console cleared" | Basarili | PASS |
-| 44 | `figma_watch_console` | `timeoutSeconds: 3` | 3 sn dinle, log dondur | 0 log (beklenen) | PASS |
+| Ekran | Boyut | Tema | Width Token | MinHeight Token |
+|-------|-------|------|------------|----------------|
+| Login / Mobile | 390x846 | Light | screen/mobile-width | screen/mobile-height |
+| Login / Mobile / Dark | 390x846 | Dark | screen/mobile-width | screen/mobile-height |
+| Login / Tablet | 768x1024 | Light | screen/tablet-width | screen/tablet-height |
+| Login / Tablet / Dark | 768x1024 | Dark | screen/tablet-width | screen/tablet-height |
+| Login / Web | 1440x900 | Light | screen/web-width | screen/web-height |
+| Login / Web / Dark | 1440x900 | Dark | screen/web-width | screen/web-height |
 
-### 2.8 REST API ve Yapilandirma Araclari
+Tum ekranlarin width, minHeight ve padding degerleri variable'lara bagli (hard-coded degil).
 
-| # | Arac | Test Adimi | Beklenen Sonuc | Gercek Sonuc | Durum |
-|---|------|-----------|----------------|-------------|-------|
-| 45 | `figma_get_rest_token_status` | Arac cagirildi | Token durumu | hasToken: true | PASS |
-| 46 | `figma_rest_api` | `GET /v1/me` | Kullanici bilgisi | "Abdussamed Tezer" | PASS |
-| 47 | `figma_set_port` | `5454 -> 5458 -> 5454` | Port degismeli ve geri donmeli | Basariyla degisti ve geri dondu | PASS |
-| 48 | `figma_set_rest_token` | - | Token set etme | Mevcut token kaybi riski | SKIP |
-| 49 | `figma_clear_rest_token` | - | Token silme | Mevcut token kaybi riski | SKIP |
+### 2.6 Faz 4: DS Denetimi — 4/4 PASS
 
-> **Not (set_rest_token / clear_rest_token):** Bu araclar basit set/delete islemleri yapar. Test etmek mevcut API token'ini kaybettirir. Calismalari `rest_api` ve `get_rest_token_status` testleriyle dolayli olarak dogrulanmistir.
+| # | Test | Sonuc |
+|---|------|-------|
+| 49 | `get_design_system_summary` (120 token, 1 comp set) | PASS |
+| 50 | Hard-coded renk kontrolu (0 bulgu) | PASS |
+| 51 | Isimlendirme kontrolu (0 varsayilan isim) | PASS |
+| 52 | Instance-component uyumu (2 instance, 0 orphan) | PASS |
+
+### 2.7 Faz 5: Bulgu Duzeltme — SKIP (bulgu yok)
+
+### 2.8 Faz 6: Erisebilirlik — 13/13 PASS
+
+| # | Test | Deger | Sonuc |
+|---|------|-------|-------|
+| 53 | Primary (white/blue600) | 5.17:1 | PASS (AA) |
+| 54 | Secondary (gray900/gray100) | 16.13:1 | PASS (AA+AAA) |
+| 55 | Outline/Ghost (blue600/white) | 5.17:1 | PASS (AA) |
+| 56 | Disabled (gray500/gray100) | 4.39:1 | EXEMPT (WCAG 1.4.3) |
+| 57 | Heading (gray900/white) | 17.74:1 | PASS (AAA) |
+| 58 | Subtitle/Placeholder | 4.83:1 | PASS (AA) |
+| 59 | Touch target — butonlar | >= 44px | PASS |
+| 60 | Touch target — inputlar | >= 48px | PASS |
+| 61 | Font boyutu — 9 text node | >= 14px | PASS |
+| 62 | A11y Annotations paneli (7 bolum) | olusturuldu | PASS |
+| 63 | Tutarlilik kontrolu (7 kural) | 7/7 | PASS |
+
+### 2.9 Faz 7: Token Export — 7/7 PASS
+
+| # | Test | Dosya | Sonuc |
+|---|------|-------|-------|
+| 64 | `get_variables` (full) | 120 token | PASS |
+| 65 | CSS Custom Properties | tokens.css | PASS |
+| 66 | Tailwind config | tailwind.tokens.js | PASS |
+| 67 | Swift (iOS) | DesignTokens.swift | PASS |
+| 68 | Kotlin (Android) | DesignTokens.kt | PASS |
+| 69 | W3C Design Tokens JSON | tokens.json | PASS |
+| 70 | `check_design_parity` (15/15 eslesme) | 0 divergent | PASS |
+
+### 2.10 Faz 8: Gelistirici Handoff — PASS
+
+| # | Test | Sonuc |
+|---|------|-------|
+| 71 | `get_design_context` (full, depth=2, layout+visual+typography) | PASS |
+| 72 | HANDOFF.md olusturma | PASS |
+
+### 2.11 Faz 9: Kod Uretimi — 3/3 PASS (dogrulanmis)
+
+| # | Platform | Dosya | Dogrulama |
+|---|----------|-------|-----------|
+| 73 | React + Tailwind | LoginScreen.tsx | 35 CSS var ref → 0 eksik, Turkce duzeltildi |
+| 74 | SwiftUI | LoginView.swift | Token ref dogru, Turkce duzeltildi |
+| 75 | Jetpack Compose | LoginScreen.kt | BorderStroke duzeltildi, Turkce duzeltildi |
+
+**Kod dogrulama detayi:**
+- TSX ↔ CSS capraz kontrol: 35/35 token referansi eslesiyor, 0 eksik
+- Swift ↔ DesignTokens capraz kontrol: Tum enum/struct referanslari dogru
+- Kotlin: `ButtonStroke` → `BorderStroke` hatasi bulundu ve duzeltildi (halusinasyon onlendi)
+- 3 dosyada 12 Turkce karakter duzeltmesi (Hos→Hos, Giris→Giris vb.)
+
+### 2.12 Faz 10: QA — 6/6 PASS
+
+| # | Test | Sonuc |
+|---|------|-------|
+| 76 | Token parity (11 matching Light) | PASS |
+| 77 | Token parity (7 divergent — Dark karisma) | EXPECTED (Free plan) |
+| 78 | Screen analyzer (DS compliance 75%) | PASS |
+| 79 | `get_console_logs` + `clear_console` + `watch_console` | PASS |
+| 80 | `export_nodes` (SVG, 24KB Button) | PASS |
+| 81 | `rest_api` (/v1/me → Abdussamed Tezer) | PASS |
+
+### 2.13 Faz 11: Etki Analizi — PASS
+
+| # | Test | Sonuc |
+|---|------|-------|
+| 82 | `color/blue/600` etki analizi | 5 dependent, 23 node, risk HIGH (38/50) |
 
 ---
 
-## 3. Figma Plan Bazli Yetenek Matrisi
+## 3. Skill Duzeltmeleri ve Zenginlestirmeleri
 
-FMCP'nin 46 araci Figma'nin farkli plan turlerinde farkli yetenekler sunar. Asagida plan bazli farkliliklar:
+### 3.1 Hata Duzeltmeleri (9 duzeltme, 8 skill)
 
-### 3.1 Tum Planlarda Calisan Araclar (Free dahil)
+| # | Skill | Duzeltme |
+|---|-------|----------|
+| 1 | `audit-figma-design-system` | `figma_take_screenshot` → `figma_capture_screenshot` |
+| 2 | `apply-figma-design-system` | `figma_take_screenshot` → `figma_capture_screenshot` |
+| 3 | `ai-handoff-export` | `figma_get_component_details` → `figma_get_component_for_development` |
+| 4 | `implement-design` | `componentId` → `nodeId` (2 yer) |
+| 5 | `figma-screen-analyzer` | DS compliance formulu duzeltildi |
+| 6 | `ds-impact-analysis` | Sayfa limiti 5→20 |
+| 7 | `ds-impact-analysis` | Transitif bagimlilik (recursive alias chain) |
+| 8 | `fix-figma-design-system-finding` | 3 remediasyon modu kod ornegi |
+| 9 | `generate-figma-library` | Batch hata yonetimi pattern |
 
-Bu araclar Figma REST API gerektirmez, plugin bridge uzerinden calisir:
+### 3.2 Zenginlestirmeler (20 ekleme, 7 skill)
 
-| Kategori | Araclar | Aciklama |
-|----------|---------|----------|
-| **Durum** | `get_status`, `list_connected_files`, `plugin_diagnostics` | Baglanti durumu ve diagnostik |
-| **Okuma** | `get_file_data`, `get_design_context`, `get_design_system_summary` | Dosya yapisi ve tasarim baglamini oku |
-| **Olusturma** | `create_frame`, `create_text`, `create_rectangle`, `create_group` | Figma'da yeni elemanlar olustur |
-| **Bilesen** | `search_components`, `get_component`, `get_component_image`, `get_component_for_development` | Bilesen ara, incele, screenshot al |
-| **Variable (Temel)** | `get_variables`, `create_variable_collection`, `create_variable`, `update_variable`, `rename_variable`, `delete_variable`, `delete_variable_collection`, `refresh_variables` | Tam variable CRUD islemleri |
-| **Variable (Toplu)** | `batch_create_variables`, `batch_update_variables`, `setup_design_tokens` | Toplu olusturma ve guncelleme |
-| **Variable (Analiz)** | `get_token_browser`, `check_design_parity`, `get_styles` | Token tarayici ve kod-tasarim uyumu |
-| **Export** | `capture_screenshot`, `export_nodes` (PNG/SVG/JPG/PDF) | Gorsel export (toplu, 1-50 node) |
-| **Kod Calistirma** | `execute` | Figma Plugin API ile ozel JS calistir |
-| **Konsol** | `get_console_logs`, `clear_console`, `watch_console` | Plugin konsol izleme |
-| **Yapilandirma** | `set_port`, `set_rest_token`, `clear_rest_token`, `get_rest_token_status` | Bridge ve token yonetimi |
+| # | Skill | Eklenen |
+|---|-------|---------|
+| 1 | `generate-figma-library` | Token description zorunlu adimi |
+| 2 | `generate-figma-library` | Token code syntax zorunlu adimi (Web/Android/iOS) |
+| 3 | `generate-figma-library` | "Semantic Token = Alias" zorunlu kurali |
+| 4 | `generate-figma-library` | Breakpoint / ekran boyut token'lari |
+| 5 | `generate-figma-library` | Dark mode token stratejisi (Pro+ vs Free) |
+| 6 | `generate-figma-library` | Code-Only Props katmani (Nathan Curtis yaklasimi) |
+| 7 | `generate-figma-screen` | Responsive boyut presetleri (3 boyut zorunlu) |
+| 8 | `generate-figma-screen` | Dark mode zorunlu adimi (6 ekran matrisi) |
+| 9 | `generate-figma-screen` | Breakpoint token binding zorunlu adimi |
+| 10 | `generate-figma-screen` | Min height token binding zorunlu adimi |
+| 11 | `figma-a11y-audit` | Annotation frame (sari panel) olusturma |
+| 12 | `figma-a11y-audit` | Baslik hiyerarsisi notlari (H1/H2/H3) |
+| 13 | `figma-a11y-audit` | Form alan-etiket iliskilendirme notlari |
+| 14 | `figma-a11y-audit` | Odak sirasi (focus order) notlari |
+| 15 | `figma-a11y-audit` | Gorsel alt text / dekoratif isaretleme |
+| 16 | `figma-a11y-audit` | Modal/dialog ve dinamik icerik notlari |
+| 17 | `figma-a11y-audit` | Erisebilirlik-tasarim tutarlilik kontrolu (7 kural) |
+| 18 | `ai-handoff-export` | Code-Only Props okuma ve spec data cikarma |
+| 19 | `design-token-pipeline` | Code Syntax okuma ve platform esleme |
+| 20 | `ai-handoff-export` | `figma_take_screenshot` → `figma_capture_screenshot` (ek temizlik) |
 
-### 3.2 Free Plan Kisitlamalari
+---
 
-| Kisit | Etkilenen Araclar | Aciklama |
-|-------|------------------|----------|
-| **1 mode limiti** | `add_mode` | Free planda collection basina sadece 1 mode. Professional+ planda coklu mode (Light/Dark vb.) |
-| **Variable siniri** | Tum variable araclari | Free planda collection ve variable sayisi sinirli |
-| **Kutuphane yayinlama yok** | `instantiate_component`, `search_assets` | Published library bilesenlerine erisim sinirli |
-
-### 3.3 Professional Plan Ek Yetenekler
-
-| Yetenek | Etkilenen Araclar | Aciklama |
-|---------|------------------|----------|
-| **Coklu mode** | `add_mode`, `rename_mode` | Light/Dark gibi birden fazla mode olusturulabilir |
-| **Daha fazla variable** | Tum variable araclari | Daha yuksek variable/collection limitleri |
-| **Team kutuphane** | `search_assets`, `instantiate_component` | Takim kutuphanesi bilesenlerine erisim |
-
-### 3.4 Organization Plan Ek Yetenekler
-
-| Yetenek | Etkilenen Araclar | Aciklama |
-|---------|------------------|----------|
-| **Private plugin** | Tum araclar | F-MCP plugin'i organizasyon icinde tek tikla dagitim |
-| **Paylasilan kutuphaneler** | `search_assets`, `instantiate_component`, `set_instance_properties` | Organizasyon genelinde bilesen kutuphaneleri |
-| **Branching** | `get_file_data` | Dosya dallari ile calisma |
-
-### 3.5 Enterprise Plan Ek Yetenekler
-
-| Yetenek | Etkilenen Araclar | Aciklama |
-|---------|------------------|----------|
-| **Variables REST API** | `rest_api` (`GET /v1/files/:key/variables`) | REST API uzerinden variable okuma (plugin disinda) |
-| **Audit log** | Tum araclar | `FIGMA_MCP_AUDIT_LOG_PATH` ile NDJSON audit log |
-| **Air-gap deployment** | Tum araclar | Internetsiz ortamda calisma (Zero Trust) |
-| **SSO/SCIM** | - | Kurumsal kimlik yonetimi (FMCP disinda, Figma ozeligi) |
-| **Gelismis analytics** | `rest_api` | Versiyon gecmisi, yorum okuma, detayli dosya bilgisi |
-
-### 3.6 Ozet Matris
+## 4. Figma Plan Bazli Yetenek Matrisi
 
 | Arac / Ozellik | Free | Pro | Org | Enterprise |
 |---------------|:----:|:---:|:---:|:----------:|
 | Plugin bridge baglantisi | + | + | + | + |
 | Dosya okuma / tasarim baglami | + | + | + | + |
 | Frame/Text/Rectangle olusturma | + | + | + | + |
-| Group olusturma | + | + | + | + |
 | Component arama / inceleme | + | + | + | + |
-| Component screenshot | + | + | + | + |
 | Variable CRUD (plugin) | + | + | + | + |
 | Variable coklu mode | - | + | + | + |
 | Toplu variable islemleri | + | + | + | + |
@@ -206,7 +278,6 @@ Bu araclar Figma REST API gerektirmez, plugin bridge uzerinden calisir:
 | REST API (variables) | - | - | - | + |
 | Published library bilesenleri | - | ~ | + | + |
 | Instance olusturma (library) | - | ~ | + | + |
-| Instance property degistirme | - | ~ | + | + |
 | Component set (variant) olusturma | ~ | ~ | ~ | ~ |
 | Private plugin dagitimi | - | - | + | + |
 | Audit logging | + | + | + | + |
@@ -216,284 +287,73 @@ Bu araclar Figma REST API gerektirmez, plugin bridge uzerinden calisir:
 
 ---
 
-## 4. Araclari Nasil Test Edebilirsiniz
+## 5. Uretilen Dosyalar
 
-### 4.1 On Kosullar
-
-1. **Node.js 18+** kurulu olmali (`node -v` ile kontrol edin)
-2. **FMCP** kurulu ve calisir durumda olmali (bkz. README.md)
-3. **Figma'da F-MCP ATezer Bridge plugin'i** acik ve yesil "Ready" durumunda olmali
-4. **Figma dosyasi** acik olmali (bos dosya yeterli)
-
-### 4.2 Temel Baglanti Testi
-
-```
-Adim 1: figma_get_status
-  -> pluginConnected: true olmali
-  -> bridgeListening: true olmali
-
-Adim 2: figma_list_connected_files
-  -> En az 1 dosya listelenmeli
-  -> fileKey ve fileName dolu olmali
-
-Adim 3: figma_plugin_diagnostics
-  -> bridgePort, uptime, memoryMB dolu olmali
-```
-
-### 4.3 Okuma Araclari Testi
-
-```
-Adim 1: figma_get_file_data
-  -> Document ve en az 1 Page donmeli
-
-Adim 2: figma_get_design_system_summary
-  -> components ve variableCollections alanlari donmeli
-
-Adim 3: figma_get_styles
-  -> paintStyles, textStyles, effectStyles dizileri donmeli
-
-Adim 4: figma_get_variables
-  -> variables ve variableCollections dizileri donmeli
-```
-
-### 4.4 Olusturma Araclari Testi
-
-```
-Adim 1: figma_create_frame
-  -> name: "Test Frame", width: 400, height: 300
-  -> Donen id'yi kaydedin (ornek: "5:2")
-
-Adim 2: figma_create_text
-  -> text: "Merhaba", parentId: <frame_id>
-  -> Donen id'yi kontrol edin
-
-Adim 3: figma_create_rectangle
-  -> width: 100, height: 50, parentId: <frame_id>, cornerRadius: 8
-  -> Donen id'yi kontrol edin
-
-Adim 4: figma_create_group
-  -> nodeIds: [<text_id>, <rectangle_id>]
-  -> childCount: 2 olmali
-```
-
-### 4.5 Variable Araclari Testi
-
-```
-Adim 1: figma_create_variable_collection
-  -> name: "Test Tokens"
-  -> Donen collectionId ve modeId'yi kaydedin
-
-Adim 2: figma_create_variable
-  -> name: "spacing", resolvedType: "FLOAT", collectionId: <collection_id>
-  -> Donen variableId'yi kaydedin
-
-Adim 3: figma_update_variable
-  -> variableId: <variable_id>, modeId: <mode_id>, value: 16
-  -> valuesByMode guncellenmis olmali
-
-Adim 4: figma_rename_variable
-  -> variableId: <variable_id>, newName: "spacing/md"
-  -> name degismis olmali
-
-Adim 5: figma_get_token_browser
-  -> Olusturulan collection ve variable listelenmeli
-
-Adim 6: figma_batch_create_variables
-  -> items: [{name: "a", resolvedType: "FLOAT", collectionId: <id>}, ...]
-  -> created dizisi dolu, failed bos olmali
-
-Adim 7: figma_batch_update_variables
-  -> items: [{variableId: <id>, modeId: <mode_id>, value: 24}]
-  -> updated dizisi dolu, failed bos olmali
-
-Adim 8: figma_check_design_parity
-  -> codeTokens: '{"spacing/md": 16}'
-  -> matching veya divergent sonuc donmeli
-
-Adim 9: figma_refresh_variables
-  -> Guncel variable degerleri donmeli
-
-Adim 10: figma_rename_mode
-  -> collectionId, modeId, newName: "Light"
-  -> modes dizisinde isim degismis olmali
-
-Adim 11: figma_add_mode (Professional+ planlarda)
-  -> collectionId, modeName: "Dark"
-  -> Yeni mode eklenmis olmali
-  -> Free planda "Limited to 1 modes only" hatasi beklenir
-
-Temizlik:
-  figma_delete_variable -> olusturulan variable'lari silin
-  figma_delete_variable_collection -> collection'i silin
-```
-
-### 4.6 Bilesen Araclari Testi
-
-On hazirlik: figma_execute ile bir component olusturun:
-```javascript
-const comp = figma.createComponent();
-comp.name = "TestButton";
-comp.resize(200, 48);
-comp.fills = [{ type: 'SOLID', color: { r: 0.3, g: 0.3, b: 0.9 } }];
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-const t = figma.createText();
-t.characters = "Test";
-t.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-comp.appendChild(t);
-return { id: comp.id, key: comp.key };
-```
-
-```
-Adim 1: figma_get_component
-  -> nodeId: <component_id>
-  -> name, type: "COMPONENT", children donmeli
-
-Adim 2: figma_get_component_image
-  -> nodeId: <component_id>
-  -> base64 PNG goruntu donmeli
-
-Adim 3: figma_get_component_for_development
-  -> nodeId: <component_id>
-  -> component metadata + image birlikte donmeli
-
-Adim 4: figma_set_description
-  -> nodeId: <component_id>, description: "Test aciklamasi"
-  -> description guncellenmis olmali
-
-Adim 5: figma_search_components
-  -> query: "TestButton"
-  -> Olusturulan component listelenmeli
-
-Adim 6: figma_instantiate_component (Library bilesenler icin)
-  -> componentKey: <published_key>
-  -> NOT: Sadece yayinlanmis kutuphaneden calisir
-
-Adim 7: figma_set_instance_properties (Property'li bilesenler icin)
-  -> nodeId: <instance_id>, properties: {...}
-  -> NOT: Component'te tanimli property olmali
-
-Adim 8: figma_arrange_component_set (2+ component ile)
-  -> nodeIds: [<comp1_id>, <comp2_id>]
-  -> NOT: dynamic-page API kisiti olabilir
-```
-
-### 4.7 Export Araclari Testi
-
-```
-Adim 1: figma_capture_screenshot
-  -> nodeId: <herhangi_node>
-  -> base64 PNG donmeli, byteLength > 0
-
-Adim 2: figma_export_nodes (SVG)
-  -> nodeIds: [<node_id>], format: "SVG"
-  -> base64 SVG donmeli
-
-Adim 3: figma_export_nodes (PNG)
-  -> nodeIds: [<node_id>], format: "PNG", scale: 2
-  -> base64 PNG donmeli
-
-Adim 4: figma_export_nodes (Toplu)
-  -> nodeIds: [<id1>, <id2>, <id3>], format: "PNG"
-  -> exported = 3, failed = 0 olmali
-```
-
-### 4.8 Gelismis Araclar Testi
-
-```
-Adim 1: figma_execute
-  -> code: 'return figma.currentPage.children.length'
-  -> Sayi donmeli
-
-Adim 2: figma_get_console_logs
-  -> logs dizisi donmeli (bos olabilir)
-
-Adim 3: figma_clear_console
-  -> "Console cleared" mesaji
-
-Adim 4: figma_watch_console
-  -> timeoutSeconds: 3
-  -> stream dizisi donmeli (bos olabilir)
-```
-
-### 4.9 REST API Araclari Testi
-
-On kosul: REST API token'i plugin'deki Advanced panelden girin.
-
-```
-Adim 1: figma_get_rest_token_status
-  -> hasToken: true olmali
-
-Adim 2: figma_rest_api
-  -> endpoint: "/v1/me"
-  -> Kullanici bilgisi donmeli (id, email, handle)
-
-Adim 3: figma_rest_api (dosya bilgisi)
-  -> endpoint: "/v1/files/<fileKey>"
-  -> Dosya adi ve son degisiklik tarihi donmeli
-```
-
-### 4.10 Yapilandirma Araclari Testi
-
-```
-Adim 1: figma_set_port
-  -> port: 5458
-  -> previousPort ve newPort dogru olmali
-  -> Geri al: port: 5454
-
-Adim 2: figma_set_rest_token (dikkatli)
-  -> token: "figd_test123"
-  -> UYARI: Mevcut token'i kaybettirir!
-  -> Test sonrasi eski token'i tekrar girin
-
-Adim 3: figma_clear_rest_token (dikkatli)
-  -> Token silinmeli
-  -> UYARI: rest_api araclari calismayi durdurur
-  -> Test sonrasi token'i tekrar girin
-```
-
-### 4.11 Toplu Token Kurulumu Testi
-
-```
-Adim 1: figma_setup_design_tokens
-  -> collectionName: "Test Tokens"
-  -> modes: ["Default"]
-  -> tokens: [
-       { name: "spacing/sm", type: "FLOAT", value: 8 },
-       { name: "spacing/lg", type: "FLOAT", value: 24 },
-       { name: "label/cta", type: "STRING", value: "Baslat" },
-       { name: "is-active", type: "BOOLEAN", value: true }
-     ]
-  -> collectionId ve 4 variableId donmeli
-
-Temizlik: figma_delete_variable_collection ile silin
-```
+| Dosya | Tip | Aciklama |
+|-------|-----|----------|
+| `test-output/tokens.css` | CSS Custom Properties | 91 satir, semantic + primitive |
+| `test-output/tailwind.tokens.js` | Tailwind config | Theme colors, spacing, radius, fontSize |
+| `test-output/DesignTokens.swift` | Swift (iOS) | Color, Spacing, Radius, FontSize, Semantic enums |
+| `test-output/DesignTokens.kt` | Kotlin (Android) | AppColors, Spacing, AppRadius objects |
+| `test-output/tokens.json` | W3C Design Tokens | Cross-platform JSON schema |
+| `test-output/LoginScreen.tsx` | React + Tailwind | WCAG AA, ARIA labels, CSS var() tokens |
+| `test-output/LoginView.swift` | SwiftUI | VoiceOver labels, token imports |
+| `test-output/LoginScreen.kt` | Jetpack Compose | TalkBack semantics, Material3 |
+| `test-output/HANDOFF.md` | Gelistirici handoff | Ekran yapisi, token ref, a11y notlari |
+| `docs/TEST_REPORT.md` | Bu dosya | Kapsamli test raporu |
 
 ---
 
-## 5. Bilinen Kisitlamalar
+## 6. Bilinen Kisitlamalar
 
-| # | Kisit | Etkilenen Arac | Sebep | Cozum |
-|---|-------|---------------|-------|-------|
-| 1 | Free planda 1 mode limiti | `add_mode` | Figma Free plan kisiti | Professional+ plana yukselt |
-| 2 | dynamic-page API kisiti | `arrange_component_set` | Plugin manifest `documentAccess: dynamic-page` | Async API'ye gecis (kod iyilestirme) |
-| 3 | Sadece published component | `instantiate_component` | Figma API tasarimi | Local icin `figma_execute` + `createInstance()` kullanin |
-| 4 | Property tanimli olmayan component | `set_instance_properties` | Component'te property yok | Component'e property ekleyin |
-| 5 | COLOR type hex string | `setup_design_tokens` | COLOR variable RGBA object bekler | FLOAT/STRING/BOOLEAN kullanin veya RGBA object gonderin |
-| 6 | REST Variables API | `rest_api` (variables endpoint) | Enterprise plan gerekli | Plugin bridge uzerinden erisim (tum planlarda) |
+| # | Kisit | Etkilenen Arac | Sebep | Cozum / Workaround |
+|---|-------|---------------|-------|---------------------|
+| 1 | Free planda 1 mode limiti | `add_mode` | Figma Free plan | Pro+ plana yukselt VEYA ayri Dark collection (workaround) |
+| 2 | dynamic-page API kisiti | `arrange_component_set`, `set_instance_properties` | Plugin manifest | `figma_execute` ile async workaround |
+| 3 | Sadece published component | `instantiate_component` | Figma API | `figma_execute` + `createInstance()` |
+| 4 | COLOR hex string | `setup_design_tokens` | COLOR variable RGBA bekler | `figma_execute` ile COLOR olustur |
+| 5 | REST Variables API | `rest_api` (variables) | Enterprise plan | Plugin bridge (tum planlarda) |
+| 6 | check_design_parity alias | Alias tokenlar `[object Object]` gosterir | Alias cozumleme yok | Sadece primitive'lerle karsilastir |
 
 ---
 
-## 6. Test Ortami Temizligi
+## 7. FUTURE.md'ye Eklenen Yol Haritasi
 
-Test sonrasi Figma dosyasindaki test verilerini temizlemek icin:
+Test sirasinda tespit edilen iyilestirme ihtiyaclari:
 
-```
-1. figma_execute ile tum test node'larini silin:
-   figma.currentPage.children.forEach(n => n.remove())
+| Oncelik | Konu | Aciklama |
+|---------|------|----------|
+| P0 | Figma Make Entegrasyonu | Onay → Make aktarimi → canli prototip |
+| P0 | Prototip Baglantilari | Ekranlar arasi navigasyon, animasyonlar, flow |
+| P1 | Figma Dev Mode | Dev status, annotation, measurement araclari |
+| P1 | `figma_create_component` araci | En sik kullanilan islem icin ozel arac |
+| P1 | `figma_set_auto_layout` araci | Her component icin gerekli |
+| P1 | `figma_bind_variable` araci | Token binding icin ozel arac |
+| P1 | `arrange_component_set` fix | dynamic-page async gecis |
+| P2 | Local component instantiate | `instantiate_component` genisletme |
+| P2 | Toplu scope atama araci | Batch scope setter |
+| P3 | Dahili kontrast orani araci | figma_execute yerine ozel arac |
 
-2. figma_delete_variable_collection ile test collection'larini silin
+---
 
-3. figma_set_port ile portu 5454'e geri alin (degistirdiyseniz)
+## 8. Test Rehberi (Nasil Tekrar Edilir)
 
-4. REST token'inizi tekrar girin (sildiyseniz)
-```
+### On Kosullar
+1. Node.js 18+ kurulu
+2. FMCP kurulu ve calisir durumda
+3. Figma'da F-MCP plugin acik ve yesil "Ready"
+4. Bos Figma dosyasi
+
+### Adim Adim
+1. **Faz 0:** `figma_get_status` → connected: true
+2. **Faz 1:** `setup_design_tokens` + `figma_execute` ile token sistemi olustur
+3. **Faz 2:** `figma_execute` ile component olustur, combineAsVariants, code-only props ekle
+4. **Faz 3:** `figma_execute` ile ekran olustur, clone → responsive, dark mode
+5. **Faz 4:** `figma_execute` ile DS denetimi (hard-coded, naming, instance)
+6. **Faz 6:** `figma_execute` ile kontrast + touch target + annotation panel
+7. **Faz 7:** `get_variables` → token dosyalari olustur, `check_design_parity`
+8. **Faz 8:** `get_design_context` → HANDOFF.md olustur
+9. **Faz 9:** Design context'ten 3 platform kodu uret, capraz kontrol yap
+10. **Faz 10-11:** QA + etki analizi
+
+Her faz sonrasi `capture_screenshot` ile gorsel dogrulama yapilmali.

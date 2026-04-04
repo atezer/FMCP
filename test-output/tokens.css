@@ -1,0 +1,91 @@
+/* Design Tokens — Generated from Figma via FMCP */
+/* Collection: Primitives */
+
+:root {
+  /* Colors */
+  --color-blue-50: #EFFFFF;
+  --color-blue-100: #DBE9FE;
+  --color-blue-500: #3B82F6;
+  --color-blue-600: #2563EB;
+  --color-blue-700: #1D4ED8;
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-500: #6B7280;
+  --color-gray-700: #374151;
+  --color-gray-900: #111827;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  /* Spacing */
+  --spacing-2xs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Font Size */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+
+  /* Size */
+  --size-touch-min-ios: 44px;
+  --size-touch-min-android: 48px;
+
+  /* Semantic — Button */
+  --btn-primary-bg: var(--color-blue-600);
+  --btn-primary-text: var(--color-white);
+  --btn-primary-border: var(--color-blue-600);
+  --btn-secondary-bg: var(--color-gray-100);
+  --btn-secondary-text: var(--color-gray-900);
+  --btn-secondary-border: var(--color-gray-200);
+  --btn-outline-bg: var(--color-white);
+  --btn-outline-text: var(--color-blue-600);
+  --btn-outline-border: var(--color-blue-600);
+  --btn-ghost-bg: var(--color-white);
+  --btn-ghost-text: var(--color-blue-600);
+  --btn-disabled-bg: var(--color-gray-100);
+  --btn-disabled-text: var(--color-gray-500);
+  --btn-disabled-border: var(--color-gray-200);
+  --btn-padding-x: var(--spacing-lg);
+  --btn-padding-y: var(--spacing-md);
+  --btn-gap: var(--spacing-sm);
+  --btn-radius: var(--radius-md);
+  --btn-font-size: var(--font-size-sm);
+  --btn-min-height: var(--size-touch-min-ios);
+
+  /* Semantic — Input */
+  --input-bg: var(--color-white);
+  --input-text: var(--color-gray-900);
+  --input-placeholder: var(--color-gray-500);
+  --input-border: var(--color-gray-300);
+  --input-borderFocus: var(--color-blue-500);
+  --input-padding-x: var(--spacing-md);
+  --input-padding-y: var(--spacing-md);
+  --input-radius: var(--radius-md);
+  --input-font-size: var(--font-size-sm);
+  --input-min-height: var(--size-touch-min-android);
+
+  /* Semantic — Surface */
+  --surface-background: var(--color-white);
+  --surface-foreground: var(--color-gray-900);
+  --surface-muted: var(--color-gray-100);
+  --surface-border: var(--color-gray-200);
+
+  /* Semantic — Layout */
+  --page-padding: var(--spacing-xl);
+  --section-gap: var(--spacing-lg);
+  --element-gap: var(--spacing-sm);
+}

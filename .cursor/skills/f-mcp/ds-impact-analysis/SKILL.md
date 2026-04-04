@@ -75,19 +75,31 @@ for (const col of collections) {
 const targetVar = allVariables.find(v => v.name === targetVarName);
 if (!targetVar) return { error: "Variable bulunamadı: " + targetVarName };
 
-// Alias zincirleri: bu variable'a referans veren diğer variable'lar
-const dependents = allVariables.filter(v => {
-  return Object.values(v.valuesByMode).some(val =>
-    val && val.type === "VARIABLE_ALIAS" && val.id === targetVar.id
+// Alias zincirleri: transitif bağımlılık taraması (A → B → C zinciri)
+function findDependents(varId, visited = new Set()) {
+  if (visited.has(varId)) return []; // döngü koruması
+  visited.add(varId);
+  const direct = allVariables.filter(v =>
+    Object.values(v.valuesByMode).some(val =>
+      val && val.type === "VARIABLE_ALIAS" && val.id === varId
+    )
   );
-});
+  const transitive = [];
+  for (const d of direct) {
+    transitive.push(...findDependents(d.id, visited));
+  }
+  return [...direct, ...transitive];
+}
+
+const allDependents = findDependents(targetVar.id);
+const uniqueDeps = [...new Map(allDependents.map(d => [d.id, d])).values()];
 
 return {
   target: { id: targetVar.id, name: targetVar.name, type: targetVar.resolvedType },
-  directDependents: dependents.map(d => ({
+  directDependents: uniqueDeps.map(d => ({
     id: d.id, name: d.name, type: d.resolvedType
   })),
-  dependentCount: dependents.length
+  dependentCount: uniqueDeps.length
 };
 ```
 
@@ -98,7 +110,7 @@ const targetVarId = "<VARIABLE_ID>";
 const affectedNodes = [];
 
 const pages = figma.root.children;
-for (const page of pages.slice(0, 5)) {
+for (const page of pages.slice(0, 20)) {
   await figma.setCurrentPageAsync(page);
 
   const nodes = page.findAll(n => {
@@ -141,7 +153,7 @@ const targetComponentKey = "<COMPONENT_KEY>";
 const instances = [];
 
 const pages = figma.root.children;
-for (const page of pages.slice(0, 5)) {
+for (const page of pages.slice(0, 20)) {
   await figma.setCurrentPageAsync(page);
 
   const pageInstances = page.findAll(n => {

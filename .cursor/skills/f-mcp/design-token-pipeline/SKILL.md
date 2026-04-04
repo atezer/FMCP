@@ -79,6 +79,17 @@ figma_get_variables(verbosity="full")
 
 Bu çağrı döner: `variableCollections` (koleksiyon adları, mode'lar, mode ID'leri) ve `variables` (her variable'ın `name`, `resolvedType`, `valuesByMode`). Alias'lar `valuesByMode` içinde `{type: "VARIABLE_ALIAS", id: "..."}` olarak gelir — hedef variable'ı ID ile bul ve son değere ulaş.
 
+**Code Syntax desteği:** Variable'larda `codeSyntax` alanı varsa (Web, Android, iOS), token export sırasında bu değerleri platform-spesifik isimlendirme için kullan. Figma'da Code Syntax ayarlanmışsa, token dönüşümünde Figma'daki isimleri referans al:
+- **Web:** `codeSyntax.WEB` → CSS custom property adı (ör. `var(--btn-primary-bg)`)
+- **Android:** `codeSyntax.ANDROID` → Resource adı (ör. `R.color.btn_primary_bg`)
+- **iOS:** `codeSyntax.iOS` → Swift sabit adı (ör. `ButtonColor.primary.bg`)
+
+Code Syntax bilgisini okumak için `figma_execute` kullan:
+```js
+const v = await figma.variables.getVariableByIdAsync("<id>");
+return { name: v.name, codeSyntax: v.codeSyntax };
+```
+
 Stil verileri için:
 
 ```

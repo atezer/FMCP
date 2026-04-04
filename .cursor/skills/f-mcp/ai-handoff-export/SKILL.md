@@ -50,11 +50,39 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 
 - `figma_get_variables`
 - `figma_search_components`
-- gerekiyorsa `figma_get_component_details`
+- gerekiyorsa `figma_get_component_for_development`
 
-### Step 5: Screenshot referansı ekle
+### Step 5: Code-Only Props Çıkar
 
-- `figma_capture_screenshot` veya `figma_take_screenshot`
+"Code only props" katmanı olan bileşenlerde, gizli property'leri spec data olarak çıkar:
+
+```js
+// figma_execute — Code-only props okuma
+const component = await figma.getNodeByIdAsync("<COMPONENT_ID>");
+const codeOnlyFrame = component.children.find(c => c.name === "Code only props");
+if (codeOnlyFrame) {
+  const props = codeOnlyFrame.children.map(c => ({
+    name: c.name,
+    type: c.type === "TEXT" ? "string" : "variant",
+    value: c.type === "TEXT" ? c.characters : null,
+    visible: c.visible
+  }));
+  return { codeOnlyProps: props };
+}
+```
+
+Handoff çıktısına ekle:
+```yaml
+## Code-Only Properties (Geliştirici İçin)
+| Property | Type | Default | Görünürlük |
+|----------|------|---------|-----------|
+| accessibilityLabel | string | "Button label" | Gizli |
+| as | enum (h1-h6) | h2 | Gizli |
+```
+
+### Step 6: Screenshot referansı ekle
+
+- `figma_capture_screenshot`
 
 ### Step 6: Handoff dosyalarını üret
 
