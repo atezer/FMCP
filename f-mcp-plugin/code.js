@@ -2773,19 +2773,7 @@ figma.ui.onmessage = async (msg) => {
         if (!parent) parent = nd.parent;
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
-      // Position nodes BEFORE combining — combineAsVariants preserves original positions
-      var preGap = 30;
-      var prePad = 20;
-      var preX = prePad;
-      var preMaxH = 0;
-      for (var p = 0; p < nodes.length; p++) {
-        nodes[p].x = preX;
-        nodes[p].y = prePad;
-        preX += nodes[p].width + preGap;
-        if (nodes[p].height > preMaxH) preMaxH = nodes[p].height;
-      }
       var componentSet = figma.combineAsVariants(nodes, parent);
-      componentSet.resize(preX - preGap + prePad, preMaxH + prePad * 2);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
