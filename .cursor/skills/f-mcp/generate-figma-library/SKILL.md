@@ -184,7 +184,22 @@ Bir bilesen olusturulurken asagidaki TUM degerler semantic variable'a baglanmali
 - `fontSize` — Figma'da fontFamily/fontWeight variable olarak baglanamaz, Text Style ile yonetilir
 - Text Style olustur → fontSize'i variable'a bagla → tum text node'lara `setTextStyleIdAsync` ile uygula
 
-**Dogrulama:** Faz 4 (4d) adiminda `boundVariables` kontrolu yapilirken stroke, fontSize ve text style da kontrol edilmeli.
+### Kritik Kural: Text Hizalama (ZORUNLU)
+
+Text node'un `textAlignHorizontal` degeri, bilesenin amacina gore ayarlanmali:
+
+| Bilesen Tipi | textAlignHorizontal | Neden |
+|-------------|---------------------|-------|
+| Button, Tag, Badge | CENTER | Yazi butonun ortasinda olmali |
+| Input, Textarea | LEFT | Kullanici metni soldan yazar |
+| Card title, List item | LEFT | Okuma yonu sol→sag |
+| Dialog title | LEFT veya CENTER | Tasarim kararina bagli |
+| Table header/cell | LEFT | Tablo verisi sola hizali |
+
+**Kural:** `textAlignHorizontal` ASLA varsayilan LEFT olarak birakilmamali — bilesen tipine gore bilinçli secilmeli.
+Text Style icerisinde hizalama AYARLANAMAZ (Figma kisitlamasi) — her text node'da ayri ayarlanmali.
+
+**Dogrulama:** Faz 4 (4d) adiminda `boundVariables` kontrolu yapilirken stroke, fontSize, text style ve text hizalama da kontrol edilmeli.
 
 ### Toplu variable oluşturma (F-MCP avantajı)
 ```
