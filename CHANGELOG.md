@@ -12,6 +12,14 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.0] - 2026-04-04 (guncelleme)
+
+### Claude Code Destegi ve Test Raporu (YENi)
+
+- **README: Claude Code kurulum bolumu eklendi.** `.mcp.json` dosyasi ile NPX tabanli config. `~/.claude/settings.json`'in MCP icin calismadigina dair uyari notu.
+- **`.mcp.json` guncellendi:** Cursor'a ozel bash script yerine evrensel NPX config (hem Claude Code hem Cursor ile uyumlu).
+- **`docs/TEST_REPORT.md` (YENi):** 46 aracin tamami test edildi (40 PASS, 4 beklenen Figma kisiti, 2 guvenlik nedeniyle SKIP). Free/Pro/Org/Enterprise plan bazli yetenek matrisi. Adim adim test rehberi.
+
 ## [1.7.0] - 2026-04-03
 
 ### Coklu Port + Otomatik AI Araci Tespiti (YENi)

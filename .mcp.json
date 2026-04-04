@@ -1,12 +1,8 @@
 {
   "mcpServers": {
     "figma-mcp-bridge": {
-      "command": "bash",
-      "args": ["${workspaceFolder}/scripts/cursor-mcp-plugin-bridge.sh"],
-      "env": {
-        "FIGMA_PLUGIN_BRIDGE_PORT": "5455",
-        "FIGMA_MCP_CLIENT_NAME": "Cursor"
-      }
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
     }
   }
 }
