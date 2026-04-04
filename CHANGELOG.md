@@ -12,6 +12,32 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.6] - 2026-04-05
+
+### component-documentation Skill (YENi — 18. skill)
+
+- **Format secimi zorunlu:** Standard (~2400px) ve Compact (~1300px) secenekleri kullaniciya sunulur, onay olmadan frame olusturulmaz
+- **Gorsel Do/Dont ornekleri:** Gercek component instance'lariyla dogru/yanlis cift kartlar (hiyerarsi, etiket, variant kullanimi)
+- **Endustri standartlari referansi:** `reference_industry_design_standards.md` hafiza dosyasi (14 bolum: M3, HIG, WCAG 2.2, shadcn/ui, Tailwind, Radix, Lucide, DTCG)
+- **Yillik guncelleme:** Standart kontrolu 1 yildan eskiyse kullaniciya guncelleme onerisi (9 kaynak)
+- **SKILL_INDEX.md:** 17→18 skill, "Dokumantasyon" kategorisi eklendi
+
+### generate-figma-library Skill (Zenginlestirme)
+
+- **Token baglama tablosu:** fill, text fill, stroke, strokeWeight, radius, padding, gap, minHeight, fontSize — tum degerlerin variable'a bagli olmasi zorunlu
+- **Text hizalama kurali:** Bilesen tipine gore textAlignHorizontal tablosu (Button=CENTER, Input=LEFT vb.)
+- **Bilesen sizing kurali:** Button/Tag=HUG, Input=FILL — Fixed width butonlarda yazi ortalanmaz
+- **Code only props:** `layoutPositioning = "ABSOLUTE"` zorunlu — auto-layout gap'te bosluk yaratmayi onler
+- **Component set olusturma:** `figma_arrange_component_set` + sonrasinda `figma_execute` ile stroke/auto-layout/rename
+
+### Plugin Bug Fix
+
+- **`figma_arrange_component_set`:** `getNodeById` → `getNodeByIdAsync` duzeltildi (documentAccess: dynamic-page hatasi)
+
+### FUTURE.md
+
+- P2: Component documentation skill'inin diger bilesen tiplerinde testi (Input, Card, Modal, Nav)
+
 ## [1.7.4] - 2026-04-04
 
 ### Graceful Port Takeover — Oturum Gecisi Sorunu Cozuldu
