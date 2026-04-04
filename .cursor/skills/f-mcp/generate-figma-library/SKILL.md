@@ -364,7 +364,19 @@ return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
 ```
 
-Bu arac `combineAsVariants` + otomatik HORIZONTAL auto-layout uygular. Variantlar yan yana dizilir, ust uste binmez.
+Bu arac `combineAsVariants` + otomatik HORIZONTAL auto-layout uygular.
+
+**ONEMLI:** `combineAsVariants` sonrasi Figma variant property adini `Property 1` olarak atar. Duzeltmek icin tum child'lari yeniden adlandir:
+
+```js
+// figma_execute icinde
+const cs = await figma.getNodeByIdAsync("<COMPONENT_SET_ID>");
+for (const child of cs.children) {
+  child.name = child.name.replace("Property 1=", "Variant=");
+}
+```
+
+Bu islem `Property 1` adini `Variant`'a cevirir — Figma otomatik olarak component property adini gunceller.
 
 ### Component property
 
