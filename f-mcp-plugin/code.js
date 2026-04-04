@@ -2774,11 +2774,6 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // Apply auto-layout so variants don't stack on top of each other
-      componentSet.layoutMode = 'HORIZONTAL';
-      componentSet.primaryAxisSizingMode = 'AUTO';
-      componentSet.counterAxisSizingMode = 'AUTO';
-      componentSet.itemSpacing = 16;
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,

@@ -366,17 +366,17 @@ figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
 
 Bu arac `combineAsVariants` + otomatik HORIZONTAL auto-layout uygular.
 
-**ONEMLI:** `combineAsVariants` sonrasi Figma variant property adini `Property 1` olarak atar. Duzeltmek icin tum child'lari yeniden adlandir:
+Arac sadece `combineAsVariants` cagirir — sonrasinda auto-layout veya manual positioning EKLEME. Figma native dashed-border grid'i kendisi uygular.
+
+**ONEMLI:** `combineAsVariants` variant property adini `Property 1` olarak atar. Sonrasinda rename yap:
 
 ```js
-// figma_execute icinde
+// figma_execute — arrange_component_set SONRASI calistir
 const cs = await figma.getNodeByIdAsync("<COMPONENT_SET_ID>");
 for (const child of cs.children) {
   child.name = child.name.replace("Property 1=", "Variant=");
 }
 ```
-
-Bu islem `Property 1` adini `Variant`'a cevirir — Figma otomatik olarak component property adini gunceller.
 
 ### Component property
 
