@@ -2774,18 +2774,11 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // combineAsVariants API does NOT match native UI — fix layout AFTER combining
-      var pad = 20;
-      var gap = 30;
-      var x = pad;
-      var maxH = 0;
-      for (var c = 0; c < componentSet.children.length; c++) {
-        componentSet.children[c].x = x;
-        componentSet.children[c].y = pad;
-        x += componentSet.children[c].width + gap;
-        if (componentSet.children[c].height > maxH) maxH = componentSet.children[c].height;
-      }
-      componentSet.resize(x - gap + pad, maxH + pad * 2);
+      // combineAsVariants API misses stroke — add native purple dashed border
+      componentSet.strokes = [{
+        type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
+        color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
+      }];
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
