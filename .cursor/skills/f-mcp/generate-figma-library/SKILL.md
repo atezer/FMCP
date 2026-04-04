@@ -358,18 +358,13 @@ componentSet.itemSpacing = 16;
 return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 ```
 
-**KRITIK:** `combineAsVariants` sonrasi component set'e auto-layout ekle — API varsayilan `NONE` dondurur, variantlar ust uste biner:
+**KRITIK:** Variantlari birlestirmek icin `figma_arrange_component_set` kullan:
 
-```js
-const compSet = figma.combineAsVariants(variants, figma.currentPage);
-compSet.name = "Button";
-compSet.layoutMode = "HORIZONTAL"; // variantlar yan yana
-compSet.primaryAxisSizingMode = "AUTO";
-compSet.counterAxisSizingMode = "AUTO";
-compSet.itemSpacing = 16;
+```
+figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
 ```
 
-> NOT: `figma_arrange_component_set` araci su an `getNodeByIdAsync` bug'i nedeniyle calismiyor. Duzeltilene kadar yukaridaki yontemi kullan.
+Bu arac `combineAsVariants` + otomatik HORIZONTAL auto-layout uygular. Variantlar yan yana dizilir, ust uste binmez.
 
 ### Component property
 

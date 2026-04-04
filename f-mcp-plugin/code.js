@@ -2766,7 +2766,7 @@ figma.ui.onmessage = async (msg) => {
       var nodes = [];
       var parent = null;
       for (var n = 0; n < nodeIds.length; n++) {
-        var nd = figma.getNodeById(nodeIds[n]);
+        var nd = await figma.getNodeByIdAsync(nodeIds[n]);
         if (!nd) throw new Error('Node not found: ' + nodeIds[n]);
         if (nd.type !== 'COMPONENT') throw new Error('Node is not a COMPONENT: ' + nodeIds[n]);
         nodes.push(nd);
@@ -2774,6 +2774,11 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
+      // Apply auto-layout so variants don't stack on top of each other
+      componentSet.layoutMode = 'HORIZONTAL';
+      componentSet.primaryAxisSizingMode = 'AUTO';
+      componentSet.counterAxisSizingMode = 'AUTO';
+      componentSet.itemSpacing = 16;
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
