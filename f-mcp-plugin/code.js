@@ -2774,6 +2774,18 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
+      // combineAsVariants API does NOT match native UI — fix layout AFTER combining
+      var pad = 20;
+      var gap = 30;
+      var x = pad;
+      var maxH = 0;
+      for (var c = 0; c < componentSet.children.length; c++) {
+        componentSet.children[c].x = x;
+        componentSet.children[c].y = pad;
+        x += componentSet.children[c].width + gap;
+        if (componentSet.children[c].height > maxH) maxH = componentSet.children[c].height;
+      }
+      componentSet.resize(x - gap + pad, maxH + pad * 2);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
