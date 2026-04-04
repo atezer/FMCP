@@ -199,7 +199,20 @@ Text node'un `textAlignHorizontal` degeri, bilesenin amacina gore ayarlanmali:
 **Kural:** `textAlignHorizontal` ASLA varsayilan LEFT olarak birakilmamali — bilesen tipine gore bilinçli secilmeli.
 Text Style icerisinde hizalama AYARLANAMAZ (Figma kisitlamasi) — her text node'da ayri ayarlanmali.
 
-**Dogrulama:** Faz 4 (4d) adiminda `boundVariables` kontrolu yapilirken stroke, fontSize, text style ve text hizalama da kontrol edilmeli.
+### Kritik Kural: Bilesen Sizing (ZORUNLU)
+
+Bilesenler ve instance'lar ASLA `Fixed width` olarak birakilmamali (ozel durum haric):
+
+| Durum | layoutSizingHorizontal | Neden |
+|-------|----------------------|-------|
+| Button, Tag, Badge | HUG | Icerige gore boyutlanir, yazi ortalanir |
+| Input, Textarea | FILL | Parent genisligine uyar |
+| Card | FILL veya FIXED | Responsive grid'e gore |
+| Icon wrapper | HUG | Ikon boyutuna gore |
+
+**Kural:** `Fixed width` kullanirsan yazinin ortalanmis gorunmesini engeller — buton "Kaydet" yazisindan genis kalir ve yazi sola yapisir. HUG kullanirsan buton yaziya sarilir ve auto-layout CENTER duzgun calisir.
+
+**Dogrulama:** Faz 4 (4d) adiminda `boundVariables`, stroke, fontSize, text style, text hizalama VE sizing mode kontrol edilmeli.
 
 ### Toplu variable oluşturma (F-MCP avantajı)
 ```
