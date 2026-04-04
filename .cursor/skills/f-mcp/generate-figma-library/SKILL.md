@@ -348,8 +348,17 @@ const componentSet = figma.combineAsVariants(
   figma.currentPage
 );
 componentSet.name = "Button";
+
+// ZORUNLU: Component set'e auto-layout ekle — yoksa variantlar ust uste biner
+componentSet.layoutMode = "VERTICAL"; // veya "HORIZONTAL"
+componentSet.primaryAxisSizingMode = "AUTO";
+componentSet.counterAxisSizingMode = "AUTO";
+componentSet.itemSpacing = 16;
+
 return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 ```
+
+**KRITIK:** `combineAsVariants` sonrasi component set'in `layoutMode` varsayilan `NONE` olur — variantlar ayni noktada ust uste biner ve gorunmez. Her zaman auto-layout ekle.
 
 Variant grid düzenleme için `figma_arrange_component_set` kullanılabilir.
 
