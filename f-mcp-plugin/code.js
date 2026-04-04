@@ -2774,8 +2774,8 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // combineAsVariants stacks all variants at their original positions — reposition
-      var gap = 20;
+      // Replicate Figma native "Combine as variants" layout
+      var gap = 30;
       var padding = 20;
       var xPos = padding;
       var maxH = 0;
@@ -2786,7 +2786,7 @@ figma.ui.onmessage = async (msg) => {
         xPos += child.width + gap;
         if (child.height > maxH) maxH = child.height;
       }
-      componentSet.resizeWithoutConstraints(xPos - gap + padding, maxH + padding * 2);
+      componentSet.resize(xPos - gap + padding, maxH + padding * 2);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
