@@ -364,15 +364,29 @@ return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
 ```
 
-Bu arac `combineAsVariants` + otomatik HORIZONTAL auto-layout uygular.
-
-Arac sadece `combineAsVariants` cagirir — sonrasinda auto-layout veya manual positioning EKLEME. Figma native dashed-border grid'i kendisi uygular.
-
-**ONEMLI:** `combineAsVariants` variant property adini `Property 1` olarak atar. Sonrasinda rename yap:
+Bu arac sadece `combineAsVariants` cagirir. API sonucu native UI ile birebir ayni degildir — asagidaki duzeltme adimlarini `figma_execute` ile SONRASINDA uygula:
 
 ```js
 // figma_execute — arrange_component_set SONRASI calistir
 const cs = await figma.getNodeByIdAsync("<COMPONENT_SET_ID>");
+
+// 1. Stroke ekle (API eklemiyor, native ekliyor)
+cs.strokes = [{
+  type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
+  color: { r: 0.541, g: 0.220, b: 0.961 }
+}];
+
+// 2. Auto-layout ekle (native degerler)
+cs.layoutMode = "HORIZONTAL";
+cs.primaryAxisSizingMode = "AUTO";
+cs.counterAxisSizingMode = "AUTO";
+cs.primaryAxisAlignItems = "MIN";
+cs.counterAxisAlignItems = "CENTER";
+cs.itemSpacing = 30;
+cs.paddingLeft = 20; cs.paddingRight = 20;
+cs.paddingTop = 20; cs.paddingBottom = 20;
+
+// 3. Property 1 → Variant rename
 for (const child of cs.children) {
   child.name = child.name.replace("Property 1=", "Variant=");
 }
