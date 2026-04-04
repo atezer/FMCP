@@ -2779,18 +2779,17 @@ figma.ui.onmessage = async (msg) => {
         type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
         color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
       }];
-      // Fix layout to match native — reposition children + resize
-      var pad = 20;
-      var gap = 30;
-      var x = pad;
-      var maxH = 0;
+      // Fix layout — combineAsVariants already offsets children, just fix size
+      var maxR = 0, maxB = 0;
       for (var c = 0; c < componentSet.children.length; c++) {
-        componentSet.children[c].x = x;
-        componentSet.children[c].y = pad;
-        x += componentSet.children[c].width + gap;
-        if (componentSet.children[c].height > maxH) maxH = componentSet.children[c].height;
+        var ch = componentSet.children[c];
+        if (ch.x + ch.width > maxR) maxR = ch.x + ch.width;
+        if (ch.y + ch.height > maxB) maxB = ch.y + ch.height;
       }
-      componentSet.resize(x - gap + pad, maxH + pad * 2);
+      // Add same padding as first child's offset (native uses 20)
+      var padR = componentSet.children[0].x;
+      var padB = componentSet.children[0].y;
+      componentSet.resize(maxR + padR, maxB + padB);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
