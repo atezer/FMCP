@@ -60,7 +60,7 @@ class LocalFigmaMCP {
 	constructor() {
 		this.server = new McpServer({
 			name: "F-MCP ATezer (Local)",
-			version: "1.7.3",
+			version: "1.7.4",
 		});
 	}
 
