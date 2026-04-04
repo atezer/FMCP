@@ -2774,32 +2774,11 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // combineAsVariants API misses: stroke + correct sizing
+      // Only add missing stroke — do NOT touch child positions or size
       componentSet.strokes = [{
         type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
         color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
       }];
-      // combineAsVariants child positioning is inconsistent —
-      // sometimes x:20 y:20, sometimes x:0 y:0
-      // Always normalize: move children to x:20 y:20 with gap:30, then resize
-      var pad = 20;
-      var gap = 30;
-      // First pass: calculate offset to apply
-      var firstX = componentSet.children[0].x;
-      var firstY = componentSet.children[0].y;
-      var offsetX = pad - firstX;
-      var offsetY = pad - firstY;
-      // Move all children by offset
-      var maxR = 0, maxB = 0;
-      for (var c = 0; c < componentSet.children.length; c++) {
-        componentSet.children[c].x += offsetX;
-        componentSet.children[c].y += offsetY;
-        var r = componentSet.children[c].x + componentSet.children[c].width;
-        var b = componentSet.children[c].y + componentSet.children[c].height;
-        if (r > maxR) maxR = r;
-        if (b > maxB) maxB = b;
-      }
-      componentSet.resize(maxR + pad, maxB + pad);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
