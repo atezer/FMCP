@@ -86,14 +86,9 @@ Her kartta:
 - Do/Dont: HORIZONTAL parent, FILL child'lar — ASLA sabit genislik
 - Font: Inter (Regular, Medium, Semi Bold, Bold)
 
-### Tipografi Token Baglama (Zorunlu)
-Bilesen icindeki metinler ASLA hardcoded font olmamali:
-1. Text Style olustur (ornek: `Button / Label` — Inter Medium 14px)
-2. fontSize'i semantic variable'a bagla (`button/fontSize` → `fontSize/sm`)
-3. Text Style'i bilesen icindeki tum text node'lara uygula (`setTextStyleIdAsync`)
-4. Fill (renk) zaten variable'a bagli olmali — degilse bagla
-
-Figma'da fontFamily/fontWeight variable olarak baglanamaz — Text Style ile yonetilir.
+### Token Baglama Kontrolu
+Dokumantasyon uretirken bilesendeki bagli olmayan degerleri tespit et ve uyar.
+Token baglama kurallari icin bkz: `generate-figma-library` skill'i.
 
 ### Standart Referansi
 - Hafiza: `reference_industry_design_standards.md` (14 bolum)

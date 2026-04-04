@@ -163,6 +163,29 @@ Her ekran frame'inde şu binding'ler ZORUNLUDUR:
 
 Figma'da "Fixed width (390)" veya "Fixed height (900)" yerine variable ikonu görünmelidir. **Hard-coded boyut değeri KABUL EDİLMEZ.**
 
+### Kritik Kural: Tum Gorunum Degerleri Token'a Bagli Olmali (ZORUNLU)
+
+Bir bilesen olusturulurken asagidaki TUM degerler semantic variable'a baglanmalidir. Hardcoded deger KABUL EDILMEZ:
+
+| Ozellik | Baglama Yontemi | Ornek Token |
+|---------|-----------------|-------------|
+| Fill (arka plan) | `setBoundVariable("fills", ...)` | button/primary/bg |
+| Text fill (yazi rengi) | Text node'da `setBoundVariable("fills", ...)` | button/primary/text |
+| Stroke (kenarlik rengi) | `setBoundVariable("strokes", ...)` | button/primary/border |
+| **Stroke width (kenarlik kalinligi)** | `setBoundVariable("strokeWeight", ...)` | button/border-width |
+| Corner radius | `setBoundVariable("topLeftRadius", ...)` vb. | button/radius |
+| Padding | `setBoundVariable("paddingLeft", ...)` vb. | button/padding-x |
+| Item spacing (gap) | `setBoundVariable("itemSpacing", ...)` | button/gap |
+| Min height | `setBoundVariable("minHeight", ...)` | button/minHeight |
+| Font size | Text Style olustur + `setBoundVariable("fontSize", ...)` | button/fontSize |
+
+**Ozellikle gozden kacan ozellikler:**
+- `strokeWeight` — Outline buton gibi kenarligi olan variantlarda kenarlik kalinligi variable'a baglanmali
+- `fontSize` — Figma'da fontFamily/fontWeight variable olarak baglanamaz, Text Style ile yonetilir
+- Text Style olustur → fontSize'i variable'a bagla → tum text node'lara `setTextStyleIdAsync` ile uygula
+
+**Dogrulama:** Faz 4 (4d) adiminda `boundVariables` kontrolu yapilirken stroke, fontSize ve text style da kontrol edilmeli.
+
 ### Toplu variable oluşturma (F-MCP avantajı)
 ```
 
