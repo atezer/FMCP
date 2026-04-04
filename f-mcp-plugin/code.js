@@ -2779,16 +2779,18 @@ figma.ui.onmessage = async (msg) => {
         type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
         color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
       }];
-      // Resize to include padding around children (native uses 20px padding)
-      var maxR = 0, maxB = 0;
+      // Fix layout to match native — reposition children + resize
+      var pad = 20;
+      var gap = 30;
+      var x = pad;
+      var maxH = 0;
       for (var c = 0; c < componentSet.children.length; c++) {
-        var ch = componentSet.children[c];
-        var r = ch.x + ch.width;
-        var b = ch.y + ch.height;
-        if (r > maxR) maxR = r;
-        if (b > maxB) maxB = b;
+        componentSet.children[c].x = x;
+        componentSet.children[c].y = pad;
+        x += componentSet.children[c].width + gap;
+        if (componentSet.children[c].height > maxH) maxH = componentSet.children[c].height;
       }
-      componentSet.resize(maxR + 20, maxB + 20);
+      componentSet.resize(x - gap + pad, maxH + pad * 2);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
