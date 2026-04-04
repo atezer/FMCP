@@ -408,6 +408,8 @@ codeOnlyFrame.y = 0;
 codeOnlyFrame.clipsContent = true;
 codeOnlyFrame.fills = [];
 component.appendChild(codeOnlyFrame);
+// KRITIK: ABSOLUTE positioning — yoksa auto-layout gap'te bosluk yaratir
+codeOnlyFrame.layoutPositioning = "ABSOLUTE";
 ```
 
 **Adım 2: Her property için bir katman ekle**
