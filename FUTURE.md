@@ -1,6 +1,6 @@
 # F-MCP -- Kalan Adimlar (Future)
 
-> Son guncelleme: 2 Nisan 2026 (v1.6.2 — 46 arac, node creation, batch export, REST API, test altyapisi)
+> Son guncelleme: 4 Nisan 2026 (v1.7.0 — Claude Code destegi, 46 arac test raporu, plan bazli yetenek matrisi)
 > Paket surumu (`package.json`): **1.7.0**
 
 ---
@@ -93,6 +93,8 @@ Hedef: Vektorel format desteyi + coklu node export.
 ### P2 — Gelistirici Deneyimi
 
 - [x] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR sureci (v1.6.0)
+- [x] Claude Code `.mcp.json` kurulum rehberi — README'ye eklendi (v1.7.0)
+- [x] 46 arac test raporu — `docs/TEST_REPORT.md`: Free/Pro/Org/Enterprise plan bazli yetenek matrisi, adim adim test rehberi (v1.7.0)
 - [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
 - [ ] IDE config ornekleri: VSCode, Windsurf, Zed
 

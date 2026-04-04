@@ -73,6 +73,21 @@ Aşağıdaki JSON bloğunu AI aracınızın config dosyasına ekleyin. Bu, AI ar
 }
 ```
 
+**Claude Code** — Proje klasörünüzde `.mcp.json` dosyası oluşturun (yoksa yeni dosya açın):
+
+```json
+{
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+    }
+  }
+}
+```
+
+> **Claude Code kullanıcıları için önemli:** Config dosyası `.mcp.json` olmalıdır (proje kökünde). `~/.claude/settings.json` dosyası MCP sunucuları için **çalışmaz** — o dosya sadece izinler (permissions) içindir.
+
 ### 3. Figma'da plugin'i açın
 
 1. **Cursor veya Claude Desktop'ı yeniden başlatın** (config'i okuması için)
@@ -206,6 +221,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
 | [USE_CASES.md](docs/USE_CASES.md) | Örnek kullanım senaryoları |
 | [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | Güvenlik denetimi |
+| [TEST_REPORT.md](docs/TEST_REPORT.md) | 46 araç test raporu ve plan bazlı yetenek matrisi |
 
 ## Güvenlik ve gizlilik
 
