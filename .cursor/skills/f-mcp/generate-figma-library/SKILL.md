@@ -358,9 +358,13 @@ componentSet.itemSpacing = 16;
 return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 ```
 
-**KRITIK:** `combineAsVariants` sonrasi component set'in `layoutMode` varsayilan `NONE` olur — variantlar ayni noktada ust uste biner ve gorunmez. Her zaman auto-layout ekle.
+**KRITIK:** `combineAsVariants` sonrasi ZORUNLU olarak `figma_arrange_component_set` cagir — bu arac variantlari duzgun grid'e yerlestirir. Manual `layoutMode` ayarlama YAPMA.
 
-Variant grid düzenleme için `figma_arrange_component_set` kullanılabilir.
+```
+figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
+```
+
+Bu arac Figma'nin native "Combine as variants" islevini kullanir ve variantlari otomatik olarak duzgun grid layout'a yerlestirir.
 
 ### Component property
 
