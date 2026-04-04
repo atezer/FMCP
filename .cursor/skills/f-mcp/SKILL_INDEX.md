@@ -13,7 +13,13 @@ Cursor veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, y
 | `uidev` | **UI Geliştirici** | iOS/Android/Web arayüz geliştirme, Figma'dan kod üretme |
 | `po` | **PO/PM/SEM** | UI analiz, tasarım durumu raporlama, karar alma |
 
-## Skill Listesi (17 skill)
+## Skill Listesi (18 skill)
+
+### Dokumantasyon
+
+| Skill | Dosya | Personalar | Kısa açıklama |
+|---|---|---|---|
+| `component-documentation` | [component-documentation/SKILL.md](component-documentation/SKILL.md) | designer, designops, uidev | Bileşen kullanım kılavuzu oluşturma (Standard/Compact format seçimi, endüstri standartları referansı) |
 
 ### Tuval Yazma ve Oluşturma
 
@@ -65,9 +71,10 @@ Cursor veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, y
 1. figma-canvas-ops (önkoşul)
 2. generate-figma-library (DS kütüphanesi yoksa)
    VEYA generate-figma-screen (ekran oluşturma)
-3. audit-figma-design-system (kalite kontrol)
-4. fix / apply (düzeltme gerekiyorsa)
-5. figma-a11y-audit (erişilebilirlik kontrol)
+3. component-documentation (bileşen kullanım kılavuzu)
+4. audit-figma-design-system (kalite kontrol)
+5. fix / apply (düzeltme gerekiyorsa)
+6. figma-a11y-audit (erişilebilirlik kontrol)
 ```
 
 ### DesignOps
@@ -111,7 +118,8 @@ Ayrıntı: [audit-figma-design-system/SKILL.md](audit-figma-design-system/SKILL.
 
 1. **Tuval hazırlık:** `figma-canvas-ops` (zorunlu önkoşul)
 2. **Oluşturma:** `generate-figma-library` → `generate-figma-screen`
-3. **Denetim:** `audit-figma-design-system` → `fix-figma-design-system-finding` *veya* `apply-figma-design-system`
+3. **Dokümantasyon:** `component-documentation` (bileşen kılavuzu — Standard veya Compact)
+4. **Denetim:** `audit-figma-design-system` → `fix-figma-design-system-finding` *veya* `apply-figma-design-system`
 4. **Token:** `design-token-pipeline` → isteğe bağlı `code-design-mapper`
 5. **Teslim:** `ai-handoff-export` → `implement-design`
 6. **Doğrulama:** `visual-qa-compare` + `design-drift-detector` → gerekirse `design-system-rules`
@@ -125,6 +133,7 @@ Ayrıntı: [audit-figma-design-system/SKILL.md](audit-figma-design-system/SKILL.
 | Dosya | Açıklama |
 |---|---|
 | [TOOL_MAPPING.md](TOOL_MAPPING.md) | Resmi Figma MCP ↔ F-MCP Bridge araç eşleme tablosu |
+| `reference_industry_design_standards.md` | Endüstri standartları hafıza dosyası (M3, HIG, WCAG, shadcn/ui, Tailwind) — Claude memory'de |
 
 ## MCP
 
