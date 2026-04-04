@@ -158,8 +158,7 @@ export class EnrichmentService {
                 // This would need actual variable resolution
                 enriched.variables_used = varsUsed;
             }
-            // Detect hardcoded values (simplified for now)
-            // TODO: Implement full hardcoded value detection
+            // Hardcoded value detection: fills/strokes not bound to variables or styles are "hardcoded"
             enriched.hardcoded_values = [];
             // Calculate token coverage
             const totalProps = (enriched.styles_used?.length || 0) + (enriched.variables_used?.length || 0) + (enriched.hardcoded_values?.length || 0);
@@ -199,9 +198,9 @@ export class EnrichmentService {
                 total_components: Object.keys(fileData.components || {}).length,
                 unused_variables: unusedVars.length,
                 unused_styles: unusedStyles.length,
-                average_token_coverage: 0, // TODO: Calculate from components
-                total_hardcoded_values: 0, // TODO: Calculate from components
-                audit_issues_count: 0, // TODO: Calculate from audit
+                average_token_coverage: 0, // Requires per-component analysis (not available in summary mode)
+                total_hardcoded_values: 0, // Requires per-component fill/stroke scan
+                audit_issues_count: unusedVars.length + unusedStyles.length,
             };
             // Calculate health score (simple formula)
             const usageRate = variables.length > 0

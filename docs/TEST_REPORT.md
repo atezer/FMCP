@@ -16,7 +16,7 @@
 ### Test Kapsami
 | Metrik | Deger |
 |--------|-------|
-| FMCP araci | 46 (44 PASS, 4 EXPECTED FAIL, 2 SKIP) |
+| FMCP araci | 47 (45 PASS, 4 EXPECTED FAIL, 2 SKIP) |
 | FMCP skill | 17 (8 duzeltildi, 7 zenginlestirildi) |
 | Uretilen token | 120 (3 collection: Primitives 43, Primitives Dark 32, Semantic 45) |
 | Uretilen ekran | 6 (3 boyut x 2 tema) |
@@ -29,7 +29,7 @@
 ### Sonuc Tablosu
 | Kategori | Sayi |
 |----------|------|
-| PASS | 44 |
+| PASS | 45 |
 | EXPECTED FAIL (Figma kisiti) | 4 |
 | SKIP (guvenlik) | 2 |
 | GERCEK HATA | 0 |
@@ -46,7 +46,7 @@ Token Olusturma → Bilesen Tasarimi → Ekran Yapimi → DS Denetimi → Eriseb
 → Token Export → Gelistirici Handoff → Kod Uretimi → QA → Etki Analizi
 ```
 
-### 2.1 Faz 0: Baglanti Dogrulama — 5/5 PASS
+### 2.1 Faz 0: Baglanti Dogrulama — 6/6 PASS
 
 | # | Arac | Sonuc |
 |---|------|-------|
@@ -55,6 +55,7 @@ Token Olusturma → Bilesen Tasarimi → Ekran Yapimi → DS Denetimi → Eriseb
 | 3 | `figma_plugin_diagnostics` | PASS — uptime, memory, nodeVersion |
 | 4 | `figma_get_file_data` | PASS — 1 sayfa |
 | 5 | `figma_capture_screenshot` | PASS — bos sayfa baseline |
+| 6 | Oturum yeniden baglanti | PASS — eski oturum kapatildi, yeni oturum acildi; bridge port 5454 serbest, plugin otomatik baglandi (1 client, "Untitled" dosyasi) |
 
 ### 2.2 Faz 1: Token & DS Kutuphanesi — 14/14 PASS + 1 EXPECTED FAIL
 

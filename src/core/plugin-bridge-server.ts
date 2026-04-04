@@ -6,13 +6,13 @@
  * (e.g. Figma Desktop + FigJam browser + Figma browser — all on one port).
  * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  *
- * Port strategy: no auto-scanning. If the configured port is busy, the server
- * probes it to distinguish a live F-MCP instance from a stale/dead process.
- * Stale ports get one automatic retry after a short delay.
+ * Port strategy: graceful takeover. If the configured port is busy with another
+ * F-MCP instance, the server sends a /shutdown request to the old bridge and
+ * retries after it exits. Stale ports get one automatic retry after a short delay.
  */
 
 import { WebSocketServer, type WebSocket } from "ws";
-import { createServer, get as httpGet } from "http";
+import { createServer, get as httpGet, request as httpRequest } from "http";
 import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
@@ -21,6 +21,7 @@ const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
 const MAX_PORT = 5470;
 const STALE_PORT_RETRY_DELAY_MS = 1500;
+const SHUTDOWN_TAKEOVER_DELAY_MS = 2000;
 
 export interface BridgeRequest {
 	id: string;
@@ -246,12 +247,64 @@ export class PluginBridgeServer {
 		});
 	}
 
+	/**
+	 * Send a POST /shutdown to an old F-MCP bridge on the given port,
+	 * wait for it to exit, then retry binding to the same port.
+	 */
+	private requestShutdownAndRetry(port: number, host: string): void {
+		console.error(`   Sending shutdown request to old F-MCP bridge on port ${port}…\n`);
+		const req = httpRequest(
+			{ hostname: host, port, path: "/shutdown", method: "POST", timeout: 3000 },
+			(res) => {
+				let body = "";
+				res.on("data", (chunk: Buffer | string) => { body += chunk; });
+				res.on("end", () => {
+					if (res.statusCode === 200) {
+						console.error(`   Old bridge accepted shutdown. Retaking port ${port} in ${SHUTDOWN_TAKEOVER_DELAY_MS}ms…\n`);
+						setTimeout(() => this.tryListenFixed(port, true), SHUTDOWN_TAKEOVER_DELAY_MS);
+					} else {
+						const msg =
+							`Old bridge refused shutdown (status ${res.statusCode}). ` +
+							`Use figma_set_port to switch to a different port (${MIN_PORT}–${MAX_PORT}), ` +
+							`or free the port: lsof -i :${port}`;
+						this.startError = msg;
+						console.error(`\n⚠️  ${msg}\n`);
+						logger.warn({ port }, msg);
+						this._listenResolve?.(false);
+						this._listenResolve = null;
+					}
+				});
+			},
+		);
+		req.on("error", () => {
+			// Old bridge unreachable — might have already exited, retry anyway
+			console.error(`   Old bridge unreachable after shutdown request. Retrying port ${port}…\n`);
+			setTimeout(() => this.tryListenFixed(port, true), SHUTDOWN_TAKEOVER_DELAY_MS);
+		});
+		req.on("timeout", () => {
+			req.destroy();
+			console.error(`   Shutdown request timed out. Retrying port ${port}…\n`);
+			setTimeout(() => this.tryListenFixed(port, true), SHUTDOWN_TAKEOVER_DELAY_MS);
+		});
+		req.end();
+	}
+
 	private tryListenFixed(port: number, isRetry: boolean): void {
-		const server = createServer((_req, res) => {
+		const server = createServer((req, res) => {
+			// Graceful shutdown endpoint: a new bridge instance requests this old one to exit
+			if (req.method === "POST" && req.url === "/shutdown") {
+				res.writeHead(200, { "Content-Type": "text/plain" });
+				res.end("shutting down\n");
+				logger.info("Received /shutdown request from new bridge instance — stopping gracefully");
+				console.error("\n⚠️  Received shutdown request from new F-MCP bridge instance. Stopping…\n");
+				// Defer stop to let the response flush
+				setTimeout(() => this.stop(), 500);
+				return;
+			}
 			res.writeHead(200, {
 				"Content-Type": "text/plain",
 				"Access-Control-Allow-Origin": "*",
-				"Access-Control-Allow-Methods": "GET, OPTIONS",
+				"Access-Control-Allow-Methods": "GET, OPTIONS, POST",
 			});
 			res.end("F-MCP ATezer Bridge (connect via WebSocket)\n");
 		});
@@ -263,7 +316,7 @@ export class PluginBridgeServer {
 				server.close();
 				if (isRetry) {
 					const msg =
-						`Port ${port} is still busy after retry. ` +
+						`Port ${port} is still busy after takeover attempt. ` +
 						`Use figma_set_port to try a different port (${MIN_PORT}–${MAX_PORT}), ` +
 						`or free the port: lsof -i :${port}`;
 					this.startError = msg;
@@ -276,14 +329,9 @@ export class PluginBridgeServer {
 				const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
 				this.probePort(port, probeHost).then((status) => {
 					if (status === "fmcp") {
-						const msg =
-							`Port ${port} is already in use by another F-MCP bridge instance. ` +
-							`Use figma_set_port to switch to a different port (${MIN_PORT}–${MAX_PORT}).`;
-						this.startError = msg;
-						console.error(`\n⚠️  ${msg}\n`);
-						logger.warn({ port }, msg);
-						this._listenResolve?.(false);
-						this._listenResolve = null;
+						console.error(`\n⚠️  Port ${port} is in use by another F-MCP bridge. Requesting graceful shutdown…\n`);
+						logger.info({ port }, "Requesting graceful shutdown of old F-MCP bridge");
+						this.requestShutdownAndRetry(port, probeHost);
 					} else if (status === "dead") {
 						console.error(
 							`\n⚠️  Port ${port} is busy but not responding (stale process).\n` +
@@ -300,10 +348,10 @@ export class PluginBridgeServer {
 						this._listenResolve?.(false);
 						this._listenResolve = null;
 					}
-				}).catch((err) => {
-					const msg = `Port probe failed: ${err instanceof Error ? err.message : String(err)}`;
+				}).catch((probeErr) => {
+					const msg = `Port probe failed: ${probeErr instanceof Error ? probeErr.message : String(probeErr)}`;
 					this.startError = msg;
-					logger.error({ err, port }, msg);
+					logger.error({ err: probeErr, port }, msg);
 					this._listenResolve?.(false);
 					this._listenResolve = null;
 				});

@@ -30,7 +30,7 @@ export class FigmaMCP extends McpAgent {
     constructor() {
         super(...arguments);
         // Root @modelcontextprotocol/sdk vs agents' nested copy — types diverge; runtime is compatible.
-        // @ts-expect-error TS2416 — McpServer duplicate package resolution
+        // @ts-ignore TS2416 — McpServer duplicate package resolution
         this.server = new McpServer({
             name: "F-MCP ATezer",
             version: "0.1.0",
