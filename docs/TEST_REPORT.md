@@ -3,7 +3,7 @@
 **Tarih:** 2026-04-04
 **Test Ortami:** macOS Darwin 25.4.0 (ARM64)
 **Node.js:** v22.22.2
-**FMCP Surum:** 1.7.1
+**FMCP Surum:** 1.7.6
 **Figma Plani:** Free
 **AI Araci:** Claude Code (Opus 4.6, 1M context)
 **Baglanti:** Plugin Bridge, port 5454
@@ -16,8 +16,8 @@
 ### Test Kapsami
 | Metrik | Deger |
 |--------|-------|
-| FMCP araci | 47 (45 PASS, 4 EXPECTED FAIL, 2 SKIP) |
-| FMCP skill | 17 (8 duzeltildi, 7 zenginlestirildi) |
+| FMCP araci | 47 (46 PASS, 3 EXPECTED FAIL, 2 SKIP) |
+| FMCP skill | 18 (9 duzeltildi, 7 zenginlestirildi) |
 | Uretilen token | 120 (3 collection: Primitives 43, Primitives Dark 32, Semantic 45) |
 | Uretilen ekran | 6 (3 boyut x 2 tema) |
 | Uretilen bilesen | 1 component set, 5 variant |
@@ -29,8 +29,8 @@
 ### Sonuc Tablosu
 | Kategori | Sayi |
 |----------|------|
-| PASS | 45 |
-| EXPECTED FAIL (Figma kisiti) | 4 |
+| PASS | 46 |
+| EXPECTED FAIL (Figma kisiti) | 3 |
 | SKIP (guvenlik) | 2 |
 | GERCEK HATA | 0 |
 | **TOPLAM** | **50+** |
@@ -98,7 +98,7 @@ Token Olusturma → Bilesen Tasarimi → Ekran Yapimi → DS Denetimi → Eriseb
 | 29 | `get_component` | Primary variant metadata | PASS |
 | 30 | `get_component_image` | 2510 byte PNG | PASS |
 | 31 | `get_component_for_development` | Metadata + screenshot | PASS |
-| 32 | `arrange_component_set` | dynamic-page hatasi | EXPECTED FAIL |
+| 32 | `arrange_component_set` | combineAsVariants + sonrasinda figma_execute ile layout duzeltme | PASS (v1.7.6 fix) |
 | 33 | `instantiate_component` | Local component — not found | EXPECTED FAIL |
 | 34 | `set_instance_properties` | dynamic-page hatasi | EXPECTED FAIL |
 | 35 | `figma_execute` | Instance + property set (workaround) | PASS |
@@ -310,7 +310,8 @@ Tum ekranlarin width, minHeight ve padding degerleri variable'lara bagli (hard-c
 | # | Kisit | Etkilenen Arac | Sebep | Cozum / Workaround |
 |---|-------|---------------|-------|---------------------|
 | 1 | Free planda 1 mode limiti | `add_mode` | Figma Free plan | Pro+ plana yukselt VEYA ayri Dark collection (workaround) |
-| 2 | dynamic-page API kisiti | `arrange_component_set`, `set_instance_properties` | Plugin manifest | `figma_execute` ile async workaround |
+| 2 | dynamic-page API kisiti | `set_instance_properties` | Plugin manifest | `figma_execute` ile async workaround |
+| 2b | `arrange_component_set` post-fix | v1.7.6'da `getNodeByIdAsync` fix + sonrasinda `figma_execute` ile stroke/layout/rename | Cozuldu | 2 adimli akis: arrange → figma_execute |
 | 3 | Sadece published component | `instantiate_component` | Figma API | `figma_execute` + `createInstance()` |
 | 4 | COLOR hex string | `setup_design_tokens` | COLOR variable RGBA bekler | `figma_execute` ile COLOR olustur |
 | 5 | REST Variables API | `rest_api` (variables) | Enterprise plan | Plugin bridge (tum planlarda) |
@@ -330,7 +331,7 @@ Test sirasinda tespit edilen iyilestirme ihtiyaclari:
 | P1 | `figma_create_component` araci | En sik kullanilan islem icin ozel arac |
 | P1 | `figma_set_auto_layout` araci | Her component icin gerekli |
 | P1 | `figma_bind_variable` araci | Token binding icin ozel arac |
-| P1 | `arrange_component_set` fix | dynamic-page async gecis |
+| ~~P1~~ | ~~`arrange_component_set` fix~~ | ~~dynamic-page async gecis~~ — **v1.7.6'da cozuldu** |
 | P2 | Local component instantiate | `instantiate_component` genisletme |
 | P2 | Toplu scope atama araci | Batch scope setter |
 | P3 | Dahili kontrast orani araci | figma_execute yerine ozel arac |
