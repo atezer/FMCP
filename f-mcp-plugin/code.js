@@ -2774,11 +2774,6 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // Only add missing stroke — do NOT touch child positions or size
-      componentSet.strokes = [{
-        type: 'SOLID', visible: true, opacity: 1, blendMode: 'NORMAL',
-        color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
-      }];
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
