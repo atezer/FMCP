@@ -18,16 +18,16 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 ## Öne çıkan özellikler
 
-- **46 araç** — okuma, yazma, export, variable yönetimi, bileşen arama ve daha fazlası
-- **Figma API token tüketmez\*** — Varsayılan olarak plugin üzerinden çalışır, Figma API kotanızı kullanmaz
-- **Veri güvenliği** — Tasarım verisi sadece kendi bilgisayarınızda kalır (Zero Trust)
-- **Çoklu dosya** — Aynı anda birden fazla Figma/FigJam dosyası ile çalışabilirsiniz
-- **Çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda (otomatik port tarama, elle değiştirmeye gerek yok)
-- **SVG/PNG export** — Vektörel veya bitmap, toplu export (1-50 node)
-- **REST API desteği** — İsteğe bağlı token ile yorum okuma, versiyon geçmişi, görsel export
+- **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ve daha fazlası ([tam liste](docs/TOOLS_FULL_LIST.md))
+- **17 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, geliştirici handoff, kod üretimi ([test raporu](docs/TEST_REPORT.md))
+- **Token gerekmez** — Temel araçlar Figma API token'ı olmadan plugin üzerinden çalışır. REST API (yorum, versiyon geçmişi) için isteğe bağlı token eklenebilir.
+- **Verileriniz sizde kalır** — Tasarım verisi bilgisayarınızdan çıkmaz. Figma bulutuna veya üçüncü taraflara veri gönderilmez.
+- **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda, birden fazla Figma/FigJam dosyasıyla çalışır (otomatik port tarama)
+- **Responsive + Dark Mode** — Ekranları 3 boyutta (Mobile/Tablet/Web) ve 2 temada (Light/Dark) üretir
+- **Erişilebilirlik** — WCAG AA kontrast kontrolü, touch target doğrulama, başlık hiyerarşisi, odak sırası notları
+- **Kod üretimi** — Figma tasarımından React, SwiftUI ve Jetpack Compose kodu üretir
+- **SVG/PNG/PDF export** — Vektörel veya bitmap, toplu export (1-50 node)
 - **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
-
-> \* **REST API isteğe bağlıdır.** Temel araçlar (okuma, yazma, export, variable) token olmadan plugin üzerinden çalışır. Yorum okuma, versiyon geçmişi gibi ek özellikler için Figma API token'ı ekleyebilirsiniz — plugin'deki Advanced panelinden girin, kalan API limitinizi plugin üzerinde takip edin.
 
 ## Hızlı başlangıç
 
@@ -225,10 +225,9 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## Güvenlik ve gizlilik
 
-- Tasarım verileri **sadece bilgisayarınızda** kalır
-- Figma bulutuna veya üçüncü taraflara veri **gönderilmez**
+- Tasarım verileri bilgisayarınızdan **çıkmaz** — tüm iletişim localhost üzerinden
 - REST API token'ı bellekte tutulur, diske **yazılmaz**
-- **KVKK / GDPR uyumlu** mimari
+- İnternetsiz (air-gap) ortamlarda çalışır
 - Detay: [PRIVACY.md](PRIVACY.md)
 
 ## Kurumsal kullanım (Tüm şirkette tek seferde)
@@ -253,6 +252,6 @@ Kurumsal özellikler (audit log, air-gap, org plugin detayı): [ENTERPRISE.md](d
 
 ## Lisans
 
-MIT tabanlı — kişisel kullanım için. Detay: [LICENSE](LICENSE)
+MIT — kişisel ve ticari kullanıma açık. Detay: [LICENSE](LICENSE)
 
 **Sorun mu var?** [GitHub Issues](https://github.com/atezer/FMCP/issues)
