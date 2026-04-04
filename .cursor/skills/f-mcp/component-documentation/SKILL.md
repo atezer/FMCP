@@ -99,13 +99,39 @@ Kullanici secim yapana kadar frame OLUSTURULMAZ.
 
 ## Workflow
 
-1. Bilesen analizi yap (figma_get_component_for_development + figma_get_design_context + figma_get_variables)
-2. **KULLANICIYA FORMAT SECENEKLERINI SUN** — icerik ozetleriyle birlikte
-3. Secime gore frame(ler) olustur
-4. Eski ayni isimli frame varsa sil
-5. Yeni frame'i uygun pozisyona yerlestir
-6. Height bug fix: primaryAxisSizingMode FIXED→AUTO toggle
-7. Viewport'u frame'e odakla
+1. **ENDUSTRI STANDARTLARINI GUNCELLE** (her calistirmada):
+   - `reference_industry_design_standards.md` oku
+   - Icerigindeki "Son guncelleme" tarihini kontrol et
+   - 1 yildan eskiyse kullaniciya uyar:
+     "Endustri standartlari referansi [tarih]'den beri guncellenmedi. Guncellemek ister misin?
+      Kontrol edilecek kaynaklar: shadcn.com, tailwindcss.com, m3.material.io, radix-ui.com, lucide.dev,
+      developer.apple.com/design, w3.org/TR/WCAG22, designtokens.org"
+   - Kullanici onaylarsa: kaynaklari tara, hafiza dosyasini guncelle, tarihi yenile
+   - Onaylamazsa: mevcut bilgilerle devam et
+2. Bilesen analizi yap (figma_get_component_for_development + figma_get_design_context + figma_get_variables)
+3. **KULLANICIYA FORMAT SECENEKLERINI SUN** — icerik ozetleriyle birlikte
+4. Secime gore frame(ler) olustur
+5. Eski ayni isimli frame varsa sil
+6. Yeni frame'i uygun pozisyona yerlestir
+7. Height bug fix: primaryAxisSizingMode FIXED→AUTO toggle
+8. Viewport'u frame'e odakla
+
+## Endustri Standartlari Guncelleme Kaynaklari
+
+Bu skill her tetiklendiginde `reference_industry_design_standards.md` hafiza dosyasindaki bilgiler kullanilir.
+Asagidaki kaynaklar yillik (veya major versiyon degisikliklerinde) kontrol edilmeli:
+
+| Kaynak | URL | Ne Kontrol Edilir |
+|--------|-----|-------------------|
+| shadcn/ui | shadcn.com | Yeni bilesenler, variant degisiklikleri, tema tokenlari |
+| Tailwind CSS | tailwindcss.com | Varsayilan degerler, yeni ozellikler (v4 breaking changes) |
+| Radix UI | radix-ui.com | Yeni primitive'ler, a11y kaliplari |
+| Lucide Icons | lucide.dev | Grid/stroke degisiklikleri, yeni ikonlar |
+| Material Design | m3.material.io | M3 Expressive, yeni bilesen specleri |
+| Apple HIG | developer.apple.com/design | Liquid Glass, yeni platform kurallari |
+| WCAG | w3.org/TR/WCAG22 | Yeni SC'ler, hedef boyut guncellemeleri |
+| W3C Design Tokens | designtokens.org | DTCG format degisiklikleri, yeni tipler |
+| Carbon DS | carbondesignsystem.com | Bilesen checklist guncellemeleri |
 
 ## Skill Koordinasyonu
 
