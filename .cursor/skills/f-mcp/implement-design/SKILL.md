@@ -281,13 +281,13 @@ fun ButtonComponent(
 Bileşende SVG/PNG asset gerekiyorsa:
 
 ```
-figma_get_component_image(componentId="<COMPONENT_ID>", format="SVG")
+figma_get_component_image(nodeId="<COMPONENT_ID>", format="SVG")
 ```
 
 veya
 
 ```
-figma_get_component_image(componentId="<COMPONENT_ID>", format="PNG", scale=2)
+figma_get_component_image(nodeId="<COMPONENT_ID>", format="PNG", scale=2)
 ```
 
 İndirilen asset'leri platform dizinine yerleştir:

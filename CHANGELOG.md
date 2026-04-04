@@ -12,6 +12,42 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.2] - 2026-04-04
+
+### Kapsamli Entegrasyon Testi + 11 Skill Guncelleme + Code-Only Props
+
+**Test:**
+- Uctan uca entegrasyon testi: 46 arac, 17 skill, 11 faz
+- 120 token (Primitives + Primitives Dark + Semantic), 6 ekran (3 boyut x 2 tema), 1 component set (5 variant)
+- 10 dosya uretildi: 3 kod (React/Swift/Kotlin), 5 token (CSS/Tailwind/Swift/Kotlin/JSON), 1 handoff
+- WCAG AA erisebilirlik: tum renk ciftleri PASS, tum touch target >= 44px
+
+**Skill duzeltmeleri (9):**
+- `audit/apply-figma-design-system`: figma_take_screenshot → figma_capture_screenshot
+- `ai-handoff-export`: figma_get_component_details → figma_get_component_for_development
+- `implement-design`: componentId → nodeId
+- `figma-screen-analyzer`: DS compliance formulu duzeltildi
+- `ds-impact-analysis`: sayfa limiti 5→20, transitif bagimlilik eklendi
+- `fix-figma-design-system-finding`: 3 remediasyon modu kod ornegi
+- `generate-figma-library`: batch hata yonetimi pattern
+
+**Skill zenginlestirmeleri (20):**
+- Token description + code syntax (Web/Android/iOS) zorunlu adimi
+- Semantic Token = Alias zorunlu kurali
+- Breakpoint / ekran boyut token'lari
+- Dark mode token stratejisi (Pro+ native vs Free workaround)
+- Code-Only Props katmani (Nathan Curtis yaklasimi)
+- Responsive boyut presetleri (3 boyut + dark = 6 ekran zorunlu)
+- MinHeight token binding zorunlu adimi
+- A11y annotation frame (baslik hiyerarsisi, form iliskilendirme, odak sirasi, alt text, dinamik icerik)
+- Erisebilirlik-tasarim tutarlilik kontrolu (7 kural)
+- Code-Only Props spec data cikarma (handoff)
+
+**FUTURE.md eklemeleri:**
+- P0: Figma Make entegrasyonu + canli prototip sureci
+- P0: Figma prototip baglantilari + animasyonlar
+- P1: Figma Dev Mode entegrasyonu
+
 ## [1.7.0] - 2026-04-04 (guncelleme)
 
 ### Claude Code Destegi ve Test Raporu (YENi)

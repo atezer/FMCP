@@ -111,6 +111,149 @@ Node.js olmadan F-MCP kullanabilme. Detayli analiz ve plan: [STANDALONE_PLAN.md]
 - [ ] Python bridge 10→46 araca genisletme (dusuk risk, 2-3 gun)
 - [ ] Standalone binary (pkg ile, yuksek risk, 3-4 hafta, opsiyonel)
 
+### P0 — Figma Make Entegrasyonu + Canli Prototip Sureci
+
+Simdi: Tasarimlar Figma'da statik olarak olusturuluyor. Onay sonrasi kodlama sureci manuel.
+Hedef: Onaylanan tasarimlari Figma Make'e aktarip, canli kodlanmis prototip olarak uretmek — tam otomasyon.
+
+**Tam Surec Akisi:**
+```
+1. AI ile tasarim uretimi (FMCP + generate-figma-screen/library)
+     ↓
+2. Kullanici/PM/Tasarimci onay verir (chat uzerinden)
+     ↓
+3. Onaylanan ekranlar Figma Make'e aktarilir
+     ↓
+4. Figma Make'te ekranlar tek tek canli prototipe donusturulur
+     ↓
+5. Canli prototip linki paylasılır (test/demo/stakeholder review)
+```
+
+**Gerekli Yeni Araclar:**
+- [ ] `figma_export_to_make` — Onaylanan Figma frame'lerini Make dosyasina aktar
+- [ ] `figma_make_generate` — Make dosyasinda ekrani canli koda donustur
+- [ ] `figma_make_preview` — Make onizleme linki olustur
+
+**Gerekli Yeni Skill:**
+- [ ] `figma-make-prototype` — Tam akis: onay → Make aktarimi → ekran ekran uretim → canli link
+  - Step 1: Kullanici onayi al (chat'te ekran listesi + screenshot goster, onay bekle)
+  - Step 2: Onaylanan ekranlari Figma Make dosyasina aktar
+  - Step 3: Her ekrani sirasıyla Make'te canli koda donustur (responsive + dark mode dahil)
+  - Step 4: Canli onizleme linki olustur ve paylas
+  - Step 5: Geri bildirim → duzeltme dongusu (Make uzerinde)
+
+**Mevcut Skill Guncellemeleri:**
+- [ ] `generate-figma-screen` — Surec sonuna "Onay → Make aktarimi" adimi ekle
+- [ ] `ai-handoff-export` — Handoff'a "Canli Prototip Linki" bolumu ekle
+- [ ] `figma-screen-analyzer` — PO/PM raporuna "Make onizleme durumu" ekle
+
+**Teknik Notlar:**
+- Figma Make API'si `use_figma` MCP araci uzerinden erisilebilir (`mcp__figma__use_figma`)
+- Make dosyalari `figma.com/make/:fileKey` formatinda
+- Make'e aktarim icin `get_design_context` verisi + screenshot kullanilir
+- Make kodu React tabanli — token dosyalari (CSS/Tailwind) ile entegre calisir
+
+**Oncelik:** P0 — Tasarim-kod arasi kopuklugu kapatan kritik ozellik. FMCP'nin "sifirdan uretime" vizyonunun son halkasi.
+
+### P0 — Figma Prototip Baglantilari + Animasyonlar
+
+Simdi: Uretilen ekranlar birbirinden bagimsiz, aralarinda navigasyon ve etkilesim baglantisi yok.
+Hedef: AI uretilen ekranlar arasinda dogru prototip baglantilari, animasyonlar ve aksiyon adimlari otomatik olusturulmali.
+
+**Tam Prototip Akisi:**
+```
+1. Ekranlar uretilir (Login, Home, Register, Forgot Password vb.)
+     ↓
+2. Ekranlar arasi navigasyon haritasi cikarilir
+     ↓
+3. Figma prototip baglantilari (connections) olusturulur
+     ↓
+4. Gecis animasyonlari ayarlanir (slide, dissolve, push vb.)
+     ↓
+5. Flow starting point belirlenir
+     ↓
+6. Prototip test edilir (play mode)
+```
+
+**Gerekli Yeni Araclar:**
+- [ ] `figma_create_prototype_connection` — Iki frame/node arasi prototip baglantisi olustur
+  - Parametreler: sourceNodeId, destinationNodeId, trigger (ON_CLICK/ON_HOVER/ON_DRAG),
+    action (NAVIGATE/OVERLAY/SWAP/BACK), transition (DISSOLVE/SLIDE_IN/PUSH/SMART_ANIMATE),
+    duration (ms), easing (EASE_IN/EASE_OUT/LINEAR)
+- [ ] `figma_set_flow_starting_point` — Prototip baslangic noktasini belirle
+- [ ] `figma_create_interaction` — Node uzerinde etkilesim ekle (hover state, press state, vb.)
+- [ ] `figma_get_prototype_connections` — Mevcut prototip baglantilarini oku (denetim icin)
+
+**Gerekli Yeni Skill:**
+- [ ] `figma-prototype-flow` — Ekranlar arasi tam prototip akisi olusturma
+  - Step 1: Mevcut ekranlari listele ve navigasyon haritasini cikar
+  - Step 2: Her buton/link icin hedef ekrani belirle
+  - Step 3: Prototip baglantilarini olustur (dogru trigger + action + animasyon)
+  - Step 4: Flow starting point'i ayarla
+  - Step 5: Baglantilari dogrula (tum interaktif elemanlar baglanmis mi?)
+  - Step 6: Screenshot/GIF ile prototip akisini dokumante et
+
+**Baglanti Ornekleri (Login Akisi):**
+```
+Login / Mobile:
+  "Giris Yap" butonu → ON_CLICK → NAVIGATE → Home ekrani (SLIDE_IN_RIGHT, 300ms, EASE_OUT)
+  "Sifremi unuttum" link → ON_CLICK → NAVIGATE → Forgot Password ekrani (PUSH, 250ms)
+  "Google ile Giris Yap" → ON_CLICK → OVERLAY → Google Auth modal (DISSOLVE, 200ms)
+  "Kayit Ol" link → ON_CLICK → NAVIGATE → Register ekrani (SLIDE_IN_RIGHT, 300ms)
+  Input focus → ON_CLICK → SET_STATE → Input / Focused state (INSTANT)
+  Button hover → ON_HOVER → SET_STATE → Button / Hover state (EASE_IN, 150ms)
+
+Register ekrani:
+  "Zaten hesabim var" → ON_CLICK → NAVIGATE → Login ekrani (SLIDE_IN_LEFT, 300ms) — BACK
+
+Forgot Password:
+  "Geri" → ON_CLICK → BACK (PUSH_REVERSE, 250ms)
+  "Gonder" → ON_CLICK → NAVIGATE → Check Email ekrani (SLIDE_IN_RIGHT, 300ms)
+```
+
+**Animasyon Standartlari:**
+| Gecis Turu | Animasyon | Sure | Easing | Kullanim |
+|-----------|-----------|------|--------|----------|
+| Ileri navigasyon | SLIDE_IN_RIGHT | 300ms | EASE_OUT | Yeni ekrana git |
+| Geri navigasyon | SLIDE_IN_LEFT | 300ms | EASE_OUT | Onceki ekrana don |
+| Modal acma | DISSOLVE | 200ms | EASE_IN | Overlay/popup goster |
+| Modal kapama | DISSOLVE | 150ms | EASE_OUT | Overlay/popup kapat |
+| Hover state | — | 150ms | EASE_IN | Buton/link hover efekti |
+| Press state | — | 100ms | EASE_OUT | Buton basma efekti |
+| Smart animate | SMART_ANIMATE | 300ms | EASE_IN_OUT | Ayni bilesen farkli state |
+
+**Mevcut Skill Guncellemeleri:**
+- [ ] `generate-figma-screen` — Ekran uretimi sonrasinda otomatik prototip baglantisi adimi ekle
+- [ ] `ai-handoff-export` — Handoff'a "Prototip Akis Diyagrami" bolumu ekle
+- [ ] `figma-a11y-audit` — Prototip fokus sirasi ile a11y fokus sirasi uyumunu kontrol et
+
+**Teknik Notlar:**
+- Figma Plugin API: `node.reactions` dizisi ile prototip baglantilari olusturulur
+- Her reaction: `{ trigger, actions: [{ type, destinationId, navigation, transition }] }`
+- `figma_execute` ile mevcut Plugin API kullanilarak baglanti olusturulabilir
+- Flow starting point: `figma.currentPage.flowStartingPoints` ile yonetilir
+
+**Oncelik:** P0 — Prototipsiz tasarim eksik bir tasarimdir. Stakeholder review, kullanici testi ve gelistirici handoff icin prototip zorunlu.
+
+### P1 — Figma Dev Mode Entegrasyonu
+
+Simdi: Uretilen ekranlarin gelistirici notlari sadece HANDOFF.md dosyasinda.
+Hedef: Figma Dev Mode'da dogrudan gorunur gelistirici notlari, olcumleri ve kod snippetleri.
+
+**Gerekli Yeni Araclar:**
+- [ ] `figma_set_dev_status` — Ekranin gelistirme durumunu ayarla (Ready for dev / In progress / Completed)
+- [ ] `figma_add_dev_annotation` — Dev Mode'da gorunur teknik not ekle
+- [ ] `figma_set_measurements` — Otomatik olcum cizgileri (padding, margin, gap)
+
+**Gerekli Skill Guncellemesi:**
+- [ ] `ai-handoff-export` — Handoff sonrasinda Figma Dev Mode notlarini otomatik ekle
+- [ ] `implement-design` — Kod uretimi sirasinda Dev Mode bilgilerini referans al
+
+**Teknik Notlar:**
+- Figma Dev Mode API: `node.devStatus = { type: "READY_FOR_DEV", description: "..." }`
+- Annotations: Plugin API ile node uzerine teknik not eklenir
+- Dev Mode CSS/iOS/Android code snippets: figma_execute ile okunabilir
+
 ### P3 — Yeni Skiller
 
 - [ ] `design-to-code-generator` — tasarim → React/Vue/Svelte kod uretimi

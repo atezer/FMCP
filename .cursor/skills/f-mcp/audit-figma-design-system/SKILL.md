@@ -22,7 +22,7 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 | Niyet | F-MCP Bridge |
 |--------|----------------|
 | Design context | `figma_get_design_context` |
-| Görsel doğrulama | `figma_capture_screenshot` veya `figma_take_screenshot` |
+| Görsel doğrulama | `figma_capture_screenshot` |
 | Variable / bağlılık | `figma_get_variables` (verbosity=`full`), gerekiyorsa `figma_get_styles` |
 | Yapı / iç içe instance haritası | `figma_get_file_data` (düşük `depth`), hedef node için `figma_get_component` veya `figma_get_design_context`; büyük tahta için `figma_get_file_data` (timeout riski — dikkat). **Not:** Bridge’te ayrı bir “yalnızca metadata” MCP aracı yok; yapı bu üç araçla alınır. |
 | Kod/dev spec ipucu | `figma_get_design_context` (`includeCodeReady=true`); uygunsa `figma_get_component_for_development` |
