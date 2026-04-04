@@ -2774,33 +2774,6 @@ figma.ui.onmessage = async (msg) => {
       }
       if (!parent || !parent.appendChild) throw new Error('Parent does not support children');
       var componentSet = figma.combineAsVariants(nodes, parent);
-      // Replicate Figma native "Combine as variants" — stroke + padding + layout
-      componentSet.strokes = [{
-        type: 'SOLID',
-        visible: true,
-        opacity: 1,
-        blendMode: 'NORMAL',
-        color: { r: 0.5411764979362488, g: 0.21960784494876862, b: 0.9607843160629272 }
-      }];
-      componentSet.strokeWeight = 1;
-      componentSet.strokeAlign = 'INSIDE';
-      componentSet.cornerRadius = 5;
-      componentSet.paddingLeft = 20;
-      componentSet.paddingRight = 20;
-      componentSet.paddingTop = 20;
-      componentSet.paddingBottom = 20;
-      // Position children
-      var gap = 59;
-      var xPos = 20;
-      var maxH = 0;
-      for (var v = 0; v < componentSet.children.length; v++) {
-        var child = componentSet.children[v];
-        child.x = xPos;
-        child.y = 20;
-        xPos += child.width + gap;
-        if (child.height > maxH) maxH = child.height;
-      }
-      componentSet.resize(xPos - gap + 20, maxH + 40);
       figma.ui.postMessage({
         type: 'ARRANGE_COMPONENT_SET_RESULT',
         requestId: msg.requestId,
