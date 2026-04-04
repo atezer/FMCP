@@ -45,9 +45,7 @@ F-MCP Bridge'in çalışması için bilgisayarınızda Node.js olması gerekiyor
 
 ### 2. AI aracınıza config ekleyin
 
-Aşağıdaki JSON bloğunu AI aracınızın config dosyasına ekleyin. Bu, AI aracına "Figma ile nasıl konuşacağını" öğretir.
-
-**Cursor** — Proje klasörünüzde `.cursor/mcp.json` dosyası oluşturun (yoksa yeni dosya açın):
+Aşağıdaki JSON'u AI aracınızın config dosyasına ekleyin:
 
 ```json
 {
@@ -60,33 +58,13 @@ Aşağıdaki JSON bloğunu AI aracınızın config dosyasına ekleyin. Bu, AI ar
 }
 ```
 
-**Claude Desktop** — Settings → Developer → Edit Config tıklayın (veya macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` açın):
+Config dosyasının konumu AI aracınıza göre değişir:
 
-```json
-{
-  "mcpServers": {
-    "figma-mcp-bridge": {
-      "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
-    }
-  }
-}
-```
-
-**Claude Code** — Proje klasörünüzde `.mcp.json` dosyası oluşturun (yoksa yeni dosya açın):
-
-```json
-{
-  "mcpServers": {
-    "figma-mcp-bridge": {
-      "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
-    }
-  }
-}
-```
-
-> **Claude Code kullanıcıları için önemli:** Config dosyası `.mcp.json` olmalıdır (proje kökünde). `~/.claude/settings.json` dosyası MCP sunucuları için **çalışmaz** — o dosya sadece izinler (permissions) içindir.
+| AI Aracı | Config Dosyası |
+|----------|---------------|
+| **Cursor** | `.cursor/mcp.json` (proje klasörü) |
+| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| **Claude Code** | `.mcp.json` (proje klasörü) |
 
 ### 3. Figma'da plugin'i açın
 
