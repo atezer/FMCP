@@ -32,8 +32,8 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 ## Hızlı başlangıç
 
 > 💡 **En kolay yol:** AI aracınıza (Claude, Cursor) şunu söyleyin:
-> *"https://github.com/atezer/FMCP — gerekli kurulumları yap ve Figma'ya bağlan"*
-> AI bu sayfayı okur, kurulumu yapar, sizi bağlar. Aşağıdaki adımlar elle yapmak isteyenler için.
+> *"@atezer/figma-mcp-bridge paketini kur ve Figma'ya bağlan"*
+> AI config'i ayarlar, bağlantıyı kurar. Aşağıdaki adımlar elle yapmak isteyenler için.
 
 ### 1. Node.js kurun (bir kerelik)
 
