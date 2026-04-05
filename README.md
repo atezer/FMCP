@@ -194,6 +194,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 | [REST_API_GUIDE.md](docs/REST_API_GUIDE.md) | REST API kullanım rehberi |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Projeye katkıda bulunma rehberi |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Sorun giderme |
+| [UPDATE.md](docs/UPDATE.md) | Güncelleme rehberi (NPX / Clone / Claude Code) |
 | [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) | Çoklu kullanıcı ve port yönetimi |
 | [ENTERPRISE.md](docs/ENTERPRISE.md) | Kurumsal özellikler (audit log, air-gap) |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
