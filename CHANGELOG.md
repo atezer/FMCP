@@ -12,6 +12,16 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.10] - 2026-04-05
+
+### Doküman: Kapsamlı Güncelleme Rehberi
+
+- **docs/UPDATE.md (YENİ):** NPX cache temizleme, clone güncelleme, Claude Code, Windsurf, Figma plugin güncelleme, sorun giderme, rollback — tüm senaryolar tek rehberde
+- **docs/ONBOARDING.md:** Kırık link düzeltmesi (`README.md#sürüm-ve-güncellemeler` anchoru yoktu), `figma-mcp-bridge-plugin` binary name eklendi
+- **README.md:** Dokümanlar tablosuna UPDATE.md linki, sürüm bilgisi güncellendi
+- **FUTURE.md:** Sürüm referansları güncellendi
+- **.cursor-plugin/plugin.json:** Sürüm güncellendi
+
 ## [1.7.9] - 2026-04-05
 
 ### Türkçe Karakter Düzeltmesi (Kapsamlı)

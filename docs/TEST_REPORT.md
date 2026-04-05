@@ -3,7 +3,7 @@
 **Tarih:** 2026-04-04
 **Test Ortamı:** macOS Darwin 25.4.0 (ARM64)
 **Node.js:** v22.22.2
-**FMCP Sürüm:** 1.7.9
+**FMCP Sürüm:** 1.7.10
 **Figma Planı:** Free
 **AI Aracı:** Claude Code (Opus 4.6, 1M context)
 **Bağlantı:** Plugin Bridge, port 5454
