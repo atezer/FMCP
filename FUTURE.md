@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 4 Nisan 2026 (v1.7.0 — Claude Code desteği, 46 araç test raporu, plan bazlı yetenek matrisi)
-> Paket sürümü (`package.json`): **1.7.0**
+> Son güncelleme: 5 Nisan 2026 (v1.7.10 — kapsamlı güncelleme rehberi, doküman düzeltmeleri)
+> Paket sürümü (`package.json`): **1.7.10**
 
 ---
 
