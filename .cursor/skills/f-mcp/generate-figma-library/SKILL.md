@@ -163,56 +163,56 @@ Her ekran frame'inde şu binding'ler ZORUNLUDUR:
 
 Figma'da "Fixed width (390)" veya "Fixed height (900)" yerine variable ikonu görünmelidir. **Hard-coded boyut değeri KABUL EDİLMEZ.**
 
-### Kritik Kural: Tum Gorunum Degerleri Token'a Bagli Olmali (ZORUNLU)
+### Kritik Kural: Tüm Görünüm Değerleri Token'a Bağlı Olmalı (ZORUNLU)
 
-Bir bilesen olusturulurken asagidaki TUM degerler semantic variable'a baglanmalidir. Hardcoded deger KABUL EDILMEZ:
+Bir bileşen oluşturulurken aşağıdaki TÜM değerler semantic variable'a bağlanmalıdır. Hardcoded değer KABUL EDİLMEZ:
 
-| Ozellik | Baglama Yontemi | Ornek Token |
+| Özellik | Bağlama Yöntemi | Örnek Token |
 |---------|-----------------|-------------|
 | Fill (arka plan) | `setBoundVariable("fills", ...)` | button/primary/bg |
-| Text fill (yazi rengi) | Text node'da `setBoundVariable("fills", ...)` | button/primary/text |
-| Stroke (kenarlik rengi) | `setBoundVariable("strokes", ...)` | button/primary/border |
-| **Stroke width (kenarlik kalinligi)** | `setBoundVariable("strokeWeight", ...)` | button/border-width |
+| Text fill (yazı rengi) | Text node'da `setBoundVariable("fills", ...)` | button/primary/text |
+| Stroke (kenarlık rengi) | `setBoundVariable("strokes", ...)` | button/primary/border |
+| **Stroke width (kenarlık kalınlığı)** | `setBoundVariable("strokeWeight", ...)` | button/border-width |
 | Corner radius | `setBoundVariable("topLeftRadius", ...)` vb. | button/radius |
 | Padding | `setBoundVariable("paddingLeft", ...)` vb. | button/padding-x |
 | Item spacing (gap) | `setBoundVariable("itemSpacing", ...)` | button/gap |
 | Min height | `setBoundVariable("minHeight", ...)` | button/minHeight |
-| Font size | Text Style olustur + `setBoundVariable("fontSize", ...)` | button/fontSize |
+| Font size | Text Style oluştur + `setBoundVariable("fontSize", ...)` | button/fontSize |
 
-**Ozellikle gozden kacan ozellikler:**
-- `strokeWeight` — Outline buton gibi kenarligi olan variantlarda kenarlik kalinligi variable'a baglanmali
-- `fontSize` — Figma'da fontFamily/fontWeight variable olarak baglanamaz, Text Style ile yonetilir
-- Text Style olustur → fontSize'i variable'a bagla → tum text node'lara `setTextStyleIdAsync` ile uygula
+**Özellikle gözden kaçan özellikler:**
+- `strokeWeight` — Outline buton gibi kenarlığı olan variantlarda kenarlık kalınlığı variable'a bağlanmalı
+- `fontSize` — Figma'da fontFamily/fontWeight variable olarak bağlanamaz, Text Style ile yönetilir
+- Text Style oluştur → fontSize'i variable'a bağla → tüm text node'lara `setTextStyleIdAsync` ile uygula
 
 ### Kritik Kural: Text Hizalama (ZORUNLU)
 
-Text node'un `textAlignHorizontal` degeri, bilesenin amacina gore ayarlanmali:
+Text node'un `textAlignHorizontal` değeri, bileşenin amacına göre ayarlanmalı:
 
-| Bilesen Tipi | textAlignHorizontal | Neden |
+| Bileşen Tipi | textAlignHorizontal | Neden |
 |-------------|---------------------|-------|
-| Button, Tag, Badge | CENTER | Yazi butonun ortasinda olmali |
-| Input, Textarea | LEFT | Kullanici metni soldan yazar |
-| Card title, List item | LEFT | Okuma yonu sol→sag |
-| Dialog title | LEFT veya CENTER | Tasarim kararina bagli |
-| Table header/cell | LEFT | Tablo verisi sola hizali |
+| Button, Tag, Badge | CENTER | Yazı butonun ortasında olmalı |
+| Input, Textarea | LEFT | Kullanıcı metni soldan yazar |
+| Card title, List item | LEFT | Okuma yönü sol→sağ |
+| Dialog title | LEFT veya CENTER | Tasarım kararına bağlı |
+| Table header/cell | LEFT | Tablo verisi sola hizalı |
 
-**Kural:** `textAlignHorizontal` ASLA varsayilan LEFT olarak birakilmamali — bilesen tipine gore bilinçli secilmeli.
-Text Style icerisinde hizalama AYARLANAMAZ (Figma kisitlamasi) — her text node'da ayri ayarlanmali.
+**Kural:** `textAlignHorizontal` ASLA varsayılan LEFT olarak bırakılmamalı — bileşen tipine göre bilinçli seçilmeli.
+Text Style içerisinde hizalama AYARLANAMAZ (Figma kısıtlaması) — her text node'da ayrı ayarlanmalı.
 
-### Kritik Kural: Bilesen Sizing (ZORUNLU)
+### Kritik Kural: Bileşen Sizing (ZORUNLU)
 
-Bilesenler ve instance'lar ASLA `Fixed width` olarak birakilmamali (ozel durum haric):
+Bileşenler ve instance'lar ASLA `Fixed width` olarak bırakılmamalı (özel durum hariç):
 
 | Durum | layoutSizingHorizontal | Neden |
 |-------|----------------------|-------|
-| Button, Tag, Badge | HUG | Icerige gore boyutlanir, yazi ortalanir |
-| Input, Textarea | FILL | Parent genisligine uyar |
-| Card | FILL veya FIXED | Responsive grid'e gore |
-| Icon wrapper | HUG | Ikon boyutuna gore |
+| Button, Tag, Badge | HUG | İçeriğe göre boyutlanır, yazı ortalanır |
+| Input, Textarea | FILL | Parent genişliğine uyar |
+| Card | FILL veya FIXED | Responsive grid'e göre |
+| Icon wrapper | HUG | İkon boyutuna göre |
 
-**Kural:** `Fixed width` kullanirsan yazinin ortalanmis gorunmesini engeller — buton "Kaydet" yazisindan genis kalir ve yazi sola yapisir. HUG kullanirsan buton yaziya sarilir ve auto-layout CENTER duzgun calisir.
+**Kural:** `Fixed width` kullanırsan yazının ortalanmış görünmesini engeller — buton "Kaydet" yazısından geniş kalır ve yazı sola yapışır. HUG kullanırsan buton yazıya sarılır ve auto-layout CENTER düzgün çalışır.
 
-**Dogrulama:** Faz 4 (4d) adiminda `boundVariables`, stroke, fontSize, text style, text hizalama VE sizing mode kontrol edilmeli.
+**Doğrulama:** Faz 4 (4d) adımında `boundVariables`, stroke, fontSize, text style, text hizalama VE sizing mode kontrol edilmeli.
 
 ### Toplu variable oluşturma (F-MCP avantajı)
 ```
@@ -349,7 +349,7 @@ const componentSet = figma.combineAsVariants(
 );
 componentSet.name = "Button";
 
-// ZORUNLU: Component set'e auto-layout ekle — yoksa variantlar ust uste biner
+// ZORUNLU: Component set'e auto-layout ekle — yoksa variantlar üst üste biner
 componentSet.layoutMode = "VERTICAL"; // veya "HORIZONTAL"
 componentSet.primaryAxisSizingMode = "AUTO";
 componentSet.counterAxisSizingMode = "AUTO";
@@ -358,13 +358,13 @@ componentSet.itemSpacing = 16;
 return { componentSetId: componentSet.id, variantCount: variants.length + 1 };
 ```
 
-**KRITIK:** Variantlari birlestirmek icin `figma_arrange_component_set` kullan:
+**KRİTİK:** Variantları birleştirmek için `figma_arrange_component_set` kullan:
 
 ```
 figma_arrange_component_set(nodeIds=["<VARIANT_1_ID>", "<VARIANT_2_ID>", ...])
 ```
 
-Bu arac sadece `combineAsVariants` cagirir. API sonucu native UI ile birebir ayni degildir — asagidaki duzeltme adimlarini `figma_execute` ile SONRASINDA uygula:
+Bu araç sadece `combineAsVariants` çağırır. API sonucu native UI ile birebir aynı değildir — aşağıdaki düzeltme adımlarını `figma_execute` ile SONRASINDA uygula:
 
 ```js
 // figma_execute — arrange_component_set SONRASI calistir
@@ -376,7 +376,7 @@ cs.strokes = [{
   color: { r: 0.541, g: 0.220, b: 0.961 }
 }];
 
-// 2. Auto-layout ekle (native degerler)
+// 2. Auto-layout ekle (native değerler)
 cs.layoutMode = "HORIZONTAL";
 cs.primaryAxisSizingMode = "AUTO";
 cs.counterAxisSizingMode = "AUTO";
@@ -422,7 +422,7 @@ codeOnlyFrame.y = 0;
 codeOnlyFrame.clipsContent = true;
 codeOnlyFrame.fills = [];
 component.appendChild(codeOnlyFrame);
-// KRITIK: ABSOLUTE positioning — yoksa auto-layout gap'te bosluk yaratir
+// KRİTİK: ABSOLUTE positioning — yoksa auto-layout gap'te boşluk yaratır
 codeOnlyFrame.layoutPositioning = "ABSOLUTE";
 ```
 
@@ -491,6 +491,21 @@ components:
 ```
 
 **Kural:** Code-only props, `ai-handoff-export` skill'inin HANDOFF.md çıktısında otomatik olarak listelenmeli. `figma-a11y-audit` skill'i bu props'ları erişilebilirlik denetiminde kullanmalı.
+
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
 
 ## Performans Kuralları
 

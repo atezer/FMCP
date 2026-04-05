@@ -403,6 +403,21 @@ return { pass: checks.filter(c => c.pass).length, total: checks.length, checks }
 | Giriş butonu | button | "Giriş yap" | 0 |
 ```
 
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
+
 ## Çıktı Formatı
 
 - **Varsayılan:** Markdown rapor (tüm platformlar)

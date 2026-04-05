@@ -186,6 +186,21 @@ AI analizi ile:
 
 Yapılandırılmış JSON — dashboard veya CI entegrasyonu için.
 
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
+
 ## Evolution Triggers
 
 - PO/PM geri bildirimine göre rapor metrikleri genişletilmeli

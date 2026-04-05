@@ -116,7 +116,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            placeholder = { Text("Sifre", color = InputColors.placeholder) },
+            placeholder = { Text("Şifre", color = InputColors.placeholder) },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = InputSpacing.minHeight),
@@ -220,7 +220,7 @@ fun LoginScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Hesabiniz yok mu?",
+                text = "Hesabınız yok mu?",
                 fontSize = AppFontSize.sm,
                 color = InputColors.placeholder
             )
