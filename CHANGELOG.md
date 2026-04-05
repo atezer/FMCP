@@ -12,6 +12,11 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) bicimine uygun
 
 Bu changelog'a ekleme oncesi surumlerin tam ayrintilari icin `git log` kullanilabilir.
 
+## [1.7.8] - 2026-04-05
+
+### Fix
+- **CI version consistency:** Kaynak dosyalardaki (local.ts, local-plugin-only.ts, plugin-bridge-server.ts) versiyon stringleri package.json ile senkronize edildi. CI "Version consistency check" artik basarili.
+
 ## [1.7.6] - 2026-04-05
 
 ### component-documentation Skill (YENi — 18. skill)
