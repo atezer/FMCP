@@ -113,9 +113,9 @@ export const LoginScreen: React.FC = () => {
           required
         />
         <InputField
-          label="Sifre"
+          label="Şifre"
           type="password"
-          placeholder="Sifre"
+          placeholder="Şifre"
           autoComplete="current-password"
           required
         />

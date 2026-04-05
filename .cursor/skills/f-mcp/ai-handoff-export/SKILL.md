@@ -151,6 +151,21 @@ PO/PM persona algılandığında veya `--executive` flag ile teknik handoff'un y
 - PO/PM persona'sı için executive summary'yi her zaman ekle.
 - Platform hedefini manifest'e her zaman yaz.
 
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
+
 ## Evolution Triggers
 
 - Bridge'e yeni metadata araçları eklendiğinde handoff paketi zenginleştirilebilir

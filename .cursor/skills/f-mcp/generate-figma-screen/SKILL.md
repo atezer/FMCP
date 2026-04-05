@@ -175,6 +175,21 @@ Mevcut bir ekranı güncellerken:
 3. Yalnızca değişen bölümü yeniden oluştur veya güncelle
 4. Tüm ekranı baştan oluşturmaktan kaçın
 
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
+
 ## Performans Kuralları
 
 - Aynı oturumda `figma_get_variables(verbosity="full")` birden fazla çağırma — ilk sonucu kullan

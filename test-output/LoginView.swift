@@ -65,7 +65,7 @@ struct LoginView: View {
                         .accessibilityLabel("E-posta adresi")
 
                     // Password
-                    SecureField("Sifre", text: $password)
+                    SecureField("Şifre", text: $password)
                         .textContentType(.password)
                         .padding(.horizontal, InputSpacing.paddingX)
                         .padding(.vertical, InputSpacing.paddingY)
@@ -77,7 +77,7 @@ struct LoginView: View {
                         )
                         .cornerRadius(InputSpacing.radius)
                         .font(.system(size: InputSpacing.fontSize))
-                        .accessibilityLabel("Sifre")
+                        .accessibilityLabel("Şifre")
 
                     // Login Button
                     Button(action: { /* Handle login */ }) {
@@ -136,7 +136,7 @@ struct LoginView: View {
 
                 // Register
                 HStack(spacing: Spacing.xs) {
-                    Text("Hesabiniz yok mu?")
+                    Text("Hesabınız yok mu?")
                         .font(.system(size: FontSize.sm))
                         .foregroundColor(InputColor.placeholder)
                     Button("Kayıt Ol") { /* Navigate */ }

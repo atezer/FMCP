@@ -1,313 +1,314 @@
-# F-MCP -- Kalan Adimlar (Future)
+# F-MCP -- Kalan Adımlar (Future)
 
-> Son guncelleme: 4 Nisan 2026 (v1.7.0 — Claude Code destegi, 46 arac test raporu, plan bazli yetenek matrisi)
-> Paket surumu (`package.json`): **1.7.0**
+> Son güncelleme: 4 Nisan 2026 (v1.7.0 — Claude Code desteği, 46 araç test raporu, plan bazlı yetenek matrisi)
+> Paket sürümü (`package.json`): **1.7.0**
 
 ---
 
-## YUKSEK ONCELIKLI HEDEFLER (Plugin-Only Kullanicilar Icin)
+## YÜKSEK ÖNCELİKLİ HEDEFLER (Plugin-Only Kullanıcılar İçin)
 
-### P0 — Plugin Coklu Port + Otomatik AI Araci Tespiti
+### P0 — Plugin Çoklu Port + Otomatik AI Aracı Tespiti
 
-**Branch:** `feature/multi-port-plugin` (ayri branch, mevcut yapi bozulmaz)
+**Branch:** `feature/multi-port-plugin` (ayrı branch, mevcut yapı bozulmaz)
 
-Simdi: Kullanici Claude/Cursor'dan "baglan" dediginde portu elle degistirmek zorunda.
-Hedef: Plugin tum portlari (5454-5470) sessizce dinler, AI araci otomatik tespit edilir.
+Şimdi: Kullanıcı Claude/Cursor'dan "bağlan" dediğinde portu elle değiştirmek zorunda.
+Hedef: Plugin tüm portları (5454-5470) sessizce dinler, AI aracı otomatik tespit edilir.
 
-**Akis:**
+**Akış:**
 ```
-Plugin acilir → 5454-5470 tarar → bulunan bridge'lere baglanir
-→ Her bridge welcome mesajinda clientName gonderir (otomatik tespit)
+Plugin açılır → 5454-5470 tarar → bulunan bridge'lere bağlanır
+→ Her bridge welcome mesajında clientName gönderir (otomatik tespit)
 → Plugin UI: ◀ 5454 (Cursor) ▶ veya ◀ 5456 (Claude) ▶
-→ Kullanici ok tuslariyla gecis yapar
+→ Kullanıcı ok tuşlarıyla geçiş yapar
 ```
 
 **Teknik:**
-- Bridge: parent process'ten AI araci adi tespit edilir (Claude.app, Cursor.app, claude-code)
-- Plugin: coklu WebSocket baglantisi (tek yerine dizi)
-- UI: ok tuslariyla port/client gecisi, bagli olana etiket
+- Bridge: parent process'ten AI aracı adı tespit edilir (Claude.app, Cursor.app, claude-code)
+- Plugin: çoklu WebSocket bağlantısı (tek yerine dizi)
+- UI: ok tuşlarıyla port/client geçişi, bağlı olana etiket
 
-**Degisecek dosyalar:**
-- `src/core/plugin-bridge-server.ts` — welcome mesajina `clientName` ekle
-- `f-mcp-plugin/code.js` — coklu WebSocket baglanti yonetimi
-- `f-mcp-plugin/ui.html` — port gecis UI (ok tuslari + etiket)
+**Değişecek dosyalar:**
+- `src/core/plugin-bridge-server.ts` — welcome mesajına `clientName` ekle
+- `f-mcp-plugin/code.js` — çoklu WebSocket bağlantı yönetimi
+- `f-mcp-plugin/ui.html` — port geçiş UI (ok tuşları + etiket)
 
-**Ek UI degisiklikleri:**
-- [x] "Otomatik tara" butonu kaldirildi (v1.7.0)
-- [ ] Host alani: simdilik kalsin, ileride gelistirilecek
+**Ek UI değişiklikleri:**
+- [x] "Otomatik tara" butonu kaldırıldı (v1.7.0)
+- [ ] Host alanı: şimdilik kalsın, ileride geliştirilecek
 
 - [x] Bridge: clientName otomatik tespit — env var + process tree walking (v1.7.0)
-- [x] Plugin: coklu port baglantisi — 5454-5470 periyodik tarama, 10s (v1.7.0)
-- [x] Plugin UI: ◀ port (AI araci adi) ▶ gecis + (i) info paneli (v1.7.0)
-- [x] "Otomatik tara" butonu kaldirildi (v1.7.0)
-- [x] Test: Claude + Cursor + Claude Code ayni anda, plugin'de gecis (v1.7.0)
-- [ ] (i) info panelinde bagli dosya kaynaklarini goster — ör. "Figma Desktop: 1, Chrome: 3 Figma, 1 FigJam" (DUSUK ONCELIK — deger/karmasiklik orani dusuk)
+- [x] Plugin: çoklu port bağlantısı — 5454-5470 periyodik tarama, 10s (v1.7.0)
+- [x] Plugin UI: ◀ port (AI aracı adı) ▶ geçiş + (i) info paneli (v1.7.0)
+- [x] "Otomatik tara" butonu kaldırıldı (v1.7.0)
+- [x] Test: Claude + Cursor + Claude Code aynı anda, plugin'de geçiş (v1.7.0)
+- [ ] (i) info panelinde bağlı dosya kaynaklarını göster — ör. "Figma Desktop: 1, Chrome: 3 Figma, 1 FigJam" (DÜŞÜK ÖNCELİK — değer/karmaşıklık oranı düşük)
 
-### P0 — Tasarim Olusturma Araclari (Node Creation)
+### P0 — Tasarım Oluşturma Araçları (Node Creation)
 
-Simdi: Yeni frame/text/rectangle olusturmak icin `figma_execute` ile ham Plugin API kodu yazmak gerekiyor.
-Hedef: Ozel araclar ile kolay node olusturma.
+Şimdi: Yeni frame/text/rectangle oluşturmak için `figma_execute` ile ham Plugin API kodu yazmak gerekiyor.
+Hedef: Özel araçlar ile kolay node oluşturma.
 
 - [x] `figma_create_frame` — x, y, width, height, name, parentId (v1.6.0)
 - [x] `figma_create_text` — text, x, y, fontSize, fontFamily, parentId (v1.6.0)
 - [x] `figma_create_rectangle` — geometry + fill/stroke (v1.6.0)
-- [x] `figma_create_group` — children birlestirme (v1.6.0)
+- [x] `figma_create_group` — children birleştirme (v1.6.0)
 
-Etki: Tasarim otomasyonu, bilesen uretimi, layout yeniden olusturma icin temel.
+Etki: Tasarım otomasyonu, bileşen üretimi, layout yeniden oluşturma için temel.
 
 ### P0 — Asset Search ve Code Connect
 
-Simdi: Sadece dosya-icindeki bilesenler aranabiliyor (`figma_search_components`). Takim kutuphane arama yok.
-Hedef: Yayinlanmis kutuphane bilesen/variable arama + Code Connect eslemesi.
+Şimdi: Sadece dosya-içindeki bileşenler aranabiliyor (`figma_search_components`). Takım kütüphane arama yok.
+Hedef: Yayınlanmış kütüphane bileşen/variable arama + Code Connect eşlemesi.
 
-- [x] `figma_search_assets` — takim kutuphane arama (plugin teamLibrary API, v1.6.0)
-- [ ] `figma_get_code_connect` — node icin kod eslesmesi. Detayli plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
-- [ ] `figma_use` — yuksek seviyeli bilesen/token tuketim araci. Detayli plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
+- [x] `figma_search_assets` — takım kütüphane arama (plugin teamLibrary API, v1.6.0)
+- [ ] `figma_get_code_connect` — node için kod eşlemesi. Detaylı plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
+- [ ] `figma_use` — yüksek seviyeli bileşen/token tüketim aracı. Detaylı plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
 
-### P1 — Gorsel Export (SVG/PNG/Batch)
+### P1 — Görsel Export (SVG/PNG/Batch)
 
-Simdi: Sadece screenshot (bitmap PNG). SVG export ve toplu export yok.
-Hedef: Vektorel format desteyi + coklu node export.
+Şimdi: Sadece screenshot (bitmap PNG). SVG export ve toplu export yok.
+Hedef: Vektörel format desteği + çoklu node export.
 
 - [x] `figma_export_nodes` — SVG/PNG/JPG/PDF batch export, 1-50 node (v1.6.1)
 - [ ] REST API image export rehberi (`/v1/images/:fileKey`)
 
-### P1 — Guvenlik Denetimi (Enterprise)
+### P1 — Güvenlik Denetimi (Enterprise)
 
-`docs/SECURITY_AUDIT.md` icindeki kritik maddeler:
-- [ ] K1: `figma_execute` eval limiti (kod enjeksiyonu onleme)
-- [ ] K2: Zod girdi dogrulama guclendir
+`docs/SECURITY_AUDIT.md` içindeki kritik maddeler:
+- [ ] K1: `figma_execute` eval limiti (kod enjeksiyonu önleme)
+- [ ] K2: Zod girdi doğrulama güçlendir
 - [ ] Y1: Token log azaltma (hassas veri maskeleme)
 
-### P1 — REST API Kullanici Rehberi
+### P1 — REST API Kullanıcı Rehberi
 
-- [x] `docs/REST_API_GUIDE.md` — token kurulumu, ornek cagrilar, rate limit yonetimi (v1.6.0)
-- [ ] Hibrit akis (plugin + REST) dokumantasyonu
+- [x] `docs/REST_API_GUIDE.md` — token kurulumu, örnek çağrılar, rate limit yönetimi (v1.6.0)
+- [ ] Hibrit akış (plugin + REST) dokümantasyonu
 
-### P2 — WebSocket Yeniden Baglanti ve Teshis
+### P2 — WebSocket Yeniden Bağlantı ve Teşhis
 
 - [x] `figma_plugin_diagnostics` — uptime, heartbeat, bellek, port (v1.6.0)
-- [ ] Plugin crash durumunda otomatik yeniden baglanti
-- [ ] Baglanti durumu UI gostergesi (iyilestirilmis)
+- [ ] Plugin crash durumunda otomatik yeniden bağlantı
+- [ ] Bağlantı durumu UI göstergesi (iyileştirilmiş)
 
-### P2 — Gelistirici Deneyimi
+### P2 — Geliştirici Deneyimi
 
-- [x] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR sureci (v1.6.0)
+- [x] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR süreci (v1.6.0)
 - [x] Claude Code `.mcp.json` kurulum rehberi — README'ye eklendi (v1.7.0)
-- [x] 46 arac test raporu — `docs/TEST_REPORT.md`: Free/Pro/Org/Enterprise plan bazli yetenek matrisi, adim adim test rehberi (v1.7.0)
+- [x] 46 araç test raporu — `docs/TEST_REPORT.md`: Free/Pro/Org/Enterprise plan bazlı yetenek matrisi, adım adım test rehberi (v1.7.0)
 - [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
-- [ ] IDE config ornekleri: VSCode, Windsurf, Zed
+- [ ] IDE config örnekleri: VSCode, Windsurf, Zed
 
-### P3 — npm ve GitHub Gorünürlük
+### P3 — npm ve GitHub Görünürlük
 
-- [x] package.json keywords guncellendi (design-system, design-tokens, zero-trust, cursor, agent — v1.6.0)
-- [ ] GitHub repo aciklamasi + topics ekle
+- [x] package.json keywords güncellendi (design-system, design-tokens, zero-trust, cursor, agent — v1.6.0)
+- [ ] GitHub repo açıklaması + topics ekle
 - [ ] README'ye CI badge, npm version badge ekle
 
-### P4 — Node.js Bagimliligi Kaldirma (Standalone)
+### P4 — Node.js Bağımlılığı Kaldırma (Standalone)
 
-Node.js olmadan F-MCP kullanabilme. Detayli analiz ve plan: [STANDALONE_PLAN.md](docs/STANDALONE_PLAN.md)
+Node.js olmadan F-MCP kullanabilme. Detaylı analiz ve plan: [STANDALONE_PLAN.md](docs/STANDALONE_PLAN.md)
 
-- [ ] Python bridge 10→46 araca genisletme (dusuk risk, 2-3 gun)
-- [ ] Standalone binary (pkg ile, yuksek risk, 3-4 hafta, opsiyonel)
+- [ ] Python bridge 10→46 araca genişletme (düşük risk, 2-3 gün)
+- [ ] Standalone binary (pkg ile, yüksek risk, 3-4 hafta, opsiyonel)
 
-### P0 — Figma Make Entegrasyonu + Canli Prototip Sureci
+### P0 — Figma Make Entegrasyonu + Canlı Prototip Süreci
 
-Simdi: Tasarimlar Figma'da statik olarak olusturuluyor. Onay sonrasi kodlama sureci manuel.
-Hedef: Onaylanan tasarimlari Figma Make'e aktarip, canli kodlanmis prototip olarak uretmek — tam otomasyon.
+Şimdi: Tasarımlar Figma'da statik olarak oluşturuluyor. Onay sonrası kodlama süreci manuel.
+Hedef: Onaylanan tasarımları Figma Make'e aktarıp, canlı kodlanmış prototip olarak üretmek — tam otomasyon.
 
-**Tam Surec Akisi:**
+**Tam Süreç Akışı:**
 ```
-1. AI ile tasarim uretimi (FMCP + generate-figma-screen/library)
+1. AI ile tasarım üretimi (FMCP + generate-figma-screen/library)
      ↓
-2. Kullanici/PM/Tasarimci onay verir (chat uzerinden)
+2. Kullanıcı/PM/Tasarımcı onay verir (chat üzerinden)
      ↓
-3. Onaylanan ekranlar Figma Make'e aktarilir
+3. Onaylanan ekranlar Figma Make'e aktarılır
      ↓
-4. Figma Make'te ekranlar tek tek canli prototipe donusturulur
+4. Figma Make'te ekranlar tek tek canlı prototipe dönüştürülür
      ↓
-5. Canli prototip linki paylasılır (test/demo/stakeholder review)
+5. Canlı prototip linki paylaşılır (test/demo/stakeholder review)
 ```
 
-**Gerekli Yeni Araclar:**
-- [ ] `figma_export_to_make` — Onaylanan Figma frame'lerini Make dosyasina aktar
-- [ ] `figma_make_generate` — Make dosyasinda ekrani canli koda donustur
-- [ ] `figma_make_preview` — Make onizleme linki olustur
+**Gerekli Yeni Araçlar:**
+- [ ] `figma_export_to_make` — Onaylanan Figma frame'lerini Make dosyasına aktar
+- [ ] `figma_make_generate` — Make dosyasında ekranı canlı koda dönüştür
+- [ ] `figma_make_preview` — Make önizleme linki oluştur
 
 **Gerekli Yeni Skill:**
-- [ ] `figma-make-prototype` — Tam akis: onay → Make aktarimi → ekran ekran uretim → canli link
-  - Step 1: Kullanici onayi al (chat'te ekran listesi + screenshot goster, onay bekle)
-  - Step 2: Onaylanan ekranlari Figma Make dosyasina aktar
-  - Step 3: Her ekrani sirasıyla Make'te canli koda donustur (responsive + dark mode dahil)
-  - Step 4: Canli onizleme linki olustur ve paylas
-  - Step 5: Geri bildirim → duzeltme dongusu (Make uzerinde)
+- [ ] `figma-make-prototype` — Tam akış: onay → Make aktarımı → ekran ekran üretim → canlı link
+  - Step 1: Kullanıcı onayı al (chat'te ekran listesi + screenshot göster, onay bekle)
+  - Step 2: Onaylanan ekranları Figma Make dosyasına aktar
+  - Step 3: Her ekranı sırasıyla Make'te canlı koda dönüştür (responsive + dark mode dahil)
+  - Step 4: Canlı önizleme linki oluştur ve paylaş
+  - Step 5: Geri bildirim → düzeltme döngüsü (Make üzerinde)
 
-**Mevcut Skill Guncellemeleri:**
-- [ ] `generate-figma-screen` — Surec sonuna "Onay → Make aktarimi" adimi ekle
-- [ ] `ai-handoff-export` — Handoff'a "Canli Prototip Linki" bolumu ekle
-- [ ] `figma-screen-analyzer` — PO/PM raporuna "Make onizleme durumu" ekle
+**Mevcut Skill Güncellemeleri:**
+- [ ] `generate-figma-screen` — Süreç sonuna "Onay → Make aktarımı" adımı ekle
+- [ ] `ai-handoff-export` — Handoff'a "Canlı Prototip Linki" bölümü ekle
+- [ ] `figma-screen-analyzer` — PO/PM raporuna "Make önizleme durumu" ekle
 
 **Teknik Notlar:**
-- Figma Make API'si `use_figma` MCP araci uzerinden erisilebilir (`mcp__figma__use_figma`)
-- Make dosyalari `figma.com/make/:fileKey` formatinda
-- Make'e aktarim icin `get_design_context` verisi + screenshot kullanilir
-- Make kodu React tabanli — token dosyalari (CSS/Tailwind) ile entegre calisir
+- Figma Make API'si `use_figma` MCP aracı üzerinden erişilebilir (`mcp__figma__use_figma`)
+- Make dosyaları `figma.com/make/:fileKey` formatında
+- Make'e aktarım için `get_design_context` verisi + screenshot kullanılır
+- Make kodu React tabanlı — token dosyaları (CSS/Tailwind) ile entegre çalışır
 
-**Oncelik:** P0 — Tasarim-kod arasi kopuklugu kapatan kritik ozellik. FMCP'nin "sifirdan uretime" vizyonunun son halkasi.
+**Öncelik:** P0 — Tasarım-kod arası kopukluğu kapatan kritik özellik. FMCP'nin "sıfırdan üretime" vizyonunun son halkası.
 
-### P0 — Figma Prototip Baglantilari + Animasyonlar
+### P0 — Figma Prototip Bağlantıları + Animasyonlar
 
-Simdi: Uretilen ekranlar birbirinden bagimsiz, aralarinda navigasyon ve etkilesim baglantisi yok.
-Hedef: AI uretilen ekranlar arasinda dogru prototip baglantilari, animasyonlar ve aksiyon adimlari otomatik olusturulmali.
+Şimdi: Üretilen ekranlar birbirinden bağımsız, aralarında navigasyon ve etkileşim bağlantısı yok.
+Hedef: AI üretilen ekranlar arasında doğru prototip bağlantıları, animasyonlar ve aksiyon adımları otomatik oluşturulmalı.
 
-**Tam Prototip Akisi:**
+**Tam Prototip Akışı:**
 ```
-1. Ekranlar uretilir (Login, Home, Register, Forgot Password vb.)
+1. Ekranlar üretilir (Login, Home, Register, Forgot Password vb.)
      ↓
-2. Ekranlar arasi navigasyon haritasi cikarilir
+2. Ekranlar arası navigasyon haritası çıkarılır
      ↓
-3. Figma prototip baglantilari (connections) olusturulur
+3. Figma prototip bağlantıları (connections) oluşturulur
      ↓
-4. Gecis animasyonlari ayarlanir (slide, dissolve, push vb.)
+4. Geçiş animasyonları ayarlanır (slide, dissolve, push vb.)
      ↓
 5. Flow starting point belirlenir
      ↓
 6. Prototip test edilir (play mode)
 ```
 
-**Gerekli Yeni Araclar:**
-- [ ] `figma_create_prototype_connection` — Iki frame/node arasi prototip baglantisi olustur
+**Gerekli Yeni Araçlar:**
+- [ ] `figma_create_prototype_connection` — İki frame/node arası prototip bağlantısı oluştur
   - Parametreler: sourceNodeId, destinationNodeId, trigger (ON_CLICK/ON_HOVER/ON_DRAG),
     action (NAVIGATE/OVERLAY/SWAP/BACK), transition (DISSOLVE/SLIDE_IN/PUSH/SMART_ANIMATE),
     duration (ms), easing (EASE_IN/EASE_OUT/LINEAR)
-- [ ] `figma_set_flow_starting_point` — Prototip baslangic noktasini belirle
-- [ ] `figma_create_interaction` — Node uzerinde etkilesim ekle (hover state, press state, vb.)
-- [ ] `figma_get_prototype_connections` — Mevcut prototip baglantilarini oku (denetim icin)
+- [ ] `figma_set_flow_starting_point` — Prototip başlangıç noktasını belirle
+- [ ] `figma_create_interaction` — Node üzerinde etkileşim ekle (hover state, press state, vb.)
+- [ ] `figma_get_prototype_connections` — Mevcut prototip bağlantılarını oku (denetim için)
 
 **Gerekli Yeni Skill:**
-- [ ] `figma-prototype-flow` — Ekranlar arasi tam prototip akisi olusturma
-  - Step 1: Mevcut ekranlari listele ve navigasyon haritasini cikar
-  - Step 2: Her buton/link icin hedef ekrani belirle
-  - Step 3: Prototip baglantilarini olustur (dogru trigger + action + animasyon)
+- [ ] `figma-prototype-flow` — Ekranlar arası tam prototip akışı oluşturma
+  - Step 1: Mevcut ekranları listele ve navigasyon haritasını çıkar
+  - Step 2: Her buton/link için hedef ekranı belirle
+  - Step 3: Prototip bağlantılarını oluştur (doğru trigger + action + animasyon)
   - Step 4: Flow starting point'i ayarla
-  - Step 5: Baglantilari dogrula (tum interaktif elemanlar baglanmis mi?)
-  - Step 6: Screenshot/GIF ile prototip akisini dokumante et
+  - Step 5: Bağlantıları doğrula (tüm interaktif elemanlar bağlanmış mı?)
+  - Step 6: Screenshot/GIF ile prototip akışını dokümante et
 
-**Baglanti Ornekleri (Login Akisi):**
+**Bağlantı Örnekleri (Login Akışı):**
 ```
 Login / Mobile:
-  "Giris Yap" butonu → ON_CLICK → NAVIGATE → Home ekrani (SLIDE_IN_RIGHT, 300ms, EASE_OUT)
-  "Sifremi unuttum" link → ON_CLICK → NAVIGATE → Forgot Password ekrani (PUSH, 250ms)
-  "Google ile Giris Yap" → ON_CLICK → OVERLAY → Google Auth modal (DISSOLVE, 200ms)
-  "Kayit Ol" link → ON_CLICK → NAVIGATE → Register ekrani (SLIDE_IN_RIGHT, 300ms)
+  "Giriş Yap" butonu → ON_CLICK → NAVIGATE → Home ekranı (SLIDE_IN_RIGHT, 300ms, EASE_OUT)
+  "Şifremi unuttum" link → ON_CLICK → NAVIGATE → Forgot Password ekranı (PUSH, 250ms)
+  "Google ile Giriş Yap" → ON_CLICK → OVERLAY → Google Auth modal (DISSOLVE, 200ms)
+  "Kayıt Ol" link → ON_CLICK → NAVIGATE → Register ekranı (SLIDE_IN_RIGHT, 300ms)
   Input focus → ON_CLICK → SET_STATE → Input / Focused state (INSTANT)
   Button hover → ON_HOVER → SET_STATE → Button / Hover state (EASE_IN, 150ms)
 
-Register ekrani:
-  "Zaten hesabim var" → ON_CLICK → NAVIGATE → Login ekrani (SLIDE_IN_LEFT, 300ms) — BACK
+Register ekranı:
+  "Zaten hesabım var" → ON_CLICK → NAVIGATE → Login ekranı (SLIDE_IN_LEFT, 300ms) — BACK
 
 Forgot Password:
   "Geri" → ON_CLICK → BACK (PUSH_REVERSE, 250ms)
-  "Gonder" → ON_CLICK → NAVIGATE → Check Email ekrani (SLIDE_IN_RIGHT, 300ms)
+  "Gönder" → ON_CLICK → NAVIGATE → Check Email ekranı (SLIDE_IN_RIGHT, 300ms)
 ```
 
-**Animasyon Standartlari:**
-| Gecis Turu | Animasyon | Sure | Easing | Kullanim |
+**Animasyon Standartları:**
+| Geçiş Türü | Animasyon | Süre | Easing | Kullanım |
 |-----------|-----------|------|--------|----------|
-| Ileri navigasyon | SLIDE_IN_RIGHT | 300ms | EASE_OUT | Yeni ekrana git |
-| Geri navigasyon | SLIDE_IN_LEFT | 300ms | EASE_OUT | Onceki ekrana don |
-| Modal acma | DISSOLVE | 200ms | EASE_IN | Overlay/popup goster |
+| İleri navigasyon | SLIDE_IN_RIGHT | 300ms | EASE_OUT | Yeni ekrana git |
+| Geri navigasyon | SLIDE_IN_LEFT | 300ms | EASE_OUT | Önceki ekrana dön |
+| Modal açma | DISSOLVE | 200ms | EASE_IN | Overlay/popup göster |
 | Modal kapama | DISSOLVE | 150ms | EASE_OUT | Overlay/popup kapat |
 | Hover state | — | 150ms | EASE_IN | Buton/link hover efekti |
 | Press state | — | 100ms | EASE_OUT | Buton basma efekti |
-| Smart animate | SMART_ANIMATE | 300ms | EASE_IN_OUT | Ayni bilesen farkli state |
+| Smart animate | SMART_ANIMATE | 300ms | EASE_IN_OUT | Aynı bileşen farklı state |
 
-**Mevcut Skill Guncellemeleri:**
-- [ ] `generate-figma-screen` — Ekran uretimi sonrasinda otomatik prototip baglantisi adimi ekle
-- [ ] `ai-handoff-export` — Handoff'a "Prototip Akis Diyagrami" bolumu ekle
-- [ ] `figma-a11y-audit` — Prototip fokus sirasi ile a11y fokus sirasi uyumunu kontrol et
+**Mevcut Skill Güncellemeleri:**
+- [ ] `generate-figma-screen` — Ekran üretimi sonrasında otomatik prototip bağlantısı adımı ekle
+- [ ] `ai-handoff-export` — Handoff'a "Prototip Akış Diyagramı" bölümü ekle
+- [ ] `figma-a11y-audit` — Prototip fokus sırası ile a11y fokus sırası uyumunu kontrol et
 
 **Teknik Notlar:**
-- Figma Plugin API: `node.reactions` dizisi ile prototip baglantilari olusturulur
+- Figma Plugin API: `node.reactions` dizisi ile prototip bağlantıları oluşturulur
 - Her reaction: `{ trigger, actions: [{ type, destinationId, navigation, transition }] }`
-- `figma_execute` ile mevcut Plugin API kullanilarak baglanti olusturulabilir
-- Flow starting point: `figma.currentPage.flowStartingPoints` ile yonetilir
+- `figma_execute` ile mevcut Plugin API kullanılarak bağlantı oluşturulabilir
+- Flow starting point: `figma.currentPage.flowStartingPoints` ile yönetilir
 
-**Oncelik:** P0 — Prototipsiz tasarim eksik bir tasarimdir. Stakeholder review, kullanici testi ve gelistirici handoff icin prototip zorunlu.
+**Öncelik:** P0 — Prototipsiz tasarım eksik bir tasarımdır. Stakeholder review, kullanıcı testi ve geliştirici handoff için prototip zorunlu.
 
 ### P1 — Figma Dev Mode Entegrasyonu
 
-Simdi: Uretilen ekranlarin gelistirici notlari sadece HANDOFF.md dosyasinda.
-Hedef: Figma Dev Mode'da dogrudan gorunur gelistirici notlari, olcumleri ve kod snippetleri.
+Şimdi: Üretilen ekranların geliştirici notları sadece HANDOFF.md dosyasında.
+Hedef: Figma Dev Mode'da doğrudan görünür geliştirici notları, ölçümleri ve kod snippetleri.
 
-**Gerekli Yeni Araclar:**
-- [ ] `figma_set_dev_status` — Ekranin gelistirme durumunu ayarla (Ready for dev / In progress / Completed)
-- [ ] `figma_add_dev_annotation` — Dev Mode'da gorunur teknik not ekle
-- [ ] `figma_set_measurements` — Otomatik olcum cizgileri (padding, margin, gap)
+**Gerekli Yeni Araçlar:**
+- [ ] `figma_set_dev_status` — Ekranın geliştirme durumunu ayarla (Ready for dev / In progress / Completed)
+- [ ] `figma_add_dev_annotation` — Dev Mode'da görünür teknik not ekle
+- [ ] `figma_set_measurements` — Otomatik ölçüm çizgileri (padding, margin, gap)
 
-**Gerekli Skill Guncellemesi:**
-- [ ] `ai-handoff-export` — Handoff sonrasinda Figma Dev Mode notlarini otomatik ekle
-- [ ] `implement-design` — Kod uretimi sirasinda Dev Mode bilgilerini referans al
+**Gerekli Skill Güncellemesi:**
+- [ ] `ai-handoff-export` — Handoff sonrasında Figma Dev Mode notlarını otomatik ekle
+- [ ] `implement-design` — Kod üretimi sırasında Dev Mode bilgilerini referans al
 
 **Teknik Notlar:**
 - Figma Dev Mode API: `node.devStatus = { type: "READY_FOR_DEV", description: "..." }`
-- Annotations: Plugin API ile node uzerine teknik not eklenir
+- Annotations: Plugin API ile node üzerine teknik not eklenir
 - Dev Mode CSS/iOS/Android code snippets: figma_execute ile okunabilir
 
-### P2 — Component Documentation Skill Testi (Diger Bilesenler)
+### P2 — Component Documentation Skill Testi (Diğer Bileşenler)
 
-`component-documentation` skill'i su an sadece Button bileseninde test edildi.
-Diger bilesen tiplerinde de test edilerek skill template'i genellestirilmeli.
+`component-documentation` skill'i şu an sadece Button bileşeninde test edildi.
+Diğer bileşen tiplerinde de test edilerek skill template'i genelleştirilmeli.
 
-- [ ] Input/TextField bileseni — form elemani, farkli state'ler (error, focused, disabled, helper text)
-- [ ] Card bileseni — container/organism seviyesi, slot yapisi, responsive davranis
-- [ ] Modal/Dialog bileseni — overlay, focus trap, klavye yonetimi, a11y gereksinimleri
-- [ ] Navigation/Tab bileseni — aktif/pasif state, responsive collapse, icon+label
+- [ ] Input/TextField bileşeni — form elemanı, farklı state'ler (error, focused, disabled, helper text)
+- [ ] Card bileşeni — container/organism seviyesi, slot yapısı, responsive davranış
+- [ ] Modal/Dialog bileşeni — overlay, focus trap, klavye yönetimi, a11y gereksinimleri
+- [ ] Navigation/Tab bileşeni — aktif/pasif state, responsive collapse, icon+label
 
 Her testte kontrol edilecekler:
-- Skill'in 2 format secenegi (Standard/Compact) dogru calisiyor mu?
-- Variant sayisi degisken olanlarda kart layoutu bozuluyor mu?
-- Token referanslari bilesen bazli dogru cekilebiliyor mu?
-- Endustri standartlari bilesen tipine gore dogru adapte ediliyor mu?
+- Skill'in 2 format seçeneği (Standard/Compact) doğru çalışıyor mu?
+- Variant sayısı değişken olanlarda kart layoutu bozuluyor mu?
+- Token referansları bileşen bazlı doğru çekilebiliyor mu?
+- Endüstri standartları bileşen tipine göre doğru adapte ediliyor mu?
 
 ### P3 — Yeni Skiller
 
-- [ ] `design-to-code-generator` — tasarim → React/Vue/Svelte kod uretimi
-- [ ] `design-system-migrations` — variable toplu yeniden adlandirma, token guncelleme
-- [ ] `layout-reconstruction` — layout context'ten responsive grid olusturma
+- [ ] `design-to-code-generator` — tasarım → React/Vue/Svelte kod üretimi
+- [ ] `design-system-migrations` — variable toplu yeniden adlandırma, token güncelleme
+- [ ] `layout-reconstruction` — layout context'ten responsive grid oluşturma
 
 ---
 
-## TAMAMLANAN ASAMALAR
+## TAMAMLANAN AŞAMALAR
 
-- [x] **v1.5.2** — Test altyapisi (36 test, CI entegrasyonu)
-- [x] **v1.5.1** — TypeScript tip guvenligi (%90 any azaltma, types/figma.ts)
-- [x] **v1.5.0** — Plugin minify (geri alindi), CI guclendirme, archive/belge/TODO temizligi
-- [x] **v1.4.x** — Figma REST API (4 tool), Response Guard (context korumasi), token yonetimi
-- [x] **v1.3.x** — figma_set_port, coklu AI araci, port catismasi dayanikliligi
-- [x] **v1.2.x** — Sabit port, graceful shutdown, paralel gorevler
+- [x] **Türkçe Karakter Düzeltmesi** (2026-04-05) — 7 skill'e Türkçe Karakter Kuralı eklendi, 2 skill iç tutarsızlığı düzeltildi (component-documentation, generate-figma-library), 4 test output dosyası düzeltildi (HANDOFF.md, LoginScreen.tsx, LoginView.swift, LoginScreen.kt), Figma tasarım dosyasındaki 48+ text node ve frame ismi düzeltildi, 3 dokümantasyon dosyası düzeltildi (TEST_REPORT.md, FUTURE.md, CHANGELOG.md). İteratif doğrulama döngüsü ile sıfır hata garantisi.
+- [x] **v1.5.2** — Test altyapısı (36 test, CI entegrasyonu)
+- [x] **v1.5.1** — TypeScript tip güvenliği (%90 any azaltma, types/figma.ts)
+- [x] **v1.5.0** — Plugin minify (geri alındı), CI güçlendirme, archive/belge/TODO temizliği
+- [x] **v1.4.x** — Figma REST API (4 tool), Response Guard (context koruması), token yönetimi
+- [x] **v1.3.x** — figma_set_port, çoklu AI aracı, port çatışması dayanıklılığı
+- [x] **v1.2.x** — Sabit port, graceful shutdown, paralel görevler
 
-**Tamamlananlar (isaretlendi):** npm **1.2.0** yayin/dogrulama - GitHub **Release v1.2.0** (govde guncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** surec satiri - **Figma** org plugin - **FUTURE** kod taramasi / Bridge tablosu - **S3** GitHub dokuman maddeleri - **S7** README satiri - **Sabit port** stratejisi + olu port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel gorevler** dokumantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teshis scripti - **figma_set_port** runtime port degisimi - **Port catismasi dayanikliligi** (crash yerine MCP ayakta kalir) - **Coklu AI araci** ayni anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context korumasi (237KB→10KB kirpma) - **429 retry** exponential backoff - **Plugin UI** token girisi + sure yonetimi + rate limit gostergesi - **figma.clientStorage** kalici token depolama.
+**Tamamlananlar (işaretlendi):** npm **1.2.0** yayın/doğrulama - GitHub **Release v1.2.0** (gövde güncel) - **CHANGELOG** + **RELEASE_NOTES_TEMPLATE** süreç satırı - **Figma** org plugin - **FUTURE** kod taraması / Bridge tablosu - **S3** GitHub doküman maddeleri - **S7** README satırı - **Sabit port** stratejisi + ölü port probe - **Graceful shutdown** (SIGINT/SIGTERM) - **Paralel görevler** dokümantasyonu (MULTI_INSTANCE + CLAUDE_DESKTOP_CONFIG) - **check-ports** teşhis scripti - **figma_set_port** runtime port değişimi - **Port çatışması dayanıklılığı** (crash yerine MCP ayakta kalır) - **Çoklu AI aracı** aynı anda (Claude + Cursor) - **Figma REST API** token entegrasyonu (4 yeni tool) - **Response Guard** context koruması (237KB→10KB kırpma) - **429 retry** exponential backoff - **Plugin UI** token girişi + süre yönetimi + rate limit göstergesi - **figma.clientStorage** kalıcı token depolama.
 
-**Kod taramasi ozeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayin: `npm view @atezer/figma-mcp-bridge version` ile **1.7.0** dogrulanabilir (yayim sonrasi).
+**Kod taraması özeti:** `docs/TOOLS.md` / `TOOLS_FULL_LIST.md` / `FMCP_AGENT_CANVAS_COMPAT.md` — `dist/local-plugin-only.js` ile parite (2026-04). Yayın: `npm view @atezer/figma-mcp-bridge version` ile **1.7.0** doğrulanabilir (yayım sonrası).
 
 ---
 
 ## 1. NPM Publish
 
-- [x] `@atezer/figma-mcp-bridge@1.2.0` npm'de yayinda (`npm view` ile dogrulandi)
-- [x] `npx -y @atezer/figma-mcp-bridge@latest` ile cekilebilirlik (paket surumu 1.2.0)
-- [ ] `figma-mcp-bridge-plugin` bin'inin temiz ortamda smoke testi (istege bagli CI)
+- [x] `@atezer/figma-mcp-bridge@1.2.0` npm'de yayında (`npm view` ile doğrulandı)
+- [x] `npx -y @atezer/figma-mcp-bridge@latest` ile çekilebilirlik (paket sürümü 1.2.0)
+- [ ] `figma-mcp-bridge-plugin` bin'inin temiz ortamda smoke testi (isteğe bağlı CI)
 
 ---
 
 ## 2. Yerel repo durumu (FCM -- bu workspace)
 
-Asagidakiler repoda **mevcut**; upstream `atezer/FMCP` ile calisiyorsaniz `main` gunceldur (fork/PR akisiyla cekenler kendi senkronunu dogrular).
+Aşağıdakiler repoda **mevcut**; upstream `atezer/FMCP` ile çalışıyorsanız `main` günceldir (fork/PR akışıyla çekenler kendi senkronunu doğrular).
 
 ### Skills
 
-Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `archive/skills-root-duplicate/`).
+Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde: `archive/skills-root-duplicate/`).
 
 | Dosya | Durum |
 |-------|--------|
@@ -329,86 +330,86 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 | `.cursor/skills/f-mcp/figma-screen-analyzer/SKILL.md` | Mevcut (yeni) |
 | `.cursor/skills/f-mcp/ds-impact-analysis/SKILL.md` | Mevcut (yeni) |
 
-### Dokumanlar
+### Dokümanlar
 
 | Dosya | Durum |
 |-------|--------|
 | `PRIVACY.md` | Mevcut |
-| `docs/TOOLS.md` | Mevcut (MCP arac envanteri) |
+| `docs/TOOLS.md` | Mevcut (MCP araç envanteri) |
 | `docs/FMCP_AGENT_CANVAS_COMPAT.md` | Mevcut |
 | `docs/FIGMA_USE_STRUCTURED_INTENT.md` | Mevcut |
 | `docs/FMCP_ENTERPRISE_WORKFLOWS.md` | Mevcut |
-| `docs/SECURITY_AUDIT.md` | Mevcut (guvenlik bulgulari checklist) |
+| `docs/SECURITY_AUDIT.md` | Mevcut (güvenlik bulguları checklist) |
 | `docs/handoff.manifest.schema.json` | Mevcut |
 | `HANDOFF_TEMPLATE.md` | Mevcut |
-| `docs/MULTI_INSTANCE.md` | Mevcut (paralel gorevler bolumu eklendi) |
-| `docs/CLAUDE_DESKTOP_CONFIG.md` | Mevcut (coklu mcpServers ornegi eklendi) |
+| `docs/MULTI_INSTANCE.md` | Mevcut (paralel görevler bölümü eklendi) |
+| `docs/CLAUDE_DESKTOP_CONFIG.md` | Mevcut (çoklu mcpServers örneği eklendi) |
 
 ### Bridge
 
 | Konu | Durum |
 |------|--------|
-| `dist/local-plugin-only.js` | Plugin-only arac seti + **graceful shutdown** (SIGINT/SIGTERM) |
-| `dist/local.js` | Tam mod: CDP, ek node araclari, tasarim sistemi onbellegi |
-| `src/core/plugin-bridge-server.ts` | **Sabit port** stratejisi, `probePort` health-check, olu port retry |
-| `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable aramasi icin) |
-| `scripts/check-ports.sh` | 5454-5470 port tarama teshis scripti |
+| `dist/local-plugin-only.js` | Plugin-only araç seti + **graceful shutdown** (SIGINT/SIGTERM) |
+| `dist/local.js` | Tam mod: CDP, ek node araçları, tasarım sistemi önbelleği |
+| `src/core/plugin-bridge-server.ts` | **Sabit port** stratejisi, `probePort` health-check, ölü port retry |
+| `f-mcp-plugin/manifest.json` | `teamlibrary` izni (library variable araması için) |
+| `scripts/check-ports.sh` | 5454-5470 port tarama teşhis scripti |
 
-### Config ornekleri
+### Config örnekleri
 
 | Dosya | Durum |
 |-------|--------|
-| `.mcp.json` | Mevcut (kok) |
-| `.cursor-plugin/plugin.json` | Mevcut; surum **1.7.0**, aciklama `docs/TOOLS.md` referansli |
+| `.mcp.json` | Mevcut (kök) |
+| `.cursor-plugin/plugin.json` | Mevcut; sürüm **1.7.0**, açıklama `docs/TOOLS.md` referanslı |
 
 ---
 
-## 3. GitHub ve dokuman tutarliligi
+## 3. GitHub ve doküman tutarlılığı
 
-- [x] `atezer/FMCP` `main` ile yerel push senkronu (son degisiklikler gonderildi; fork/PR kullananlar kendi dallarini birlestirmeli)
-- [x] `KURULUM.md` -- **Surum** **1.2.0** (`package.json` ile uyum)
-- [x] `.cursor-plugin/plugin.json` -- `version` **1.2.0**; aciklama `docs/TOOLS.md` ile hizali
-- [x] Surum notlari -- kok `CHANGELOG.md`; `README.md` ve `KURULUM.md` icinde GitHub Releases / npm takibi ve guncelleme ozeti
-- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0), [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1); govde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md), [`docs/releases/v1.2.1-body.md`](docs/releases/v1.2.1-body.md); sonraki surum: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) icindeki `gh release create` / `edit`**
-
----
-
-## 4. Cursor Plugin Dagitimi
-
-**Kontrol:** `.cursor-plugin/plugin.json` gecerli JSON; `skills` -> `.cursor/skills/f-mcp/`, `mcpServers` NPX tanimi mevcut -- Cursor surumune gore resmi sema dogrulamasi elle/marketplace rehberi ile yapilmali.
-
-- [ ] Cursor Plugin API / sema ile bicim dogrulamasi (resmi dokumantasyon)
-- [ ] Skills yollarinin IDE'de yuklendigi manuel test
-- [ ] Cursor Marketplace'e publish degerlendir
+- [x] `atezer/FMCP` `main` ile yerel push senkronu (son değişiklikler gönderildi; fork/PR kullananlar kendi dallarını birleştirmeli)
+- [x] `KURULUM.md` -- **Sürüm** **1.2.0** (`package.json` ile uyum)
+- [x] `.cursor-plugin/plugin.json` -- `version` **1.2.0**; açıklama `docs/TOOLS.md` ile hizalı
+- [x] Sürüm notları -- kök `CHANGELOG.md`; `README.md` ve `KURULUM.md` içinde GitHub Releases / npm takibi ve güncelleme özeti
+- [x] GitHub Releases -- [v1.2.0](https://github.com/atezer/FMCP/releases/tag/v1.2.0), [v1.2.1](https://github.com/atezer/FMCP/releases/tag/v1.2.1); gövde: [`docs/releases/v1.2.0-body.md`](docs/releases/v1.2.0-body.md), [`docs/releases/v1.2.1-body.md`](docs/releases/v1.2.1-body.md); sonraki sürüm: **CHANGELOG -> `docs/releases/vX.Y.Z-body.md` -> [`RELEASE_NOTES_TEMPLATE.md`](docs/RELEASE_NOTES_TEMPLATE.md) içindeki `gh release create` / `edit`**
 
 ---
 
-## 5. Figma Plugin Yayini
+## 4. Cursor Plugin Dağıtımı
 
-**Kontrol notu (2026-03-27):** Depo tarafinda `f-mcp-plugin/manifest.json` (Plugin ID, `teamlibrary`, `enablePrivatePluginApi`, `networkAccess` localhost **5454-5470**, FigJam/Dev editor) ve [docs/PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md) (Data security cevaplari, org secimi) yayin gereksinimleriyle uyumlu. **Canli durum:** Organization uzerinden plugin yayini tamamlandi; diger organizasyonel dagitimlar (ek org / ayni yapilandirma ile cogaltma) icin hazirlik kullanici tarafindan onaylandi.
+**Kontrol:** `.cursor-plugin/plugin.json` geçerli JSON; `skills` -> `.cursor/skills/f-mcp/`, `mcpServers` NPX tanımı mevcut -- Cursor sürümüne göre resmi şema doğrulaması elle/marketplace rehberi ile yapılmalı.
 
-- [x] **Organization private plugin** -- Figma Org uzerinden yayinlandi; coklu org / org yapilarina uygun dagitim icin hazir
-- [ ] **Community (genel)** -- Istege bagli; Figma Community incelemesi ayri surec (simdilik org odakli yayin yeterli sayildi)
-- [x] **Plugin listing** -- Gorsel, aciklama ve etiketler org yayini icin hazirlandi / kullanildi
+- [ ] Cursor Plugin API / şema ile biçim doğrulaması (resmi dokümantasyon)
+- [ ] Skills yollarının IDE'de yüklendiği manuel test
+- [ ] Cursor Marketplace'e publish değerlendir
 
 ---
 
-## 6. .mcpb Dosya Dagitimi
+## 5. Figma Plugin Yayını
 
-**Kontrol:** Depoda `*.mcpb` dosyasi yok; dagitim maddeleri hala gecerli.
+**Kontrol notu (2026-03-27):** Depo tarafında `f-mcp-plugin/manifest.json` (Plugin ID, `teamlibrary`, `enablePrivatePluginApi`, `networkAccess` localhost **5454-5470**, FigJam/Dev editor) ve [docs/PUBLISH-PLUGIN.md](docs/PUBLISH-PLUGIN.md) (Data security cevapları, org seçimi) yayın gereksinimleriyle uyumlu. **Canlı durum:** Organization üzerinden plugin yayını tamamlandı; diğer organizasyonel dağıtımlar (ek org / aynı yapılandırma ile çoğaltma) için hazırlık kullanıcı tarafından onaylandı.
 
-- [ ] `figma-mcp-bridge.mcpb` (buyuk paket) -- GitHub tek dosya limiti disinda kaliyorsa
-- [ ] Alternatif: GitHub Releases asset veya ayri hosting
+- [x] **Organization private plugin** -- Figma Org üzerinden yayınlandı; çoklu org / org yapılarına uygun dağıtım için hazır
+- [ ] **Community (genel)** -- İsteğe bağlı; Figma Community incelemesi ayrı süreç (şimdilik org odaklı yayın yeterli sayıldı)
+- [x] **Plugin listing** -- Görsel, açıklama ve etiketler org yayını için hazırlandı / kullanıldı
+
+---
+
+## 6. .mcpb Dosya Dağıtımı
+
+**Kontrol:** Depoda `*.mcpb` dosyası yok; dağıtım maddeleri hala geçerli.
+
+- [ ] `figma-mcp-bridge.mcpb` (büyük paket) -- GitHub tek dosya limiti dışında kalıyorsa
+- [ ] Alternatif: GitHub Releases asset veya ayrı hosting
 - [ ] Gerekirse Git LFS
 
 ---
 
-## 7. Dokuman & README Iyilestirmeleri
+## 7. Doküman & README İyileştirmeleri
 
-- [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) -- repo ayarlari (UI)
-- [x] Kok `README.md` mevcut ve guncel; `docs/` baglanti tablosu var
-- [x] `docs/TOOLS.md` -- **Agent Canvas** / `local-plugin-only` paritesi (2026-04): `figma_search_assets` / `figma_get_code_connect` / `figma_use` kayitli degildir notu; `TOOLS_FULL_LIST.md`, `FMCP_AGENT_CANVAS_COMPAT.md`, `FIGMA_USE_STRUCTURED_INTENT.md` ile hizali
-- [ ] Ingilizce README alternatifi veya cift dil destegi degerlendir
+- [ ] GitHub repo **description** ve **topics** (Figma, MCP, design-system, AI, cursor, claude) -- repo ayarları (UI)
+- [x] Kök `README.md` mevcut ve güncel; `docs/` bağlantı tablosu var
+- [x] `docs/TOOLS.md` -- **Agent Canvas** / `local-plugin-only` paritesi (2026-04): `figma_search_assets` / `figma_get_code_connect` / `figma_use` kayıtlı değildir notu; `TOOLS_FULL_LIST.md`, `FMCP_AGENT_CANVAS_COMPAT.md`, `FIGMA_USE_STRUCTURED_INTENT.md` ile hizalı
+- [ ] İngilizce README alternatifi veya çift dil desteği değerlendir
 - [ ] Badge'ler (npm version, license, stars)
 
 ---
@@ -419,36 +420,36 @@ Kaynak tek klasor: **`.cursor/skills/f-mcp/`** (koke kopya `skills/` arsivde: `a
 
 - [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
 - [ ] NPM publish workflow (tag -> `npm publish`)
-- [ ] Plugin baglantisi smoke testi (istege bagli)
-- [ ] Guvenlik duzeltmeleri sonrasi regresyon: `figma_execute` limit, WS payload (bkz. [S10](#10-guvenlik-denetimi-security-audit))
-- [ ] Bagimlilk gozden gecirmesi: periyodik `npm audit` (gerekirse `fix` / manuel yukseltme); kritik CVE'lerde patch surumu
-- [ ] Istege bagli: commit/CI oncesi **secret / anahtar sizintisi** taramasi (orn. [gitleaks](https://github.com/gitleaks/gitleaks), TruffleHog) -- `wrangler.jsonc` id'leri icin [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) (D2)
+- [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
+- [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [S10](#10-güvenlik-denetimi-security-audit))
+- [ ] Bağımlılık gözden geçirmesi: periyodik `npm audit` (gerekirse `fix` / manuel yükseltme); kritik CVE'lerde patch sürümü
+- [ ] İsteğe bağlı: commit/CI öncesi **secret / anahtar sızıntısı** taraması (ör. [gitleaks](https://github.com/gitleaks/gitleaks), TruffleHog) -- `wrangler.jsonc` id'leri için [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) (D2)
 
 ---
 
-## 9. Ileri Seviye (Uzun Vadeli)
+## 9. İleri Seviye (Uzun Vadeli)
 
-- [ ] Cloudflare Worker -- `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokumantasyon netlestirilmeli
-- [ ] OAuth -- Worker tarafinda token/refresh kodu var; **coklu kullanici / oturum modeli** ve guvenlik gozden gecirmesi acik ([S10](#10-guvenlik-denetimi-security-audit) Y1/O3 ile iliskili)
+- [ ] Cloudflare Worker -- `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokümantasyon netleştirilmeli
+- [ ] OAuth -- Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık ([S10](#10-güvenlik-denetimi-security-audit) Y1/O3 ile ilişkili)
 - [ ] Python bridge -- `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
-- [x] Multi-instance -- `docs/MULTI_INSTANCE.md` sabit port ve paralel gorevler dokumantasyonu tamamlandi; `check-ports.sh` teshis scripti eklendi
-- [x] Port env -- `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Sabit port stratejisi uygulanmis; otomatik port taramasi kaldirilmis.
-- [x] **figma_set_port** -- Runtime port degisimi (v1.3.0). Port mesgulse crash yerine MCP ayakta kalir; `figma_set_port(5456)` ile farkli porta gecis. Claude + Cursor ayni anda kullanim destegi.
-- [x] **npm paket optimizasyonu** -- dist/cloudflare paketten cikarildi; 284KB→234KB (%18), 128→104 dosya (v1.4.1→v1.4.3).
-- [x] Enterprise audit log -- `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); ornek log senaryolari / test istege bagli
-- [x] Graceful shutdown -- `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi; port serbest birakma sorunu cozuldu
+- [x] Multi-instance -- `docs/MULTI_INSTANCE.md` sabit port ve paralel görevler dokümantasyonu tamamlandı; `check-ports.sh` teşhis scripti eklendi
+- [x] Port env -- `src/core/config.ts`: `FIGMA_MCP_BRIDGE_PORT` **veya** `FIGMA_PLUGIN_BRIDGE_PORT` (ikisi de okunuyor). Sabit port stratejisi uygulanmış; otomatik port taraması kaldırılmış.
+- [x] **figma_set_port** -- Runtime port değişimi (v1.3.0). Port meşgulse crash yerine MCP ayakta kalır; `figma_set_port(5456)` ile farklı porta geçiş. Claude + Cursor aynı anda kullanım desteği.
+- [x] **npm paket optimizasyonu** -- dist/cloudflare paketten çıkarıldı; 284KB→234KB (%18), 128→104 dosya (v1.4.1→v1.4.3).
+- [x] Enterprise audit log -- `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); örnek log senaryoları / test isteğe bağlı
+- [x] Graceful shutdown -- `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi; port serbest bırakma sorunu çözüldü
 
 ---
 
-## 10. Guvenlik denetimi (Security audit)
+## 10. Güvenlik denetimi (Security audit)
 
-**Evet, FUTURE'a eklenmeli:** Yayinlanmis bir kopru + `eval` + WebSocket yuzeyi icin izlenebilir maddeler yol haritasinda olmali. Ozet checklist repoda: **[docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)** (K1-K4, Y1-Y3, O1-O7, D1-D4; Y4 iptal notu).
+**Evet, FUTURE'a eklenmeli:** Yayınlanmış bir köprü + `eval` + WebSocket yüzeyi için izlenebilir maddeler yol haritasında olmalı. Özet checklist repoda: **[docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md)** (K1-K4, Y1-Y3, O1-O7, D1-D4; Y4 iptal notu).
 
-**Kaynak:** Cursor plani `~/.cursor/plans/security_audit_fixes_f803037b.plan.md` -- ekip icin asil takip **`docs/SECURITY_AUDIT.md`** uzerinden yapilmali; plan yalnizca gelistirici makinesinde kalabilir.
+**Kaynak:** Cursor planı `~/.cursor/plans/security_audit_fixes_f803037b.plan.md` -- ekip için asıl takip **`docs/SECURITY_AUDIT.md`** üzerinden yapılmalı; plan yalnızca geliştirici makinesinde kalabilir.
 
 - [ ] **Kritik:** K1 `code.js` eval limit - K2 Zod (plugin-only + `local.ts`) + Python `len` - K3 `nodeId` - K4 OPT-IN WS secret
-- [ ] **Yuksek:** Y1 token log - Y2 `0.0.0.0` uyarisi - Y3 path traversal -- Y4 dokumana "postMessage `*` zorunlu" notu
-- [ ] **Orta:** O2 maxPayload + rate - O3/O5/O7 hata sanitize (Worker OAuth dahil) - O6 console-monitor - O1/O4 dokumantasyon + debug log
-- [ ] **Dusuk:** D1-D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
+- [ ] **Yüksek:** Y1 token log - Y2 `0.0.0.0` uyarısı - Y3 path traversal -- Y4 dokümana "postMessage `*` zorunlu" notu
+- [ ] **Orta:** O2 maxPayload + rate - O3/O5/O7 hata sanitize (Worker OAuth dahil) - O6 console-monitor - O1/O4 dokümantasyon + debug log
+- [ ] **Düşük:** D1-D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
 
-OAuth / token loglari **S9** ile birlikte ele alinmali; duzeltmelerde tek PR veya sirali surum onerilir.
+OAuth / token logları **S9** ile birlikte ele alınmalı; düzeltmelerde tek PR veya sıralı sürüm önerilir.

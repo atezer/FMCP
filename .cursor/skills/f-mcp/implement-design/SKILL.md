@@ -344,6 +344,21 @@ figma_check_design_parity(
 - [ ] Legacy browser desteği (gerekiyorsa)
 - [ ] RTL (sağdan-sola) desteği (gerekiyorsa)
 
+## Türkçe Karakter Kuralı (ZORUNLU)
+
+Tüm Türkçe metin içeriklerinde (Figma text node, kod string, dokümantasyon) doğru Unicode karakterler kullanılmalıdır. ASCII karşılıkları YASAKTIR:
+
+| Doğru | Yanlış | Doğru | Yanlış |
+|-------|--------|-------|--------|
+| ş | s | Ş | S |
+| ı | i | İ | I |
+| ö | o | Ö | O |
+| ü | u | Ü | U |
+| ç | c | Ç | C |
+| ğ | g | Ğ | G |
+
+Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
+
 ## Cross-Platform Tutarlılık
 
 Aynı component'i birden fazla platformda implement ederken:
