@@ -14,11 +14,18 @@ metadata:
 ## Workflow
 
 1. **Standart kontrolü:** `reference_industry_design_standards.md` oku. "Son güncelleme" 1 yıldan eskiyse kullanıcıya güncelleme öner (kaynak listesi aşağıda).
-2. **Bileşen analizi:** figma_get_component_for_development + figma_get_design_context (depth=2, full) + figma_get_variables
-3. **KULLANICIYA FORMAT SEÇ:** Aşağıdaki 2 seçeneği içerik özetiyle sun. Onay olmadan frame OLUŞTURMA.
-4. Seçime göre frame oluştur. Eski aynı isimli frame varsa sil.
-5. Height bug fix: `primaryAxisSizingMode` FIXED→AUTO toggle.
-6. Viewport'u frame'e odakla.
+2. **Bileşen analizi:** figma_get_component_for_development + figma_get_design_context (depth=3, full) + figma_get_variables
+
+> **DERİN ANALİZ KURALI:** Sadece frame/node isimlerine bakarak sonuç çıkarma. Her node'un içindeki text content (`characters`), instance prop'ları ve child yapılarını detaylı oku. Bir şeyin "eksik" veya "yok" olduğunu iddia etmeden önce tüm child node'ların içeriğini kontrol et.
+
+> **GÖRSEL DOĞRULAMA KURALI:** Analiz sonucunu raporlamadan önce `figma_capture_screenshot` ile ekran görüntüsü al ve görsel olarak kontrol et. Text content ile screenshot'ın tutarlı olduğunu teyit et. Çelişki varsa screenshot'ı esas al.
+3. **Bileşen description güncelleme:** Bileşenin description ve link alanlarını güncelle (bkz. "Bileşen Description Kuralları").
+4. **KULLANICIYA FORMAT SEÇ:** Aşağıdaki 2 seçeneği içerik özetiyle sun. Onay olmadan frame OLUŞTURMA.
+5. Seçime göre frame oluştur. Eski aynı isimli frame varsa sil.
+6. Height bug fix: `primaryAxisSizingMode` FIXED→AUTO toggle.
+7. Viewport'u frame'e odakla.
+
+> **ONAY KURALI:** Bileşene herhangi bir ekleme veya değişiklik yapmadan önce (description, property, variant, child node, frame oluşturma vb.) yapılacak değişikliği açıkça belirt ve kullanıcıdan onay bekle. Sadece okuma/analiz işlemleri onaysız yapılabilir.
 
 ---
 
@@ -69,6 +76,23 @@ Her kartta:
 - Başlık: 13px Bold, yeşil/kırmızı
 - Instance satırı: gerçek component instance'ları yan yana
 - Açıklama: 12px, tek satır
+
+---
+
+## Bileşen Description Kuralları
+
+### Description alanı
+- "Bu bileşen nedir ve ne amaçla kullanılır?" sorusuna **tek cümle** cevap ver
+- State listesi, yapı detayları, teknik kurallar gibi uzun bilgileri description'a EKLEME
+- Varsa bileşenin dokümantasyon sayfasını (Documentation frame) oku ve oradan özetle
+
+### Link alanı
+- Bileşenin dokümantasyon sayfası varsa Figma linkini `documentationLinks` olarak ekle
+- Format: `https://www.figma.com/design/{fileKey}/...?node-id={docNodeId}`
+
+### Örnek
+- **Doğru:** "File Upload bileşeni, kullanıcıların belgelerini sisteme yüklemesini sağlar. Buton aracılığıyla dosya seçimi yapılır."
+- **Yanlış:** "Dosya yükleme bileşeni (Mobil). States: empty, loading, loaded, disable. Yapısı: Label + Button + Belgeler listesi + Hint. Kurallar: Genişlik 358px, maks 10 dosya..."
 
 ---
 
