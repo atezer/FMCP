@@ -438,6 +438,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [x] **npm paket optimizasyonu** -- dist/cloudflare paketten çıkarıldı; 284KB→234KB (%18), 128→104 dosya (v1.4.1→v1.4.3).
 - [x] Enterprise audit log -- `FIGMA_MCP_AUDIT_LOG_PATH`, `dist/core/audit-log.js`, [docs/ENTERPRISE.md](docs/ENTERPRISE.md); örnek log senaryoları / test isteğe bağlı
 - [x] Graceful shutdown -- `local-plugin-only.ts`'e SIGINT/SIGTERM handler eklendi; port serbest bırakma sorunu çözüldü
+- [ ] **Figma MCP maliyet analizi** -- Figma MCP gidiş-dönüş işlem maliyeti, gizli maliyetler (token tüketimi, API rate limit, context window şişmesi vb.) araştırılacak; maliyet performansı ve yönetimi için sürdürülebilir metotlar belirlenecek
 
 ---
 
