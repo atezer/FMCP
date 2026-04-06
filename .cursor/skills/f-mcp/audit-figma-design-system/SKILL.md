@@ -69,6 +69,10 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 1. **Girdi:** Figma URL veya `fileKey` + `nodeId`. `node-id=72-293` → `72:293` normalize et.
 2. **Bağlantı:** `figma_get_status()`.
 3. **Kanıt:** Hedef node için `figma_get_design_context`; `figma_capture_screenshot`; `figma_get_variables`. Büyük/hacimli yapıda `figma_get_file_data` (düşük `depth`) veya aynı node üzerinden `figma_get_component` / `figma_get_design_context`. Özel primitive için `figma_search_components`.
+
+> **DERİN ANALİZ KURALI:** Sadece frame/node isimlerine bakarak sonuç çıkarma. Her node'un içindeki text content (`characters`), instance prop'ları ve child yapılarını detaylı oku. Bir şeyin "eksik" veya "yok" olduğunu iddia etmeden önce tüm child node'ların içeriğini kontrol et.
+
+> **GÖRSEL DOĞRULAMA KURALI:** Analiz sonucunu raporlamadan önce `figma_capture_screenshot` ile ekran görüntüsü al ve görsel olarak kontrol et. Text content ile screenshot'ın tutarlı olduğunu teyit et. Çelişki varsa screenshot'ı esas al.
 4. **İnceleme:** Yerel frame ile yeniden icat edilmiş primitive, tekrarlayan kardeş yapılar, tokenize eşlerin yanında ham hex/spacing/typography, navigasyon gibi yüksek etkili custom yapılar, variant sapması.
 5. **Öneri:** Yalnızca `figma_search_components` ile **inandırıcı** aday bulunduğunda değiştirme öner; zayıf eşleşmede aday yazma.
 6. **Çıktı:** Seçilen formatta rapor; ardından yukarıdaki koordinasyon tablosuna göre sonraki skill’i öner.
