@@ -89,6 +89,36 @@ Her platform projesini ayrı analiz et:
 - Component dizin yapısı
 - Legacy altyapı gereksinimleri
 
+### Step 3.5: DS Prensipleri (Her Kural Dosyasının Başına)
+
+Her platform kural dosyasının `## Genel` bölümünden önce bu prensipler eklenir:
+
+```markdown
+## Design System Prensipleri
+
+1. **Tutarlılık > Yaratıcılık** — DS, ekiplerin tekerleği yeniden icat etmemesi için var. Custom çözüm yaratmadan önce DS'de karşılığı olup olmadığını kontrol et.
+2. **Kısıtlamalar içinde esneklik** — Bileşenler composable olmalı, rigid değil. Prop'lar ve slot'lar ile özelleştirme sun, fork'lama yerine.
+3. **Belgelenmemiş = yok** — Dökümante edilmeyen bileşen/token başkaları tarafından kullanılmayacaktır. Her yeni bileşen → component-documentation skill'i ile belgele.
+4. **Versiyonla ve migrate et** — Breaking change'lerde migration path sun. Eski API'ı hemen kaldırma, deprecation süreci uygula.
+```
+
+### Step 3.6: Pattern Katmanı Kuralları (Cross-Platform Dosyasına)
+
+Cross-platform kural dosyasına pattern tutarlılığı bölümü eklenir:
+
+```markdown
+## Pattern Tutarlılığı
+
+Tüm platformlarda aynı pattern aynı mantıkla çalışmalı:
+
+| Pattern | Tutarlılık Kuralı |
+|---------|------------------|
+| **Forms** | Validation mantığı aynı (required, format, min/max), hata gösterimi platform-native |
+| **Navigation** | Hiyerarşi aynı (tab sırası, breadcrumb seviyeleri), geçiş animasyonları platform-native |
+| **Data Display** | Sıralama/filtreleme mantığı aynı, pagination/infinite scroll davranışı platform-native |
+| **Feedback** | Mesaj içeriği aynı (copy), gösterim biçimi platform-native (iOS: alert, Android: snackbar, Web: toast) |
+```
+
 ### Step 4: Platform-Spesifik Kurallar Oluştur
 
 Her platform için ayrı kural dosyası oluştur:

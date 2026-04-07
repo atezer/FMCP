@@ -55,6 +55,54 @@ Figma'ya dokunmadan önce ne inşa edileceğini anla:
 2. Ekranın ana bölümlerini listele (Header, Hero, Content, Footer vb.)
 3. Her bölüm için gereken UI bileşenlerini belirle (Button, Input, Card, Nav vb.)
 
+### Step 2.5: Tasarım Yönü Belirleme
+
+DS bileşenlerini keşfetmeden ÖNCE, ne inşa edileceğinin estetik yönünü belirle.
+
+#### Marka Profili Kontrolü
+
+Proje kökünde `.fmcp-brand-profile.json` varsa:
+- `aestheticDirection` → estetik yön zaten tanımlı, kullan
+- `typography.displayFont` / `typography.bodyFont` → font seçimi zaten tanımlı, kullan
+- `typography.rationale` → seçim gerekçesi mevcut
+
+#### Profil Yoksa Kullanıcıya Sor
+
+**Amaç:** Bu ekran hangi sorunu çözüyor? Kim kullanıyor?
+
+**Estetik Yön:** Aşağıdakilerden birini seç veya tanımla:
+
+| Yön | Karakteristik | Örnek Referans |
+|-----|--------------|----------------|
+| Brutal minimal | Çok beyaz alan, tek font, siyah-beyaz + tek accent | Stripe, Linear |
+| Maksimalist | Yoğun renk, bold tipografi, katmanlı | Spotify Wrapped, Figma |
+| Retro-futuristik | Neon + karanlık, monospace, grid | Vercel, Terminal |
+| Organik / doğal | Yumuşak köşeler, sıcak renkler, el yapımı his | Notion, Calm |
+| Lüks / rafine | Serif font, düşük kontrast, çok whitespace | Apple, Aesop |
+| Playful / oyunsu | Renkli, yuvarlak, büyük tipografi | Duolingo, Slack |
+| Editorial / dergi | Grid bazlı, image-heavy, typographic | Medium, NYT |
+| Brutalist / ham | Kırık grid, mono font, minimal dekorasyon | Bloomberg, Craigslist |
+| Soft / pastel | Hafif renkler, yumuşak gölgeler, rounded | Headspace, Airbnb |
+| Industrial / utiliteryen | Fonksiyonel, data-dense, utility-first | GitHub, Grafana |
+
+**Kısıtlamalar:** Teknik gereksinimler (framework, performans, a11y)
+
+**Farklılaşma:** Bu ekranı unutulmaz yapan tek şey ne?
+
+> **DS bileşen kütüphanesi olan projelerde:** Estetik yön DS'nin belirlediği sınırlar içinde olmalı. DS font, renk ve spacing kararlarını zaten vermiştir. Bu adım DS'yi *aşmak* için değil, DS bileşenlerini *nasıl compose edeceğini* yönlendirmek içindir.
+
+#### Tipografi Stratejisi
+
+| Durum | Font Seçimi |
+|-------|-------------|
+| Marka profili var | `typography.displayFont` + `typography.bodyFont` kullan |
+| DS font'ları var | DS font'larını kullan (Inter DS font'uysa Inter DOĞRU — Anti-pattern DEĞİL) |
+| Ne DS ne profil var | Ayırt edici display font seç (Satoshi, Clash Display, General Sans vb.) + okunaklı body font |
+
+- Display font: başlıklar, hero text, sayfa title
+- Body font: paragraflar, açıklamalar, form etiketleri
+- Font çifti kararını raporda belirt (neden bu çift?)
+
 ### Step 3: Design System Keşfi
 
 Üç şey gerekiyor: **bileşenler**, **variable'lar**, **stiller**.
@@ -153,6 +201,27 @@ instance.layoutSizingHorizontal = "FILL";
 
 **Tercihen `figma_instantiate_component` aracını kullan** — daha güvenli ve basit.
 
+### Step 5.5: Görsel Derinlik ve Detay (İsteğe Bağlı)
+
+Estetik yön belirlendiyse (Step 2.5), bölüm inşa sırasında şu detaylar eklenebilir:
+
+**Spatial Composition:**
+- Asimetrik layout: her bölüm aynı grid'e sıkışmasın
+- Overlap: öğeler arasında kasıtlı örtüşme (hero image + text overlay)
+- Negatif alan: dramatik boşluk CTA'yı öne çıkarır
+
+**Arka Plan ve Atmosfer:**
+- Düz renk yerine: subtle gradient, noise doku, geometrik pattern
+- Katmanlı transparan: overlay + backdrop-blur efektleri
+- Gölge derinliği: elevation token'larını kullan (sm → xl)
+
+**Dekoratif Detaylar:**
+- Border: dekoratif border (dashed, gradient border)
+- İkon: mono-weight ikon seti tutarlılığı
+- Mikro detaylar: buton iç gölge, kart hover efekti ipucu
+
+> **NOT:** Bu öneriler DS bileşen kütüphanesi varsa DS'nin izin verdiği ölçüde uygulanır. DS token'ları dışında hardcoded değer eklenmez.
+
 ### Step 6: Görsel Doğrulama
 
 ```
@@ -163,6 +232,13 @@ Screenshot'ı incele:
 - Bölümler doğru sırada mı?
 - Spacing ve hizalama tutarlı mı?
 - Renk ve tipografi DS'ye uygun mu?
+
+**Anti-Pattern Kontrolü** (screenshot'a bakarak):
+- ❌ Generic font mu kullanılmış? (DS font'u yokken Inter/Roboto/Arial)
+- ❌ Mor gradient + beyaz arka plan? (klişe AI estetiği)
+- ❌ Tahmin edilebilir grid? (12-col, hep aynı padding, her bölüm aynı)
+- ❌ Her ekran birbirinin kopyası mı? (aynı layout, renk, font)
+- ❌ "Bu bir AI'ın ürettiği gibi mi görünüyor?" → Evet ise revizyona dön
 
 Sorun varsa hedefli `figma_execute` ile düzelt.
 

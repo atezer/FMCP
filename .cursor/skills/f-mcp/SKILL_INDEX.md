@@ -13,13 +13,20 @@ Cursor veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, y
 | `uidev` | **UI Geliştirici** | iOS/Android/Web arayüz geliştirme, Figma'dan kod üretme |
 | `po` | **PO/PM/SEM** | UI analiz, tasarım durumu raporlama, karar alma |
 
-## Skill Listesi (18 skill)
+## Kişiselleştirme — Marka Profili
 
-### Dokumantasyon
+Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, tipografi, estetik yön ve copy kurallarını otomatik uygular. Detay: [BRAND_PROFILE_SCHEMA.md](BRAND_PROFILE_SCHEMA.md)
+
+**Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
+
+## Skill Listesi (19 skill)
+
+### Dokümantasyon ve İçerik
 
 | Skill | Dosya | Personalar | Kısa açıklama |
 |---|---|---|---|
-| `component-documentation` | [component-documentation/SKILL.md](component-documentation/SKILL.md) | designer, designops, uidev | Bileşen kullanım kılavuzu oluşturma (Standard/Compact format seçimi, endüstri standartları referansı) |
+| `component-documentation` | [component-documentation/SKILL.md](component-documentation/SKILL.md) | designer, designops, uidev | Bileşen kullanım kılavuzu oluşturma (Standard/Compact format, durumlar, copy spec, endüstri standartları referansı) |
+| `ux-copy-guidance` | [ux-copy-guidance/SKILL.md](ux-copy-guidance/SKILL.md) | designer, uidev, po | UX yazarlık rehberi — CTA, hata mesajı, boş durum, onay diyaloğu kalıpları + marka ses/ton kişiselleştirmesi |
 
 ### Tuval Yazma ve Oluşturma
 
@@ -70,61 +77,66 @@ Cursor veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, y
 ```
 1. figma-canvas-ops (önkoşul)
 2. generate-figma-library (DS kütüphanesi yoksa)
-   VEYA generate-figma-screen (ekran oluşturma)
-3. component-documentation (bileşen kullanım kılavuzu)
-4. audit-figma-design-system (kalite kontrol)
-5. fix / apply (düzeltme gerekiyorsa)
-6. figma-a11y-audit (erişilebilirlik kontrol)
+   VEYA generate-figma-screen (ekran oluşturma — tasarım yönü belirleme adımı dahil)
+3. ux-copy-guidance (ekran text node'ları için copy kalitesi)
+4. component-documentation (bileşen kullanım kılavuzu — durumlar ve copy spec dahil)
+5. audit-figma-design-system (kalite kontrol — DS eksiksizlik çerçevesi dahil)
+6. fix / apply (düzeltme gerekiyorsa)
+7. figma-a11y-audit (erişilebilirlik kontrol — WCAG çerçevesi dahil)
 ```
 
 ### DesignOps
 
 ```
-1. audit-figma-design-system (DS sağlık kontrolü)
+1. audit-figma-design-system (DS sağlık kontrolü — DS eksiksizlik çerçevesi: token kategorileri, bileşen durumları, pattern kapsamı)
 2. ds-impact-analysis (değişiklik öncesi etki analizi)
 3. apply-figma-design-system (DS hizalama)
-4. design-token-pipeline (token senkronu — çift yönlü)
-5. design-system-rules (kural üretimi)
-6. figma-a11y-audit (erişilebilirlik denetimi)
-7. generate-figma-library (DS kütüphanesi inşa/güncelleme)
+4. design-token-pipeline (token senkronu — motion token'lar dahil)
+5. design-system-rules (kural üretimi — DS prensipleri ve pattern katmanı dahil)
+6. figma-a11y-audit (erişilebilirlik denetimi — WCAG 2.1 AA hızlı referans dahil)
+7. generate-figma-library (DS kütüphanesi inşa/güncelleme — motion/shadow token, durum kapsamı dahil)
 ```
 
 ### UI Geliştirici (uidev)
 
 ```
-1. ai-handoff-export (handoff paketi al)
-2. implement-design (Figma → kod)
+1. ai-handoff-export (handoff paketi — etkileşim spec, içerik spec, uç durumlar, a11y spec dahil)
+2. implement-design (Figma → kod — durum/etkileşim kapsamı kontrolü dahil)
 3. design-token-pipeline (token dosyaları üret)
 4. code-design-mapper (bileşen eşleme)
 5. visual-qa-compare (görsel doğrulama)
-6. design-drift-detector (token parity)
+6. design-drift-detector (token parity — motion token drift dahil)
 7. figma-a11y-audit (a11y attribute'ları)
+8. ux-copy-guidance (hata mesajı, boş durum, CTA copy kalıpları)
 ```
 
 ### PO/PM/SEM (po)
 
 ```
-1. figma-screen-analyzer (ekran analizi — teknik olmayan)
+1. figma-screen-analyzer (ekran analizi — ilk izlenim testi + kritik çerçevesi dahil)
 2. audit-figma-design-system --executive (DS uyum raporu)
 3. ds-impact-analysis (değişiklik etki ve risk skoru)
 4. design-drift-detector (kod-tasarım parity durumu)
-5. ai-handoff-export (implementasyon durumu)
-6. figjam-diagram-builder (süreç haritası)
+5. ux-copy-guidance (marka sesi ve copy tutarlılık kontrolü)
+6. ai-handoff-export (implementasyon durumu)
+7. figjam-diagram-builder (süreç haritası)
 ```
 
 ## Uçtan Uca Akış (Özet)
 
 Ayrıntı: [audit-figma-design-system/SKILL.md](audit-figma-design-system/SKILL.md) içinde **"Önerilen uçtan uca akış"** ve **"Zincir performansı"**.
 
-1. **Tuval hazırlık:** `figma-canvas-ops` (zorunlu önkoşul)
-2. **Oluşturma:** `generate-figma-library` → `generate-figma-screen`
-3. **Dokümantasyon:** `component-documentation` (bileşen kılavuzu — Standard veya Compact)
-4. **Denetim:** `audit-figma-design-system` → `fix-figma-design-system-finding` *veya* `apply-figma-design-system`
-4. **Token:** `design-token-pipeline` → isteğe bağlı `code-design-mapper`
-5. **Teslim:** `ai-handoff-export` → `implement-design`
-6. **Doğrulama:** `visual-qa-compare` + `design-drift-detector` → gerekirse `design-system-rules`
-7. **Kalite:** `figma-a11y-audit` + `figma-screen-analyzer`
-8. **Etki:** `ds-impact-analysis` (değişiklik öncesi)
+1. **Kişiselleştirme:** `.fmcp-brand-profile.json` oluştur veya kontrol et ([BRAND_PROFILE_SCHEMA.md](BRAND_PROFILE_SCHEMA.md))
+2. **Tuval hazırlık:** `figma-canvas-ops` (zorunlu önkoşul)
+3. **Oluşturma:** `generate-figma-library` (motion/shadow token dahil) → `generate-figma-screen` (tasarım yönü belirleme dahil)
+4. **İçerik:** `ux-copy-guidance` (marka sesiyle uyumlu copy)
+5. **Dokümantasyon:** `component-documentation` (bileşen kılavuzu — durumlar, copy spec dahil)
+6. **Denetim:** `audit-figma-design-system` (DS eksiksizlik çerçevesi dahil) → `fix-figma-design-system-finding` *veya* `apply-figma-design-system`
+7. **Token:** `design-token-pipeline` → isteğe bağlı `code-design-mapper`
+8. **Teslim:** `ai-handoff-export` (etkileşim/içerik/uç durum/a11y spec dahil) → `implement-design` (durum kapsamı kontrolü dahil)
+9. **Doğrulama:** `visual-qa-compare` + `design-drift-detector` (motion token drift dahil) → gerekirse `design-system-rules` (DS prensipleri dahil)
+10. **Kalite:** `figma-a11y-audit` (WCAG çerçevesi dahil) + `figma-screen-analyzer` (ilk izlenim + kritik çerçevesi dahil)
+11. **Etki:** `ds-impact-analysis` (değişiklik öncesi)
 
 **FigJam** (`figjam-diagram-builder`) bu zincirle zorunlu sırada değildir.
 
@@ -133,6 +145,7 @@ Ayrıntı: [audit-figma-design-system/SKILL.md](audit-figma-design-system/SKILL.
 | Dosya | Açıklama |
 |---|---|
 | [TOOL_MAPPING.md](TOOL_MAPPING.md) | Resmi Figma MCP ↔ F-MCP Bridge araç eşleme tablosu |
+| [BRAND_PROFILE_SCHEMA.md](BRAND_PROFILE_SCHEMA.md) | Marka profili (`.fmcp-brand-profile.json`) şema tanımı ve skill entegrasyon tablosu |
 | `reference_industry_design_standards.md` | Endüstri standartları hafıza dosyası (M3, HIG, WCAG, shadcn/ui, Tailwind) — Claude memory'de |
 
 ## MCP
