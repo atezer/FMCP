@@ -12,6 +12,27 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.13] - 2026-04-07
+
+### Plugin UI: Dark/Light Tema Uyumu ve Font Okunabilirliği
+
+**Kök neden düzeltmesi:**
+- **`@media (prefers-color-scheme: light)` kaldırıldı:** Figma plugin iframe'inde bu media query çalışmıyor. Figma `themeColors: true` ile `<html>` elementine `.figma-light` / `.figma-dark` class ekler — artık resmi Figma tema sistemi kullanılıyor.
+- **`@media` fallback eklendi:** Browser preview ve Figma dışı ortamlarda da light tema çalışır (`:root:not(.figma-dark)` selector ile).
+
+**Renk düzeltmeleri:**
+- **17 CSS custom property tanımlandı:** `--fmcp-bg-subtle`, `--fmcp-text-secondary`, `--fmcp-border-light` vb. Dark tema varsayılan, `.figma-light` ve `@media light` ile override.
+- **Tüm hardcoded `rgba(255,255,255,...)` inline renkler** CSS variable'lara çevrildi — light temada artık okunaklı.
+- **Tüm `color: inherit` ve `color: #fff`** kaldırıldı, tema-uyumlu `var()` fallback'lere çevrildi.
+- **Figma `--figma-color-*` variable fallback'leri** `var(--fmcp-*)` ile değiştirildi — Figma variable inject etmediğinde bile doğru renk.
+- **3 JS dinamik renk** (`updateTokenUI`, `updatePortLabel`) `fmcpVar()` helper ile tema-uyumlu.
+
+**Font okunabilirliği:**
+- **Tüm font boyutları +2px büyütüldü:** body 11→13, label/toggle 10→12, info 9→11, note 8→10, icon 7→9.
+- **Icon boyutları da +2px:** info butonları 13→15px, rate-limit info 11→13px (line-height uyumlu).
+
+**Etkilenen alanlar:** Status bar, Advanced panel, Host/Port input, Port switcher, API Token section, Rate limit bar, Connections panel — tümü dark ve light temada okunaklı.
+
 ## [1.7.10] - 2026-04-05
 
 ### Doküman: Kapsamlı Güncelleme Rehberi
