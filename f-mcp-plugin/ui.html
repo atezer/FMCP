@@ -346,16 +346,16 @@
     </div>
     <div class="advanced-wrap">
       <button id="advanced-toggle" class="advanced-toggle" type="button">Advanced</button>
-      <span id="advanced-state" class="advanced-state">auto port</span>
+      <span id="advanced-state" class="advanced-state">otomatik bağlantı aktif</span>
     </div>
     <div id="advanced-panel" class="advanced-panel">
       <div class="bridge-host" title="Host: localhost (aynı makine) veya IP adresi (uzak makine). Browser Figma'da da çalışır.">
         <label for="mcp-host">Host</label>
         <input type="text" id="mcp-host" value="localhost" placeholder="localhost" aria-label="MCP bridge host (localhost veya IP)" />
       </div>
-      <div class="bridge-port" title="Port elle belirtilmezse bridge'in dinlediği porta otomatik bağlanır (5454-5470 aralığı).">
+      <div class="bridge-port" title="Port otomatik bulunur (5454-5470). Elle değiştirmeniz gerekmez — sadece sorun yaşarsanız kullanın.">
         <label for="mcp-port">Port</label>
-        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
+        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Normalde değiştirmeniz gerekmez. Elle değiştirirseniz otomatik tarama durur — Advanced'ı kapatarak sıfırlayabilirsiniz." />
       </div>
       <div id="port-switcher" style="display:flex;align-items:center;gap:4px;margin-top:4px;">
         <button type="button" id="port-prev" onclick="switchActivePort(-1)" style="font-size:12px;padding:1px 5px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-secondary);cursor:pointer;">◀</button>
@@ -1091,7 +1091,7 @@
         panel.classList.toggle('is-open', !!open);
       }
       if (state) {
-        state.textContent = open ? 'manual controls' : 'auto port';
+        state.textContent = open ? 'manuel kontrol' : 'otomatik bağlantı aktif';
       }
       try { localStorage.setItem(MCP_ADVANCED_OPEN_KEY, open ? '1' : '0'); } catch (e) {}
       if (open) {

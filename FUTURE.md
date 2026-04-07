@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 7 Nisan 2026 (v1.7.13 — plugin UI dark/light tema uyumu, font okunabilirliği)
-> Paket sürümü (`package.json`): **1.7.13**
+> Son güncelleme: 7 Nisan 2026 (v1.7.14 — kurulum deneyimi iyileştirmesi, setup script'leri)
+> Paket sürümü (`package.json`): **1.7.14**
 
 ---
 
@@ -97,6 +97,18 @@ Hedef: Vektörel format desteği + çoklu node export.
 - [x] 46 araç test raporu — `docs/TEST_REPORT.md`: Free/Pro/Org/Enterprise plan bazlı yetenek matrisi, adım adım test rehberi (v1.7.0)
 - [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
 - [ ] IDE config örnekleri: VSCode, Windsurf, Zed
+
+### P2 — Kurulum Deneyimi İyileştirmeleri
+
+Feedback kaynağı: `fmcp-feedback.md` (kullanıcı deneyim raporu)
+Plan: `.claude/plans/compiled-shimmying-mccarthy.md`
+
+- [x] `scripts/setup.sh` — Otomatik kurulum (Homebrew + Node.js + build + config) (v1.7.14)
+- [x] `scripts/setup-npx.sh` — NPX yolu için minimal kurulum (v1.7.14)
+- [x] Plugin UI "otomatik bağlantı aktif" mesajı (v1.7.14)
+- [ ] Pre-built binary dağıtımı (Node.js gerektirmeyen) — `brew install --cask fmcp`
+- [ ] Tek satır web installer: `curl -fsSL https://fmcp.dev/install.sh | bash`
+- [ ] GUI installer (.dmg) — tasarımcılar için sıfır terminal deneyimi
 
 ### P3 — npm ve GitHub Görünürlük
 
