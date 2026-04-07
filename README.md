@@ -34,6 +34,9 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 > 💡 **En kolay yol:** AI aracınıza (Claude, Cursor) şunu söyleyin:
 > *"@atezer/figma-mcp-bridge paketini kur ve Figma'ya bağlan"*
 > AI config'i ayarlar, bağlantıyı kurar. Aşağıdaki adımlar elle yapmak isteyenler için.
+>
+> **Otomatik kurulum:** Repo'yu clone ettiyseniz tek komutla: `bash scripts/setup.sh`
+> (Node.js kontrolü, build, MCP config — hepsini otomatik yapar)
 
 ### 1. Node.js kurun (bir kerelik)
 
@@ -175,7 +178,7 @@ Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Güncel sürüm | **1.7.13** ([package.json](package.json)) |
+| Güncel sürüm | **1.7.14** ([package.json](package.json)) |
 | Değişiklik geçmişi | [CHANGELOG.md](CHANGELOG.md) |
 | GitHub sürümleri | [Releases](https://github.com/atezer/FMCP/releases) |
 | npm paketi | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |

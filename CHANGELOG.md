@@ -12,6 +12,21 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.14] - 2026-04-07
+
+### Kurulum Deneyimi Iyilestirmesi
+
+Kaynak: `fmcp-feedback.md` — terminal bilgisi olmayan kullanicinin kurulum zorlugu feedback'i.
+
+- **`scripts/setup.sh`** eklendi: Node.js kontrolu, build, MCP config otomatik ayari — tek komutla kurulum
+- **`scripts/setup-npx.sh`** eklendi: NPX ile kurulum — repo indirmeden, config otomatik
+- **Plugin UI:** "auto port" → "otomatik baglanti aktif" mesaji; port input title'lari daha aciklayici
+- **README.md** guncellendi: Otomatik kurulum bolumu
+- **ONBOARDING.md** guncellendi: Tek komutluk kurulum referansi
+- **KURULUM.md** guncellendi: Script referansi, surum guncelleme
+- **FUTURE.md** guncellendi: Kurulum deneyimi hedefleri (pre-built binary, GUI installer)
+- **TEST_REPORT.md** surum guncellendi
+
 ## [1.7.13] - 2026-04-07
 
 ### Plugin UI: Dark/Light Tema Uyumu ve Font Okunabilirliği
