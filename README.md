@@ -43,6 +43,12 @@ git clone https://github.com/atezer/FMCP.git && cd FMCP && bash scripts/setup.sh
 
 > **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → `f-mcp-plugin/manifest.json`
 
+### Kurulumdan sonra Claude Code'da kalmak zorunda değilsiniz
+
+Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claude Chat gibi yazışın, Figma bağlantısı otomatik çalışır.
+
+> **Claude Chat (claude.ai web) ile çalışmaz** — çünkü web tarayıcısı bilgisayarınızdaki Figma plugin'ine erişemez. Claude Desktop (masaüstü uygulaması) aynı sohbet deneyimini sunar ve F-MCP ile çalışır.
+
 ---
 
 ## Neler yapabilirsiniz?
