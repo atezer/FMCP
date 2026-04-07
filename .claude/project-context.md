@@ -78,6 +78,18 @@ try {
 }
 ```
 
+## Kullanıcı İstekleri — Otomatik Yanıt
+
+### "F-MCP'yi güncelle" / "update" / "güncelle"
+Terminal komutu verme. `bash scripts/update.sh` çalıştır, sonucu bildir:
+> Güncelleme tamamlandı (vX.Y.Z). Claude'u yeniden başlat ve Figma'da plugin'i kapat-aç.
+
+### "F-MCP'yi kur" / "setup" / "kur"
+`bash scripts/setup.sh` çalıştır. Kullanıcıya sadece sonucu bildir.
+
+### Dil
+Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, ğ, ö, ü, ı, İ) doğru kullanılmalı.
+
 ## References
 
 - [Architecture](../docs/ARCHITECTURE.md) - Technical design
