@@ -106,6 +106,7 @@ Plan: `.claude/plans/compiled-shimmying-mccarthy.md`
 - [x] `scripts/setup.sh` — Otomatik kurulum (Homebrew + Node.js + build + config) (v1.7.14)
 - [x] `scripts/setup-npx.sh` — NPX yolu için minimal kurulum (v1.7.14)
 - [x] Plugin UI "otomatik bağlantı aktif" mesajı (v1.7.14)
+- [ ] npm README güncelleme — sonraki version bump'ta (1.7.15+) otomatik yansıyacak
 - [ ] Pre-built binary dağıtımı (Node.js gerektirmeyen) — `brew install --cask fmcp`
 - [ ] Tek satır web installer: `curl -fsSL https://fmcp.dev/install.sh | bash`
 - [ ] GUI installer (.dmg) — tasarımcılar için sıfır terminal deneyimi
