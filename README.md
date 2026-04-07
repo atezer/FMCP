@@ -18,23 +18,19 @@ Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderil
 
 ## Kurulum
 
-### En hızlı yol
+### Claude Code ile kurulum (önerilen)
 
-AI aracınıza (Claude, Cursor) şunu söyleyin:
+Claude Code'a şunu söyleyin:
 
-> *"@atezer/figma-mcp-bridge paketini kur ve Figma'ya bağlan"*
+> *"https://github.com/atezer/FMCP reposunu clone et ve bash scripts/setup.sh çalıştır"*
 
-AI gerisini halleder.
+Claude repoyu indirir, Node.js kontrolü yapar, build alır ve MCP config'i otomatik ayarlar. Sizden sadece gerekirse bilgisayar şifresi istenir.
 
-### Otomatik kurulum
-
-Terminale şu komutu yapıştırın:
+### Terminal ile kurulum
 
 ```bash
 git clone https://github.com/atezer/FMCP.git && cd FMCP && bash scripts/setup.sh
 ```
-
-Bu komut Node.js kontrolü, build ve MCP config ayarını otomatik yapar. Sadece gerekirse bilgisayar şifresi sorulur.
 
 > NPX ile (indirmeden): `bash <(curl -fsSL https://raw.githubusercontent.com/atezer/FMCP/main/scripts/setup-npx.sh)`
 
