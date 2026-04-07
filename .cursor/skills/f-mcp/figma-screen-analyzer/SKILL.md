@@ -37,10 +37,14 @@ figma_get_status()
 
 ### Step 2: Ekran Verisi Topla
 
+> **DERİN ANALİZ KURALI:** Sadece frame/node isimlerine bakarak sonuç çıkarma. Her node'un içindeki text content (`characters`), instance prop'ları ve child yapılarını detaylı oku. Bir şeyin "eksik" veya "yok" olduğunu iddia etmeden önce tüm child node'ların içeriğini kontrol et.
+
+> **GÖRSEL DOĞRULAMA KURALI:** Analiz sonucunu raporlamadan önce `figma_capture_screenshot` ile ekran görüntüsü al ve görsel olarak kontrol et. Text content ile screenshot'ın tutarlı olduğunu teyit et. Çelişki varsa screenshot'ı esas al.
+
 ```
 figma_get_design_context(
   nodeId="<NODE_ID>",
-  depth=2,
+  depth=3,
   verbosity="full",
   includeLayout=true,
   includeVisual=true,
