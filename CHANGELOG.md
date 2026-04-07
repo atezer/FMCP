@@ -14,18 +14,20 @@ Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` ku
 
 ## [1.7.14] - 2026-04-07
 
-### Kurulum Deneyimi Iyilestirmesi
+### Kurulum Deneyimi İyileştirmesi
 
-Kaynak: `fmcp-feedback.md` — terminal bilgisi olmayan kullanicinin kurulum zorlugu feedback'i.
+Kaynak: `fmcp-feedback.md` — terminal bilgisi olmayan kullanıcının kurulum zorluğu feedback'i.
 
-- **`scripts/setup.sh`** eklendi: Node.js kontrolu, build, MCP config otomatik ayari — tek komutla kurulum
+- **`scripts/setup.sh`** eklendi: Node.js kontrolü, build, MCP config otomatik ayarı — tek komutla kurulum
 - **`scripts/setup-npx.sh`** eklendi: NPX ile kurulum — repo indirmeden, config otomatik
-- **Plugin UI:** "auto port" → "otomatik baglanti aktif" mesaji; port input title'lari daha aciklayici
-- **README.md** guncellendi: Otomatik kurulum bolumu
-- **ONBOARDING.md** guncellendi: Tek komutluk kurulum referansi
-- **KURULUM.md** guncellendi: Script referansi, surum guncelleme
-- **FUTURE.md** guncellendi: Kurulum deneyimi hedefleri (pre-built binary, GUI installer)
-- **TEST_REPORT.md** surum guncellendi
+- **`scripts/update.sh`** eklendi: Tek komutla otomatik güncelleme
+- **Plugin UI:** "auto port" → "otomatik bağlantı aktif" mesajı; port input title'ları daha açıklayıcı
+- **README.md** sadeleştirildi: Teknik bilgisi olmayan kullanıcı için net kurulum akışı
+- **ONBOARDING.md** güncellendi: Tek komutluk kurulum referansı
+- **KURULUM.md** güncellendi: Script referansı, sürüm güncelleme
+- **UPDATE.md** güncellendi: Otomatik güncelleme bölümü eklendi
+- **FUTURE.md** güncellendi: Kurulum deneyimi hedefleri (pre-built binary, GUI installer)
+- **TEST_REPORT.md** sürüm güncellendi
 
 ## [1.7.13] - 2026-04-07
 
