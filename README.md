@@ -51,15 +51,29 @@ Bu komut Node.js kontrolü, build ve MCP config ayarını otomatik yapar. Sadece
 
 ## Neler yapabilirsiniz?
 
-| Kategori | Örnekler |
-|----------|----------|
-| **Tasarım okuma** | Dosya yapısı, bileşen detayı, screenshot, design system özeti |
-| **Oluşturma** | Frame, text, rectangle, group, bileşen instance'ı |
-| **Export** | SVG, PNG, JPG, PDF — tekli veya toplu (1-50 node) |
-| **Variable ve token** | Okuma, oluşturma, güncelleme, silme, toplu işlem |
-| **Kod üretimi** | Figma'dan React, SwiftUI, Jetpack Compose kodu |
-| **Tasarım kalitesi** | WCAG AA kontrast, responsive (Mobile/Tablet/Web), dark mode |
-| **Design-code uyumu** | Tasarım tokenlarını kodla karşılaştırma |
+AI ile Figma arasında **çift yönlü** çalışırsınız:
+
+```
+Figma → AI : "Bu ekrandaki renkleri ve fontları çıkar"
+AI → Figma : "Yeni bir login ekranı oluştur, dark mode dahil"
+```
+
+**Figma'dan AI'a (okuma):**
+- *"Bu dosyadaki tüm bileşenleri listele"*
+- *"Button bileşeninin özelliklerini göster"*
+- *"Design token'larını çıkar ve koda çevir"*
+- *"Bu ekranın screenshot'ını al"*
+
+**AI'dan Figma'ya (oluşturma):**
+- *"Yeni bir frame oluştur, 375x812, mobile layout"*
+- *"Bu tasarımdan React kodu üret"*
+- *"Color token'larını toplu güncelle"*
+- *"Tüm ikonları SVG olarak export et"*
+
+**Kalite kontrolü (her iki yönde):**
+- *"WCAG AA kontrast kontrolü yap"*
+- *"Koddaki token'larla Figma'daki token'ları karşılaştır"*
+- *"Responsive: Mobile, Tablet, Web versiyonlarını üret"*
 
 46 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
 
