@@ -1,6 +1,22 @@
 # F-MCP Guncelleme Rehberi
 
-Bu rehber, F-MCP Bridge'in (MCP server + Figma plugin) nasil guncellenegini anlatir. Kurulum yontemine gore dogrudan ilgili bolume gidin.
+Bu rehber, F-MCP Bridge'in (MCP server + Figma plugin) nasil guncellenegini anlatir.
+
+## Otomatik guncelleme (tek komut)
+
+Repo clone ile kurduysaniz her seyi tek komutla guncelleyin:
+
+```bash
+bash scripts/update.sh
+```
+
+Bu script: git pull, npm install, build, NPX cache temizligi — hepsini otomatik yapar. Yerel degisiklikleriniz varsa otomatik stash yapilir.
+
+Sonra AI aracinizi yeniden baslatin ve Figma'da plugin'i kapatip tekrar acin.
+
+---
+
+Manuel guncelleme yapmak istiyorsaniz asagidaki senaryolara bakin:
 
 | Kurulum yonteminiz | Bolum |
 |--------------------|-------|
