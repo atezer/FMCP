@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 5 Nisan 2026 (v1.7.10 — kapsamlı güncelleme rehberi, doküman düzeltmeleri)
-> Paket sürümü (`package.json`): **1.7.10**
+> Son güncelleme: 7 Nisan 2026 (v1.7.13 — plugin UI dark/light tema uyumu, font okunabilirliği)
+> Paket sürümü (`package.json`): **1.7.13**
 
 ---
 
