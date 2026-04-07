@@ -31,18 +31,20 @@ metadata:
 
 ## Format Seçenekleri
 
-### Standard (~2400px, 780px geniş)
+### Standard (~2800px, 780px geniş)
 
 | # | Bölüm | İçerik |
 |---|-------|--------|
 | 1 | Intro | Başlık (26px Bold) + 2 satırlık tanıtım |
 | 2 | Variantlar | Kart: gri bg, instance (130px fixed) + isim + açıklama (FILL) |
-| 3 | Kurallar | Do/Dont metin kutuları (yeşil/kırmızı, 3+3 madde) + görsel örnekler (gerçek instance'larla doğru/yanlış çift kartlar) |
-| 4 | Standartlar | Kaynak chip'leri (M3, HIG, WCAG, shadcn) + info kutu (touch, kontrast, hiyerarşi, boyut, states) |
-| 5 | Props | Satır bazlı: prop adı (mavi) + tip/default (gri) + açıklama (FILL) |
-| 6 | A11y | Info kutu: touch, focus, label, disabled |
-| 7 | Tokenlar | Renk + boyut token satırları, dark mode notu |
-| 8 | Kod | Tek koyu blok: React, SwiftUI, Compose |
+| 3 | Durumlar | Grid: Default, Hover, Active, Disabled, Loading, Error, Focus — her durum gerçek instance ile gösterilir (mevcut variant'ın farklı state'leri) |
+| 4 | Kurallar | Do/Dont metin kutuları (yeşil/kırmızı, 3+3 madde) + görsel örnekler (gerçek instance'larla doğru/yanlış çift kartlar) |
+| 5 | Standartlar | Kaynak chip'leri (M3, HIG, WCAG, shadcn) + info kutu (touch, kontrast, hiyerarşi, boyut, states) |
+| 6 | Props | Satır bazlı: prop adı (mavi) + tip/default (gri) + açıklama (FILL) |
+| 7 | Copy Spec | Text node'lar için copy kuralları: max karakter, truncation davranışı, boş durum metni, placeholder. Bkz. [ux-copy-guidance](../ux-copy-guidance/SKILL.md) |
+| 8 | A11y | Info kutu: touch, focus, label, disabled |
+| 9 | Tokenlar | Renk + boyut token satırları, dark mode notu |
+| 10 | Kod | Tek koyu blok: React, SwiftUI, Compose |
 
 ### Compact (~1300px, 720px geniş)
 
@@ -142,8 +144,14 @@ Token bağlama kuralları için bkz: `generate-figma-library` skill'i.
 
 ---
 
+## Marka Profili Entegrasyonu
+
+`.fmcp-brand-profile.json` varsa:
+- `voiceTone` → Bileşen açıklama ve kullanım notlarının ton kalibrasyonu
+- `copyRules` → Copy Spec bölümünde CTA max karakter, kaçınılacak kelimeler referansı
+
 ## Skill Koordinasyonu
 
 - Öncesi: `generate-figma-library` veya `figma-canvas-ops`
 - Sonrası: `ai-handoff-export`
-- İlişkili: `figma-a11y-audit`, `reference_industry_design_standards.md`
+- İlişkili: `figma-a11y-audit`, `ux-copy-guidance`, `reference_industry_design_standards.md`

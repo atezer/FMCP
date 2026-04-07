@@ -12,6 +12,32 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.13] - 2026-04-07
+
+### Skill: Anthropic Design Skill Entegrasyonu + Marka Profili + UX Copy
+
+Anthropic built-in design skill'leri (accessibility-review, design-handoff, design-critique, design-system-management, ux-writing, frontend-design) ile F-MCP skill'leri satır satır karşılaştırıldı. Eksik tasarım prensipleri, yapısal çerçeveler, estetik yönlendirme ve kişiselleştirme mekanizmaları entegre edildi.
+
+**Yeni dosyalar:**
+- **ux-copy-guidance/SKILL.md (YENİ):** UX yazarlık rehberi — 5 temel prensip, 6 copy kalıbı (CTA, hata, boş durum, onay, başarı, yükleme), ses/ton rehberi, marka profili kişiselleştirmesi, çok dilli/i18n kuralları, Figma text node entegrasyonu (19. skill)
+- **BRAND_PROFILE_SCHEMA.md (YENİ):** `.fmcp-brand-profile.json` şema tanımı — tüm skill'lerin kişiselleştirilebilmesi için merkezi yapılandırma (ses/ton, tipografi, estetik yön, copy kuralları, i18n)
+
+**Genişletilen skill'ler (10):**
+- **figma-a11y-audit:** WCAG 2.1 AA hızlı referans (12 kriter), yaygın sorunlar listesi (8), test yaklaşımı sırası (5 aşama), Step 5'e WCAG referansı, Step 8'e 3 yeni kontrol (fokus göstergesi, hata ilişkilendirme, UI bileşen kontrastı)
+- **ai-handoff-export:** Handoff prensipleri (4), etkileşim spesifikasyonları, içerik spesifikasyonları, uç durumlar tablosu, erişilebilirlik spesifikasyonları, marka profili entegrasyonu
+- **audit-figma-design-system:** DS eksiksizlik çerçevesi (token kategorileri, bileşen durum kapsamı, pattern katmanı), DS prensipleri, JSON şemasına `dsCompleteness`
+- **figma-screen-analyzer:** İlk İzlenim Analizi (2sn testi), görsel hiyerarşi 4 yeni soru, geri bildirim prensipleri (5), marka profili entegrasyonu
+- **generate-figma-screen:** Tasarım Yönü Belirleme (Step 2.5), tipografi stratejisi, görsel derinlik (Step 5.5), anti-pattern kontrolü, marka profili entegrasyonu
+- **component-documentation:** Durumlar bölümü ve Copy Spec bölümü eklendi (Standard format 8→10 bölüm), marka profili entegrasyonu
+- **implement-design:** Step 7d durum/etkileşim kapsamı kontrolü (6 kontrol), marka profili entegrasyonu
+- **generate-figma-library:** Faz 1'e motion token (1f) ve shadow token (1g), Faz 3'e durum kapsamı kontrolü (3d), marka profili entegrasyonu
+- **design-system-rules:** DS prensipleri (Step 3.5), pattern katmanı kuralları (Step 3.6)
+- **design-drift-detector:** Motion token drift kontrolü (Step 5.5)
+
+**Güncellenen referans dosyalar:**
+- **SKILL_INDEX.md:** Kişiselleştirme bölümü, skill sayısı 18→19, persona akışları güncellenmiş, uçtan uca akış güncellenmiş
+- **FUTURE.md:** P3 tüm maddeler [TAMAMLANDI], sürüm referansları güncellenmiş
+
 ## [1.7.10] - 2026-04-05
 
 ### Doküman: Kapsamlı Güncelleme Rehberi
