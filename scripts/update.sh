@@ -1,58 +1,58 @@
 #!/bin/bash
 set -euo pipefail
 
-# F-MCP ATezer Bridge — Otomatik Guncelleme
-# Mevcut kurulumu tespit eder, gunceller, dogrular.
+# F-MCP ATezer Bridge — Otomatik Güncelleme
+# Mevcut kurulumu tespit eder, günceller, doğrular.
 
-echo "=== F-MCP ATezer Bridge Guncelleme ==="
+echo "=== F-MCP ATezer Bridge Güncelleme ==="
 echo ""
 
-# 1. OS kontrolu
+# 1. OS kontrolü
 OS="$(uname -s)"
 if [[ "$OS" != "Darwin" && "$OS" != "Linux" ]]; then
-  echo "❌ Bu script macOS ve Linux icin. Windows: docs/WINDOWS-INSTALLATION.md"
+  echo "❌ Bu script macOS ve Linux için. Windows: docs/WINDOWS-INSTALLATION.md"
   exit 1
 fi
 
-# 2. Node.js kontrolu
+# 2. Node.js kontrolü
 if ! command -v node &>/dev/null; then
-  echo "❌ Node.js bulunamadi. Once kurulum yapin: bash scripts/setup.sh"
+  echo "❌ Node.js bulunamadı. Önce kurulum yapın: bash scripts/setup.sh"
   exit 1
 fi
 
 NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
 if [[ "$NODE_MAJOR" -lt 18 ]]; then
   echo "❌ Node.js 18+ gerekli. Mevcut: $(node -v)"
-  echo "   Guncelleme: brew upgrade node (macOS) veya nodejs.org"
+  echo "   Güncelleme: brew upgrade node (macOS) veya nodejs.org"
   exit 1
 fi
 echo "✓ Node.js $(node -v)"
 
-# 3. Repo kok kontrolu
+# 3. Repo kök kontrolü
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [[ ! -f "$REPO_ROOT/package.json" ]]; then
-  echo "❌ package.json bulunamadi. Bu script'i FMCP repo icinden calistirin."
+  echo "❌ package.json bulunamadı. Bu script'i FMCP repo içinden çalıştırın."
   exit 1
 fi
 
 PKG_NAME=$(node -e "console.log(require('$REPO_ROOT/package.json').name)" 2>/dev/null || echo "")
 if [[ "$PKG_NAME" != "@atezer/figma-mcp-bridge" ]]; then
-  echo "❌ Bu FMCP reposu degil."
+  echo "❌ Bu FMCP reposu değil."
   exit 1
 fi
 
 cd "$REPO_ROOT"
 
-# 4. Mevcut surum
+# 4. Mevcut sürüm
 OLD_VERSION=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
-echo "✓ Mevcut surum: v$OLD_VERSION"
+echo "✓ Mevcut sürüm: v$OLD_VERSION"
 
-# 5. Yerel degisiklik kontrolu
+# 5. Yerel değişiklik kontrolü
 if ! git diff --quiet 2>/dev/null; then
   echo ""
-  echo "⚠ Yerel degisiklikler var. Stash yapiliyor..."
+  echo "⚠ Yerel değişiklikler var. Stash yapılıyor..."
   git stash
   STASHED=true
 else
@@ -61,50 +61,50 @@ fi
 
 # 6. git pull
 echo ""
-echo "📥 Guncellemeler indiriliyor..."
+echo "📥 Güncellemeler indiriliyor..."
 git pull origin main 2>&1
 
 # 7. npm install
 echo ""
-echo "📦 Bagimliliklar guncelleniyor..."
+echo "📦 Bağımlılıklar güncelleniyor..."
 npm install --loglevel=warn
 
 # 8. Build
 echo ""
-echo "🔨 Build aliniyor..."
+echo "🔨 Build alınıyor..."
 npm run build:local
-echo "✓ Build tamamlandi"
+echo "✓ Build tamamlandı"
 
 # 9. Stash geri al
 if [[ "$STASHED" == "true" ]]; then
   echo ""
-  echo "📂 Yerel degisiklikler geri yukleniyor..."
-  git stash pop 2>&1 || echo "⚠ Stash pop conflict — elle cozmeniz gerekebilir: git stash pop"
+  echo "📂 Yerel değişiklikler geri yükleniyor..."
+  git stash pop 2>&1 || echo "⚠ Stash pop conflict — elle çözmeniz gerekebilir: git stash pop"
 fi
 
-# 10. NPX cache temizle (kullanici ayni zamanda npx ile de kullaniyorsa)
+# 10. NPX cache temizle
 echo ""
 echo "🧹 NPX cache temizleniyor..."
 if [[ -d "$HOME/.npm/_npx" ]]; then
   rm -rf "$HOME/.npm/_npx"
   echo "  ✓ NPX cache temizlendi"
 else
-  echo "  ℹ NPX cache bulunamadi (zaten temiz)"
+  echo "  ℹ NPX cache bulunamadı (zaten temiz)"
 fi
 
-# 11. Yeni surum
+# 11. Yeni sürüm
 NEW_VERSION=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "?")
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 if [[ "$OLD_VERSION" == "$NEW_VERSION" ]]; then
-  echo "✅ Zaten guncel: v$NEW_VERSION"
+  echo "✅ Zaten güncel: v$NEW_VERSION"
 else
-  echo "✅ Guncellendi: v$OLD_VERSION → v$NEW_VERSION"
+  echo "✅ Güncellendi: v$OLD_VERSION → v$NEW_VERSION"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  → AI aracinizi yeniden baslatin (Claude/Cursor)"
-echo "  → Figma'da plugin'i kapatin ve tekrar acin"
-echo "  → AI aracinizdan: 'figma_get_status' ile dogrulayin"
+echo "  → AI aracınızı yeniden başlatın (Claude/Cursor)"
+echo "  → Figma'da plugin'i kapatın ve tekrar açın"
+echo "  → AI aracınızdan: 'figma_get_status' ile doğrulayın"
 echo ""
