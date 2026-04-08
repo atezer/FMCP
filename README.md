@@ -4,233 +4,142 @@
 
 # F-MCP (Figma MCP Bridge)
 
-Figma'daki tasarımlarınızı AI araçlarına (Claude, Cursor) bağlayan bir köprü. Figma'da bir plugin açarsınız, AI aracınız bu plugin üzerinden tasarımlarınızı okur, değiştirir ve export eder.
-
-**Ne işe yarar?** AI'a "Bu dosyadaki Button bileşenini göster", "Yeni bir frame oluştur", "SVG olarak export et" gibi komutlar verirsiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
-
-## Nasıl çalışır?
-
-```
-Siz (Claude/Cursor) → F-MCP Bridge → Figma Plugin → Figma dosyanız
-```
+Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
 Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderilmez.
 
-## Öne çıkan özellikler
+---
 
-- **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ve daha fazlası ([tam liste](docs/TOOLS_FULL_LIST.md))
-- **17 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, geliştirici handoff, kod üretimi ([test raporu](docs/TEST_REPORT.md))
-- **Token gerekmez** — Temel araçlar Figma API token'ı olmadan plugin üzerinden çalışır. REST API (yorum, versiyon geçmişi) için isteğe bağlı token eklenebilir.
-- **Verileriniz sizde kalır** — Tasarım verisi bilgisayarınızdan çıkmaz. Figma bulutuna veya üçüncü taraflara veri gönderilmez.
-- **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda, birden fazla Figma/FigJam dosyasıyla çalışır (otomatik port tarama)
-- **Responsive + Dark Mode** — Ekranları 3 boyutta (Mobile/Tablet/Web) ve 2 temada (Light/Dark) üretir
-- **Erişilebilirlik** — WCAG AA kontrast kontrolü, touch target doğrulama, başlık hiyerarşisi, odak sırası notları
-- **Kod üretimi** — Figma tasarımından React, SwiftUI ve Jetpack Compose kodu üretir
-- **SVG/PNG/PDF export** — Vektörel veya bitmap, toplu export (1-50 node)
-- **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
+## Neye ihtiyacım var?
 
-## Hızlı başlangıç
+| Gerekli | Açıklama |
+|---------|----------|
+| **Figma** | Zaten kullanıyorsanız hazırsınız |
+| **Claude Code** | Kurulumu yapacak uygulama — [claude.ai/download](https://claude.ai/download) adresinden indirin |
 
-> 💡 **En kolay yol:** AI aracınıza (Claude, Cursor) şunu söyleyin:
-> *"@atezer/figma-mcp-bridge paketini kur ve Figma'ya bağlan"*
-> AI config'i ayarlar, bağlantıyı kurar. Aşağıdaki adımlar elle yapmak isteyenler için.
+> **Claude Code nedir?** Bilgisayarınızda çalışan Claude versiyonu. Dosya oluşturabilir, komut çalıştırabilir, kurulum yapabilir. İndirdikten sonra kurulum için sadece bir kez kullanacaksınız.
 
-### 1. Node.js kurun (bir kerelik)
+---
 
-F-MCP Bridge'in çalışması için bilgisayarınızda Node.js olması gerekiyor. Zaten kuruluysa bu adımı atlayın.
+## Kurulum (5 dakika)
 
-**Kurulu mu kontrol edin:** Terminal açıp `node -v` yazın. Versiyon görüyorsanız kurulu demektir.
+**1.** [Claude Code'u indirin](https://claude.ai/download) (henüz yoksa)
 
-**Kurulu değilse:** [nodejs.org](https://nodejs.org) → **LTS** butonuna tıklayın → indirin → kurun. Sadece "İleri"ye tıklayarak kurulum tamamlanır.
+**2.** Claude Code'u açın ve şunu yazın:
 
-### 2. AI aracınıza config ekleyin
+> *"https://github.com/atezer/FMCP bu repoyu kur"*
 
-Aşağıdaki JSON'u AI aracınızın config dosyasına ekleyin:
+Claude gerekli her şeyi (Node.js, build, ayarlar) otomatik yapar. Sizden sadece gerekirse **bilgisayar şifreniz** istenir.
 
-```json
-{
-  "mcpServers": {
-    "figma-mcp-bridge": {
-      "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
-    }
-  }
-}
-```
+**3.** Claude "kurulum tamamlandı" deyince **Claude Code'u kapatıp tekrar açın**
 
-Config dosyasının konumu AI aracınıza göre değişir:
+**4.** Figma'da **Plugins → F-MCP ATezer Bridge** açın → yeşil **"Ready"** görün
 
-| AI Aracı | Config Dosyası |
-|----------|---------------|
-| **Cursor** | `.cursor/mcp.json` (proje klasörü) |
-| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
-| **Claude Code** | `.mcp.json` (proje klasörü) |
+**5.** Hazırsınız! Claude'a Figma ile ilgili sorularınızı sorun.
 
-### 3. Figma'da plugin'i açın
-
-1. **Cursor veya Claude Desktop'ı yeniden başlatın** (config'i okuması için)
-2. **Figma'yı açın** → herhangi bir dosyayı açın
-3. **Plugins** menüsünden **F-MCP ATezer Bridge** seçin
-4. Plugin'de yeşil **"Ready"** yazısını görene kadar bekleyin
-5. AI aracınızdan Figma'ya komut verebilirsiniz!
-
-> **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → Bu repodaki `f-mcp-plugin/manifest.json` dosyasını seçin.
+> **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → `f-mcp-plugin/manifest.json`
 >
-> **Kurumsal kullanım:** Plugin'i organizasyonunuzda private plugin olarak yayınlarsanız herkes Plugins menüsünden tek tıkla erişir — tek tek yüklemeye gerek kalmaz.
+> **Kurumsal kullanım:** Plugin organizasyonda yayınlandıysa import gerekmez — Plugins menüsünden doğrudan çalıştırın.
 
-## 46 araçla neler yapabilirsiniz?
+---
 
-### Tasarımcılar için
+## Kurulumdan sonra hangi Claude'u kullanmalıyım?
 
-| Ne yapabilirsiniz | Araçlar |
-|-------------------|---------|
-| Dosya yapısını görme | `figma_get_file_data`, `figma_get_design_context` |
-| Bileşen bulma ve inceleme | `figma_search_components`, `figma_get_component` |
-| Screenshot alma | `figma_capture_screenshot` |
-| SVG/PNG export | `figma_export_nodes` (toplu, vektörel) |
-| Yeni tasarım elemanı oluşturma | `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group` |
-| Variable ve token yönetimi | `figma_get_variables`, `figma_create_variable`, `figma_update_variable` |
-| Design system özeti | `figma_get_design_system_summary`, `figma_get_token_browser` |
-| Takım kütüphanesi arama | `figma_search_assets` |
+Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claude Chat gibi yazışın, Figma bağlantısı otomatik çalışır.
 
-### Geliştiriciler için
+| Araç | F-MCP çalışır mı? | Not |
+|------|-------------------|-----|
+| **Claude Desktop** (masaüstü uygulaması) | ✅ | Sohbet arayüzü — günlük kullanım için önerilen |
+| **Claude Code** (terminal uygulaması) | ✅ | Kod yazma ve geliştirme için |
+| **Cursor** | ✅ | Kod editörü — geliştirciler için |
+| **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
 
-| Ne yapabilirsiniz | Araçlar |
-|-------------------|---------|
-| Bileşen detayı + görsel | `figma_get_component_for_development`, `figma_get_component_image` |
-| Token ve stil çıkarma | `figma_get_variables`, `figma_get_styles` |
-| Instance oluşturma | `figma_instantiate_component`, `figma_set_instance_properties` |
-| Kod çalıştırma | `figma_execute` (Figma Plugin API ile doğrudan JS) |
-| Konsol izleme | `figma_get_console_logs`, `figma_watch_console` |
+---
 
-### DesignOps için
+## Neler yapabilirsiniz?
 
-| Ne yapabilirsiniz | Araçlar |
-|-------------------|---------|
-| Design-code uyumu kontrolü | `figma_check_design_parity` |
-| Toplu token oluşturma | `figma_setup_design_tokens`, `figma_batch_create_variables` |
-| Variable CRUD (oluştur/güncelle/sil) | Tam variable yönetim seti (12 araç) |
-| Bileşen variant yönetimi | `figma_arrange_component_set`, `figma_set_description` |
+AI ile Figma arasında **çift yönlü** çalışırsınız:
 
-### REST API (isteğe bağlı, token gerektirir)
+**Figma'dan AI'a** — tasarımı oku, analiz et:
+- *"Bu dosyadaki tüm bileşenleri listele"*
+- *"Button bileşeninin özelliklerini göster"*
+- *"Bu ekranın screenshot'ını al"*
+- *"Design token'larını çıkar"*
 
-| Ne yapabilirsiniz | Araçlar |
-|-------------------|---------|
-| Token girişi | `figma_set_rest_token` (plugin UI'dan veya AI aracından) |
-| API çağrısı | `figma_rest_api` (yorumlar, versiyonlar, görsel export) |
-| Limit takibi | `figma_get_rest_token_status` |
-| Bağlantı durumu | `figma_plugin_diagnostics` |
+**AI'dan Figma'ya** — tasarım oluştur, değiştir:
+- *"Yeni bir frame oluştur, 375x812, mobile layout"*
+- *"Bu tasarımdan React kodu üret"*
+- *"Color token'larını toplu güncelle"*
+- *"Tüm ikonları SVG olarak export et"*
 
-Tam araç listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | Detaylı referans: [TOOLS.md](docs/TOOLS.md)
+**Kalite kontrolü:**
+- *"Kontrast kontrolü yap (erişilebilirlik)"*
+- *"Koddaki token'larla Figma'daki token'ları karşılaştır"*
+- *"Responsive: Mobile, Tablet, Web versiyonlarını üret"*
 
-## Claude + Cursor aynı anda kullanma (v1.7.0+)
+46 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
 
-Plugin tüm portları (5454-5470) **otomatik tarar** ve bulunan bridge'lere sessizce bağlanır. Elle port değiştirmenize gerek yok.
+---
 
-**Nasıl çalışır:**
-1. Claude Desktop, Cursor veya Claude Code'u açın — her biri kendi portunda bridge başlatır
-2. Figma'da plugin'i açın — otomatik olarak tüm bridge'leri bulur ve bağlanır
-3. Plugin'de **(i)** ikonuna tıklayın — bağlı araçları görün
-4. **◀ ▶** ok tuşlarıyla araçlar arasında geçiş yapın
+## Figma API Token (opsiyonel — ek özellikler)
 
-```
-● 5454 (Claude) ← aktif
-○ 5455 (Cursor)
-○ 5457 (Claude Code)
-```
+F-MCP temel özellikleri token olmadan çalışır. Figma API token eklerseniz **ek özellikler** açılır:
 
-AI aracı adı otomatik tespit edilir — config'e bir şey eklemenize gerek yok.
+| Token olmadan | Token ile (ek) |
+|---------------|---------------|
+| Tasarım okuma, bileşen arama | + Yorum okuma/yazma |
+| Frame/text oluşturma | + Versiyon geçmişi |
+| Variable/token yönetimi | + REST API görsel export |
+| SVG/PNG/PDF export | + Dosya bilgisi detayları |
 
-## Çoklu dosya desteği
+**Nasıl eklenir:**
+1. [figma.com/developers](https://www.figma.com/developers) → **Personal Access Tokens** → yeni token oluşturun
+2. Figma'da plugin'i açın → **Advanced** → **API Token** alanına yapıştırın
+3. Süre seçin (30/60/90 gün) → token otomatik kaydedilir
 
-Aynı anda birden fazla Figma/FigJam dosyasında plugin'i açabilirsiniz:
+> Token bilgisayarınızda kalır, internete gönderilmez.
 
-- **Figma Desktop** — tasarım dosyası
-- **Figma Browser** — tarayıcıda figma.com
-- **FigJam** — whiteboard/diyagram
+---
 
-Hangi linki verirseniz, AI o dosyaya yönlendirilir. `figma_list_connected_files` ile bağlı dosyaları görebilirsiniz.
+## Güncelleme
 
-## Plugin durum göstergeleri
+Claude Code'a şunu söyleyin:
 
-| Plugin'de ne görüyorsunuz | Anlamı |
-|---------------------------|--------|
-| `ready (:5454)` | Bağlantı kuruldu, kullanmaya hazır |
-| `connecting...` | Bağlanmaya çalışıyor |
-| `no server` | AI aracı çalışmıyor veya port uyuşmuyor |
-| `wrong server` | Farklı bir sunucuya bağlandı |
+> *"F-MCP'yi güncelle"*
+
+Claude gerisini halleder. Sonra Claude'u yeniden başlatın.
+
+Detay: [UPDATE.md](docs/UPDATE.md)
+
+---
 
 ## Sorun mu yaşıyorsunuz?
 
 | Sorun | Çözüm |
 |-------|-------|
-| Plugin "no server" diyor | AI aracınızı (Claude/Cursor) yeniden başlatın |
-| Port çakışması | `figma_set_port` ile farklı porta geçin veya `lsof -i :5454` ile portu kontrol edin |
-| "Server disconnected" | Config'deki node yolunu kontrol edin: `which node` ile tam yolu bulun |
-| Plugin'de 0 bağlantı | Plugin'deki port ile AI aracının portu aynı olmalı |
+| Plugin "no server" diyor | AI aracınızı yeniden başlatın |
+| Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
+| Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
 
-Detaylı sorun giderme: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
-## Sürüm bilgisi
+---
 
-| Bilgi | Kaynak |
-|-------|--------|
-| Güncel sürüm | **1.7.10** ([package.json](package.json)) |
-| Değişiklik geçmişi | [CHANGELOG.md](CHANGELOG.md) |
-| GitHub sürümleri | [Releases](https://github.com/atezer/FMCP/releases) |
-| npm paketi | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
+## Teknik detaylar
 
-**Güncelleme:** NPX ile `@latest` kullanıyorsanız otomatik güncellenir. Repo ile kurduysanız: `git pull` → `npm run build:local` → AI aracını yeniden başlatın.
+- **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ([tam liste](docs/TOOLS_FULL_LIST.md))
+- **17 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi ([test raporu](docs/TEST_REPORT.md))
+- **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda çalışır
+- **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
+- **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internetsiz (air-gap) ortamlarda çalışır
+- [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
-## Dokümanlar
+---
 
-| Doküman | Açıklama |
-|---------|----------|
-| [ONBOARDING.md](docs/ONBOARDING.md) | Adım adım kurulum rehberi |
-| [WINDOWS-INSTALLATION.md](docs/WINDOWS-INSTALLATION.md) | Windows kurulumu |
-| [SETUP.md](docs/SETUP.md) | Detaylı kurulum (Local / Remote) |
-| [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) | **46 araç tam listesi** |
-| [TOOLS.md](docs/TOOLS.md) | Araçların detaylı açıklamaları |
-| [REST_API_GUIDE.md](docs/REST_API_GUIDE.md) | REST API kullanım rehberi |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Projeye katkıda bulunma rehberi |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Sorun giderme |
-| [UPDATE.md](docs/UPDATE.md) | Güncelleme rehberi (NPX / Clone / Claude Code) |
-| [MULTI_INSTANCE.md](docs/MULTI_INSTANCE.md) | Çoklu kullanıcı ve port yönetimi |
-| [ENTERPRISE.md](docs/ENTERPRISE.md) | Kurumsal özellikler (audit log, air-gap) |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Teknik mimari |
-| [USE_CASES.md](docs/USE_CASES.md) | Örnek kullanım senaryoları |
-| [SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) | Güvenlik denetimi |
-| [TEST_REPORT.md](docs/TEST_REPORT.md) | Kapsamli entegrasyon testi: 46 arac, 17 skill, 120 token, 6 ekran |
-
-## Güvenlik ve gizlilik
-
-- Tasarım verileri bilgisayarınızdan **çıkmaz** — tüm iletişim localhost üzerinden
-- REST API token'ı bellekte tutulur, diske **yazılmaz**
-- İnternetsiz (air-gap) ortamlarda çalışır
-- Detay: [PRIVACY.md](PRIVACY.md)
-
-## Kurumsal kullanım (Tüm şirkette tek seferde)
-
-Plugin'i herkesin tek tek yüklemesi gerekmez. Figma Organization hesabınız varsa plugin'i **private plugin** olarak yayınlayabilirsiniz:
-
-**Publish plugin** → **Publish to** → **Organizasyon adınız (Private)** seçin.
-
-Yayınladıktan sonra:
-- Tüm ekip üyeleri **Plugins** menüsünden tek tıkla erişir
-- Kimsenin "manifest import" yapmasına gerek kalmaz
-- Plugin güncellemelerini merkezden yönetirsiniz
-- Review süreci yok (private plugin) — yayınladıktan hemen sonra kullanılabilir
-
-**Gereksinimler:**
-- Figma **Organization** veya **Enterprise** planı
-- Yayınlama: Figma → Plugins → Publish → **Publish to** kısmında organizasyonunuzu seçin
-
-> Her kullanıcının kendi bilgisayarında sadece AI aracı config'ini (Claude/Cursor) ayarlaması yeterli. Plugin zaten şirketin Figma'sında hazır olur.
-
-Kurumsal özellikler (audit log, air-gap, org plugin detayı): [ENTERPRISE.md](docs/ENTERPRISE.md)
-
-## Lisans
-
-MIT — kişisel ve ticari kullanıma açık. Detay: [LICENSE](LICENSE)
+| | |
+|---|---|
+| Güncel sürüm | **1.7.14** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
+| npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
+| Lisans | MIT — kişisel ve ticari kullanıma açık |
 
 **Sorun mu var?** [GitHub Issues](https://github.com/atezer/FMCP/issues)

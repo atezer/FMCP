@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    :root {
+      --fmcp-bg-subtle: rgba(255,255,255,0.06);
+      --fmcp-bg-panel: rgba(255,255,255,0.04);
+      --fmcp-bg-tip: rgba(255,255,255,0.05);
+      --fmcp-border-light: rgba(255,255,255,0.1);
+      --fmcp-border-subtle: rgba(255,255,255,0.08);
+      --fmcp-border-faint: rgba(255,255,255,0.25);
+      --fmcp-text-input: #fff;
+      --fmcp-text-secondary: rgba(255,255,255,0.5);
+      --fmcp-text-tertiary: rgba(255,255,255,0.4);
+      --fmcp-text-muted: rgba(255,255,255,0.35);
+      --fmcp-text-dim: rgba(255,255,255,0.3);
+      --fmcp-text-ghost: rgba(255,255,255,0.2);
+      --fmcp-text-select: rgba(255,255,255,0.6);
+      --fmcp-clear-bg: rgba(255,100,100,0.15);
+      --fmcp-clear-border: rgba(255,100,100,0.2);
+      --fmcp-clear-text: rgba(255,100,100,0.8);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -18,9 +37,9 @@
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 11px;
+      font-size: 13px;
       background: var(--figma-color-bg, #2c2c2c);
-      color: var(--figma-color-text, rgba(255, 255, 255, 0.9));
+      color: var(--figma-color-text, var(--fmcp-text-input));
       width: 100%;
       max-width: 100%;
       height: auto;
@@ -85,11 +104,11 @@
     }
 
     .status-text .label {
-      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+      color: var(--figma-color-text-secondary, var(--fmcp-text-secondary));
     }
 
     .status-text .state {
-      color: var(--figma-color-text, rgba(255, 255, 255, 0.9));
+      color: var(--figma-color-text, var(--fmcp-text-input));
       margin-left: 4px;
     }
 
@@ -103,16 +122,16 @@
     .advanced-toggle {
       border: 1px solid var(--figma-color-border, #4a4a4a);
       background: transparent;
-      color: inherit;
+      color: var(--figma-color-text, var(--fmcp-text-input));
       border-radius: 6px;
-      font-size: 10px;
+      font-size: 12px;
       padding: 4px 8px;
       cursor: pointer;
     }
 
     .advanced-state {
-      font-size: 10px;
-      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+      font-size: 12px;
+      color: var(--figma-color-text-secondary, var(--fmcp-text-secondary));
     }
 
     .advanced-panel {
@@ -133,10 +152,10 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 10px;
+      font-size: 12px;
     }
     .bridge-host label, .bridge-port label {
-      color: var(--figma-color-text-secondary, rgba(255, 255, 255, 0.7));
+      color: var(--figma-color-text-secondary, var(--fmcp-text-secondary));
     }
     .bridge-host input {
       width: 90px;
@@ -144,8 +163,8 @@
       background: var(--figma-color-bg-tertiary, #1e1e1e);
       border: 1px solid var(--figma-color-border, #4a4a4a);
       border-radius: 3px;
-      color: inherit;
-      font-size: 11px;
+      color: var(--figma-color-text, var(--fmcp-text-input));
+      font-size: 13px;
     }
     .bridge-port input {
       width: 56px;
@@ -153,17 +172,17 @@
       background: var(--figma-color-bg-tertiary, #1e1e1e);
       border: 1px solid var(--figma-color-border, #4a4a4a);
       border-radius: 3px;
-      color: inherit;
-      font-size: 11px;
+      color: var(--figma-color-text, var(--fmcp-text-input));
+      font-size: 13px;
     }
 
     .auto-port-reset {
       align-self: flex-start;
       border: 1px solid var(--figma-color-border, #4a4a4a);
       background: transparent;
-      color: inherit;
+      color: var(--figma-color-text, var(--fmcp-text-input));
       border-radius: 6px;
-      font-size: 10px;
+      font-size: 12px;
       padding: 4px 8px;
       cursor: pointer;
     }
@@ -172,25 +191,142 @@
       opacity: 0.9;
     }
 
-    /* Light theme support */
+    /* Light theme — .figma-light: Figma injects on <html> when themeColors:true
+       @media fallback: browser preview & non-Figma environments */
+    .figma-light,
+    .fmcp-light {
+      --fmcp-bg-subtle: rgba(0,0,0,0.05);
+      --fmcp-bg-panel: rgba(0,0,0,0.03);
+      --fmcp-bg-tip: rgba(0,0,0,0.04);
+      --fmcp-border-light: rgba(0,0,0,0.12);
+      --fmcp-border-subtle: rgba(0,0,0,0.08);
+      --fmcp-border-faint: rgba(0,0,0,0.2);
+      --fmcp-text-input: #222;
+      --fmcp-text-secondary: #555;
+      --fmcp-text-tertiary: #666;
+      --fmcp-text-muted: #777;
+      --fmcp-text-dim: #888;
+      --fmcp-text-ghost: #999;
+      --fmcp-text-select: #444;
+      --fmcp-clear-bg: rgba(220,50,50,0.1);
+      --fmcp-clear-border: rgba(220,50,50,0.2);
+      --fmcp-clear-text: rgba(200,50,50,0.85);
+    }
     @media (prefers-color-scheme: light) {
-      body {
+      :root:not(.figma-dark) {
+        --fmcp-bg-subtle: rgba(0,0,0,0.05);
+        --fmcp-bg-panel: rgba(0,0,0,0.03);
+        --fmcp-bg-tip: rgba(0,0,0,0.04);
+        --fmcp-border-light: rgba(0,0,0,0.12);
+        --fmcp-border-subtle: rgba(0,0,0,0.08);
+        --fmcp-border-faint: rgba(0,0,0,0.2);
+        --fmcp-text-input: #222;
+        --fmcp-text-secondary: #555;
+        --fmcp-text-tertiary: #666;
+        --fmcp-text-muted: #777;
+        --fmcp-text-dim: #888;
+        --fmcp-text-ghost: #999;
+        --fmcp-text-select: #444;
+        --fmcp-clear-bg: rgba(220,50,50,0.1);
+        --fmcp-clear-border: rgba(220,50,50,0.2);
+        --fmcp-clear-text: rgba(200,50,50,0.85);
+      }
+    }
+    .figma-light body,
+    .fmcp-light body {
+      background: var(--figma-color-bg, #f5f5f5);
+      color: var(--figma-color-text, #333);
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not(.figma-dark) body {
         background: #f5f5f5;
         color: #333;
       }
-      .bridge-status {
+    }
+    .figma-light .bridge-status,
+    .fmcp-light .bridge-status {
+      background: var(--figma-color-bg-secondary, #fff);
+      border-color: var(--figma-color-border, #e0e0e0);
+    }
+    .figma-light .advanced-panel,
+    .fmcp-light .advanced-panel {
+      background: var(--figma-color-bg-secondary, #fff);
+      border-color: var(--figma-color-border, #e0e0e0);
+    }
+    .figma-light .advanced-toggle,
+    .fmcp-light .advanced-toggle {
+      border-color: var(--figma-color-border, #ccc);
+    }
+    .figma-light .status-text .label,
+    .fmcp-light .status-text .label {
+      color: var(--figma-color-text-secondary, #666);
+    }
+    .figma-light .status-text .state,
+    .fmcp-light .status-text .state {
+      color: var(--figma-color-text, #333);
+    }
+    .figma-light .bridge-host input,
+    .figma-light .bridge-port input,
+    .fmcp-light .bridge-host input,
+    .fmcp-light .bridge-port input {
+      background: var(--figma-color-bg-tertiary, #f0f0f0);
+      border-color: var(--figma-color-border, #ccc);
+      color: var(--figma-color-text, #333);
+    }
+    .figma-light .auto-port-reset,
+    .fmcp-light .auto-port-reset {
+      border-color: var(--figma-color-border, #ccc);
+    }
+    .figma-light .advanced-state,
+    .fmcp-light .advanced-state {
+      color: var(--figma-color-text-secondary, #666);
+    }
+    .figma-light .advanced-toggle,
+    .fmcp-light .advanced-toggle {
+      color: var(--figma-color-text, #333);
+    }
+    .figma-light .bridge-host label,
+    .figma-light .bridge-port label,
+    .fmcp-light .bridge-host label,
+    .fmcp-light .bridge-port label {
+      color: var(--figma-color-text-secondary, #666);
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not(.figma-dark) .bridge-status {
         background: #fff;
-        border-color: #e5e5e5;
+        border-color: #e0e0e0;
       }
-      .advanced-panel {
+      :root:not(.figma-dark) .advanced-panel {
         background: #fff;
-        border-color: #e5e5e5;
+        border-color: #e0e0e0;
       }
-      .status-text .label {
+      :root:not(.figma-dark) .advanced-toggle {
+        border-color: #ccc;
+      }
+      :root:not(.figma-dark) .status-text .label {
         color: #666;
       }
-      .status-text .state {
+      :root:not(.figma-dark) .status-text .state {
         color: #333;
+      }
+      :root:not(.figma-dark) .bridge-host input,
+      :root:not(.figma-dark) .bridge-port input {
+        background: #f0f0f0;
+        border-color: #ccc;
+        color: #333;
+      }
+      :root:not(.figma-dark) .auto-port-reset {
+        border-color: #ccc;
+      }
+      :root:not(.figma-dark) .advanced-state {
+        color: #666;
+      }
+      :root:not(.figma-dark) .advanced-toggle {
+        color: #333;
+      }
+      :root:not(.figma-dark) .bridge-host label,
+      :root:not(.figma-dark) .bridge-port label {
+        color: #666;
       }
     }
   </style>
@@ -202,73 +338,80 @@
       <div class="status-text">
         <span class="label">MCP</span>
         <span class="state" id="status-state">connecting</span>
-        <span id="status-info-btn" onclick="var p=document.getElementById('connections-panel');if(p){p.style.display=p.style.display==='block'?'none':'block';requestUiResize();}" style="display:none;cursor:pointer;margin-left:4px;font-size:9px;width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.4);text-align:center;line-height:13px;user-select:none;">i</span>
+        <span id="status-info-btn" onclick="var p=document.getElementById('connections-panel');if(p){p.style.display=p.style.display==='block'?'none':'block';requestUiResize();}" style="display:none;cursor:pointer;margin-left:4px;font-size:11px;width:15px;height:15px;border-radius:50%;border:1px solid var(--fmcp-border-faint);color:var(--fmcp-text-tertiary);text-align:center;line-height:15px;user-select:none;">i</span>
       </div>
     </div>
-    <div id="connections-panel" style="display:none;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:5px;font-size:9px;color:rgba(255,255,255,0.4);line-height:1.6;">
+    <div id="connections-panel" style="display:none;padding:6px 10px;background:var(--fmcp-bg-panel);border-radius:5px;font-size:11px;color:var(--fmcp-text-tertiary);line-height:1.6;">
       <div id="connections-panel-list">—</div>
     </div>
     <div class="advanced-wrap">
       <button id="advanced-toggle" class="advanced-toggle" type="button">Advanced</button>
-      <span id="advanced-state" class="advanced-state">auto port</span>
+      <span id="advanced-state" class="advanced-state">otomatik bağlantı aktif</span>
     </div>
     <div id="advanced-panel" class="advanced-panel">
       <div class="bridge-host" title="Host: localhost (aynı makine) veya IP adresi (uzak makine). Browser Figma'da da çalışır.">
         <label for="mcp-host">Host</label>
         <input type="text" id="mcp-host" value="localhost" placeholder="localhost" aria-label="MCP bridge host (localhost veya IP)" />
       </div>
-      <div class="bridge-port" title="Port elle belirtilmezse bridge'in dinlediği porta otomatik bağlanır (5454-5470 aralığı).">
+      <div class="bridge-port" title="Port otomatik bulunur (5454-5470). Elle değiştirmeniz gerekmez — sadece sorun yaşarsanız kullanın.">
         <label for="mcp-port">Port</label>
-        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Elle değiştirirseniz tek porta kilitlenir; Otomatik tara veya Advanced'ı kapatın." />
+        <input type="number" id="mcp-port" min="5454" max="5470" value="5454" aria-label="MCP bridge port (auto fallback 5454-5470)" title="Normalde değiştirmeniz gerekmez. Elle değiştirirseniz otomatik tarama durur — Advanced'ı kapatarak sıfırlayabilirsiniz." />
       </div>
       <div id="port-switcher" style="display:flex;align-items:center;gap:4px;margin-top:4px;">
-        <button type="button" id="port-prev" onclick="switchActivePort(-1)" style="font-size:10px;padding:1px 5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.5);cursor:pointer;">◀</button>
-        <span id="port-label" style="font-size:10px;color:rgba(255,255,255,0.4);flex:1;text-align:center;">—</span>
-        <button type="button" id="port-next" onclick="switchActivePort(1)" style="font-size:10px;padding:1px 5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.5);cursor:pointer;">▶</button>
+        <button type="button" id="port-prev" onclick="switchActivePort(-1)" style="font-size:12px;padding:1px 5px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-secondary);cursor:pointer;">◀</button>
+        <span id="port-label" style="font-size:12px;color:var(--fmcp-text-tertiary);flex:1;text-align:center;">—</span>
+        <button type="button" id="port-next" onclick="switchActivePort(1)" style="font-size:12px;padding:1px 5px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-secondary);cursor:pointer;">▶</button>
       </div>
-      <div class="api-token-section" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
+      <div class="api-token-section" style="margin-top:8px;border-top:1px solid var(--fmcp-border-subtle);padding-top:8px;">
         <div style="display:flex;align-items:center;gap:6px;">
-          <label for="figma-token" style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;">API Token</label>
-          <input type="password" id="figma-token" placeholder="figd_..." style="flex:1;min-width:0;font-size:11px;padding:3px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#fff;outline:none;" aria-label="Figma REST API token" />
-          <select id="token-expiry" style="font-size:10px;padding:2px 3px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:3px;color:rgba(255,255,255,0.6);outline:none;" title="Token süresi (Figma'da seçtiğiniz süre)">
+          <label for="figma-token" style="font-size:13px;color:var(--fmcp-text-secondary);white-space:nowrap;">API Token</label>
+          <input type="password" id="figma-token" placeholder="figd_..." style="flex:1;min-width:0;font-size:13px;padding:3px 6px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:4px;color:var(--fmcp-text-input);outline:none;" aria-label="Figma REST API token" />
+          <select id="token-expiry" style="font-size:12px;padding:2px 3px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-select);outline:none;" title="Token süresi (Figma'da seçtiğiniz süre)">
             <option value="90">90g</option>
             <option value="30">30g</option>
             <option value="7">7g</option>
             <option value="1">1g</option>
           </select>
-          <button type="button" id="clear-token" style="font-size:10px;padding:2px 6px;background:rgba(255,100,100,0.15);border:1px solid rgba(255,100,100,0.2);border-radius:3px;color:rgba(255,100,100,0.8);cursor:pointer;" title="Token'ı temizle">x</button>
+          <button type="button" id="clear-token" style="font-size:12px;padding:2px 6px;background:var(--fmcp-clear-bg);border:1px solid var(--fmcp-clear-border);border-radius:3px;color:var(--fmcp-clear-text);cursor:pointer;" title="Token'ı temizle">x</button>
         </div>
-        <div id="token-status" style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:3px;display:none;"></div>
-        <div id="token-expiry-info" style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;display:none;"></div>
-        <div id="token-expiry-note" style="font-size:8px;color:rgba(255,255,255,0.2);margin-top:1px;display:none;">Figma'daki token suresiyle eslestiginden emin olun</div>
+        <div id="token-status" style="font-size:12px;color:var(--fmcp-text-muted);margin-top:3px;display:none;"></div>
+        <div id="token-expiry-info" style="font-size:11px;color:var(--fmcp-text-dim);margin-top:2px;display:none;"></div>
+        <div id="token-expiry-note" style="font-size:10px;color:var(--fmcp-text-ghost);margin-top:1px;display:none;">Figma'daki token suresiyle eslestiginden emin olun</div>
         <div id="rate-limit-bar" style="display:none;margin-top:4px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;color:rgba(255,255,255,0.4);">
-            <span style="display:flex;align-items:center;gap:3px;">API Limit <span id="rate-limit-info" onclick="var t=document.getElementById('rate-limit-tip');if(t)t.style.display=t.style.display==='block'?'none':'block';" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);font-size:7px;color:rgba(255,255,255,0.4);user-select:none;">i</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--fmcp-text-tertiary);">
+            <span style="display:flex;align-items:center;gap:3px;">API Limit <span id="rate-limit-info" onclick="var t=document.getElementById('rate-limit-tip');if(t)t.style.display=t.style.display==='block'?'none':'block';" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--fmcp-border-faint);font-size:9px;color:var(--fmcp-text-tertiary);user-select:none;">i</span></span>
             <span id="rate-limit-text">—</span>
           </div>
-          <div id="rate-limit-tip" style="display:none;font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;padding:4px 6px;background:rgba(255,255,255,0.05);border-radius:3px;line-height:1.5;">
-            <div style="margin-bottom:3px;color:rgba(255,255,255,0.5);">Limiti ne tuketir?</div>
+          <div id="rate-limit-tip" style="display:none;font-size:10px;color:var(--fmcp-text-muted);margin-top:3px;padding:4px 6px;background:var(--fmcp-bg-tip);border-radius:3px;line-height:1.5;">
+            <div style="margin-bottom:3px;color:var(--fmcp-text-secondary);">Limiti ne tuketir?</div>
             <div>&#x25CB; Yorum okuma/yazma</div>
             <div>&#x25CB; Versiyon gecmisi</div>
             <div>&#x25CB; Gorsel export (REST ile)</div>
             <div>&#x25CB; Dosya bilgisi (REST ile)</div>
-            <div style="margin-top:3px;color:rgba(255,255,255,0.5);">Limiti tuketmeyen (sinirsiz):</div>
+            <div style="margin-top:3px;color:var(--fmcp-text-secondary);">Limiti tuketmeyen (sinirsiz):</div>
             <div>&#x25CF; Dosya okuma, yazma, silme</div>
             <div>&#x25CF; Variable/token yonetimi</div>
             <div>&#x25CF; Bilesen arama, export (plugin)</div>
             <div>&#x25CF; Screenshot, frame olusturma</div>
           </div>
-          <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:2px;">
+          <div style="height:3px;background:var(--fmcp-border-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
             <div id="rate-limit-fill" style="height:100%;background:#4ecdc4;border-radius:2px;transition:width 0.3s;width:100%;"></div>
           </div>
-          <div id="rate-limit-note" style="font-size:8px;color:rgba(255,255,255,0.2);margin-top:2px;display:none;">REST API cagrisi sonrasi guncellenir</div>
-          <div id="rate-limit-warning" style="display:none;font-size:9px;margin-top:2px;font-weight:600;"></div>
+          <div id="rate-limit-note" style="font-size:10px;color:var(--fmcp-text-ghost);margin-top:2px;display:none;">REST API cagrisi sonrasi guncellenir</div>
+          <div id="rate-limit-warning" style="display:none;font-size:11px;margin-top:2px;font-weight:600;"></div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    // ============================================================================
+    // THEME HELPER — read CSS custom properties for dark/light compat
+    // ============================================================================
+    function fmcpVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
     // ============================================================================
     // GLOBAL STATE - Data storage for Puppeteer/MCP access
     // ============================================================================
@@ -948,7 +1091,7 @@
         panel.classList.toggle('is-open', !!open);
       }
       if (state) {
-        state.textContent = open ? 'manual controls' : 'auto port';
+        state.textContent = open ? 'manuel kontrol' : 'otomatik bağlantı aktif';
       }
       try { localStorage.setItem(MCP_ADVANCED_OPEN_KEY, open ? '1' : '0'); } catch (e) {}
       if (open) {
@@ -972,7 +1115,7 @@
       if (statusEl) {
         statusEl.style.display = 'block';
         statusEl.textContent = hasToken ? 'Token aktif' : 'Token yok';
-        statusEl.style.color = hasToken ? 'rgba(78,205,196,0.8)' : 'rgba(255,255,255,0.35)';
+        statusEl.style.color = hasToken ? 'rgba(78,205,196,0.8)' : fmcpVar('--fmcp-text-muted');
       }
       // Expiry countdown
       if (expiryEl) {
@@ -988,7 +1131,7 @@
             expiryEl.style.display = 'block';
             var expDate = new Date(expiresAt);
             expiryEl.textContent = daysLeft + ' gun kaldi (' + expDate.toLocaleDateString('tr-TR') + ')';
-            expiryEl.style.color = daysLeft <= 7 ? 'rgba(249,193,79,0.8)' : 'rgba(255,255,255,0.35)';
+            expiryEl.style.color = daysLeft <= 7 ? 'rgba(249,193,79,0.8)' : fmcpVar('--fmcp-text-muted');
           }
         } else {
           expiryEl.style.display = 'none';
@@ -1740,7 +1883,7 @@
       });
       if (ports.length === 0) {
         label.textContent = '—';
-        label.style.color = 'rgba(255,255,255,0.3)';
+        label.style.color = fmcpVar('--fmcp-text-dim');
       } else if (ports.length === 1) {
         label.textContent = ports[0].port + ' (' + ports[0].clientName + ')';
         label.style.color = 'rgba(78,205,196,0.8)';

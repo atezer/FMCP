@@ -78,6 +78,28 @@ try {
 }
 ```
 
+## Kullanıcı İstekleri — Otomatik Yanıt
+
+### "F-MCP'yi güncelle" / "update" / "güncelle"
+Terminal komutu verme. `bash scripts/update.sh` çalıştır, sonucu bildir:
+> Güncelleme tamamlandı (vX.Y.Z). Claude'u yeniden başlat ve Figma'da plugin'i kapat-aç.
+
+### "F-MCP'yi kur" / "setup" / "kur" / "bunu kur" / GitHub linki verildi
+Kullanıcı GitHub linki (github.com/atezer/FMCP) verip "kur" derse veya herhangi bir şekilde kurulum isterse:
+
+1. Repo zaten clone edilmişse: `bash scripts/setup.sh` çalıştır
+2. Repo clone edilmemişse: şu komutu çalıştır:
+   ```
+   git clone https://github.com/atezer/FMCP.git && cd FMCP && bash scripts/setup.sh
+   ```
+3. Kullanıcıya sadece sonucu bildir:
+   > Kurulum tamamlandı. Claude'u yeniden başlat ve Figma'da plugin'i aç → yeşil "Ready" yazısını gör.
+
+Kullanıcıya ASLA terminal komutu söyleme, teknik adım açıklama. Her şeyi sen yap.
+
+### Dil
+Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, ğ, ö, ü, ı, İ) doğru kullanılmalı.
+
 ## References
 
 - [Architecture](../docs/ARCHITECTURE.md) - Technical design

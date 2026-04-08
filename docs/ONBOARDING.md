@@ -2,6 +2,8 @@
 
 Bu rehber, **figma-mcp-bridge** ile Claude/Cursor’u Figma’ya bağlamak için iki yol sunar: **en basit (NPX, repo indirmeden)** ve **detaylı (clone + build)**.
 
+> **Tek komutla kurulum:** Clone ettiyseniz `bash scripts/setup.sh` — Node.js kontrolü, build, MCP config hepsini otomatik yapar. Manuel yapmak isterseniz aşağıya devam edin.
+
 ---
 
 ## En basit kurulum (NPX — repo indirmeden)
