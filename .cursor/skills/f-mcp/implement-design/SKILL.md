@@ -305,6 +305,21 @@ figma_capture_screenshot(nodeId="<NODE_ID>", format="PNG", scale=2)
 
 Üretilen kodu çalıştırıp ekran görüntüsünü al ve Figma screenshot'ı ile karşılaştır. Farklar varsa düzelt.
 
+### Step 7d: Durum ve Etkileşim Kapsamı Kontrolü
+
+Görsel doğrulamaya ek olarak, tüm durumlar ve etkileşimler implement edildi mi kontrol et:
+
+| Kontrol | Açıklama |
+|---------|----------|
+| **Durum kapsamı** | Default, hover, active, disabled, loading, error, focus — handoff spec'te belirtilen tüm durumlar implement edildi mi? |
+| **Etkileşim kontrolü** | Transition süreleri doğru mu? (handoff spec'teki ms + easing değerleri) |
+| **Uç durum testi** | Min/max içerik test edildi mi? (3 kelimelik başlık vs 30 kelimelik başlık) |
+| **Boş durum** | Empty state implement edildi mi? (copy için bkz. [ux-copy-guidance](../ux-copy-guidance/SKILL.md)) |
+| **Yükleme durumu** | Skeleton/spinner implement edildi mi? |
+| **Hata durumu** | Error state mesajı ve görünümü implement edildi mi? |
+
+> **Kaynak:** ai-handoff-export skill'inin "Etkileşim Spesifikasyonları", "İçerik Spesifikasyonları" ve "Uç Durumlar" bölümleri bu kontrol için referanstır.
+
 ### Step 8: Design Parity Kontrolü
 
 **Önemli sınırlama:** `figma_check_design_parity` yalnızca **token değerlerini** karşılaştırır (variables + styles). Belirli bir component'in layout, spacing veya typography'sini kontrol etmez. Component-level doğrulama için screenshot karşılaştırması kullan.
@@ -428,6 +443,12 @@ Kullanıcı: "Bu login ekranını Bootstrap 4 ile implement et, nodeId: 10:5"
 ### Sorun: Legacy altyapıda modern Figma tasarımı implement edilemiyor
 
 **Çözüm:** Progressive enhancement uygula. Temel görünüm legacy CSS ile, gelişmiş özellikler (animasyon, blur, gradient) modern browser'lar için ekle.
+
+## Marka Profili Entegrasyonu
+
+`.fmcp-brand-profile.json` varsa:
+- `targetPlatforms` → Hedef platform listesi otomatik belirlenir (kullanıcıya sorma)
+- `typography` → Font seçim kararları referans alınır
 
 ## Evolution Triggers
 

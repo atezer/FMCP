@@ -142,6 +142,87 @@ PO/PM persona algılandığında veya `--executive` flag ile teknik handoff'un y
 2. Animasyon spesifikasyonu eksik
 ```
 
+## Handoff Prensipleri
+
+Her handoff paketi bu 4 prensibe uygun olmalıdır:
+
+1. **Varsayma, belirt** — Belirtilmeyen her şeyi geliştirici tahmin eder. Padding, radius, renk, davranış, hepsi açıkça yazılmalı.
+2. **Token kullan, değer değil** — `spacing-md` yaz, `16px` yazma. `color/primary` yaz, `#2563eb` yazma. Token ismi hem niyeti hem değeri taşır.
+3. **Tüm durumları göster** — Default, hover, active/pressed, disabled, loading, error, empty, focus. Gösterilmeyen durum "yok" demek değil, "bilinmiyor" demek.
+4. **Neden'i açıkla** — "Mobilde daraltılır" yerine "Mobilde daraltılır çünkü tek elle kullanım senaryosunda ekran alanı kısıtlı." Bağlam, geliştiricinin kenar durumlarında doğru karar vermesini sağlar.
+
+## Etkileşim Spesifikasyonları
+
+Step 5 (Code-Only Props) ile Step 6 (Screenshot) arasında üretilecek ek bölüm:
+
+### Davranış Detayları
+
+| Öğe | Tıklama/Tap | Hover | Transition | Gesture |
+|-----|------------|-------|------------|---------|
+| CTA Buton | navigate("/dashboard") | scale(1.02), shadow-lg | 200ms ease-out | — |
+| Kart | navigate("/detail/:id") | border highlight | 150ms ease-in-out | swipe-left: sil |
+| Input | focus + keyboard | border-color change | 100ms | — |
+| Modal | — | — | enter: 300ms ease-out, exit: 200ms ease-in | swipe-down: kapat |
+
+### Animasyon Spesifikasyonları
+
+- **Giriş animasyonları:** fade-in + slide-up (stagger delay: 50ms per item)
+- **Çıkış animasyonları:** fade-out (150ms)
+- **Mikro etkileşimler:** buton press scale(0.97), toggle spring(damping: 15)
+- **Sayfa geçişleri:** push (iOS), shared-element (Android), fade (Web)
+
+## İçerik Spesifikasyonları
+
+Step 5 (Code-Only Props) çıktısına ek olarak:
+
+| Alan | Max Karakter | Truncation | Boş Durum | Yükleme Durumu |
+|------|-------------|-----------|-----------|---------------|
+| Sayfa başlığı | 60 | ellipsis | — | skeleton (200×24) |
+| Açıklama metni | 120 | 2 satır + "devamı" | "Henüz açıklama yok" | skeleton (full-width×16 ×2) |
+| CTA butonu | 24 | — | — | spinner |
+| Kullanıcı adı | 30 | ellipsis | "Anonim" | skeleton (120×16) |
+| Avatar | — | — | initials fallback | pulse circle |
+
+> **Copy kuralları** için bkz. [ux-copy-guidance](../ux-copy-guidance/SKILL.md) — hata mesajı formülü, boş durum kalıbı, CTA prensipleri
+
+## Uç Durumlar
+
+Step 8 (Self-healing) sonrasında değerlendirilecek:
+
+| Uç Durum | Tasarım Davranışı | Not |
+|----------|------------------|-----|
+| Min içerik (başlık 3 kelime) | Normal görünüm | Kart yüksekliği auto |
+| Max içerik (başlık 30 kelime) | Truncation: 2 satır + ellipsis | Tooltip ile tam metin |
+| Uluslararası metin (Almanca %30 uzun) | Truncation tetiklenir | i18n testinde en uzun locale kontrol |
+| RTL dil (Arapça) | Mirror layout | İkonlar ters, sayılar LTR kalır |
+| Yavaş bağlantı / offline | Skeleton → timeout mesajı (10sn) | "Bağlantı kurulamadı. Tekrar deneyin." |
+| Eksik veri (null avatar) | Initials fallback → generic ikon | İsim de yoksa "?" ikonu |
+| Eksik veri (isim yok) | "Anonim Kullanıcı" placeholder | Backend default ile uyumlu olmalı |
+
+## Erişilebilirlik Spesifikasyonları
+
+Handoff paketine a11y bilgisi eklenir. Detaylı denetim için bkz. [figma-a11y-audit](../figma-a11y-audit/SKILL.md).
+
+| Öğe | Fokus Sırası | ARIA Label/Role | Klavye Etkileşimi |
+|-----|-------------|----------------|-------------------|
+| Ana başlık | — (heading, fokuslanmaz) | role="heading" level=1 | — |
+| E-posta input | 1 | label="E-posta adresi" | Tab: giriş, Enter: submit |
+| Şifre input | 2 | label="Şifre" | Tab: giriş, Enter: submit |
+| Giriş butonu | 3 | role="button" label="Giriş yap" | Enter/Space: tetikle |
+| Google butonu | 4 | role="button" label="Google ile giriş" | Enter/Space: tetikle |
+
+**Ekran okuyucu duyuruları:**
+- Form submit sonrası: `aria-live="assertive"` — "Giriş başarılı" veya "Hatalı e-posta adresi"
+- Loading durumunda: `aria-busy="true"` — "Yükleniyor"
+- Modal açıldığında: fokus modal'a taşınır, `aria-modal="true"`
+
+## Marka Profili Entegrasyonu
+
+`.fmcp-brand-profile.json` varsa handoff paketine otomatik eklenir:
+- `voiceTone` → İçerik spesifikasyonlarında ton referansı
+- `copyRules` → CTA max karakter, kaçınılacak/tercih edilecek kelimeler
+- `i18n` → Uç durumlar bölümünde desteklenen diller ve en uzun locale
+
 ## Rules
 
 - Hardcoded renk/font yerine mevcut token isimlerini yaz.

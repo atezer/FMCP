@@ -65,7 +65,19 @@ Faz 1: TEMELLERİ KUR (token'lar — her zaman bileşenlerden önce)
   1c. Semantic variable'lar (alias, mod-bazlı)
   1d. Tüm variable'larda scope ayarla
   1e. Effect style ve text style oluştur
-  → Çıkış kriteri: planlanan her token mevcut, tüm scope'lar ayarlı
+  1f. Motion token'ları oluştur:
+      - duration/fast: 150 (ms)
+      - duration/normal: 250
+      - duration/slow: 400
+      - easing/standard: "ease-in-out"
+      - easing/decelerate: "ease-out"
+      - easing/accelerate: "ease-in"
+      NOT: Figma'da motion token'ları native variable olarak desteklenmez (FLOAT/STRING).
+      STRING variable olarak oluştur ve scope'u "ALL_SCOPES" ayarla.
+      Alternatif: Dokümantasyon sayfasında motion token tablosu olarak belgele.
+  1g. Shadow/elevation token'ları: shadow/sm, shadow/md, shadow/lg, shadow/xl
+      Effect style olarak oluştur (figma_execute ile dropShadow).
+  → Çıkış kriteri: planlanan her token mevcut, tüm scope'lar ayarlı, motion ve shadow dahil
   ✋ KULLANICI ONAYI: variable özeti göster
 
 Faz 2: DOSYA YAPISI (bileşenlerden önce)
@@ -79,10 +91,17 @@ Faz 3: BİLEŞENLER (bağımlılık sırasıyla, teker teker)
     3a. Bileşen sayfasını oluştur
     3b. Base component: auto-layout + variable bağlama
     3c. Variant kombinasyonları (combineAsVariants + grid layout)
-    3d. Component property ekle (TEXT, BOOLEAN, INSTANCE_SWAP)
-    3e. Sayfa dokümantasyonu (başlık, açıklama, kullanım notları)
-    3f. Doğrulama: figma_get_file_data + figma_capture_screenshot
-    → Çıkış kriteri: variant sayısı doğru, tüm bağlamalar doğrulanmış
+    3d. Durum kapsamı kontrolü: her bileşende en az 4 durum olmalı
+        Zorunlu: Default, Disabled
+        Bileşen tipine göre: Hover, Active/Pressed, Loading, Error, Focus
+        Etkileşimli bileşenler (Button, Input, Toggle, Checkbox):
+          minimum Default + Hover + Active + Disabled + Focus = 5 durum
+        Statik bileşenler (Card, Badge, Divider):
+          minimum Default + Disabled = 2 durum yeterli
+    3e. Component property ekle (TEXT, BOOLEAN, INSTANCE_SWAP)
+    3f. Sayfa dokümantasyonu (başlık, açıklama, kullanım notları)
+    3g. Doğrulama: figma_get_file_data + figma_capture_screenshot
+    → Çıkış kriteri: variant sayısı doğru, tüm bağlamalar doğrulanmış, durum kapsamı yeterli
     ✋ KULLANICI ONAYI: her bileşen sonrası screenshot
 
 Faz 4: ENTEGRASYON + QA
@@ -543,6 +562,12 @@ Ayrı "Primitives Dark" collection oluştur:
 | Koyu metin (#111827) | Açık metin (#F3F4F6) | Ters çevir ama saf beyaz değil |
 | Gri border (#E5E7EB) | Koyu border (#272A30) | Daha az belirgin |
 | Mavi/600 (#2563EB) | Mavi/500 açık (#609EF6) | Daha parlak mavi (koyu yüzeyde okunur) |
+
+## Marka Profili Entegrasyonu
+
+`.fmcp-brand-profile.json` varsa:
+- `typography` → Display ve body font seçimi Faz 1'de text style oluştururken referans alınır
+- `aestheticDirection` → Faz 2'de dokümantasyon sayfalarının görsel tonunu belirler
 
 ## Evolution Triggers
 
