@@ -77,6 +77,94 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 5. **Öneri:** Yalnızca `figma_search_components` ile **inandırıcı** aday bulunduğunda değiştirme öner; zayıf eşleşmede aday yazma.
 6. **Çıktı:** Seçilen formatta rapor; ardından yukarıdaki koordinasyon tablosuna göre sonraki skill’i öner.
 
+## DS Eksiksizlik Çerçevesi
+
+Audit sırasında yalnızca instance/token sayısı değil, DS'nin **yapısal eksiksizliği** de değerlendirilir.
+
+### Token Kategorileri Kontrolü
+
+Sağlıklı bir DS'de aşağıdaki token kategorilerinin tamamı bulunmalıdır:
+
+| Kategori | Alt Kategoriler | Min Beklenen |
+|----------|----------------|-------------|
+| **Renkler** | Brand (primary, secondary, accent), Semantic (success, warning, error, info), Neutral (gray scale) | 15+ token |
+| **Tipografi** | Scale (6+ kademe), Weights (regular, medium, semi-bold, bold), Line-heights | 10+ token |
+| **Spacing** | Scale (4/8/12/16/24/32/48/64 vb.) | 6+ token |
+| **Border** | Radius kademeleri (sm, md, lg, full), Genişlik (1, 2) | 4+ token |
+| **Shadow** | Elevation seviyeleri (sm, md, lg, xl) | 3+ token |
+| **Motion** | Duration (fast: 150ms, normal: 250ms, slow: 400ms), Easing (ease-in-out, spring) | 4+ token |
+
+> **Sık eksik:** Motion token'ları — çoğu DS'de duration ve easing tanımlı değil. Audit raporunda bu eksiklik ayrıca belirtilmeli.
+
+### Bileşen Eksiksizlik Kontrolü
+
+Bir bileşenin "eksiksiz" sayılması için:
+
+| Kriter | Açıklama | Kontrol Yöntemi |
+|--------|----------|-----------------|
+| **Variant'lar** | Primary, secondary, ghost/outline, destructive vb. | Component set'te variant prop sayısı |
+| **Durumlar** | Default, hover, active, disabled, loading, error, focus | En az 4 durum olmalı |
+| **Boyutlar** | sm, md, lg (en az 2) | Size prop veya ayrı variant |
+| **Davranış spec'i** | Transition, animasyon, etkileşim notları | Description veya code-only props |
+| **A11y spec'i** | Min touch target, fokus göstergesi, label | Description veya annotation |
+
+> **Mevcut audit'ten farkı:** Mevcut audit instance/token sayar; bu çerçeve bileşenin **iç kalitesini** değerlendirir.
+
+### Pattern Katmanı Kontrolü
+
+Bileşen üstü pattern'ların varlığı (yoksa "DS olgunluk eksikliği" olarak raporla):
+
+| Pattern | Bileşenler | Kontrol |
+|---------|-----------|---------|
+| **Forms** | Input grubu + validation görseli + submit akışı | Form-like frame'lerde input+button+error text birlikte mi? |
+| **Navigation** | Sidebar, tabs, breadcrumb, bottom nav | Nav pattern'ı yayınlanmış bileşen mi yoksa ad-hoc frame mi? |
+| **Data Display** | Tablo, kart listesi, liste | Tekrarlayan veri gösteriminde DS bileşeni mi kullanılıyor? |
+| **Feedback** | Toast, modal, inline mesaj, snackbar | Geri bildirim mekanizmaları DS'de tanımlı mı? |
+
+### DS Prensipleri
+
+Audit raporunun sonuna bu prensipler bağlam olarak eklenir:
+
+1. **Tutarlılık > Yaratıcılık** — DS, ekiplerin tekerleği yeniden icat etmemesi için var
+2. **Kısıtlamalar içinde esneklik** — Bileşenler composable olmalı, rigid değil
+3. **Belgelenmemiş = yok** — Dökümante edilmeyen bileşen/token kullanılmayacaktır → bkz. [component-documentation](../component-documentation/SKILL.md)
+4. **Versiyonla ve migrate et** — Breaking change'lerde migration path sun → bkz. [ds-impact-analysis](../ds-impact-analysis/SKILL.md)
+
+### Audit JSON Şemasına Ek Alan
+
+`--json` çıktısına `dsCompleteness` objesi eklenir:
+
+```json
+{
+  "findings": [...],
+  "dsCompleteness": {
+    "tokenCategories": {
+      "colors": { "count": 24, "status": "complete" },
+      "typography": { "count": 12, "status": "complete" },
+      "spacing": { "count": 8, "status": "complete" },
+      "border": { "count": 5, "status": "complete" },
+      "shadow": { "count": 4, "status": "complete" },
+      "motion": { "count": 0, "status": "missing" }
+    },
+    "componentStates": {
+      "averageStatesPerComponent": 3.2,
+      "componentsWithAllStates": 5,
+      "componentsWithMissingStates": 8,
+      "missingStateDetails": [
+        { "component": "Button", "missing": ["loading", "focus"] },
+        { "component": "Input", "missing": ["error", "loading"] }
+      ]
+    },
+    "patternCoverage": {
+      "forms": true,
+      "navigation": true,
+      "dataDisplay": false,
+      "feedback": false
+    }
+  }
+}
+```
+
 ## Ne işaretlenir / ne işaretlenmez
 
 **İşaretle:** Ad-hoc frame ile yapılmış button/card/alert/chip vb.; tekrarlayan kardeş modüller; somut ham değer + tokenize komşular; global pattern’lerin custom olması; nominal component içi variant sapması.

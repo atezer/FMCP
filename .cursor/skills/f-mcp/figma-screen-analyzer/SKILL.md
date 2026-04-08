@@ -60,7 +60,18 @@ figma_get_design_context(nodeId="<NODE_ID>", depth=2)
 figma_capture_screenshot(nodeId="<NODE_ID>")
 ```
 
-### Step 3: DS Uyum Analizi
+### Step 3: İlk İzlenim Analizi (2 Saniye Testi)
+
+Screenshot'a bakarak hızlı sezgisel değerlendirme yap (DS metriklerinden ÖNCE):
+
+1. **Göz çekimi:** İlk bakışta göz nereye gidiyor? Bu doğru öğe mi? (CTA, başlık, hero görsel?)
+2. **Duygusal tepki:** Ekran güven mi, kafa karışıklığı mı, heyecan mı uyandırıyor?
+3. **Amaç netliği:** Ekranın ne için olduğu 2 saniyede anlaşılıyor mu?
+4. **Görsel yoğunluk:** Sıkışık mı, dengeli mi, çok boş mu?
+
+> Bu bölüm **sezgisel** — metrik değil, izlenim. Raporda "İlk İzlenim" başlığı altında 2-3 cümle.
+
+### Step 4: DS Uyum Analizi
 
 ```
 figma_get_design_system_summary()
@@ -113,7 +124,7 @@ return {
 };
 ```
 
-### Step 4: Görsel Hiyerarşi Değerlendirmesi
+### Step 5: Görsel Hiyerarşi Değerlendirmesi
 
 AI analizi ile:
 
@@ -121,8 +132,24 @@ AI analizi ile:
 2. **Görsel akış:** Kullanıcı gözünün doğal akışı (F-pattern, Z-pattern, üstten alta)
 3. **Öne çıkan öğeler:** CTA butonları, başlıklar, görsel odak noktaları
 4. **Boşluk dengesi:** Sıkışık mı, dengeli mi, çok boş mu
+5. **Okuma sırası doğru mu?** Başlık → alt başlık → içerik → CTA sırası mantıklı mı?
+6. **Vurgu doğru elemanda mı?** CTA görsel olarak en dikkat çekici mi, yoksa dekoratif bir öğe mi öne çıkıyor?
+7. **Tipografi hiyerarşisi net mi?** Kaç farklı boyut var? 3-4 kademe yeterli, 7+ sorun işareti
+8. **Beyaz alan etkili mi?** Kasıtlı dramatik boşluk mu, dengesiz dağılım mı, sıkışıklık mı?
 
-### Step 5: Rapor Üret
+### Step 6: Geri Bildirim Prensipleri
+
+Rapor üretilirken aşağıdaki prensiplere uyulmalı:
+
+1. **Spesifik ol** — "CTA navigasyonla yarışıyor" yaz, "layout kafa karıştırıcı" yazma
+2. **Neden'i açıkla** — Geri bildirimi tasarım prensibine veya kullanıcı ihtiyacına bağla
+3. **Alternatif öner** — Sadece sorun tespit etme, çözüm de sun
+4. **İyi olanı kabul et** — Yalnızca eleştiri değil, iyi yapılan şeyleri de raporla
+5. **Aşamaya göre ayarla** — Erken keşif farklı feedback alır, son düzeltme farklı
+
+### Step 7: Rapor Üret
+
+> **Marka Profili Entegrasyonu:** `.fmcp-brand-profile.json` varsa `aestheticDirection` ve `typography` bilgisiyle değerlendir — ekranın marka estetiğiyle uyumu raporla.
 
 ## Çıktı Formatı
 

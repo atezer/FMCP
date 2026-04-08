@@ -605,6 +605,11 @@ Sayı ve isimlerin kaynak ile eşleştiğini doğrula.
 - Atlanılan (zaten güncel) token sayısı
 - Figma'da olup kodda olmayan token raporu
 
+## Marka Profili Entegrasyonu
+
+`.fmcp-brand-profile.json` varsa:
+- `targetPlatforms` → Yalnızca belirtilen platformlar için token dosyaları üret (tümünü üretme)
+
 ## Evolution Triggers
 
 - Bridge'e yeni token araçları eklendiğinde (ör. toplu token import aracı) ilgili adımlar güncellenmeli

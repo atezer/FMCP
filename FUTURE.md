@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 7 Nisan 2026 (v1.7.14 — kurulum deneyimi iyileştirmesi, setup script'leri)
-> Paket sürümü (`package.json`): **1.7.14**
+> Son güncelleme: 8 Nisan 2026 (v1.7.15 — Anthropic design skill entegrasyonu, marka profili, UX copy)
+> Paket sürümü (`package.json`): **1.7.15**
 
 ---
 
@@ -288,6 +288,331 @@ Her testte kontrol edilecekler:
 - [ ] `design-to-code-generator` — tasarım → React/Vue/Svelte kod üretimi
 - [ ] `design-system-migrations` — variable toplu yeniden adlandırma, token güncelleme
 - [ ] `layout-reconstruction` — layout context'ten responsive grid oluşturma
+
+### P3 — Anthropic Design Skill Maddelerini F-MCP Skill'lerine Entegre Etme (v2)
+
+> Kaynak: Anthropic built-in design skill'leri (accessibility-review, design-handoff, design-critique, design-system-management, ux-writing, frontend-design) ile tüm F-MCP skill'leri **satır satır** karşılaştırıldı.
+> Temel tespit: F-MCP teknik execution'da güçlü ama **tasarım prensipleri, yapısal çerçeveler, estetik yönlendirme ve kişiselleştirme** eksik.
+> Ayrıca: Anthropic'in user-research ve research-synthesis skill'leri F-MCP'de hiç yok — PO/PM persona'sı için entegre edilmeli.
+
+---
+
+#### 0. [TAMAMLANDI] Marka Profili Mekanizması (`brand-profile`)
+
+> Tüm skill'lerin kişiselleştirilebilmesi için ortak bir yapı gerekiyor.
+
+- [ ] `.fmcp-brand-profile.json` şema tanımı oluştur — skill'lerin okuyacağı merkezi kişiselleştirme dosyası
+  ```json
+  {
+    "brand": {
+      "name": "Acme Corp",
+      "language": "tr",
+      "voiceTone": {
+        "personality": ["samimi", "profesyonel", "cesur"],
+        "formality": "semi-formal",
+        "humor": "subtle",
+        "examples": {
+          "success": "Harika! İşlem tamamlandı.",
+          "error": "Bir sorun oluştu. Tekrar deneyebilirsin.",
+          "empty": "Henüz burada bir şey yok. Hadi başlayalım!"
+        }
+      },
+      "copyRules": {
+        "maxCTALength": 24,
+        "avoidWords": ["tıklayın", "lütfen"],
+        "preferWords": ["keşfet", "başla", "oluştur"],
+        "ctaStyle": "verb-first",
+        "errorTone": "empathetic-actionable"
+      },
+      "typography": {
+        "displayFont": "Satoshi",
+        "bodyFont": "Inter",
+        "monoFont": "JetBrains Mono",
+        "rationale": "Satoshi display için cesur/modern, Inter body için okunaklı"
+      },
+      "aestheticDirection": "minimal-bold",
+      "targetPlatforms": ["ios", "android", "web"],
+      "designSystemName": "Acme DS"
+    }
+  }
+  ```
+- [ ] Her skill'e "Marka Profili Entegrasyonu" bölümü ekle — `.fmcp-brand-profile.json` varsa oku, yoksa varsayılan davranış
+- [ ] `SKILL_INDEX.md`'ye "Kişiselleştirme" bölümü ekle — profil dosyasının ne olduğu, nasıl oluşturulacağı
+
+---
+
+#### 1. [TAMAMLANDI] `figma-a11y-audit/SKILL.md` — Erişilebilirlik Çerçevesi
+
+Kaynak: Anthropic `accessibility-review`
+Ekleme yeri: `## Required Workflow`'dan hemen önce
+
+- [ ] **"WCAG 2.1 AA Hızlı Referans"** — 4 prensip, 12 kriter:
+  - Perceivable: 1.1.1 (alt text), 1.3.1 (semantik yapı), 1.4.3 (metin kontrastı ≥4.5:1), **1.4.11** (UI bileşen kontrastı ≥3:1 — mevcut skill'de eksik, sadece metin kontrastı var)
+  - Operable: 2.1.1 (klavye), 2.4.3 (fokus sırası), **2.4.7** (görünür fokus göstergesi — mevcut Step 7c'de odak sırası var ama fokus göstergesi tasarım kuralı yok), **2.5.5** (dokunma hedefi ≥44px — mevcut Step 5'te var ama WCAG referansı yok)
+  - Understandable: 3.1.1 (dil), **3.2.1** (fokusta tahmin edilebilir davranış — tamamen eksik), **3.3.1** (hata tanımlama — tamamen eksik), 3.3.2 (etiket/talimat)
+  - Robust: 4.1.2 (ad/rol/değer)
+- [ ] **"Yaygın Sorunlar Kontrol Listesi"** — 8 madde (Step 8 doğrulama listesine ek olarak, Step 3'ten önce referans):
+  1. Yetersiz renk kontrastı 2. Eksik form etiketleri 3. Klavye erişimi yok 4. Alt text eksik 5. Focus trap hatalı 6. ARIA landmark eksik 7. Otomatik oynatılan medya 8. Zaman limitleri
+- [ ] **"Test Yaklaşımı Sırası"** — 5 aşama (Step 3'ten önce, denetimin hangi sırayla yürütüleceğini belirtir):
+  1. Otomatik tarama (Step 4-6) 2. Klavye-only navigasyon (Step 7c, 7e) 3. Ekran okuyucu testi (Step 7a, 7b, 7d) 4. Kontrast doğrulama (gradient/overlay kaçırılanlar — screenshot) 5. %200 zoom testi (içerik kaybı/yatay kaydırma kontrolü)
+- [ ] **Step 5 genişletme:** Mevcut dokunma hedefi kontrolüne **2.5.5** WCAG referansı ekle ve web için **24x24 CSS px** minimum hedef (WCAG 2.2 Target Size) notu
+- [ ] **Step 8 genişletme:** Mevcut 7 kontrole 3 yeni kontrol ekle: (8) fokus göstergesi renk kontrastı, (9) hata mesajı ilişkilendirme (aria-describedby), (10) UI bileşen kontrastı (non-text 3:1)
+
+---
+
+#### 2. [TAMAMLANDI] `ai-handoff-export/SKILL.md` — Handoff Prensipleri ve Kapsamı
+
+Kaynak: Anthropic `design-handoff`
+Ekleme yeri: `## Rules` bölümünün hemen üstüne yeni `## Handoff Prensipleri` bölümü
+
+- [ ] **"Handoff Prensipleri"** (4 madde — mevcut Rules'a ek, daha üst düzey):
+  1. Varsayma, belirt — belirtilmeyen her şeyi geliştirici tahmin eder
+  2. Token kullan, değer değil — `spacing-md` yaz, `16px` yazma (mevcut Rules'ta implicit var ama prensip olarak formüle edilmemiş)
+  3. Tüm durumları göster — default, hover, active, disabled, loading, error, empty (mevcut skill'de durumlar yok!)
+  4. Neden'i açıkla — "Mobilde daraltılır çünkü tek elle kullanım" bağlamı handoff'a ekle
+- [ ] **"Etkileşim Spesifikasyonları"** (Step 5 ile Step 6 arasına yeni Step):
+  - Tıklama/tap davranışı, hover durumları
+  - Transition: süre (ms) + easing (ease-in-out, spring vb.)
+  - Gesture desteği: swipe, pinch, long-press (hangi platform neyi destekler)
+  - Animasyon: giriş/çıkış animasyonları, stagger delay
+- [ ] **"İçerik Spesifikasyonları"** (Step 5'e ek, Code-Only Props'tan sonra):
+  - Karakter limitleri (başlık max 60, açıklama max 120 vb.)
+  - Truncation davranışı (ellipsis, fade, wrap)
+  - Boş durum (empty state) tanımı ve görseli
+  - Yükleme durumu (loading/skeleton) tanımı
+  - Hata durumu (error state) mesaj yapısı — UX Copy Guidance skill'ine referans
+- [ ] **"Uç Durumlar"** (Step 8 Self-healing'den sonra yeni Step):
+  - Min/max içerik (başlık 3 kelime vs 30 kelime)
+  - Uluslararası metin (Almanca %30 daha uzun, Arapça RTL)
+  - Yavaş bağlantı (offline/timeout fallback)
+  - Eksik veri (null avatar, isim yok)
+- [ ] **"Erişilebilirlik Spesifikasyonları"** (mevcut handoff'ta tamamen yok!):
+  - Fokus sırası haritası (figma-a11y-audit çıktısına referans)
+  - ARIA label/role listesi
+  - Klavye etkileşimleri (Tab, Enter, Escape, Arrow keys)
+  - Ekran okuyucu duyuruları (dinamik içerik değişikliklerinde)
+- [ ] **Marka Profili Entegrasyonu:** `.fmcp-brand-profile.json` varsa handoff'a `voiceTone` ve `copyRules` bilgisini otomatik ekle
+
+---
+
+#### 3. [TAMAMLANDI] `audit-figma-design-system/SKILL.md` — DS Eksiksizlik Çerçevesi
+
+Kaynak: Anthropic `design-system-management`
+Ekleme yeri: `## Ne işaretlenir / ne işaretlenmez` bölümünün hemen üstüne
+
+- [ ] **"DS Eksiksizlik Çerçevesi: Token Kategorileri"** — audit sırasında bu kategorilerin varlığını kontrol et:
+  - Renkler: brand (primary, secondary, accent), semantic (success, warning, error, info), neutral (gray scale)
+  - Tipografi: scale (6+ kademe), weights (regular, medium, semi-bold, bold), line-heights
+  - Spacing: scale (4-8 kademe, ör. 4/8/12/16/24/32/48/64)
+  - Border: radius kademeleri, genişlik
+  - Shadow: elevation seviyeleri (sm, md, lg, xl)
+  - **Motion: duration + easing** (mevcut audit'te hiç kontrol edilmiyor! DS'lerde motion token'ları sıkça eksik)
+- [ ] **"DS Eksiksizlik Çerçevesi: Bileşen Tanımı"** — bir bileşenin "eksiksiz" sayılması için:
+  - Variant'lar (primary, secondary, ghost, destructive vb.)
+  - Durumlar (default, hover, active, disabled, loading, error — **mevcut audit sadece instance/token sayıyor, durum eksikliğini kontrol etmiyor**)
+  - Boyutlar (sm, md, lg — en az 2)
+  - Davranış spec'i (transition, animasyon)
+  - A11y spec'i (minimum touch target, fokus göstergesi, label)
+- [ ] **"DS Eksiksizlik Çerçevesi: Pattern Katmanı"** — bileşen üstü pattern kontrolü:
+  - Forms (input grubu, validation görseli, submit akışı)
+  - Navigation (sidebar, tabs, breadcrumb, bottom nav)
+  - Data display (tablo, kart listesi, liste)
+  - Feedback (toast, modal, inline mesaj, snackbar)
+- [ ] **"DS Prensipleri"** (audit raporunun sonuna ek bölüm):
+  1. Tutarlılık > Yaratıcılık — sistem tekrar icat edilmesin diye var
+  2. Kısıtlamalar içinde esneklik — composable, rigid değil
+  3. Belgelenmemiş = yok — component-documentation skill'ine referans
+  4. Versiyonla ve migrate et — breaking change'lerde migration path sun
+- [ ] **Audit JSON şemasına yeni alan:** `"dsCompleteness"` objesi ekle — token kategorileri, bileşen durum kapsamı, pattern kapsamı skorları
+
+---
+
+#### 4. [TAMAMLANDI] `figma-screen-analyzer/SKILL.md` — Tasarım Kritik Çerçevesi
+
+Kaynak: Anthropic `design-critique`
+Ekleme yeri: Step 4'ü (Görsel Hiyerarşi Değerlendirmesi) genişlet + Step 5'e yeni bölüm
+
+- [ ] **Step 3.5 (yeni): "İlk İzlenim Analizi (2 saniye testi)"** — Step 3 (DS Uyum) ile Step 4 arasına:
+  - Screenshot'a bakarak: göz ilk nereye gidiyor? bu doğru mu?
+  - Duygusal tepki: güven mi, kafa karışıklığı mı, heyecan mı?
+  - Amaç netliği: ekran ne için, 2 saniyede anlaşılıyor mu?
+  - Bu bölüm mevcut "Görsel Hiyerarşi"den farklı: daha sezgisel, daha kısa
+- [ ] **Step 4 genişletme:** Mevcut 4 maddeye (ana bölümler, görsel akış, öne çıkan öğeler, boşluk dengesi) ekle:
+  - **Okuma sırası doğru mu?** (başlık → alt başlık → içerik → CTA — F-pattern, Z-pattern veya üstten alta mı?)
+  - **Vurgu doğru elemanda mı?** (CTA görsel olarak en dikkat çekici mi? yoksa dekoratif bir eleman mı öne çıkıyor?)
+  - **Tipografi hiyerarşisi net mi?** (kaç farklı boyut var? 3-4 kademe yeterli, 7+ sorun)
+  - Beyaz alan etkili mi? (sıkışıklık mı, dengesiz dağılım mı, kasıtlı dramatik boşluk mu?)
+- [ ] **Step 5 genişletme: "Geri Bildirim Prensipleri"** — rapor üretildikten sonra nasıl sunulacağı:
+  1. Spesifik ol — "CTA navigasyonla yarışıyor" yaz, "layout kafa karıştırıcı" yazma
+  2. Neden'i açıkla — tasarım prensibine veya kullanıcı ihtiyacına bağla
+  3. Alternatif öner — sadece sorun tespit etme, çözüm de sun
+  4. İyi olanı kabul et — iyi yapılan şeyleri de raporla (yalnızca eleştiri değil)
+  5. Aşamaya göre ayarla — erken keşif farklı, son düzeltme farklı feedback alır
+- [ ] **Marka Profili Entegrasyonu:** `.fmcp-brand-profile.json` varsa `aestheticDirection` ve `typography` bilgisiyle değerlendir
+
+---
+
+#### 5. [TAMAMLANDI] `generate-figma-screen/SKILL.md` — Tasarım Düşüncesi ve Estetik
+
+Kaynak: Anthropic `frontend-design`
+Ekleme yeri: Step 2 (Ekranı Anla) ile Step 3 (DS Keşfi) arasına yeni Step 2.5
+
+- [ ] **Step 2.5 (yeni): "Tasarım Yönü Belirleme"** — DS bileşenlerini keşfetmeden ÖNCE:
+  - **Amaç:** Bu ekran hangi sorunu çözüyor? Kim kullanıyor?
+  - **Estetik Yön:** Marka profili varsa `.fmcp-brand-profile.json` → `aestheticDirection` oku. Yoksa kullanıcıya sor:
+    - brutal minimal, maksimalist, retro-futuristik, organik/doğal, lüks/rafine, playful/oyunsu, editorial/dergi, brutalist/ham, art deco/geometrik, soft/pastel, industrial/utiliteryen, neon/cyber
+  - **Kısıtlamalar:** Teknik gereksinimler (framework, performans, a11y)
+  - **Farklılaşma:** Bu ekranı unutulmaz yapan tek şey ne?
+  - **NOT:** DS bileşen kütüphanesi olan projelerde estetik yön DS'nin belirlediği sınırlar içinde olmalı. DS yoksa serbest estetik.
+- [ ] **Step 3'e "Tipografi Stratejisi" ek bölüm:**
+  - Marka profili varsa → `typography.displayFont` ve `typography.bodyFont` kullan
+  - DS font'ları varsa → DS font'larını kullan (Inter DS font'uysa Inter DOĞRU)
+  - Ne DS ne profil varsa → ayırt edici display font seç (Satoshi, Clash Display, General Sans vb.), generic fontlardan kaçın (Arial, Roboto, system fonts)
+  - Body font: display ile kontrast oluşturan okunaklı font
+  - Font çifti kararını raporla (neden bu çift?)
+- [ ] **Step 5'e "Görsel Derinlik" ek bölüm:** (bölüm bölüm inşa sırasında)
+  - Spatial composition: asimetri, overlap, diagonal flow, grid-breaking öğeler, dramatik negatif alan
+  - Arka plan: düz renk yerine atmosfer oluştur — gradient mesh, noise doku, geometrik pattern, katmanlı transparan
+  - Detaylar: gölge derinliği, dekoratif border, micro-interaction ipuçları
+  - **NOT:** Bu öneriler DS bileşen kütüphanesi varsa DS'nin izin verdiği ölçüde uygulanır
+- [ ] **"Anti-Pattern Koruması"** (Step 6 Görsel Doğrulama'ya ek kontrol):
+  - YAPMA: DS font'u yokken generic font kullan (Inter, Roboto, Arial)
+  - YAPMA: Mor gradient + beyaz arka plan (klişe AI estetiği)
+  - YAPMA: Tahmin edilebilir grid (12-col, hep aynı padding)
+  - YAPMA: Her ekran birbirinin kopyası (aynı layout, aynı renk, aynı font)
+  - Screenshot kontrolünde: "Bu ekran başka bir AI'ın ürettiği gibi mi görünüyor?" sorusu
+
+---
+
+#### 6. [TAMAMLANDI] `ux-copy-guidance/SKILL.md` — UX Yazarlık ve Marka Sesi Rehberi
+
+Kaynak: Anthropic `ux-writing` + kişiselleştirme ihtiyacı
+
+> Bu skill salt okunur değildir — Figma text node'larına copy uygulayabilir.
+
+- [ ] **Frontmatter:** name, description, personas (designer, uidev, po), mcp-server
+- [ ] **"5 Temel Prensip":**
+  1. Anlaşılır — jargon yok, belirsizlik yok, açık söyle
+  2. Kısa — tam anlamı en az kelimeyle ifade et
+  3. Tutarlı — aynı kavram her yerde aynı terim
+  4. Faydalı — her kelime kullanıcının hedefine hizmet etsin
+  5. İnsanca — yardımsever bir insan gibi yaz, robot gibi değil
+- [ ] **"Kopya Kalıpları" (formüllü):**
+  - **CTA:** Fiille başla + spesifik ol + sonuca eşle → "Hesap oluştur" (DOĞRU) vs "Gönder" (YANLIŞ)
+  - **Hata Mesajları:** Ne oldu + Neden + Nasıl düzeltilir → "Ödeme reddedildi. Bankanız kartı onaylamadı. Farklı bir kart deneyin."
+  - **Boş Durumlar:** Bu ne + Neden boş + Nasıl başlanır → "Henüz proje yok. İlk projenizi oluşturarak ekibinizle çalışmaya başlayın."
+  - **Onay Diyalogları:** Eylemi netleştir + sonuçları belirt + butonlara eylem fiili → "3 dosya silinsin mi? Bu geri alınamaz." / "Dosyaları sil" / "Vazgeç"
+  - **Başarı Mesajları:** Kısa kutla + sonraki adım → "Profil güncellendi. Değişiklikler hemen yansıyacak."
+  - **Yükleme Durumları:** Ne yapılıyor + beklenti → "Raporunuz hazırlanıyor..." (1-3 sn), "Bu birkaç dakika sürebilir" (>10 sn)
+- [ ] **"Ses ve Ton Rehberi":**
+  - Varsayılan ton matrisi: Başarı (kutlayıcı ama abartısız), Hata (empatik + aksiyon odaklı), Uyarı (net + acil), Nötr (bilgilendirici + kısa)
+  - **Kişiselleştirme:** `.fmcp-brand-profile.json` → `voiceTone` bölümünü oku. Varsa:
+    - `personality` dizisinden ton kalibrasyonu yap (ör. ["samimi", "cesur"] → kısa, direkt, emoji-uygun)
+    - `formality` seviyesine göre kelime seçimi (formal: "İşleminiz başarıyla tamamlandı" vs casual: "Tamam, bitti!")
+    - `humor` seviyesi (none: asla, subtle: hafif, playful: serbest)
+    - `examples` bölümündeki gerçek örnekleri ton referansı olarak kullan
+  - **Profil yoksa:** Kullanıcıya 3 soru sor:
+    1. Markanız bir insan olsa nasıl konuşurdu? (3 sıfat)
+    2. Formallik seviyesi? (formal / yarı-formal / casual)
+    3. Bir başarı mesajı örneği verin
+    → Cevapları `.fmcp-brand-profile.json` olarak kaydet
+- [ ] **"Çok Dilli / i18n Kuralları":**
+  - Almanca, Fince, Macarca gibi diller metin uzunluğunu %20-40 artırır — tasarımda truncation planla
+  - Arapça, İbranice RTL layout gerektirir
+  - Tarih/saat/para formatları kültüre göre değişir
+  - Copy kalıplarında kültür-nötr dil kullan (metafor, deyim, emoji dikkatli)
+- [ ] **"Figma Entegrasyonu"** — copy'yi Figma text node'larına uygulama:
+  ```js
+  // figma_execute — Text node'lara copy uygula
+  const node = await figma.getNodeByIdAsync("<TEXT_NODE_ID>");
+  await figma.loadFontAsync(node.fontName);
+  node.characters = "Yeni copy metni";
+  ```
+  - Toplu copy güncelleme: ekrandaki tüm text node'ları listele → kullanıcıya tablo sun → onaylananları güncelle
+- [ ] **Skill Koordinasyonu:**
+  - ai-handoff-export → Step 5 (İçerik Spesifikasyonları) bu skill'e referans verir
+  - figma-screen-analyzer → raporda copy kalitesi değerlendirmesi bu skill'i referans alır
+  - component-documentation → bileşen label/placeholder copy'si bu skill'in prensiplerini uygular
+  - generate-figma-screen → text node oluştururken bu skill'in kalıplarını kullanır
+
+---
+
+#### 7. [TAMAMLANDI] `component-documentation/SKILL.md` — Durum ve Copy Zenginleştirmesi
+
+Kaynak: Anthropic `design-system-management` (bileşen durumları) + `ux-writing` (copy spec)
+
+- [ ] **Format Seçenekleri (Standard) genişletme:** Mevcut 8 bölüme 2 yeni bölüm ekle:
+  - **Bölüm 3.5: Durumlar** — Default, Hover, Active/Pressed, Disabled, Loading, Error, Focus görsel grid'i (mevcut Standard format'ta durumlar sadece Props'ta dolaylı var, görsel olarak gösterilmiyor)
+  - **Bölüm 7.5: Copy Spec** — Bileşenin text node'ları için copy kuralları (max karakter, truncation, boş durum metni) — ux-copy-guidance skill'ine referans
+- [ ] **Bileşen Description Kuralları genişletme:** "Bu bileşen hangi durumlara sahip?" sorusunu description'a tek cümleyle ekle
+
+---
+
+#### 8. [TAMAMLANDI] `implement-design/SKILL.md` — Handoff Prensipleri ve Etkileşim Detayı
+
+Kaynak: Anthropic `design-handoff` (prensip 4: "neden'i açıkla")
+
+- [ ] **Step 2 (Handoff & Specs Topla) genişletme:** ai-handoff-export'un yeni "Etkileşim Spesifikasyonları" ve "Uç Durumlar" bölümlerini implement-design'ın spec toplama adımında referans al
+- [ ] **Step 7 (Design Parity Check) genişletme:** Mevcut görsel karşılaştırmaya ek olarak:
+  - Durum kapsamı kontrolü: tüm durumlar (hover, disabled, loading, error) implement edildi mi?
+  - Etkileşim kontrolü: transition süreleri doğru mu?
+  - Uç durum kontrolü: min/max içerik test edildi mi?
+
+---
+
+#### 9. [TAMAMLANDI] `generate-figma-library/SKILL.md` — DS Eksiksizlik Kontrolü
+
+Kaynak: Anthropic `design-system-management` (token kategorileri, bileşen tanımı)
+
+- [ ] **Faz 2 (Foundations) genişletme:** Mevcut token oluşturma adımlarına ekle:
+  - **Motion token'ları:** duration (fast: 150ms, normal: 250ms, slow: 400ms) ve easing (ease-in-out, spring) — mevcut skill'de motion token'ları hiç yok
+  - **Shadow/elevation token'ları:** sm, md, lg, xl seviyeleri — mevcut skill'de shadow token oluşturma var mı kontrol et, yoksa ekle
+- [ ] **Faz 4 (Components) genişletme:** Her bileşen için zorunlu durum kontrolü:
+  - Default, Hover, Active, Disabled, Loading, Error, Focus — en az 4'ü olmalı
+  - Mevcut skill sadece variant oluşturuyor, durum kapsamı kontrolü yok
+
+---
+
+#### 10. [TAMAMLANDI] `design-system-rules/SKILL.md` — DS Prensipleri ve Pattern Katmanı
+
+Kaynak: Anthropic `design-system-management` (prensipler)
+
+- [ ] **Step 4 (Platform-Spesifik Kurallar) genişletme:** Her platform kural dosyasının başına DS prensipleri ekle:
+  1. Tutarlılık > Yaratıcılık
+  2. Kısıtlamalar içinde esneklik (composable, rigid değil)
+  3. Belgelenmemiş = yok
+  4. Versiyonla ve migrate et
+- [ ] **Cross-Platform Kurallar genişletme:** Pattern katmanı referansı ekle — Forms, Navigation, Data Display, Feedback pattern'larının tüm platformlarda aynı mantıkla çalışması gerektiği
+
+---
+
+#### 11. [TAMAMLANDI] `design-drift-detector/SKILL.md` — Motion Token Drift Kontrolü
+
+- [ ] **Drift kontrol listesine ekle:** Motion token'ları (duration, easing) — mevcut skill sadece renk, tipografi, spacing drift'i kontrol ediyor, motion yok
+
+---
+
+#### 12. [TAMAMLANDI] `SKILL_INDEX.md` — Kapsamlı Güncelleme
+
+- [ ] Yeni `ux-copy-guidance` skill'i index'e ekle — "Dokümantasyon" veya yeni "İçerik ve Yazarlık" kategorisi
+- [ ] "Kişiselleştirme" bölümü ekle — `.fmcp-brand-profile.json` açıklaması, profil oluşturma akışı
+- [ ] Persona akışlarını güncelle:
+  - **Tasarımcı:** generate-figma-screen akışına "Tasarım Yönü Belirleme" adımı ekle
+  - **DesignOps:** audit akışına "DS Eksiksizlik Çerçevesi" kontrolü ekle
+  - **UI Geliştirici:** handoff akışına "Etkileşim Spesifikasyonları" ve "Uç Durumlar" adımı ekle
+  - **PO/PM:** figma-screen-analyzer akışına "İlk İzlenim Analizi" ekle, ux-copy-guidance'ı ekle
+- [ ] Uçtan Uca Akış'ı güncelle — yeni skill ve adımları ekle
+- [ ] Skill sayısını güncelle (18 → 19)
+
+---
+
+#### Uygulama Sırası (Önerilen)
+
+1. **Önce:** Madde 0 (brand-profile şeması) — diğer tüm skill'lerin referans alacağı temel
+2. **Sonra:** Madde 6 (ux-copy-guidance yeni skill) — bağımsız, diğerlerini bloklamaz
+3. **Paralel:** Madde 1-5 (mevcut skill genişletmeleri) — birbirinden bağımsız
+4. **Paralel:** Madde 7-11 (ikincil genişletmeler) — birbirinden bağımsız
+5. **Son:** Madde 12 (SKILL_INDEX güncellemesi) — tüm değişiklikler tamamlandıktan sonra
 
 ---
 

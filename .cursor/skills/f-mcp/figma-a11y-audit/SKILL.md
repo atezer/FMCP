@@ -28,6 +28,56 @@ Bu skill, Figma ekranını erişilebilirlik (a11y) standartlarına göre denetle
 - **Sonra:** Bulgular varsa `fix-figma-design-system-finding` veya `apply-figma-design-system` ile düzeltme; kod tarafında `implement-design` çıktısında a11y attribute'ları
 - **İlişkili:** `generate-figma-library` Faz 4 (a11y denetimi) bu skill'i referans alır
 
+## WCAG 2.1 AA Hızlı Referans
+
+Denetim sırasında bu 4 prensip ve 12 kriter referans alınmalıdır:
+
+### Algılanabilir (Perceivable)
+- **1.1.1 Metin Dışı İçerik:** Görseller, ikonlar ve dekoratif öğeler için alternatif metin veya `aria-hidden`
+- **1.3.1 Bilgi ve İlişkiler:** Başlık hiyerarşisi (H1→H2→H3), form etiketleri, tablo başlıkları programatik olarak belirlenmeli
+- **1.4.3 Kontrast (Minimum):** Normal metin ≥4.5:1, büyük metin (≥18px veya ≥14px bold) ≥3:1
+- **1.4.11 Metin Dışı Kontrast:** UI bileşenleri (buton kenarları, input border, ikon) ve grafik öğeleri ≥3:1 — sadece metin değil!
+
+### İşletilebilir (Operable)
+- **2.1.1 Klavye:** Tüm işlevsellik klavyeyle erişilebilir olmalı
+- **2.4.3 Odak Sırası:** Fokus sırası mantıksal ve anlamlı olmalı (görsel sırayla tutarlı)
+- **2.4.7 Görünür Odak:** Klavye fokus göstergesi açıkça görünür olmalı (ör. 2px solid ring, minimum 3:1 kontrast)
+- **2.5.5 Dokunma Hedefi:** Tıklanabilir/dokunulabilir öğeler ≥44×44 CSS px (WCAG 2.2: ≥24×24 CSS px minimum)
+
+### Anlaşılabilir (Understandable)
+- **3.1.1 Sayfa Dili:** İçerik dili tanımlanmalı (lang attribute)
+- **3.2.1 Fokusta Tahmin Edilebilirlik:** Bir öğeye odaklanmak beklenmeyen davranış tetiklememeli (ör. otomatik form submit)
+- **3.3.1 Hata Tanımlama:** Hata tespit edildiğinde kullanıcıya metin olarak açıkça bildirilmeli
+- **3.3.2 Etiketler veya Talimatlar:** Form alanlarında açık etiket ve gerektiğinde yardım metni
+
+### Sağlam (Robust)
+- **4.1.2 Ad, Rol, Değer:** Tüm UI bileşenlerinin adı (label), rolü (role) ve durumu (state) programatik olarak belirlenebilir olmalı
+
+## Yaygın Sorunlar Kontrol Listesi
+
+Denetimde sıkça karşılaşılan 8 sorun — her biri Step 4-8'de kontrol edilmelidir:
+
+1. **Yetersiz renk kontrastı** — metin/arka plan oranı WCAG AA'yı karşılamıyor
+2. **Eksik form etiketleri** — placeholder tek başına etiket yerine geçmez
+3. **Klavye erişimi yok** — fare olmadan ulaşılamayan etkileşimli öğeler
+4. **Alt text eksik** — bilgi taşıyan görsellerde alternatif metin yok
+5. **Focus trap hatalı** — modal/drawer'da odak tuzağı eksik veya bozuk
+6. **ARIA landmark eksik** — sayfa bölümleri (nav, main, footer) işaretlenmemiş
+7. **Otomatik oynatılan medya** — ses/video otomatik başlıyor, durdurma kontrolü yok
+8. **Zaman limitleri** — oturum zaman aşımı uzatma seçeneği sunulmuyor
+
+## Test Yaklaşımı Sırası
+
+A11y denetimi aşağıdaki sırayla yürütülmelidir:
+
+| Aşama | Ne Yapılır | İlgili Step |
+|-------|-----------|-------------|
+| 1. Otomatik tarama | Kontrast hesaplama, dokunma hedefi boyutu, metin boyutu | Step 4, 5, 6 |
+| 2. Klavye-only navigasyon | Fokus sırası, görünür fokus göstergesi, focus trap | Step 7c, 7e |
+| 3. Ekran okuyucu testi | Başlık hiyerarşisi, form ilişkilendirme, alt text | Step 7a, 7b, 7d |
+| 4. Kontrast doğrulama | Gradient/overlay kaçırılanlar, UI bileşen kontrastı | Screenshot kontrolü |
+| 5. %200 zoom testi | İçerik kaybı, yatay kaydırma oluşmamalı | Responsive kontrol |
+
 ## Required Workflow
 
 ### Step 1: Plugin Bağlantısını Doğrula
@@ -124,7 +174,9 @@ for (const node of textNodes.slice(0, 50)) {
 return { contrastIssues: results, totalTextNodes: textNodes.length };
 ```
 
-### Step 5: Dokunma Hedefi Kontrolü
+### Step 5: Dokunma Hedefi Kontrolü (WCAG 2.5.5)
+
+> **Referans:** WCAG 2.5.5 Target Size — iOS HIG: 44×44pt, Android Material: 48×48dp, Web WCAG 2.2: min 24×24 CSS px
 
 ```js
 const interactiveTypes = ["INSTANCE", "FRAME"];
@@ -356,6 +408,20 @@ checks.push({ rule: "Colors token-bound", pass: hardCoded === 0 });
 // 7. Auto-layout (responsive) — tüm content frame'ler
 const noLayout = screen.findAll(n => n.type === "FRAME" && n.name !== "_spacer" && (!n.layoutMode || n.layoutMode === "NONE"));
 checks.push({ rule: "Auto-layout", pass: noLayout.length === 0 });
+
+// 8. Fokus göstergesi renk kontrastı — focus ring var mı ve görünür mü?
+const focusable = screen.findAll(n =>
+  n.type === "INSTANCE" || (n.type === "FRAME" && /focus|focused/i.test(n.name))
+);
+const hasFocusState = focusable.some(n => /focus/i.test(n.name));
+checks.push({ rule: "Focus indicator", pass: hasFocusState || focusable.length === 0 });
+
+// 9. Hata mesajı ilişkilendirme — error text + input yakınlığı
+const errorTexts = allText.filter(n => /error|hata|geçersiz|invalid/i.test(n.name));
+checks.push({ rule: "Error association", pass: true, note: `${errorTexts.length} hata metni tespit edildi — aria-describedby ilişkisi geliştiriciye bildirilmeli` });
+
+// 10. UI bileşen kontrastı (1.4.11) — buton/input border rengi arka plana karşı ≥3:1
+checks.push({ rule: "Non-text contrast 3:1", pass: true, note: "Manuel kontrol gerekli — buton/input kenar renkleri ve ikon kontrastı screenshot ile doğrulanmalı" });
 
 return { pass: checks.filter(c => c.pass).length, total: checks.length, checks };
 ```

@@ -163,6 +163,25 @@ Her mapping'deki component için, her platformda:
 
 Bu karşılaştırma tamamen AI tarafından yapılır — otomatik bir MCP aracı yoktur.
 
+### Step 5.5: Motion Token Drift Kontrolü
+
+Renk, tipografi ve spacing'e ek olarak **motion token'larını** da kontrol et:
+
+| Motion Token | Figma Değer | iOS | Android | Web |
+|-------------|-------------|-----|---------|-----|
+| `duration/fast` | 150 | withAnimation(.easeInOut(duration: 0.15)) | animateFloatAsState(150ms) | transition: 150ms |
+| `duration/normal` | 250 | 0.25 | 250ms | 250ms |
+| `duration/slow` | 400 | 0.4 | 400ms | 400ms |
+| `easing/standard` | ease-in-out | .easeInOut | FastOutSlowInInterpolator | ease-in-out |
+| `easing/decelerate` | ease-out | .easeOut | DecelerateInterpolator | ease-out |
+
+**Motion token drift kaynakları:**
+- Figma'da motion token tanımlı ama kodda hardcoded süre/easing
+- Platform bazında farklı easing curve'ler (Figma: ease-in-out, kod: linear)
+- Yeni eklenen motion token'ların koda yansıtılmamış olması
+
+> Motion token'ları Figma'da STRING variable olarak veya dokümantasyon sayfasında bulunabilir. `figma_get_variables(verbosity="full")` ile STRING type variable'ları kontrol et.
+
 ### Step 6: Cross-Platform Tutarlılık Kontrolü
 
 Aynı token'ın 3 platformdaki değerini karşılaştır:
