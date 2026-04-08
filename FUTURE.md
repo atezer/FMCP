@@ -616,6 +616,85 @@ Kaynak: Anthropic `design-system-management` (prensipler)
 
 ---
 
+### P3.5 — Skill Hata Düzeltmeleri + Dış Kaynak İyileştirmeleri (Sıfır Hata Doğrulanmış)
+
+> Kaynak: edenspiekermann/Skills (3 skill), Owl-Listener/designer-skills (63 skill, 8 plugin) ile F-MCP skill'leri karşılaştırıldı. Ayrıca mevcut skill'lerdeki hatalar, tutarsızlıklar ve yanlış kodlar tespit edildi. Tüm `figma_*` çağrıları ve `figma_execute` içindeki Figma Plugin API kullanımları kaynak kodla doğrulandı.
+
+#### HATA DÜZELTMELERİ (A1-A10)
+
+**A1. ai-handoff-export: Duplike "Step 6" numaralama hatası**
+- [ ] İki ayrı adım "Step 6" olarak numaralanmış (satır 83 ve 87). Sonraki tüm adımlar bir numara kayık.
+- Düzeltme: Step 6 (Screenshot) → Step 6, Step 6 (Handoff) → Step 7, Step 7 → Step 8, Step 8 → Step 9, Step 9 → Step 10. Yeni eklenen bölümler de buna göre kaydırılacak.
+
+**A2. figma-a11y-audit: "Salt okunur" iddiası ama annotation yazıyor**
+- [ ] Overview "Salt okunur — Figma tuvalinde değişiklik yapmaz" diyor ama Step 7 annotation frame oluşturuyor.
+- Düzeltme: `**Okuma + Yazma** — Denetim sonuçlarını okur, isteğe bağlı olarak annotation frame ekler.`
+
+**A3. figma-a11y-audit: Step 8 h1Count kontrolü yanlış**
+- [ ] `h1Count <= 2` — kural "max 1 adet H1" diyor. 2 H1'e izin vermek yanlış.
+- Düzeltme: `h1Count <= 2` → `h1Count <= 1`
+
+**A4. figma-a11y-audit: Step 8 body text filtresi mantık hatası**
+- [ ] `n.fontSize < 18 && n.fontSize < 14` — `< 18` gereksiz. Ayrıca `<12` zaten önceki step'te yakalanıyor.
+- Düzeltme: `allText.filter(n => n.fontSize >= 12 && n.fontSize < 14)`
+
+**A5. figma-screen-analyzer: Duplike figma_get_design_context çağrısı**
+- [ ] Step 2'de iki ayrı çağrı (depth=3/full + depth=2). Aynı veriyi iki kere çekmek gereksiz.
+- Düzeltme: İkinci çağrıyı (depth=2) sil.
+
+**A6. figma-screen-analyzer: Step numaralama kayması**
+- [ ] Yeni Step 3 (İlk İzlenim) eklendikten sonra eski Step numaraları güncellenmedi.
+- Düzeltme: DS Uyum → Step 4, Görsel Hiyerarşi → Step 5, Geri Bildirim → Step 6, Rapor → Step 7.
+
+**A7. figma-a11y-audit: WCAG versiyon başlık tutarsızlığı**
+- [ ] Başlık "WCAG 2.1 AA" diyor ama 2.5.5 Target Size kriteri WCAG 2.2'de eklendi.
+- Düzeltme: `"WCAG 2.1/2.2 AA Hızlı Referans"` + 2.5.5'e `(WCAG 2.2)` notu.
+
+**A8. component-documentation: Compact formatta Copy Spec eksikliği belirtilmemiş**
+- [ ] Standard 10 bölüme çıktı ama Compact'ta Copy Spec yok, bu belirtilmemiş.
+- Düzeltme: Compact'a not ekle: `NOT: Copy Spec ve Durumlar bölümleri Compact formatta dahil değildir.`
+
+**A9. generate-figma-library: Faz 1 çıkış kriteri scope çelişkisi**
+- [ ] Çıkış kriteri "tüm scope'lar ayarlı" diyor ama motion token STRING type — scope ayarlanamaz.
+- Düzeltme: `→ Çıkış kriteri: ... (motion token'lar STRING olarak belgelenmiş), shadow effect style'lar oluşturulmuş`
+
+**A10. SKILL_INDEX.md: DesignOps akışında ux-copy-guidance eksik**
+- [ ] Uçtan uca akışta ux-copy-guidance var ama DesignOps persona akışında yok.
+- Düzeltme: DesignOps akışına isteğe bağlı ux-copy-guidance ekle.
+
+#### İYİLEŞTİRMELER (B1-B12)
+
+**edenspiekermann kaynaklı (B1-B4):**
+- [ ] B1. audit-figma-design-system: Ortam bazlı çıktı format otomatik tespiti (CI→JSON, chat→markdown)
+- [ ] B2. apply-figma-design-system: İki giriş modu (review-then-apply + apply-known-scope)
+- [ ] B3. apply-figma-design-system: %80 eşik kuralı ("birkaç DS buton ≠ bağlı bölüm")
+- [ ] B4. fix-figma-design-system-finding: 3 beklenen girdi formatı (tek JSON, tam audit+index, serbest metin+URL)
+
+**Owl-Listener kaynaklı (B5-B12):**
+- [ ] B5. generate-figma-screen: Loading state karar ağacı (<1sn→yok, 1-3sn→spinner, 3-10sn→skeleton, >10sn→progress bar)
+- [ ] B6. generate-figma-library: İsimlendirme konvansiyonu çerçevesi (token: kategori/alt/varyant, bileşen: PascalCase, prop: camelCase)
+- [ ] B7. generate-figma-library: 60-30-10 renk kuralı (%60 baskın, %30 ikincil, %10 vurgu)
+- [ ] B8. figma-a11y-audit: Gesture a11y kontrolleri (swipe→buton alternatifi, pinch→+/- buton, long-press→context menu)
+- [ ] B9. ai-handoff-export: Loading state karar ağacı (handoff'ta her öğe için loading pattern)
+- [ ] B10. audit-figma-design-system: Nielsen 10 Sezgisel Değerlendirme (isteğe bağlı --heuristic flag)
+- [ ] B11. component-documentation: State machine geçiş diyagramı (Default→Hover→Active→Default döngüsü)
+- [ ] B12. implement-design: Gesture platform mapping tablosu (swipe/long-press/pinch/pull-to-refresh × iOS/Android/Web)
+
+#### KOD/PLUGIN UYUMLULUK DOĞRULAMASI (Tamamlandı)
+
+Tüm skill'lerdeki `figma_*` çağrıları ve `figma_execute` içindeki Figma Plugin API kullanımları kaynak kodla doğrulandı:
+- ✅ setBoundVariable, findAll, loadFontAsync, getNodeByIdAsync → figma_execute içinde çalışır
+- ✅ currentPageOnly → local-plugin-only.ts'de tanımlı
+- ✅ Tüm parametre uyumluluğu doğrulandı (capture_screenshot, check_design_parity, get_design_context, execute timeout, get_variables verbosity)
+- ⚠️ Dikkat: figma_execute timeout 5sn varsayılan (büyük ekranlarda artırılmalı), export limiti 50 node, variable batch limiti 100
+
+#### Uygulama Sırası
+1. **Önce A1-A10:** Hata düzeltmeleri
+2. **Sonra B1-B12:** İyileştirmeler
+3. **Son:** `npm run validate:fmcp-skills` + step numara doğrulama + Türkçe karakter kontrolü
+
+---
+
 ## TAMAMLANAN AŞAMALAR
 
 - [x] **Türkçe Karakter Düzeltmesi** (2026-04-05) — 7 skill'e Türkçe Karakter Kuralı eklendi, 2 skill iç tutarsızlığı düzeltildi (component-documentation, generate-figma-library), 4 test output dosyası düzeltildi (HANDOFF.md, LoginScreen.tsx, LoginView.swift, LoginScreen.kt), Figma tasarım dosyasındaki 48+ text node ve frame ismi düzeltildi, 3 dokümantasyon dosyası düzeltildi (TEST_REPORT.md, FUTURE.md, CHANGELOG.md). İteratif doğrulama döngüsü ile sıfır hata garantisi.
