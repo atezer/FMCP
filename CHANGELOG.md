@@ -12,6 +12,46 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.17] - 2026-04-08
+
+### Skill: P3.5 Hata Düzeltmeleri + Dış Kaynak İyileştirmeleri + Canlı Figma Testi
+
+19 F-MCP skill'i canlı Figma dosyasında satır satır test edildi. Tespit edilen 10 hata düzeltmesi (A1-A10) + 12 iyileştirme (B1-B12) uygulandı. Test sonuçları: **18 PASS, 1 PARTIAL, 0 SKIP**.
+
+**Hata düzeltmeleri (A1-A10):**
+- **A1** `ai-handoff-export`: Duplike Step 6 numaralama düzeltildi (6→10 kaydırma + cross-ref güncellemesi)
+- **A2** `figma-a11y-audit`: "Salt okunur" iddiası → "Okuma + Yazma" (Step 7 annotation oluşturuyor)
+- **A3** `figma-a11y-audit`: `h1Count <= 2` → `<= 1` (kural "max 1 H1")
+- **A4** `figma-a11y-audit`: Body text filtresi mantık hatası düzeltildi (`>= 12 && < 14`)
+- **A5** `figma-screen-analyzer`: Duplike `figma_get_design_context` çağrısı silindi
+- **A7** `figma-a11y-audit`: WCAG versiyon tutarlılığı (2.1 → 2.1/2.2)
+- **A8** `component-documentation`: Compact formatta Copy Spec eksikliği belirtildi
+- **A9** `generate-figma-library`: Faz 1 çıkış kriteri STRING/FLOAT scope ayrımı
+- **A10** `SKILL_INDEX.md`: DesignOps akışına `ux-copy-guidance` eklendi
+
+**İyileştirmeler (B1-B12):**
+- **B1** `audit-figma-design-system`: CI ortam tespiti (JSON default)
+- **B2** `apply-figma-design-system`: İki giriş modu (`review-then-apply` + `apply-known-scope`)
+- **B3** `apply-figma-design-system`: %80 uyum eşiği kapısı
+- **B4** `fix-figma-design-system-finding`: 3 girdi formatı otomatik algılama
+- **B5** `generate-figma-screen`: Loading state karar ağacı (skeleton/spinner/progress)
+- **B7** `generate-figma-library`: 60-30-10 renk kuralı (palette + kullanım rehberi)
+- **B8** `figma-a11y-audit`: Gesture a11y kontrolleri (7a)
+- **B10** `audit-figma-design-system`: Nielsen 10 sezgisel (`--heuristic` flag)
+- **B11** `component-documentation`: State machine geçiş diyagramı (Mermaid)
+- **B12** `implement-design`: Gesture platform mapping tablosu (iOS/Android/Web)
+
+**Canlı Figma Testi (feedback için):**
+- Test dosyası: [Figma Design](https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1) — 20 sayfa, her skill için görsel doğrulama
+- FigJam testi: [Design System JIRA Backlog Süreci](https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1) — `figjam-diagram-builder` swimlane testi
+- 6/7 bug gerçek Figma dosyasında düzeltildi (Button touch target, placeholder kontrast, variable bağlama, Türkçe karakter)
+
+**Versiyon tutarlılığı düzeltmesi:**
+- `.cursor-plugin/plugin.json`: 1.7.14 → 1.7.17 (v1.7.15/v1.7.16'da atlanmıştı)
+- `KURULUM.md`: 1.7.14 → 1.7.17 (v1.7.15/v1.7.16'da atlanmıştı)
+
+**P3.6 plan (sonraki sürümde):** 4 araç sorunu FUTURE.md'de plan halinde — `figma_setup_design_tokens` mode name mapping, `ALL_FILLS` scope validation, FigJam `shapeWithText` font dokümantasyonu, FigJam timeout limiti. Plugin kodu bu sürümde dokunulmadı.
+
 ## [1.7.15] - 2026-04-08
 
 ### Skill: Anthropic Design Skill Entegrasyonu + Marka Profili + UX Copy

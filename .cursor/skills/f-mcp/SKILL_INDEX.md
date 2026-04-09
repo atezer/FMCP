@@ -93,8 +93,9 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 3. apply-figma-design-system (DS hizalama)
 4. design-token-pipeline (token senkronu — motion token'lar dahil)
 5. design-system-rules (kural üretimi — DS prensipleri ve pattern katmanı dahil)
-6. figma-a11y-audit (erişilebilirlik denetimi — WCAG 2.1 AA hızlı referans dahil)
+6. figma-a11y-audit (erişilebilirlik denetimi — WCAG 2.1/2.2 AA hızlı referans dahil)
 7. generate-figma-library (DS kütüphanesi inşa/güncelleme — motion/shadow token, durum kapsamı dahil)
+8. ux-copy-guidance *(isteğe bağlı)* (marka sesiyle uyumlu copy kuralları — token isimlendirme, bileşen açıklamaları)
 ```
 
 ### UI Geliştirici (uidev)
