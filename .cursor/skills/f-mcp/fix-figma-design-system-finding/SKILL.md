@@ -40,9 +40,13 @@ Ekran geneli veya çoklu bölüm için **apply-figma-design-system** kullan.
 
 ## Beklenen girdi
 
-- `audit-figma-design-system` JSON’undan tek `finding`, veya
-- Aynı JSON + hangi bulgunun hedeflendiği, veya
-- Sorun özeti + Figma URL / `fileKey` + `nodeId`
+Bu skill üç farklı girdi formatını otomatik algılar:
+
+1. **Tek finding JSON** — `audit-figma-design-system` çıktısından tek `finding` objesi. `code_location` alanı varsa bu format algılanır.
+2. **Tam audit JSON + indeks** — Tüm audit çıktısı + hangi bulgunun düzeltileceği (indeks veya `ruleId`). `findings` dizisi varsa bu format algılanır.
+3. **Serbest metin + URL** — Sorun özeti + Figma URL / `fileKey` + `nodeId`. Yapılandırılmış JSON yoksa bu format algılanır.
+
+**Format algılama sırası:** `code_location` → `findings[]` → serbest metin fallback.
 
 Audit JSON kullanılıyorsa `code_location.absolute_file_path` içinden `fileKey` ve `nodeId` çıkar: `/figma/<fileKey>/nodes/<nodeId>`.
 

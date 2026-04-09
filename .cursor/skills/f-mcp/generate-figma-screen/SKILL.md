@@ -186,6 +186,24 @@ Her bölüm için:
 3. Oluşturulan node ID'lerini return et
 4. `figma_capture_screenshot` ile görsel doğrulama
 
+**Loading State Karar Ağacı:**
+
+Dinamik içerik barındıran her öğe için uygun loading pattern'ını belirle:
+
+| Beklenen Yüklenme Süresi | Loading Pattern | Kullanım |
+|--------------------------|----------------|----------|
+| < 1 saniye | Yok (anlık) | Statik içerik, önbellekli veri |
+| 1-3 saniye | Spinner | Buton, küçük widget, tek alan |
+| 3-10 saniye | Skeleton | Kart, liste, metin bloğu, görsel |
+| > 10 saniye | Progress bar | Dosya yükleme, toplu işlem |
+
+**Skeleton türleri:**
+- Metin bloğu → `skeleton-text` (tam genişlik × 16px, 2-3 satır)
+- Başlık → `skeleton-title` (200px × 24px)
+- Avatar/ikon → `skeleton-circle` (pulse animasyonlu daire)
+- Kart → `skeleton-card` (başlık + 2 satır metin + görsel alanı)
+- Tablo/liste → `skeleton-row` (satır bazlı tekrarlayan skeleton)
+
 **Instance oluşturma kalıbı:**
 
 ```js
