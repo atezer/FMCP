@@ -9,6 +9,8 @@ metadata:
 
 # Implement Design (Multi-Platform)
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, Figma tasarımlarını **iOS, Android ve Web** platformlarına pixel-perfect doğrulukla koda dönüştürür. Aynı Figma design system'i 3 farklı platformda implement eden ekipler için tasarlanmıştır.

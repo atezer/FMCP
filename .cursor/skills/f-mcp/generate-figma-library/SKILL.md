@@ -10,6 +10,8 @@ metadata:
 
 # Generate Figma Library — Koddan DS Kütüphanesi İnşa
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, bir kod tabanından Figma'da profesyonel bir design system kütüphanesi oluşturur. Variable'lar (token), stiller, bileşenler (variant, auto-layout, property) ve sayfa yapısı dahil. Topluluk `figma-generate-library` skill'inden uyarlanmış, F-MCP Bridge araçlarına göre yeniden yazılmıştır.
@@ -277,6 +279,7 @@ Bu kural, token sisteminin tutarlılığını garanti eder: primitive değişinc
 figma_batch_create_variables(
   collectionId="<id>",
   variables=[
+    // Aşağıdaki değerler FORMAT örneğidir — çalışma anında DS'den okunur
     { name: "primary/50", type: "COLOR", values: { "Light": "#EEF2FF", "Dark": "#312E81" } },
     { name: "primary/100", type: "COLOR", values: { "Light": "#E0E7FF", "Dark": "#3730A3" } },
     ...
@@ -324,11 +327,15 @@ return { id: variable.id, description: variable.description };
 
 ### Text ve effect style'lar
 
+> **Font kuralı:** Hardcoded font kullanma. Önce kayıtlı kütüphanenin text style'larından font ailesini oku. Bulunamazsa kullanıcıya sor. Kullanıcı "sen seç" derse `Inter` kullan.
+
 ```js
+// FONT_FAMILY ve FONT_STYLE'ı kütüphaneden veya kullanıcıdan al
+const FONT_FAMILY = "KütüphanedenOkunanFont"; // ör: "Source Sans Pro", "Inter", vb.
 const style = figma.createTextStyle();
 style.name = "Heading/H1";
-await figma.loadFontAsync({ family: "Inter", style: "Bold" });
-style.fontName = { family: "Inter", style: "Bold" };
+await figma.loadFontAsync({ family: FONT_FAMILY, style: "Bold" });
+style.fontName = { family: FONT_FAMILY, style: "Bold" };
 style.fontSize = 32;
 style.lineHeight = { value: 40, unit: "PIXELS" };
 return { styleId: style.id, name: style.name };
@@ -349,11 +356,11 @@ component.paddingLeft = component.paddingRight = 24;
 component.cornerRadius = 8;
 component.itemSpacing = 8;
 
-// Metin ekle
-await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+// Metin ekle — FONT_FAMILY'yi kütüphaneden veya kullanıcıdan al
+await figma.loadFontAsync({ family: FONT_FAMILY, style: "Medium" });
 const label = figma.createText();
 label.characters = "Button";
-label.fontName = { family: "Inter", style: "Medium" };
+label.fontName = { family: FONT_FAMILY, style: "Medium" };
 label.fontSize = 14;
 component.appendChild(label);
 
@@ -462,7 +469,7 @@ codeOnlyFrame.layoutPositioning = "ABSOLUTE";
 **Adım 2: Her property için bir katman ekle**
 
 ```js
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+await figma.loadFontAsync({ family: FONT_FAMILY, style: "Regular" });
 
 // Erişilebilirlik etiketi
 const a11yLabel = figma.createText();

@@ -207,3 +207,6 @@ Temporary Items
 # Development documentation (internal use only)
 docs/testing/
 docs/analysis/
+
+# Local design system libraries (user-specific, not shared)
+.claude/libraries/

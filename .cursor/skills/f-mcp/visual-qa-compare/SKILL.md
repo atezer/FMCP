@@ -10,6 +10,8 @@ metadata:
 
 # Visual QA Compare — Figma vs Kod Görsel Karşılaştırma
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, Figma tasarımı ile kodlanmış UI arasındaki **görsel** farkları tespit eder. `design-drift-detector` token/kod tabanlı çalışırken, bu skill **pixel/görsel** tabanlı karşılaştırma yapar.

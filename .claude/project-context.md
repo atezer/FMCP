@@ -100,76 +100,38 @@ Kullanıcıya ASLA terminal komutu söyleme, teknik adım açıklama. Her şeyi 
 ### Dil
 Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, ğ, ö, ü, ı, İ) doğru kullanılmalı.
 
-## Design System Referansları
+## Design System Kütüphaneleri
 
-Proje tasarım sistemleri: `.claude/design-systems/` dizininde MD dosyaları olarak cache'lenir. Her kütüphane kendi alt klasörüne sahiptir.
+Kullanıcı lokal olarak design system kütüphaneleri kaydedebilir. Kayıtlı kütüphaneler `.claude/libraries/` dizininde bulunur (gitignored — repo'ya dahil edilmez).
 
-**Framework dokümanı:** `.claude/design-systems/README.md` (detaylı kurallar ve örnekler burada)
-**Slash komutları:** `/ds-add` (yeni kütüphane ekle), `/ds-sync` (güncelle)
+### Kullanım kuralları
 
-### Kritik Kural — `_meta.md` Öncelikle Okunur
-Kullanıcı tasarım sistemi konusunda (bileşen, token, ikon, renk, spacing vb.) çalışırken Claude şu sırayı izler:
+1. **Skill çalıştırmadan önce** `.claude/libraries/` dizinini kontrol et. Kayıtlı kütüphane varsa oku.
+2. **Varsayılan kütüphane:** Kullanıcı "hangi kütüphane?" demişse veya context'ten anlaşılamıyorsa, kayıtlı kütüphanelerden ilkini kullan.
+3. **Figma file key'leri** kütüphane dosyasındaki tablolardan al — URL'den parse etme, doğrudan `File Key` alanını kullan.
+4. **Token okuma** her zaman kütüphanenin WEB/ana dosyasından yapılır.
+5. **Platform seçimi:** Web ekranı → WEB dosyası, Mobil ekran → Mobil dosyası (yoksa WEB fallback).
 
-1. **Önce:** `.claude/design-systems/<library>/_meta.md` oku (sync durumu kontrolü)
-2. **Sonra:** `.claude/design-systems/<library>/<section>.md` oku (içerik)
-3. **MD'de yoksa:** Figma MCP araçlarını kullan
-4. **Figma'ya sadece** görsel doğrulama için git
+### Design Token Kuralı (TÜM skill'ler için geçerli — ZORUNLU)
 
-### `_meta.md` Durum Kontrolü
-Her okuma sırasında "Sync Durumu" bölümüne bak:
-- **✅ TAMAMLANDI** → normal devam et; tarih 30 gün eskiyse "güncellemek ister misin?" öner; 60 gün eskiyse güçlü uyar
-- **⚠️ YARIM KALDI** → kullanıcıya bildir: "Son sync yarım kaldı (X/Y). Tamamlamak ister misin?"
-- **❌ HATA** → kullanıcıya detayı ilet ve yeniden deneme öner
+Hiçbir skill gömülü/hardcoded design token değeri içeremez ve kullanamaz. Font ailesi, renk kodu, font boyutu, spacing, radius, gölge — hiçbir tasarım değeri skill içine yazılmaz.
 
-### Kütüphane Seçimi
-- Tek kütüphane varsa → otomatik kullan
-- Birden fazla varsa → kullanıcıya hangisi sor
-- Kullanıcı konuşmada söylerse (ör: "SUI button") → o kütüphane aktif say
-- Farklı kütüphaneden istenirse sessizce geç + bilgilendir
+**Her tasarım değeri çalışma anında tasarım sisteminden okunur:**
 
-### Yeni Kütüphane Ekleme (Akıllı Tespit)
-Kullanıcı bir Figma linki verip "ekle" veya "bu kütüphaneyi ekle" derse:
+1. **Önce kayıtlı kütüphaneyi oku:** `.claude/libraries/` dizinindeki kütüphane dosyasını kontrol et. Font ailesi, variable collection'lar ve style listesi orada.
+2. **Canlı değerleri Figma'dan al:**
+   - Font → `figma_get_styles()` text style'larından veya kütüphanenin `Font Ailesi` alanından
+   - Renkler → `figma_get_variables()` veya `figma_get_styles()` paint style'larından
+   - Boyutlar/spacing → `figma_get_variables()` variable collection'larından
+   - Gölgeler → `figma_get_styles()` effect style'larından
+3. **Bulunamazsa kullanıcıya sor.**
+4. **Kullanıcı "sen seç" derse:** Font için `Inter`, renkler için Figma varsayılanları kullan.
 
-1. URL'den file key çıkar
-2. `.claude/design-systems/` altındaki `_meta.md` dosyalarını tara
-3. Karar ver:
-   - **Aynı file key var** → "Bu dosya zaten <X>'te kayıtlı. Güncelleyeyim mi?"
-   - **Aynı isim var** → "<X> zaten kayıtlı. Değiştir / yeniden isimlendir / iptal?"
-   - **Benzer isim var** (fuzzy) → "<Y>'ye kaynak olarak ekleyeyim mi yoksa ayrı kütüphane mi?"
-   - **Hiç yok** → Yeni kütüphane olarak ekle
-4. Figma MCP ile analiz et (variables, styles, components)
-5. Bileşen isimlerinden section'ları otomatik tespit et (tokens/components/icons/mobile/assets)
-6. Kullanıcıdan onay al, sonra oluştur
-7. İlk sync'i otomatik başlat (süre uyarısı ile)
+**Skill'lerdeki kod örnekleri:** Örneklerde geçen değerler (renk hex, font adı, piksel boyutu) yalnızca FORMAT gösterimi içindir. Çalışma anında bu değerler her zaman tasarım sisteminden okunmalıdır.
 
-**Slash command kullanılmasa bile** bu mantığı doğal dilde uygula. `/ds-add` komut dosyasında tam akış yazılı.
+### Mevcut kütüphaneler
 
-### Sync (Güncelleme) Davranışı
-Kullanıcı "güncelle" veya "sync" derse veya MD eski ise:
-
-1. **Yedekleme:** Her MD dosyasını `.bak` olarak kopyala (rollback için)
-2. **Resume kontrolü:** Mevcut MD'yi oku, `### <Başlık>` satırlarını regex ile çıkar → "done" listesi
-3. **Sadece eksikleri çek:** Figma'dan güncel listeyi al, done ile karşılaştır, kalanları işle
-4. **Batch'li işleme:** 5'er paralel `figma_get_component` çağrısı, her batch sonrası progress raporla
-5. **Atomik append:** Her bileşen MD'ye tek tek append edilir (yarım yazma yok)
-6. **Hata yönetimi:**
-   - API timeout (tek öğe) → 3x retry (1s, 2s, 4s) → sonra skip + log
-   - Bridge disconnect → DUR + `_meta.md`'yi "YARIM KALDI" işaretle + kullanıcıya bildir
-   - Permission denied → section atla + uyar, diğerleriyle devam
-7. **Sonuç:**
-   - Tam başarı → `.bak` sil, `_meta.md`'yi ✅ TAMAMLANDI olarak güncelle
-   - Kısmi başarı → `.bak` TUT, failed_items listele, ⚠️ KISMI BAŞARI
-   - Tam başarısızlık → `.bak`'tan geri yükle
-
-**`/ds-sync` komut dosyasında tam akış yazılı.**
-
-### Resume Mantığı
-Sync yarım kalırsa (crash, disconnect), bir sonraki `/ds-sync` çağrısı kaldığı yerden devam eder. Bu tamamen MD dosyasının kendisine dayanır — Claude mevcut `### <Başlık>`'ları okur, eksik olanları Figma'dan çeker. State dosyası gerekmez.
-
-### Manuel Düzenleme Uyarısı
-- `.claude/design-systems/` içindeki MD dosyaları **manuel düzenlenmemelidir**
-- Her zaman `/ds-sync` veya doğal dil komutu kullan
-- Manuel düzenleme yapılırsa sonraki sync'te kayıplar olabilir
+Kayıtlı kütüphaneleri görmek için `.claude/libraries/` dizinini kontrol et. Her `.md` dosyası bir kütüphanedir. Kütüphane eklemek için `/add-library` komutunu kullan.
 
 ## References
 

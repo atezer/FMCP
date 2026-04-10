@@ -11,6 +11,8 @@ metadata:
 
 # Design Drift Detector (Multi-Platform)
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, implementasyon sonrasında oluşan kod-tasarım sapmalarını **iOS, Android ve Web** platformlarında ayrı ayrı ve cross-platform olarak tespit eder. Resmi Figma plugininde bu yetenek yoktur.
