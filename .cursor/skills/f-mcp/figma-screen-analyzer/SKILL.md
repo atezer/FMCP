@@ -53,10 +53,6 @@ figma_get_design_context(
 ```
 
 ```
-figma_get_design_context(nodeId="<NODE_ID>", depth=2)
-```
-
-```
 figma_capture_screenshot(nodeId="<NODE_ID>")
 ```
 

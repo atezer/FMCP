@@ -84,12 +84,12 @@ Handoff çıktısına ekle:
 
 - `figma_capture_screenshot`
 
-### Step 6: Handoff dosyalarını üret
+### Step 7: Handoff dosyalarını üret
 
 1. `HANDOFF_TEMPLATE.md` içini doldur.
 2. `docs/handoff.manifest.schema.json` uyumlu `handoff.manifest.json` çıktısı oluştur.
 
-### Step 7: Platform Hedefi Belirle
+### Step 8: Platform Hedefi Belirle
 
 Handoff manifest'ine hedef platform(lar) eklenir:
 
@@ -106,13 +106,13 @@ Handoff manifest'ine hedef platform(lar) eklenir:
 
 Platform bilgisi kullanıcıdan alınır veya proje yapısından çıkarılır.
 
-### Step 8: Self-healing sonucunu işle
+### Step 9: Self-healing sonucunu işle
 
 - İterasyon sayısını kaydet (`0-3`).
 - Açık kalan sapmaları `openIssues` alanına yaz.
 - Çözülemeyen fark varsa `manualReviewNeeded=true`.
 
-### Step 9: Executive Summary (PO/PM Modu)
+### Step 10: Executive Summary (PO/PM Modu)
 
 PO/PM persona algılandığında veya `--executive` flag ile teknik handoff'un yanında yönetici özeti eklenir:
 
@@ -153,7 +153,7 @@ Her handoff paketi bu 4 prensibe uygun olmalıdır:
 
 ## Etkileşim Spesifikasyonları
 
-Step 5 (Code-Only Props) ile Step 6 (Screenshot) arasında üretilecek ek bölüm:
+Step 5 (Code-Only Props) ile Step 6 (Screenshot) arasında üretilecek ek bölüm (Step 5.5):
 
 ### Davranış Detayları
 

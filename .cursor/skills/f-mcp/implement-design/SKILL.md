@@ -381,6 +381,19 @@ Aynı component'i birden fazla platformda implement ederken:
 1. **Tek Figma kaynağı** — Tüm platformlar aynı Figma node'dan beslenir
 2. **Aynı token değerleri** — Renkler, spacing, radius her platformda aynı sayısal değeri kullanmalı
 3. **Platform-native davranış** — Görünüm aynı olmalı ama interaction pattern'ları platforma özgü olmalı (ör. iOS haptic feedback, Android ripple effect, Web hover state)
+
+   **Gesture Platform Mapping Tablosu:**
+
+   | Gesture | iOS (SwiftUI/UIKit) | Android (Compose/View) | Web (React/HTML) |
+   |---------|---------------------|----------------------|------------------|
+   | Tap | `onTapGesture` / `UITapGestureRecognizer` | `Modifier.clickable` / `OnClickListener` | `onClick` |
+   | Swipe | `swipeActions` / `UISwipeGestureRecognizer` | `SwipeToDismissBox` / `ItemTouchHelper` | `onTouchStart/Move/End` + threshold |
+   | Long-press | `onLongPressGesture` / `UILongPressGestureRecognizer` | `Modifier.combinedClickable` / `OnLongClickListener` | `onContextMenu` / `pointerdown` + timer |
+   | Pinch | `MagnifyGesture` / `UIPinchGestureRecognizer` | `detectTransformGestures` / `ScaleGestureDetector` | `wheel` event / `touch` iki parmak |
+   | Pull-to-refresh | `refreshable` / `UIRefreshControl` | `pullRefresh` / `SwipeRefreshLayout` | Custom scroll listener |
+   | Drag & drop | `draggable` / `UIDragInteraction` | `Modifier.dragAndDropSource` / `DragShadowBuilder` | HTML5 Drag API / `onDragStart` |
+
+   Gesture implementasyonunda erişilebilirlik alternatiflerini unutma (bkz. figma-a11y-audit 7a)
 4. **Naming tutarlılığı** — Token isimleri platformlar arası eşleşmeli:
    - Figma: `color/primary/500`
    - iOS: `Color.primary500` veya `Asset Catalog: primary-500`

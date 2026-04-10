@@ -695,6 +695,88 @@ Tüm skill'lerdeki `figma_*` çağrıları ve `figma_execute` içindeki Figma Pl
 
 ---
 
+### P3.5 — Canlı Figma Test Sonuçları (v1.7.17 doğrulaması)
+
+P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyalarında satır satır test edildi. Her skill'in her step'i gerçek tool çağrılarıyla doğrulandı ve Figma üzerinde görsel çıktı bırakıldı.
+
+**Test dosyaları (feedback ve görsel doğrulama için):**
+
+- **Figma Design (Skill Test):** [https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1](https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1)
+  - 20 sayfa: `0. Test Ana Sayfa` + 19 skill (her skill kendi sayfasında)
+  - Her sayfada skill'in step notları, kullanılan araçlar, sonuç özeti
+  - Login ekranı (390×844 mobil, `generate-figma-screen` testi)
+  - Button component set + 5 variant (State=Default/Hover/Active/Disabled/Focus, `generate-figma-library` testi)
+  - DS token'ları: 4 collection, 24 variable, 3 effect style
+  - Bug fix doğrulama + WCAG 2.1/2.2 AA a11y denetim raporu
+
+- **FigJam Board (Diyagram Test):** [https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1](https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1)
+  - `figjam-diagram-builder` testi: 3 swim lane + 13 skill kartı + 10 connector
+  - 3 fazlı üretim doğrulaması (Zemin → Node'lar → Connector'lar)
+  - Güvenli execute kuralları (<500 karakter dönüş, deterministik koordinat)
+
+**Test sonuçları:** 18 PASS | 1 PARTIAL | 0 SKIP
+- **PARTIAL:** `visual-qa-compare` — Figma tarafı çalışıyor, kodlanmış UI olmadığı için karşılaştırma simülasyon
+
+**Düzeltilen buglar (6/7) — Figma'ya birebir uygulandı:**
+- ✅ Button touch target 41px → 45px (padding 12→14, tüm 5 variant)
+- ✅ Placeholder kontrast 2.84:1 → 4.71:1 (WCAG AA, renk koyulaştırıldı)
+- ✅ "Kayıt Olun" → primary/500 variable bağlandı (`fix-figma-design-system-finding` ile)
+- ✅ Footer text + Alt başlık → neutral/900 variable bağlandı
+- ✅ Placeholder Türkçe karakter "ornek" → "örnek" (`ux-copy-guidance` ile)
+- ⚠️ **Açık:** semantic/error yuvarlama farkı (#e53333 vs #E63333) — token export normalize edilmeli
+
+**Araç sorunları → P3.6 planına taşındı** (bu sürümde dahil değil, plugin dokunulmadı):
+- `figma_setup_design_tokens` mode name → mode ID mapping (`f-mcp-plugin/code.js:2719-2731`)
+- `ALL_FILLS` + spesifik fill scope çakışması doğrulaması yok (`f-mcp-plugin/code.js:632-635` + `src/core/plugin-bridge-connector.ts:56-63`)
+- FigJam `shapeWithText` varsayılan font Inter Medium dokümante değil (`figma-canvas-ops/SKILL.md` + `figjam-diagram-builder/SKILL.md`)
+- FigJam timeout limiti (13+ node single call → 5sn aşar) dokümante değil
+
+**P3.6 uygulaması v1.7.18 veya sonraki sürümde yapılacak.** Plan detayı aşağıda.
+
+---
+
+### P3.6 — MCP Bridge Araç Sorunları Düzeltmesi (Sıfır Hata Doğrulanmış)
+
+> Kaynak: 19 skill'in kapsamlı Figma testi sırasında tespit edildi. Plugin bozulmamalı, mevcut çağrılar geriye uyumlu kalmalı.
+
+#### C1. figma_setup_design_tokens: mode name → mode ID mapping
+- [ ] `f-mcp-plugin/code.js` satır 2719-2733: Mode name'leri mode ID'ye çeviren `modeNameToId` haritası ekle
+- [ ] İlk modu `renameMode()` ile kullanıcının istediği isme yeniden adlandır ("Mode 1" → "Light")
+- [ ] COLOR tipi token'lar için `hexToFigmaRGB()` dönüşümü ekle (mevcut fonksiyon satır 150'de)
+- [ ] Geriye uyumluluk: `modeNameToId[mid] || mid` — ham mode ID geçilirse de çalışır
+- Doğrulama: `modes: ["Light", "Dark"]` + `values: { "Light": "#fff", "Dark": "#000" }` → başarılı olmalı
+
+#### C2. ALL_FILLS + spesifik fill scope çakışması doğrulaması
+- [ ] `f-mcp-plugin/code.js` satır 632-635: Scope atamadan önce ALL_FILLS mutual exclusion kontrolü ekle
+- [ ] `src/core/plugin-bridge-connector.ts` satır 56-63: `createVariable()` metoduna erken doğrulama ekle
+- [ ] Net hata mesajı: "ALL_FILLS cannot be combined with FRAME_FILL/SHAPE_FILL/TEXT_FILL..."
+- Doğrulama: `["ALL_FILLS", "TEXT_FILL"]` → net hata, `["ALL_FILLS"]` tek başına → başarılı
+
+#### C3. FigJam shapeWithText varsayılan font Inter Medium dokümantasyonu
+- [ ] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu ekle
+- [ ] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Step 2'ye FigJam Font Kuralı bölümü ekle
+- [ ] Kural: `createShapeWithText()` → "Inter Medium" (Regular DEĞİL), `loadFontAsync(shape.text.fontName)` önerisi
+
+#### C4. FigJam timeout limiti dokümantasyonu
+- [ ] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması ekle
+- [ ] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü ekle
+- [ ] Güvenli limitler: 1-6 node → 5000ms | 7-12 → 10000ms | 13+ → böl veya 15000-30000ms
+- [ ] Font optimizasyonu: Tek seferde yükle, sonra tüm node'ları oluştur
+
+#### Uygulama Sırası
+1. **C1** (en yüksek — araç tamamen kırık)
+2. **C2** (kriptik hata mesajı)
+3. **C3 + C4 birlikte** (doküman değişiklikleri)
+4. **Son:** `npm run build:local` + `npm test` + `npm run validate:fmcp-skills` + canlı Figma doğrulama
+
+#### Değişecek Dosyalar
+- `f-mcp-plugin/code.js` (C1 + C2 plugin tarafı)
+- `src/core/plugin-bridge-connector.ts` (C2 sunucu tarafı → `npm run build:local` gerekli)
+- `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` (C3 + C4)
+- `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` (C3 + C4)
+
+---
+
 ## TAMAMLANAN AŞAMALAR
 
 - [x] **Türkçe Karakter Düzeltmesi** (2026-04-05) — 7 skill'e Türkçe Karakter Kuralı eklendi, 2 skill iç tutarsızlığı düzeltildi (component-documentation, generate-figma-library), 4 test output dosyası düzeltildi (HANDOFF.md, LoginScreen.tsx, LoginView.swift, LoginScreen.kt), Figma tasarım dosyasındaki 48+ text node ve frame ismi düzeltildi, 3 dokümantasyon dosyası düzeltildi (TEST_REPORT.md, FUTURE.md, CHANGELOG.md). İteratif doğrulama döngüsü ile sıfır hata garantisi.

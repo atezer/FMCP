@@ -62,6 +62,7 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 
 - Kullanıcı `--json` veya JSON isterse: şema altındaki JSON’u **markdown fence’siz**, ek metin yok.
 - Sohbet ortamı veya `--markdown`: insan okunur markdown rapor.
+- **Ortam bazlı otomatik tespit:** CI ortamı algılandığında (`CI=true`, `GITHUB_ACTIONS`, `GITLAB_CI` vb. ortam değişkenleri) varsayılan format **JSON** olarak ayarlanır. Etkileşimli sohbet ortamında varsayılan **markdown**’dır. Kullanıcı her iki durumda da `--json` veya `--markdown` flag’i ile tercihi geçersiz kılabilir.
 - Belirsizse: markdown varsayılan.
 
 ## Required Workflow
@@ -76,6 +77,25 @@ Yazma gerekiyorsa aşağıdaki skill’lerden birine yönlendir.
 4. **İnceleme:** Yerel frame ile yeniden icat edilmiş primitive, tekrarlayan kardeş yapılar, tokenize eşlerin yanında ham hex/spacing/typography, navigasyon gibi yüksek etkili custom yapılar, variant sapması.
 5. **Öneri:** Yalnızca `figma_search_components` ile **inandırıcı** aday bulunduğunda değiştirme öner; zayıf eşleşmede aday yazma.
 6. **Çıktı:** Seçilen formatta rapor; ardından yukarıdaki koordinasyon tablosuna göre sonraki skill’i öner.
+
+## Nielsen 10 Sezgisel Değerlendirme (İsteğe Bağlı)
+
+`--heuristic` flag'i ile aktif edilir. DS denetiminin yanı sıra Jakob Nielsen'in 10 kullanılabilirlik sezgisel ilkesini DS bağlamında değerlendirir:
+
+| # | İlke | DS Bağlamında Değerlendirme |
+|---|------|-----------------------------|
+| 1 | Sistem durumu görünürlüğü | Loading/progress state bileşenleri mevcut mu? |
+| 2 | Sistem-gerçek dünya uyumu | Token isimlendirme kullanıcı diline uygun mu? (ör. `danger` vs `color-red-500`) |
+| 3 | Kullanıcı kontrolü ve özgürlüğü | Undo/geri alma/iptal bileşenleri var mı? (dismiss, close, cancel) |
+| 4 | Tutarlılık ve standartlar | DS bileşenleri platform konvansiyonlarına uyuyor mu? |
+| 5 | Hata önleme | Validation, disabled state, form kısıtlama bileşenleri mevcut mu? |
+| 6 | Tanıma > hatırlama | Bileşen isimleri açıklayıcı mı? Description'lar yeterli mi? |
+| 7 | Kullanım esnekliği | Variant çeşitliliği farklı kullanım senaryolarını kapsıyor mu? |
+| 8 | Estetik ve minimalist tasarım | Token sayısı gereksiz yere şişkin mi? Kullanılmayan variant var mı? |
+| 9 | Hata tanıma ve kurtarma | Error state, empty state, fallback bileşenleri var mı? |
+| 10 | Yardım ve dokümantasyon | Bileşen description'ları, kullanım notları yeterli mi? |
+
+**Çıktı:** Rapora `heuristicEvaluation` bölümü eklenir (JSON veya markdown formatına göre). Her ilke için `pass` / `partial` / `fail` + açıklama.
 
 ## DS Eksiksizlik Çerçevesi
 
