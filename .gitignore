@@ -210,3 +210,4 @@ docs/analysis/
 
 # Local design system libraries (user-specific, not shared)
 .claude/libraries/
+.claude/worktrees/
