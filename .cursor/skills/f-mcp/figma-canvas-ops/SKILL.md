@@ -76,7 +76,50 @@ const page = figma.root.children.find(p => p.name === "Hedef Sayfa");
 await figma.setCurrentPageAsync(page);
 ```
 
-10. **`setBoundVariableForPaint` YENİ paint döner** — yakala ve geri ata.
+10. **Tüm tasarım değerleri DS variable'larına BAĞLANMALI (ZORUNLU).** Renk, spacing, padding, radius gibi hiçbir değer hardcoded yazılmaz. Akış:
+
+   **a) Kütüphaneden variable key'lerini oku:** `.claude/libraries/` dosyasını kontrol et. Key yoksa SUI/DS dosyasında `figma_execute` ile çek:
+   ```js
+   // DS dosyasında çalıştır (fileKey = DS dosyasının key'i)
+   const v = await figma.variables.getVariableByIdAsync("VariableID:...");
+   return { name: v.name, key: v.key };
+   ```
+
+   **b) Hedef dosyada variable'ı import et:**
+   ```js
+   const variable = await figma.variables.importVariableByKeyAsync("VARIABLE_KEY");
+   ```
+
+   **c) Renk bağlama (fill/stroke):** `setBoundVariableForPaint` kullan — DİKKAT: yeni paint döner, yakala ve geri ata:
+   ```js
+   const fills = [...node.fills];
+   const boundPaint = figma.variables.setBoundVariableForPaint(fills[0], "color", variable);
+   node.fills = [boundPaint];
+   ```
+
+   **d) Spacing/padding/radius bağlama:** `setBoundVariable` kullan:
+   ```js
+   node.setBoundVariable("paddingLeft", variable);
+   node.setBoundVariable("paddingRight", variable);
+   node.setBoundVariable("itemSpacing", variable);
+   node.setBoundVariable("topLeftRadius", variable);
+   ```
+
+   **e) Text style bağlama:** Doğrudan text style ID'si ile uygula:
+   ```js
+   const textStyles = await figma.getLocalTextStylesAsync();
+   const bodyStyle = textStyles.find(s => s.name === "global/surface/body");
+   await textNode.setTextStyleIdAsync(bodyStyle.id);
+   ```
+
+   **f) Text rengi bağlama (text node fill):**
+   ```js
+   const textFills = [...textNode.fills];
+   const boundTextPaint = figma.variables.setBoundVariableForPaint(textFills[0], "color", textColorVar);
+   textNode.fills = [boundTextPaint];
+   ```
+
+   **Asla** `node.fills = [{ type: "SOLID", color: { r: X, g: Y, b: Z } }]` gibi hardcoded renk yazma. Her zaman variable import et ve bağla.
 
 11. **`layoutSizingHorizontal/Vertical = 'FILL'` appendChild'DAN SONRA** ayarlanmalı — öncesinde hata verir.
 
