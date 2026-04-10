@@ -41,10 +41,11 @@ jobs:
         run: |
           PKG_VER=$(node -p "require('./package.json').version")
           echo "package.json version: $PKG_VER"
-          grep -q "version: \"$PKG_VER\"" src/local-plugin-only.ts || (echo "FAIL: local-plugin-only.ts version mismatch" && exit 1)
-          grep -q "version: \"$PKG_VER\"" src/local.ts || (echo "FAIL: local.ts version mismatch" && exit 1)
-          grep -q "bridgeVersion: \"$PKG_VER\"" src/core/plugin-bridge-server.ts || (echo "FAIL: bridgeVersion mismatch" && exit 1)
-          echo "All version strings match $PKG_VER"
+          grep -q "FMCP_VERSION = \"$PKG_VER\"" src/core/version.ts || (echo "FAIL: src/core/version.ts FMCP_VERSION mismatch" && exit 1)
+          grep -q "FMCP_VERSION" src/local-plugin-only.ts || (echo "FAIL: local-plugin-only.ts must use FMCP_VERSION" && exit 1)
+          grep -q "FMCP_VERSION" src/local.ts || (echo "FAIL: local.ts must use FMCP_VERSION" && exit 1)
+          grep -q "FMCP_VERSION" src/core/plugin-bridge-server.ts || (echo "FAIL: plugin-bridge-server.ts must use FMCP_VERSION" && exit 1)
+          echo "All version strings match $PKG_VER (via FMCP_VERSION)"
 
       - name: Security audit
         run: npm audit --omit=dev || true
