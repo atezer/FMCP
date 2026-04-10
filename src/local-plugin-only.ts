@@ -20,8 +20,6 @@ import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, calculateSizeKB } from "./core/response-guard.js";
-import { FMCP_VERSION } from "./core/version.js";
-import { FMCP_INSTRUCTIONS } from "./core/instructions.js";
 import type {
 	RGBColor, FigmaVariable, FigmaVariableCollection, FigmaVariableMode,
 	FigmaComponent, FigmaPaintStyle, FigmaTextStyle, FigmaFill,
@@ -105,10 +103,10 @@ export async function main() {
 	const bridge = new PluginBridgeServer(port, { auditLogPath });
 	bridge.start();
 
-	const server = new McpServer(
-		{ name: "F-MCP ATezer Bridge (Plugin-only)", version: FMCP_VERSION },
-		{ instructions: FMCP_INSTRUCTIONS },
-	);
+	const server = new McpServer({
+		name: "F-MCP ATezer Bridge (Plugin-only)",
+		version: "1.7.23",
+	});
 
 	// ---- figma_list_connected_files (multi-client discovery) ----
 	server.registerTool(
@@ -140,7 +138,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_file_data",
 		{
-			description: "(F-MCP Bridge) Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected (Figma Desktop, FigJam browser, Figma browser). Pass a Figma/FigJam URL in figmaUrl to route by link.",
+			description: "Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected (Figma Desktop, FigJam browser, Figma browser). Pass a Figma/FigJam URL in figmaUrl to route by link.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey is extracted from the link for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
@@ -194,7 +192,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_design_context",
 		{
-			description: "(F-MCP Bridge) Design context for a node or whole file: structure + text, layout/visual/typography. Use fileKey or figmaUrl to target a file when multiple plugins are connected. Pass a Figma/FigJam URL in figmaUrl; fileKey and node-id (if present in the link) are extracted automatically.",
+			description: "Design context for a node or whole file: structure + text, layout/visual/typography. Use fileKey or figmaUrl to target a file when multiple plugins are connected. Pass a Figma/FigJam URL in figmaUrl; fileKey and node-id (if present in the link) are extracted automatically.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey and optional node-id are extracted for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -254,7 +252,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_variables",
 		{
-			description: "(F-MCP Bridge) Get design tokens and variables from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
+			description: "Get design tokens and variables from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -293,7 +291,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_component",
 		{
-			description: "(F-MCP Bridge) Get component metadata by node ID from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
+			description: "Get component metadata by node ID from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -312,7 +310,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_styles",
 		{
-			description: "(F-MCP Bridge) Get local paint, text, and effect styles from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
+			description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -331,7 +329,7 @@ export async function main() {
 	server.registerTool(
 		"figma_execute",
 		{
-			description: "(F-MCP Bridge) Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file.",
+			description: "Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -351,7 +349,7 @@ export async function main() {
 	server.registerTool(
 		"figma_capture_screenshot",
 		{
-			description: "(F-MCP Bridge) Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey or figmaUrl to target a specific file.",
+			description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -498,7 +496,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_design_system_summary",
 		{
-			description: "(F-MCP Bridge) Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
+			description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -530,7 +528,7 @@ export async function main() {
 	server.registerTool(
 		"figma_search_components",
 		{
-			description: "(F-MCP Bridge) Search local components by name. Returns nodeIds and names. No REST API. Use fileKey or figmaUrl to target a specific file.",
+			description: "Search local components by name. Returns nodeIds and names. No REST API. Use fileKey or figmaUrl to target a specific file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -668,7 +666,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_component_image",
 		{
-			description: "(F-MCP Bridge) Get screenshot of a node (component/frame). Returns base64 image. No REST API.",
+			description: "Get screenshot of a node (component/frame). Returns base64 image. No REST API.",
 			inputSchema: {
 				nodeId: z.string(),
 				scale: z.number().min(0.5).max(4).optional().default(2),

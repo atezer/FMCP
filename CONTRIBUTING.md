@@ -25,7 +25,6 @@ npm test
 ```
 src/
   local-plugin-only.ts  — Plugin-only MCP giris noktasi (onerilen)
-  local.ts              — Tam mod (CDP + REST)
   core/
     plugin-bridge-server.ts   — WebSocket sunucusu
     plugin-bridge-connector.ts — Plugin iletisimi
@@ -52,7 +51,6 @@ tests/
 Versiyon degistirirken bu dosyalari guncelle:
 - `package.json` version
 - `src/local-plugin-only.ts` McpServer version
-- `src/local.ts` McpServer version
 - `src/core/plugin-bridge-server.ts` bridgeVersion
 - `.cursor-plugin/plugin.json` version
 - `README.md` ornek versiyon

@@ -7,11 +7,7 @@ import type { ServerConfig } from './types/index.js';
  */
 export declare function loadConfig(): ServerConfig;
 /**
- * Validate configuration
- */
-export declare function validateConfig(config: ServerConfig): void;
-/**
- * Get configuration with validation
+ * Get configuration
  */
 export declare function getConfig(): ServerConfig;
 //# sourceMappingURL=config.d.ts.map

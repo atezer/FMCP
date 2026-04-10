@@ -376,3 +376,50 @@ Test sırasında tespit edilen iyileştirme ihtiyaçları:
 10. **Faz 10-11:** QA + etki analizi
 
 Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
+
+---
+
+## 9. v1.7.23 Kod Temizliği Doğrulama Raporu
+
+**Tarih:** 2026-04-11
+**Scope:** Local full mode (CDP+REST) ve Cloudflare mode kaldırıldı, sadece plugin-only korundu.
+
+### Silinen Modüller (27 kaynak dosya)
+
+| Kategori | Dosyalar |
+|---|---|
+| Entry Points | local.ts (3,097 satır), index.ts (1,615 satır) |
+| Browser | browser/local.ts, browser/cloudflare.ts, browser/base.ts |
+| Cloud | browser-manager.ts, cloud-cors.ts, cloud-mode-kv.ts, cloud-mode-routes.ts, cloud-relay-session.ts, test-browser.ts |
+| Core | figma-tools.ts (3,564), figma-api.ts, figma-desktop-connector.ts (1,391), console-monitor.ts, snippet-injector.ts, design-system-manifest.ts, figma-reconstruction-spec.ts |
+| Enrichment | enrichment-service.ts, relationship-mapper.ts, style-resolver.ts, index.ts |
+| Types | enriched.ts |
+| Config | tsconfig.cloudflare.json, wrangler.jsonc, worker-configuration.d.ts, run-mcp.sh, auto-launch-figma-plugin.sh |
+
+### Kaldırılan Bağımlılıklar
+
+- @cloudflare/puppeteer, agents, puppeteer-core, wrangler
+
+### Doğrulama Sonuçları
+
+| Test | Sonuç |
+|---|---|
+| TypeScript build (tsc) | PASS — sıfır hata |
+| Jest testleri (36 test) | PASS — 36/36 |
+| Skill validasyon (46 araç) | PASS — 46/46 uyumlu |
+| MCP sunucu başlatma | PASS — WebSocket 5454 dinliyor |
+| npm pack | PASS — temiz paket, gereksiz dosya yok |
+| Plugin bağlantısı | PASS — 6 dosya bağlı, tüm araçlar çalışıyor |
+| Resmi Figma MCP uyumu | PASS — çakışma yok, paralel çalışıyor |
+
+### Kalan Yapı (10 kaynak dosya)
+
+- src/local-plugin-only.ts, src/core/plugin-bridge-server.ts, plugin-bridge-connector.ts, config.ts, logger.ts, figma-url.ts, response-guard.ts, audit-log.ts, types/figma.ts, types/index.ts
+
+### Etki
+
+| Metrik | Önce | Sonra |
+|---|---|---|
+| Kaynak dosya (src/) | 23 | 10 |
+| Runtime bağımlılıklar | 7 | 4 |
+| Entry point | 3 | 1 |

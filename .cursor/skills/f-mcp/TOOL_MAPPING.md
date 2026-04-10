@@ -7,7 +7,7 @@
 
 | Resmi Figma MCP | F-MCP Bridge | Fark / Not |
 |---|---|---|
-| `use_figma` | `figma_execute` | Aynı amaç: JS çalıştırma. F-MCP'de `code` parametresi ile Plugin API kodu gönderilir. Topluluk skill'lerinde `skillNames` parametresi var; F-MCP'de yok. |
+| `use_figma` | `figma_execute` | Aynı amaç: JS çalıştırma. F-MCP'de `code` parametresi ile Plugin API kodu gönderilir. |
 | — | `figma_instantiate_component` | Resmi MCP'de yok; F-MCP'ye özel bileşen instance oluşturma aracı. |
 | — | `figma_set_instance_properties` | Resmi MCP'de yok; F-MCP'ye özel instance property ayarlama. |
 | — | `figma_arrange_component_set` | F-MCP'ye özel; variant grid düzenleme. |
@@ -18,14 +18,12 @@
 |---|---|---|
 | `get_metadata` | `figma_get_file_data` | Yapı ve metadata. F-MCP'de `depth` parametresi ile derinlik sınırlanır. |
 | `get_design_context` | `figma_get_design_context` | Aynı ad, benzer çıktı. F-MCP'de `includeCodeReady` parametresi mevcut. |
-| — | `figma_get_file_for_plugin` | Yalnızca F-MCP; plugin bağlamında dosya verisi. |
 
 ## Görsel Doğrulama
 
 | Resmi Figma MCP | F-MCP Bridge | Fark / Not |
 |---|---|---|
 | `get_screenshot` | `figma_capture_screenshot` | Node bazlı ekran görüntüsü. |
-| — | `figma_take_screenshot` | Tarayıcı tabanlı tam ekran görüntüsü (CDP modunda). |
 
 ## Tasarım Sistemi Keşfi
 
@@ -40,7 +38,6 @@
 | (use_figma ile) | `figma_get_variables` | Verbosity: `summary` / `full`. |
 | — | `figma_refresh_variables` | Önbellek temizleme. |
 | — | `figma_get_token_browser` | Token tarayıcı; kategoriye göre filtreleme. |
-| — | `figma_get_token_values` | Doğrudan token değerleri (local.ts). |
 | — | `figma_create_variable` | Tekil variable oluşturma. |
 | — | `figma_create_variable_collection` | Collection oluşturma. |
 | — | `figma_batch_create_variables` | Toplu variable oluşturma. |
@@ -63,7 +60,6 @@
 | — | `figma_get_component` | Tekil bileşen detayı. |
 | — | `figma_get_component_image` | Bileşen SVG/PNG export. |
 | — | `figma_get_component_for_development` | Geliştirici odaklı bileşen bilgisi. |
-| — | `figma_get_component_details` | Detaylı bileşen metadata (local.ts). |
 
 ## Code Connect
 
@@ -86,39 +82,30 @@
 | Resmi Figma MCP | F-MCP Bridge | Fark / Not |
 |---|---|---|
 | — | `figma_get_status` | Plugin bağlantı durumu. |
-| — | `figma_reconnect` | Yeniden bağlanma. |
-| — | `figma_navigate` | Sayfa/node gezinme. |
 | — | `figma_list_connected_files` | Bağlı dosya listesi. |
-
-## Konsol ve Hata Ayıklama
-
-| Resmi Figma MCP | F-MCP Bridge | Fark / Not |
-|---|---|---|
-| — | `figma_get_console_logs` | Konsol çıktıları. |
-| — | `figma_watch_console` | Canlı konsol izleme. |
 | — | `figma_clear_console` | Konsol temizleme. |
-| — | `figma_reload_plugin` | Plugin yeniden yükleme. |
 
-## Doğrudan Node Düzenleme (yalnızca local.ts)
+## Doğrudan Node Düzenleme
 
-| Araç | Açıklama |
-|---|---|
-| `figma_resize_node` | Boyutlandırma |
-| `figma_move_node` | Konum değiştirme |
-| `figma_set_fills` | Dolgu ayarlama |
-| `figma_set_strokes` | Çizgi ayarlama |
-| `figma_clone_node` | Klonlama |
-| `figma_delete_node` | Silme |
-| `figma_rename_node` | Yeniden adlandırma |
-| `figma_set_text` | Metin ayarlama |
-| `figma_create_child` | Alt node oluşturma |
-| `figma_set_description` | Açıklama ayarlama |
-| `figma_add_component_property` | Bileşen özelliği ekleme |
-| `figma_edit_component_property` | Bileşen özelliği düzenleme |
-| `figma_delete_component_property` | Bileşen özelliği silme |
+> Node düzenleme işlemleri `figma_execute` ile Plugin API kodu çalıştırılarak yapılır.
+> Ayrıca `figma_create_frame`, `figma_create_rectangle`, `figma_create_text`, `figma_create_group` özel araçları mevcuttur.
 
 ## Tasarım–Kod Parity
 
 | Resmi Figma MCP | F-MCP Bridge | Fark / Not |
 |---|---|---|
 | — | `figma_check_design_parity` | Tasarım–kod uyum kontrolü (plugin-only). |
+
+## REST API ve Tanılama
+
+| Resmi Figma MCP | F-MCP Bridge | Fark / Not |
+|---|---|---|
+| — | `figma_rest_api` | Doğrudan Figma REST API çağrısı (token gerekir). |
+| — | `figma_set_rest_token` / `figma_get_rest_token_status` / `figma_clear_rest_token` | REST token yönetimi. |
+| — | `figma_set_port` | Bridge port değiştirme (5454-5470). |
+| — | `figma_plugin_diagnostics` | Plugin bağlantı tanılama. |
+| — | `figma_search_assets` | Kütüphane bileşen arama. |
+| — | `figma_export_nodes` | Node export (SVG/PNG/JPG/PDF). |
+| — | `figma_set_description` | Node açıklama ayarlama. |
+| — | `figma_watch_console` | Konsol izleme. |
+| — | `figma_get_console_logs` | Konsol çıktıları. |

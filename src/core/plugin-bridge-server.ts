@@ -16,7 +16,6 @@ import { createServer, get as httpGet, request as httpRequest } from "http";
 import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
-import { FMCP_VERSION } from "./version.js";
 
 const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
@@ -419,7 +418,7 @@ export class PluginBridgeServer {
 
 							ws.send(JSON.stringify({
 								type: "welcome",
-								bridgeVersion: FMCP_VERSION,
+								bridgeVersion: "1.7.23",
 								port: this.port,
 								clientId,
 								multiClient: true,

@@ -3,10 +3,9 @@
 	"version": "1.7.23",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
-	"main": "dist/local.js",
-	"types": "dist/local.d.ts",
+	"main": "dist/local-plugin-only.js",
+	"types": "dist/local-plugin-only.d.ts",
 	"bin": {
-		"figma-mcp-bridge": "./dist/local.js",
 		"figma-mcp-bridge-plugin": "./dist/local-plugin-only.js"
 	},
 	"files": [
@@ -14,11 +13,6 @@
 		"dist/local-plugin-only.js.map",
 		"dist/local-plugin-only.d.ts",
 		"dist/local-plugin-only.d.ts.map",
-		"dist/local.js",
-		"dist/local.js.map",
-		"dist/local.d.ts",
-		"dist/local.d.ts.map",
-		"dist/browser",
 		"dist/core",
 		"f-mcp-plugin",
 		"README.md",
@@ -26,23 +20,15 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"prepublishOnly": "npm run build:local && npm run validate:fmcp-skills",
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"dev:local": "tsx src/local.ts",
-		"dev:plugin-only": "node dist/local-plugin-only.js",
-		"build:run": "npm run build:local && node dist/local-plugin-only.js",
-		"figma:debug": "./scripts/auto-launch-figma-plugin.sh",
-		"build": "npm run build:local && npm run build:cloudflare",
-		"build:local": "tsc -p tsconfig.local.json",
-		"build:cloudflare": "tsc -p tsconfig.cloudflare.json",
-		"start": "wrangler dev",
+		"prepublishOnly": "npm run build && npm run validate:fmcp-skills",
+		"dev": "node dist/local-plugin-only.js",
+		"build:run": "npm run build && node dist/local-plugin-only.js",
+		"build": "tsc -p tsconfig.local.json",
 		"test": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
 		"format": "biome format --write",
 		"lint:fix": "biome lint --fix",
-		"cf-typegen": "wrangler types",
 		"type-check": "tsc --noEmit",
 		"validate:fmcp-skills": "node scripts/validate-fmcp-skills-tools.mjs",
 		"check-ports": "bash scripts/check-ports.sh"
@@ -71,18 +57,10 @@
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"overrides": {
-		"agents": {
-			"@modelcontextprotocol/sdk": "1.25.3"
-		}
-	},
 	"dependencies": {
-		"@cloudflare/puppeteer": "^1.0.4",
 		"@modelcontextprotocol/sdk": "^1.25.3",
-		"agents": "^0.2.8",
 		"pino": "^9.5.0",
 		"pino-pretty": "^13.0.0",
-		"puppeteer-core": "^23.11.1",
 		"ws": "^8.19.0",
 		"zod": "^3.25.76"
 	},
@@ -94,7 +72,6 @@
 		"jest": "^29.7.0",
 		"ts-jest": "^29.2.5",
 		"tsx": "^4.19.2",
-		"typescript": "5.9.3",
-		"wrangler": "^4.42.0"
+		"typescript": "5.9.3"
 	}
 }
