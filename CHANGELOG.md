@@ -12,6 +12,35 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.18] - 2026-04-10
+
+### Fix: P3.6 MCP Bridge Araç Sorunları Düzeltmesi
+
+Canlı Figma testi sırasında tespit edilen 4 araç sorunu düzeltildi. Plugin kodu + sunucu tarafı + skill dokümantasyonu güncellendi.
+
+**C1. `figma_setup_design_tokens` mode name → mode ID mapping** (`f-mcp-plugin/code.js`)
+- Mode name'leri (`"Light"`, `"Dark"`) mode ID'ye çeviren `modeNameToId` haritası eklendi
+- İlk mod `renameMode()` ile kullanıcının istediği isme yeniden adlandırılıyor ("Mode 1" → "Light")
+- COLOR tipi token'lar için `hexToFigmaRGB()` dönüşümü eklendi
+- Geriye uyumlu: ham mode ID geçilirse de çalışır (`modeNameToId[mid] || mid`)
+
+**C2. ALL_FILLS scope çakışma doğrulaması** (`f-mcp-plugin/code.js` + `src/core/plugin-bridge-connector.ts`)
+- Plugin tarafı: scope atamadan önce ALL_FILLS mutual exclusion kontrolü
+- Sunucu tarafı: `createVariable()` metoduna erken doğrulama (defense in depth)
+- Net hata mesajı: "Scope conflict: ALL_FILLS cannot be combined with..."
+
+**C3. FigJam `shapeWithText` font dokümantasyonu** (2 skill dosyası)
+- `figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu eklendi
+- `figjam-diagram-builder/SKILL.md`'ye FigJam Font Kuralı bölümü eklendi
+- Kural: varsayılan font "Inter Medium" (Regular DEĞİL)
+
+**C4. FigJam timeout limiti dokümantasyonu** (2 skill dosyası)
+- `figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması eklendi
+- `figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü eklendi
+- Güvenli limitler: 1-6 node → 5sn | 7-12 → 10sn | 13+ → böl veya 15-30sn
+
+**Canlı Figma Doğrulama:** Tüm düzeltmeler Skill Test dosyasında birebir test edildi ve PASS aldı.
+
 ## [1.7.17] - 2026-04-08
 
 ### Skill: P3.5 Hata Düzeltmeleri + Dış Kaynak İyileştirmeleri + Canlı Figma Testi

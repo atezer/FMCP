@@ -418,7 +418,7 @@ export class PluginBridgeServer {
 
 							ws.send(JSON.stringify({
 								type: "welcome",
-								bridgeVersion: "1.7.17",
+								bridgeVersion: "1.7.18",
 								port: this.port,
 								clientId,
 								multiClient: true,

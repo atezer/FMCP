@@ -59,6 +59,13 @@ export class PluginBridgeConnector {
 		resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN",
 		options?: { valuesByMode?: Record<string, unknown>; description?: string; scopes?: string[] }
 	): Promise<unknown> {
+		// Validate mutually exclusive scope combinations early (defense in depth)
+		if (options?.scopes) {
+			const fillScopes = ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "FILL_COLOR"];
+			if (options.scopes.includes("ALL_FILLS") && options.scopes.some(s => fillScopes.includes(s))) {
+				throw new Error("Scope conflict: ALL_FILLS cannot be combined with specific fill scopes. Use ALL_FILLS alone or use specific scopes (FRAME_FILL, SHAPE_FILL, TEXT_FILL, etc.).");
+			}
+		}
 		return this.bridge.request("createVariable", { name, collectionId, resolvedType, options }, this.fileKey);
 	}
 
