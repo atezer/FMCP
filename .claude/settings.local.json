@@ -132,7 +132,22 @@
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
       "Bash(sed -i '' 's/\"\"1\\\\.6\\\\.3\"\"/\"\"1.6.4\"\"/g' package.json src/local-plugin-only.ts src/local.ts src/core/plugin-bridge-server.ts .cursor-plugin/plugin.json)",
-      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.3\\\\*\\\\*/\\\\*\\\\*1.6.4\\\\*\\\\*/g' FUTURE.md)"
+      "Bash(sed -i '' 's/\\\\*\\\\*1\\\\.6\\\\.3\\\\*\\\\*/\\\\*\\\\*1.6.4\\\\*\\\\*/g' FUTURE.md)",
+      "Bash(npx tsc:*)",
+      "Bash(node scripts/validate-fmcp-skills-tools.mjs)",
+      "Bash(rm -f dist/core/figma-tools.* dist/core/figma-api.* dist/core/console-monitor.* dist/core/figma-desktop-connector.* dist/core/snippet-injector.* dist/core/design-system-manifest.* dist/core/figma-reconstruction-spec.*)",
+      "Bash(rm -f dist/core/types/enriched.*)",
+      "Bash(timeout 5 node dist/local-plugin-only.js)",
+      "Bash(node -e ':*)",
+      "mcp__figma-mcp-bridge__figma_get_design_system_summary",
+      "mcp__figma-mcp-bridge__figma_search_components",
+      "mcp__figma-mcp-bridge__figma_capture_screenshot",
+      "mcp__figma-mcp-bridge__figma_get_variables",
+      "mcp__612958df-f605-474e-9e3d-8584257217b8__create_new_file",
+      "mcp__612958df-f605-474e-9e3d-8584257217b8__use_figma",
+      "mcp__figma-mcp-bridge__figma_get_design_context",
+      "mcp__figma-mcp-bridge__figma_get_file_data",
+      "Bash(node -p \"require\\('./package.json'\\).version\")"
     ],
     "deny": [],
     "ask": []

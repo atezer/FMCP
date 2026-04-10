@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 8 Nisan 2026 (v1.7.15 — Anthropic design skill entegrasyonu, marka profili, UX copy)
-> Paket sürümü (`package.json`): **1.7.15**
+> Son güncelleme: 11 Nisan 2026 (v1.7.23 — Local full + Cloudflare modları kaldırıldı, plugin-only single-mode)
+> Paket sürümü (`package.json`): **1.7.23**
 
 ---
 
@@ -82,7 +82,7 @@ Hedef: Vektörel format desteği + çoklu node export.
 ### P1 — REST API Kullanıcı Rehberi
 
 - [x] `docs/REST_API_GUIDE.md` — token kurulumu, örnek çağrılar, rate limit yönetimi (v1.6.0)
-- [ ] Hibrit akış (plugin + REST) dokümantasyonu
+- ~~Hibrit akış (plugin + REST) dokümantasyonu~~ — N/A (REST modu v1.7.23'te kaldırıldı)
 
 ### P2 — WebSocket Yeniden Bağlantı ve Teşhis
 
@@ -95,7 +95,8 @@ Hedef: Vektörel format desteği + çoklu node export.
 - [x] `CONTRIBUTING.md` — yerel kurulum, test, skill yazma, PR süreci (v1.6.0)
 - [x] Claude Code `.mcp.json` kurulum rehberi — README'ye eklendi (v1.7.0)
 - [x] 46 araç test raporu — `docs/TEST_REPORT.md`: Free/Pro/Org/Enterprise plan bazlı yetenek matrisi, adım adım test rehberi (v1.7.0)
-- [ ] Eski belgelere "deprecated" notu ekle (OAUTH_SETUP.md vb.)
+- [x] Eski belgelere "deprecated" notu ekle (KURULUM.md, TOOL_MAPPING.md güncellendi — v1.7.23)
+- [x] Kod temizliği: local full + cloudflare modları kaldırıldı (v1.7.23)
 - [ ] IDE config örnekleri: VSCode, Windsurf, Zed
 
 ### P2 — Kurulum Deneyimi İyileştirmeleri
@@ -121,7 +122,7 @@ Plan: `.claude/plans/compiled-shimmying-mccarthy.md`
 
 Node.js olmadan F-MCP kullanabilme. Detaylı analiz ve plan: [STANDALONE_PLAN.md](docs/STANDALONE_PLAN.md)
 
-- [ ] Python bridge 10→46 araca genişletme (düşük risk, 2-3 gün)
+- ~~Python bridge 10→46 araca genişletme~~ — Mimari değişti, plugin-only single-mode (v1.7.23)
 - [ ] Standalone binary (pkg ile, yüksek risk, 3-4 hafta, opsiyonel)
 
 ### P0 — Figma Make Entegrasyonu + Canlı Prototip Süreci

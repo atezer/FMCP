@@ -3,8 +3,8 @@
  * F-MCP Cursor skill dosyalarında geçen figma_* MCP araç adlarını,
  * repodaki kaynakta registerTool ile tanımlanan araçlarla karşılaştırır.
  *
- * Kaynak (union — plugin-only + local + figma-tools):
- *   src/local-plugin-only.ts, src/local.ts, src/core/figma-tools.ts
+ * Kaynak:
+ *   src/local-plugin-only.ts
  *
  * Hedef: .cursor/skills/f-mcp/ altındaki tüm .md dosyaları
  *
@@ -19,9 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const SOURCE_FILES = [
-	join(ROOT, "src/local.ts"),
 	join(ROOT, "src/local-plugin-only.ts"),
-	join(ROOT, "src/core/figma-tools.ts"),
 ];
 
 const SKILLS_DIR = join(ROOT, ".cursor/skills/f-mcp");
