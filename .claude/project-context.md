@@ -127,7 +127,20 @@ Hiçbir skill gömülü/hardcoded design token değeri içeremez ve kullanamaz. 
 3. **Bulunamazsa kullanıcıya sor.**
 4. **Kullanıcı "sen seç" derse:** Font için `Inter`, renkler için Figma varsayılanları kullan.
 
-**Skill'lerdeki kod örnekleri:** Örneklerde geçen değerler (renk hex, font adı, piksel boyutu) yalnızca FORMAT gösterimi içindir. Çalışma anında bu değerler her zaman tasarım sisteminden okunmalıdır.
+**Skill'lerdeki kod örnekleri:** Örneklerde geçen değerler (renk hex, font adı, piksel boyutu) yalnızca FORMAT gösterimidir. Çalışma anında bu değerler her zaman tasarım sisteminden okunmalıdır.
+
+### Bağlı Token Kuralı (ZORUNLU — tüm ekran/bileşen oluşturma işlemlerinde)
+
+Figma'da oluşturulan hiçbir node'da **bağlanmamış (unbound) tasarım değeri** bulunmamalıdır. Her renk, spacing, padding, radius ve metin stili DS variable'ına veya text style'ına **bağlı (bound)** olmalıdır.
+
+- **Renk (fill/stroke):** `figma.variables.importVariableByKeyAsync(key)` ile import et, `setBoundVariableForPaint()` ile bağla
+- **Spacing/padding/radius/gap:** `setBoundVariable("paddingLeft", variable)` ile bağla
+- **Metin stili:** `setTextStyleIdAsync(styleId)` ile DS text style'ını uygula
+- **Metin rengi:** Text node fill'ini `setBoundVariableForPaint()` ile bağla
+
+**Hardcoded değer kabul edilmez.** `node.fills = [{ type: "SOLID", color: {r,g,b} }]` veya `node.fontSize = 16` gibi doğrudan değer atamaları YASAKTIR. Tüm değerler DS'ten import edilip bağlanmalıdır.
+
+Detaylı API kullanımı: `figma-canvas-ops` skill'inin **madde 10** bölümüne bak.
 
 ### Mevcut kütüphaneler
 

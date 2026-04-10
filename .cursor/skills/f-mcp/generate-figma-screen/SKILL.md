@@ -152,15 +152,31 @@ figma_get_styles()
 
 Text style ve effect style'ları not al.
 
-#### 3d: Font belirleme (ZORUNLU)
+#### 3d: DS Variable Key'lerini Hazırla (ZORUNLU)
 
-Ekranda metin oluşturmadan önce font ailesini belirle:
+Ekran oluşturmadan önce kullanılacak tüm DS token'larının **variable key'lerini** topla. Bu adım atlanamaz.
 
-1. **Önce text style'lardan oku:** `figma_get_styles()` sonucundaki text style'ların font ailesini kontrol et. Kütüphane dosyası (`.claude/libraries/`) varsa oradaki bilgiyi de referans al.
-2. **Bulunamazsa kullanıcıya sor:** "Tasarım sisteminde tanımlı bir font bulamadım. Hangi fontu kullanmamı istersiniz?"
-3. **Kullanıcı "sen seç" derse:** `Inter` kullan.
+1. **Kütüphane dosyasını oku:** `.claude/libraries/` dizinindeki kütüphane dosyasından font ailesi, variable collection ve text style bilgilerini al.
+2. **DS dosyasında variable key'lerini çek:** Ekranda kullanılacak renk, spacing, text style token'larının key'lerini DS dosyasında `figma_execute` ile oku:
+   ```js
+   // DS dosyasında çalıştır (fileKey = DS dosyasının file key'i)
+   const varIds = ["VariableID:...", "VariableID:..."];
+   const result = [];
+   for (const id of varIds) {
+     const v = await figma.variables.getVariableByIdAsync(id);
+     if (v) result.push({ name: v.name, key: v.key, type: v.resolvedType });
+   }
+   return result;
+   ```
+3. **Text style ID'lerini çek:** DS dosyasında text style'ları al:
+   ```js
+   // DS dosyasında çalıştır
+   const styles = await figma.getLocalTextStylesAsync();
+   return styles.map(s => ({ id: s.id, name: s.name, key: s.key }));
+   ```
+4. **Font ailesi:** Kütüphane dosyasındaki `Font Ailesi` alanından oku. Bulunamazsa kullanıcıya sor. Kullanıcı "sen seç" derse `Inter` kullan.
 
-**Asla** hardcoded font varsayma — bu adımı atlamadan metin node oluşturma.
+Bu adımda toplanan key'ler, sonraki adımlarda `importVariableByKeyAsync` ile hedef dosyaya import edilecek.
 
 ### Step 4: Boş Alan Bul ve Wrapper Frame Oluştur
 
@@ -172,6 +188,10 @@ children.forEach(c => {
   if (right > maxX) maxX = right;
 });
 
+// DS'den arka plan ve spacing variable'larını import et
+const bgVar = await figma.variables.importVariableByKeyAsync("SURFACE_BG_KEY");
+const paddingVar = await figma.variables.importVariableByKeyAsync("SPACING_KEY");
+
 const frame = figma.createFrame();
 frame.name = "Ekran Adı";
 frame.x = maxX + 100;
@@ -180,8 +200,17 @@ frame.resize(1440, 900); // Masaüstü varsayılan; mobil için 390x844
 frame.layoutMode = "VERTICAL";
 frame.primaryAxisSizingMode = "AUTO";
 frame.counterAxisSizingMode = "FIXED";
-// Arka plan rengini DS'den oku — aşağıdaki beyaz sadece fallback
-frame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+
+// Arka plan rengini DS variable'ına BAĞLA (hardcoded renk YAZMA)
+const fills = [{type: "SOLID", color: {r:1,g:1,b:1}}]; // geçici
+const boundFill = figma.variables.setBoundVariableForPaint(fills[0], "color", bgVar);
+frame.fills = [boundFill];
+
+// Padding'i DS variable'ına BAĞLA
+frame.setBoundVariable("paddingLeft", paddingVar);
+frame.setBoundVariable("paddingRight", paddingVar);
+frame.setBoundVariable("paddingTop", paddingVar);
+frame.setBoundVariable("paddingBottom", paddingVar);
 
 return { frameId: frame.id, position: { x: frame.x, y: frame.y } };
 ```
@@ -195,9 +224,29 @@ Sıra: Üstten alta — Header → Hero → Content → Footer
 Her bölüm için:
 
 1. `figma_execute` ile bölüm frame'ini oluştur, DS bileşen instance'larını yerleştir
-2. Variable bağla (hardcode değer kullanma)
-3. Oluşturulan node ID'lerini return et
-4. `figma_capture_screenshot` ile görsel doğrulama
+2. **Tüm renkleri `setBoundVariableForPaint` ile DS variable'ına bağla** — hardcoded renk kullanma
+3. **Tüm spacing/padding/radius değerlerini `setBoundVariable` ile bağla** — hardcoded sayı kullanma
+4. **Metin node'larına text style ata:** `setTextStyleIdAsync` ile DS text style'ını uygula — hardcoded fontSize/fontName kullanma
+5. Oluşturulan node ID'lerini return et
+6. `figma_capture_screenshot` ile görsel doğrulama — boundVariables bağlı mı kontrol et
+
+**Metin oluşturma kalıbı (DS'e bağlı):**
+
+```js
+await figma.loadFontAsync({ family: "DS_FONT", style: "Regular" });
+const textColorVar = await figma.variables.importVariableByKeyAsync("TEXT_COLOR_KEY");
+
+const text = figma.createText();
+text.characters = "Metin içeriği";
+
+// Text style uygula (fontSize, fontName, lineHeight hep style'dan gelir)
+await text.setTextStyleIdAsync("TEXT_STYLE_ID");
+
+// Metin rengini DS variable'ına bağla
+const textFills = [...text.fills];
+const boundTextFill = figma.variables.setBoundVariableForPaint(textFills[0], "color", textColorVar);
+text.fills = [boundTextFill];
+```
 
 **Loading State Karar Ağacı:**
 
