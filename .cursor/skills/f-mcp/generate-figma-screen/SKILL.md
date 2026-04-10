@@ -342,8 +342,72 @@ Card içi mantıksal gruplar (nested frame ile):
 **Similarity:** Aynı işlevi gören öğeler aynı text style, renk ve boyutta olmalı.
 **Hierarchy:** Büyük/bold = önemli (başlık, CTA), küçük/light = ikincil (legal text, açıklama).
 **Contrast:** CTA butonu ve önemli öğeler arka plandan ayrışmalı.
-**Alignment:** Tutarlı hizalama ile düzen hissi — tüm child'lar `layoutAlign="STRETCH"`.
+**Alignment:** Tutarlı hizalama ile düzen hissi — tüm child'lar `layoutSizingHorizontal="FILL"` (appendChild SONRA).
 **White Space:** Nefes aldıran boşluklar — ne çok sıkışık ne çok dağınık.
+
+### Step 5.15: DS Bileşen Kullanım Kuralı (ZORUNLU)
+
+**Önce DS'te o işlevi karşılayan bileşen variant'ını ara. DS'te varsa bileşeni kullan, yoksa raw node oluştur.**
+
+| İhtiyaç | YANLIŞ (raw node) | DOĞRU (DS bileşen) |
+|---------|-------------------|---------------------|
+| Link text | Text node + Text/link rengi | Button(Type=Link) instance |
+| İkon göstermek | Rectangle + SVG path | İkon component instance |
+| Ayırıcı çizgi | Rectangle 1px yükseklik | Divider component instance |
+| Placeholder input | Text node + gri renk | Input component doğru variant |
+| Toggle | Checkbox + custom logic | Switch component instance |
+
+**Kural:** Ekrana koyacağın her UI öğesi için şu soruyu sor: "DS'te bu işlevi karşılayan bileşen var mı?"
+- **Evet →** DS bileşenini kullan, variant/property'lerini ayarla (öncelikli)
+- **Hayır →** Raw node oluştur (DS'te yoksa geçerli yol)
+
+**Uygulama:** Ekran oluşturmadan önce (Step 3) DS bileşen kataloğunu tara. `.claude/libraries/<ds>.md` dosyasındaki bileşen listesini kontrol et. Link, divider, hint, badge gibi yardımcı öğeler için de mutlaka bileşen ara.
+
+### Step 5.16: Auto-Layout Sizing Kuralları (ZORUNLU)
+
+**Tüm child node'lar `layoutSizingHorizontal = "FILL"` olmalı (appendChild SONRASI).** `layoutAlign = "STRETCH"` kullanma — tutarsız davranır.
+
+```js
+// DOĞRU: appendChild sonra FILL
+parentFrame.appendChild(child);
+child.layoutSizingHorizontal = "FILL";
+
+// YANLIŞ: layoutAlign = "STRETCH"
+child.layoutAlign = "STRETCH"; // tutarsız, kullanma
+```
+
+**İstisnalar:**
+- **Horizontal row içindeki text node'lar:** `layoutSizingHorizontal = "HUG"` — FILL yaparsan text kesilir
+- **Logo instance:** HUG veya FIXED — doğal boyutunda kalsın
+- **layoutGrow = 1:** Horizontal row'da eşit genişlik paylaşımı için (divider'lar gibi)
+
+**Card yapısı:**
+```
+Screen: VERTICAL, counterAxis=CENTER, layoutSizingVertical=HUG
+├── Logo: HUG (doğal boyut)
+├── Card: FILL (appendChild SONRA) ← ekran padding ile genişlik kontrol edilir
+│   ├── Title text: FILL
+│   ├── Form Group: FILL
+│   │   ├── Input instance: FILL
+│   │   ├── Input instance: FILL
+│   │   └── Horizontal Row: FILL
+│   │       ├── Checkbox: HUG
+│   │       └── Button(Link): HUG
+│   ├── Action Group: FILL
+│   │   ├── Button(Primary): FILL
+│   │   └── Horizontal Row: FILL
+│   │       ├── Text: HUG
+│   │       └── Button(Link): HUG
+│   └── Social Group: FILL
+│       ├── Divider Row: FILL
+│       ├── Social Button: FILL
+│       └── Legal text: FILL
+└── Bottom text: FILL
+```
+
+**Responsive:** Ekran genişliği FIXED (1280/768/375) veya Breakpoints/Screen token'a bound. Mode (Web/Tablet/Mobil) padding ve gap değerlerini kontrol eder → card otomatik uyar.
+
+**Mode adı eşleşmesi DİKKAT:** `indexOf("Web")` "Mobil & Web Mobil"i de yakalar. `indexOf("Desktop")` kullan.
 
 ### Step 5.2: Instance Override Rehberi (ZORUNLU)
 
