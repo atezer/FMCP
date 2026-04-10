@@ -1,0 +1,37 @@
+{
+  "name": "figma-mcp-bridge",
+  "version": "1.7.24",
+  "description": "Figma tasarım verilerini 46 MCP aracı ile AI asistanlarına açar. 19 uzman skill, 8 komut. REST API token gerektirmez, Zero Trust mimarisi.",
+  "author": {
+    "name": "Abdussamed Tezer",
+    "url": "https://github.com/atezer"
+  },
+  "homepage": "https://github.com/atezer/FMCP",
+  "repository": "https://github.com/atezer/FMCP",
+  "license": "MIT",
+  "keywords": [
+    "figma",
+    "mcp",
+    "design",
+    "design-system",
+    "design-tokens",
+    "ui",
+    "claude-code"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "npx",
+      "args": ["-y", "@atezer/figma-mcp-bridge@latest", "figma-mcp-bridge-plugin"]
+    }
+  },
+  "userConfig": {
+    "default_platform": {
+      "description": "Varsayılan hedef platform (web/ios/android)",
+      "sensitive": false
+    }
+  }
+}

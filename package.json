@@ -21,6 +21,13 @@
 		"dist/browser",
 		"dist/core",
 		"f-mcp-plugin",
+		"skills",
+		"commands",
+		"agents",
+		"hooks",
+		".claude-plugin",
+		".cursor-plugin",
+		"assets",
 		"README.md",
 		"CHANGELOG.md",
 		"LICENSE"
