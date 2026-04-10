@@ -2,7 +2,7 @@
  * Response Guard — Shared response size protection for MCP tools.
  *
  * Prevents AI context window exhaustion by truncating large responses.
- * Used by both plugin-based tools (figma-tools.ts) and REST API tools (local-plugin-only.ts).
+ * Used by local-plugin-only.ts to truncate large responses.
  */
 export declare const RESPONSE_SIZE_THRESHOLDS: {
     readonly IDEAL_KB: 100;
