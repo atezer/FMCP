@@ -105,9 +105,53 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 - Body font: paragraflar, açıklamalar, form etiketleri
 - Font çifti kararını raporda belirt (neden bu çift?)
 
-### Step 3: Design System Keşfi
+### Step 3: Design System Keşfi (Cache-First Stratejisi)
 
 Üç şey gerekiyor: **bileşenler**, **variable'lar**, **stiller**.
+
+**CACHE-FIRST KURALI (ZORUNLU):** Figma API'ye gitmeden önce `.claude/libraries/<ds>.md` dosyasını kontrol et. Cache varsa:
+- Text style key'leri → cache'den oku (API çağrısı yapma)
+- Variable key'leri → cache'den oku
+- Component key'leri + override notları → cache'den oku
+- Font ailesi → cache'den oku
+
+Cache yoksa veya eksikse → keşif yap, sonucu cache'e yaz. **Bu, sonraki oturumlarda token tüketimini %60-70 düşürür.**
+
+#### Kütüphane Cache Şablonu
+
+Her DS kütüphanesi `.claude/libraries/<ds>.md` dosyasında şu bölümleri içermeli:
+
+```markdown
+### Text Style Key Cache (importStyleByKeyAsync ile kullan)
+| Style Adı | Font | Size | Key |
+|-----------|------|------|-----|
+| heading/h1 | Bold | 32 | `abc123...` |
+| body/regular | Regular | 14 | `def456...` |
+
+### Effect Style Key Cache
+| Style Adı | Key |
+|-----------|-----|
+| shadow/card | `ghi789...` |
+
+### Sık Kullanılan Variable Key Cache
+**Renkler:**
+| Variable | Key |
+|----------|-----|
+| bg/primary | `jkl012...` |
+
+**Boyutlar:**
+| Variable | Key |
+|----------|-----|
+| spacing/md | `mno345...` |
+
+### Sık Kullanılan Component Key Cache
+| Bileşen | Key | Override Notları |
+|---------|-----|------------------|
+| Button | `pqr678...` | `Label#id` → TEXT property |
+| Input | `stu901...` | Label → nested text (findOne) |
+```
+
+**Cache oluşturma:** İlk ekran oluşturmada `figma_get_styles`, `figma_get_variables(summary)` ve `componentProperties` ile key'leri topla, `.claude/libraries/<ds>.md`'ye yaz. Sonraki oturumlarda direkt cache'den oku.
 
 #### 3a: Bileşen keşfi
 
@@ -281,6 +325,65 @@ instance.layoutSizingHorizontal = "FILL";
 
 **Tercihen `figma_instantiate_component` aracını kullan** — daha güvenli ve basit.
 
+### Step 5.1: Gestalt İlkeleri ile Spacing Kararları (ZORUNLU)
+
+Tek bir `itemSpacing` ile tüm bölümü dizme — **YANLIŞ**. Spacing kararlarında tüm tasarım ilkelerini sentezle:
+
+**Gestalt Proximity:** İlişkili öğeler yakın, ilişkisiz öğeler uzak.
+```
+Card içi mantıksal gruplar (nested frame ile):
+├── Header Group (title + subtitle) → iç gap: küçük (sp-050 ~ sp-100)
+├── Form Group (inputs + checkbox) → iç gap: küçük-orta (sp-100 ~ sp-150)
+├── Action Group (button + register link) → iç gap: küçük (sp-100 ~ sp-150)
+├── Social Group (divider + social buttons + legal) → iç gap: küçük-orta (sp-150)
+└── Gruplar arası gap: BÜYÜK (sp-300 ~ sp-400)
+```
+
+**Similarity:** Aynı işlevi gören öğeler aynı text style, renk ve boyutta olmalı.
+**Hierarchy:** Büyük/bold = önemli (başlık, CTA), küçük/light = ikincil (legal text, açıklama).
+**Contrast:** CTA butonu ve önemli öğeler arka plandan ayrışmalı.
+**Alignment:** Tutarlı hizalama ile düzen hissi — tüm child'lar `layoutAlign="STRETCH"`.
+**White Space:** Nefes aldıran boşluklar — ne çok sıkışık ne çok dağınık.
+
+### Step 5.2: Instance Override Rehberi (ZORUNLU)
+
+**Component PROPERTY (TEXT/BOOLEAN/VARIANT tipi) → `setProperties`:**
+```js
+btn.setProperties({"Value#44:2": "Buton Metni"});
+```
+
+**NESTED TEXT (property olarak expose edilmemiş) → `findOne`:**
+```js
+var label = instance.findOne(function(n){
+  return n.type==="TEXT" && n.name==="Label";
+});
+if(label){
+  await figma.loadFontAsync(label.fontName);
+  label.characters = "Yeni Metin";
+}
+```
+
+**Kural:** Property mi nested mi bilmiyorsan → önce `componentProperties` oku. Orada yoksa `findOne` kullan. Hiçbir instance'ta "Label", "Value", "Button" gibi default text bırakma.
+
+### Step 5.3: API Gotcha Tablosu (EZBERLE)
+
+| İşlem | DOĞRU API | YANLIŞ (HATA VERİR) |
+|-------|-----------|---------------------|
+| Fill/stroke renk bind | `setBoundVariableForPaint(paint, "color", var)` | `setBoundVariable("fills", 0, var)` |
+| Text style ata | `await node.setTextStyleIdAsync(style.id)` | `node.fontSize = 24` veya fontSize variable |
+| Effect style ata | `await node.setEffectStyleIdAsync(style.id)` | `node.effectStyleId = style.id` |
+| Dark mode set | Library API chain → collection OBJECT | String collection ID |
+| Sayfa geçişi | `await figma.setCurrentPageAsync(page)` | `figma.currentPage = page` |
+| FILL sizing | appendChild SONRA `layoutSizingHorizontal = "FILL"` | appendChild ÖNCE |
+| Function adı | `async function g(k){}` | Arrow fn ile `import` keyword (reserved) |
+
+### Step 5.4: Referans Sadakati
+
+Kullanıcı referans ekran (screenshot, canlı site) paylaştıysa:
+- Card genişliği, renk tonu, border stili, spacing oranlarını kopyala
+- Kendi yorumunu ekleme — referansa sadık kal
+- Emin olmadığın kararlardan önce kullanıcıya sor
+
 ### Step 5.5: Görsel Derinlik ve Detay (İsteğe Bağlı)
 
 Estetik yön belirlendiyse (Step 2.5), bölüm inşa sırasında şu detaylar eklenebilir:
@@ -348,9 +451,12 @@ Son adım: Üretilen tüm Türkçe metinleri karakter kontrolünden geçir.
 
 ## Performans Kuralları
 
-- Aynı oturumda `figma_get_variables(verbosity="full")` birden fazla çağırma — ilk sonucu kullan
+- Aynı oturumda `figma_get_variables(verbosity="full")` birden fazla çağırma — ilk sonucu kullan. `verbosity="full"` 500K+ karakter üretir, **asla full kullanma** — `summary` yeterli.
 - `figma_search_components`: varsayılan `currentPageOnly=true`; `false` yalnızca gerektiğinde (timeout riski)
 - Her `figma_execute` çağrısı küçük ve odaklı olmalı — 50+ satır kod riski yüksek
+- **Asla 3 paralel agent çalıştırma** — gereksiz token tüketir. Key'ler `.claude/libraries/` dosyasında cache'liyse agent bile gereksiz.
+- **Performans bütçesi:** Ekran başına ≤5 figma_execute (3 core + 1 hata buffer + 1 doğrulama), <130K token hedefi. Cache'li çalışmada <100K.
+- **Timeout:** 1-5 node → 5000ms | 6-12 node → 10000ms | 13+ node → 15-30000ms veya işlemi böl
 
 ## Responsive Boyut Presetleri (ZORUNLU)
 
@@ -454,7 +560,48 @@ darkScreen.name = lightScreen.name + " / Dark";
 ```
 
 ### Professional+ Plan (çoklu mode):
-Semantic collection'a "Dark" mode ekle, alias'ları dark primitive'lere yönlendir. Figma'nın native mode switching'i kullanılır.
+
+Light ekranı klonla, collection OBJECT ile mode set et. **String ID çalışmaz — library API chain zorunlu:**
+
+```js
+// 1. Collection object al
+var colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+var semCol = colls.find(function(c){ return c.name.indexOf("Semantic Colors") !== -1; });
+var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semCol.key);
+var firstVar = await figma.variables.importVariableByKeyAsync(vars[0].key);
+var localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
+var darkMode = localColl.modes.find(function(m){ return m.name === "Dark"; });
+
+// 2. Dark ekrana set et
+dark.setExplicitVariableModeForCollection(localColl, darkMode.modeId);
+```
+
+### Semantic Sizes Mode Binding (ZORUNLU)
+
+Her ekran frame'inde Semantic Sizes collection'a da mode set edilmeli. Figma Appearance panelinde hem renk hem boyut mode'u görünmeli:
+
+```js
+// Semantic Sizes collection object al (aynı chain)
+var sizeColls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+var semSize = sizeColls.find(function(c){ return c.name.indexOf("Semantic Sizes") !== -1; });
+var sizeVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semSize.key);
+var sizeFirst = await figma.variables.importVariableByKeyAsync(sizeVars[0].key);
+var localSizeColl = await figma.variables.getVariableCollectionByIdAsync(sizeFirst.variableCollectionId);
+
+var webMode = localSizeColl.modes.find(function(m){ return m.name.indexOf("Web Desktop") !== -1; });
+var tabletMode = localSizeColl.modes.find(function(m){ return m.name.indexOf("Tablet") !== -1; });
+var mobilMode = localSizeColl.modes.find(function(m){ return m.name.indexOf("Mobil") !== -1; });
+
+// Her ekrana size mode set et
+webScreen.setExplicitVariableModeForCollection(localSizeColl, webMode.modeId);
+tabletScreen.setExplicitVariableModeForCollection(localSizeColl, tabletMode.modeId);
+mobileScreen.setExplicitVariableModeForCollection(localSizeColl, mobilMode.modeId);
+```
+
+**Sonuç:** Her ekranın Figma Appearance panelinde:
+- Semantic Colors → Light / Dark
+- Semantic Sizes → Web Desktop / Tablet / Mobil & Web Mobil
+- W alanı → breakpoint token'ına bound
 
 ### Toplam Ekran Matrisi:
 ```

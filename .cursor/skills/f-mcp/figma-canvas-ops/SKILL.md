@@ -243,7 +243,54 @@ const boundPaint = figma.variables.setBoundVariableForPaint(
 node.fills = [boundPaint]; // YENİ paint'i geri ata
 ```
 
-## 6. Hata Kurtarma
+## 6. Ek API Gotcha'lar (Canlı Testte Keşfedilen)
+
+17. **`import` keyword yasağı.** Plugin sandbox'ta `eval()` ile kod çalıştırılır. `import` JavaScript reserved word olduğundan function/variable adında kullanılamaz:
+```js
+// YANLIŞ — syntax error verir
+const iv = async (k) => await figma.variables.importVariableByKeyAsync(k);
+
+// DOĞRU
+async function getVar(k) { return await figma.variables.importVariableByKeyAsync(k); }
+```
+
+18. **`setEffectStyleIdAsync` zorunlu.** Sync setter `node.effectStyleId = style.id` dynamic-page mode'da hata verir:
+```js
+// YANLIŞ
+card.effectStyleId = esCard.id;
+
+// DOĞRU
+await card.setEffectStyleIdAsync(esCard.id);
+```
+
+19. **`setTextStyleIdAsync` kullan, fontSize variable binding YASAK.** Text style atamak font, size, line-height, letter-spacing'i tek seferde bağlar:
+```js
+// YANLIŞ — sadece font size bağlar, style bağlamaz
+textNode.setBoundVariable("fontSize", fontSizeVar);
+
+// DOĞRU — tüm tipografi token'larını tek seferde uygular
+const style = await figma.importStyleByKeyAsync("TEXT_STYLE_KEY");
+await textNode.setTextStyleIdAsync(style.id);
+```
+
+20. **`setExplicitVariableModeForCollection` — string ID çalışmaz.** Library API chain ile collection OBJECT alınmalı:
+```js
+// YANLIŞ — hata verir
+frame.setExplicitVariableModeForCollection("VariableCollectionId:3015:5729", "3019:3");
+
+// DOĞRU — library API chain
+var colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+var sem = colls.find(function(c){ return c.name.indexOf("Semantic Colors") !== -1; });
+var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(sem.key);
+var first = await figma.variables.importVariableByKeyAsync(vars[0].key);
+var coll = await figma.variables.getVariableCollectionByIdAsync(first.variableCollectionId);
+var darkMode = coll.modes.find(function(m){ return m.name === "Dark"; });
+frame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
+```
+
+21. **Escaped quote dikkat.** `figma_execute` code parametresinde `\"` yerine düz `"` kullan. Template literal içinde kaçış karakteri syntax error verir.
+
+## 7. Hata Kurtarma
 
 1. `figma_execute` hata dönerse **hemen tekrar deneme**
 2. Hata mesajını oku ve analiz et
