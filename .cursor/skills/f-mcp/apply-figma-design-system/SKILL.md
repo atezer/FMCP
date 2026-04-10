@@ -16,6 +16,24 @@ Mevcut bir frame/page **published design system** kullanmalıdır; detached laye
 
 **Tek dar bulgu** için **fix-figma-design-system-finding** kullan; bu skill çok bölüm ve koordineli reconcile içindir.
 
+## Giriş Modları
+
+Bu skill iki farklı modda çalışabilir:
+
+1. **review-then-apply** *(varsayılan)* — Tam audit → envanter → bölüm sınıflandırması → onay → uygulama. İlk kez DS hizalaması yapılıyorsa veya kapsamlı tarama istendiğinde kullanılır.
+2. **apply-known-scope** — Kullanıcı hedef frame'leri ve stratejiyi zaten biliyorsa (ör. önceki audit'ten), audit adımları atlanır ve doğrudan uygulama başlar. Giriş: `{ frames: [{ id: "72:293", strategy: "exact-swap" | "compose-from-primitives" }] }`.
+
+Mod, kullanıcı girdisinden otomatik çıkarılır: frame ID + strateji belirtilmişse `apply-known-scope`, aksi halde `review-then-apply`.
+
+## %80 Uyum Eşiği
+
+Bölüm sınıflandırması sonrası uyum oranı hesaplanır:
+```
+uyumOranı = (already-connected + exact-swap + compose-from-primitives) / toplamBölüm
+```
+- `uyumOranı >= 0.80`: Otomatik uygulama önerilir.
+- `uyumOranı < 0.80`: Uyarı gösterilir — "67% (16/24) otomatik düzeltilebilir. Minimum %80 önerilir. Devam edilsin mi?" Kullanıcı onay vermeden uygulama başlamaz.
+
 ## Bölüm sınıflandırması
 
 Her bölüm tam olarak biri:

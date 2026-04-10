@@ -57,6 +57,37 @@ metadata:
 | 5 | Tokenlar | 2 satır, bullet-separated |
 | 6 | Kod | Tek koyu blok |
 
+> **NOT:** Copy Spec ve Durumlar bölümleri Compact formatta dahil değildir. Bu bölümler yalnızca Standard formatta yer alır.
+
+---
+
+## State Machine Geçiş Diyagramı (Sadece Standard)
+
+Etkileşimli bileşenler için durum geçiş diyagramı üretilir. Variant yapısından (`State` prop'u) otomatik çıkarılır:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Default
+  Default --> Hover : onMouseEnter
+  Hover --> Active : onMouseDown / onTouchStart
+  Active --> Default : onMouseUp / onTouchEnd
+  Default --> Focus : onFocus (Tab)
+  Focus --> Default : onBlur
+  Default --> Disabled : disabled=true
+  Hover --> Default : onMouseLeave
+  Active --> Loading : async action
+  Loading --> Default : success
+  Loading --> Error : failure
+  Error --> Default : retry / dismiss
+```
+
+**Kurallar:**
+- Her durumdan `Disabled`'a geçiş mümkün (programatik)
+- `Loading` yalnızca async aksiyon tetikleyen bileşenlerde (Button, Form, Toggle)
+- `Error` yalnızca başarısız olabilecek aksiyonlarda
+- Geçiş tetikleyicileri (onMouseEnter, onFocus vb.) açıkça belirtilmeli
+- Statik bileşenler (Card, Badge, Divider) için diyagram üretilmez
+
 ---
 
 ## Görsel Do/Don't Örnekleri (Sadece Standard)

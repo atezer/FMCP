@@ -15,7 +15,7 @@ metadata:
 
 Bu skill, Figma ekranını erişilebilirlik (a11y) standartlarına göre denetler. Platform-bazlı (iOS VoiceOver, Android TalkBack, Web ARIA) raporlar üretir. Topluluk "Uber a11y ekran okuyucu spesifikasyonları" örneğinden esinlenilmiştir.
 
-**Salt okunur** — Figma tuvalinde değişiklik yapmaz.
+**Okuma + Yazma** — Denetim sonuçlarını okur, isteğe bağlı olarak annotation frame ekler.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ Bu skill, Figma ekranını erişilebilirlik (a11y) standartlarına göre denetle
 - **Sonra:** Bulgular varsa `fix-figma-design-system-finding` veya `apply-figma-design-system` ile düzeltme; kod tarafında `implement-design` çıktısında a11y attribute'ları
 - **İlişkili:** `generate-figma-library` Faz 4 (a11y denetimi) bu skill'i referans alır
 
-## WCAG 2.1 AA Hızlı Referans
+## WCAG 2.1/2.2 AA Hızlı Referans
 
 Denetim sırasında bu 4 prensip ve 12 kriter referans alınmalıdır:
 
@@ -42,7 +42,7 @@ Denetim sırasında bu 4 prensip ve 12 kriter referans alınmalıdır:
 - **2.1.1 Klavye:** Tüm işlevsellik klavyeyle erişilebilir olmalı
 - **2.4.3 Odak Sırası:** Fokus sırası mantıksal ve anlamlı olmalı (görsel sırayla tutarlı)
 - **2.4.7 Görünür Odak:** Klavye fokus göstergesi açıkça görünür olmalı (ör. 2px solid ring, minimum 3:1 kontrast)
-- **2.5.5 Dokunma Hedefi:** Tıklanabilir/dokunulabilir öğeler ≥44×44 CSS px (WCAG 2.2: ≥24×24 CSS px minimum)
+- **2.5.5 Dokunma Hedefi (WCAG 2.2):** Tıklanabilir/dokunulabilir öğeler ≥44×44 CSS px (WCAG 2.2: ≥24×24 CSS px minimum)
 
 ### Anlaşılabilir (Understandable)
 - **3.1.1 Sayfa Dili:** İçerik dili tanımlanmalı (lang attribute)
@@ -281,7 +281,26 @@ function addAnnotation(parent, emoji, title, body) {
 return { annotFrameId: annotFrame.id };
 ```
 
-#### 7a. Başlık Hiyerarşisi Notları
+#### 7a. Gesture Erişilebilirlik Kontrolleri
+
+Mobil ve dokunmatik arayüzlerde gesture-bazlı etkileşimler klavye/switch kullanıcıları için erişilebilir alternatifler gerektir:
+
+| Gesture | Gerekli Alternatif | Platform Notu |
+|---------|-------------------|---------------|
+| Swipe (kaydırma) | Buton / ok kontrolü | iOS VoiceOver: swipe gesture'lar yeniden atanır |
+| Long-press (uzun basma) | Context menu butonu | Android: `onLongClick` + `contentDescription` |
+| Pinch (çimdikleme) | +/- zoom butonları | Web: `wheel` event alternatifi |
+| Pull-to-refresh | Yenile butonu | Ekran okuyucu ile pull gesture kullanılamaz |
+| Drag & drop | Taşı butonu / sıralama menüsü | Klavye ile sürükle-bırak erişilemez |
+
+**Annotation:** Gesture kullanan öğeleri tespit et ve alternatif kontrolün mevcut olup olmadığını raporla:
+
+```
+addAnnotation(annotFrame, "👆", "Gesture Kontrolü",
+  "Swipe left → Sil butonu mevcut mi? Long-press → Context menu alternatifi var mı?");
+```
+
+#### 7b. Başlık Hiyerarşisi Notları
 
 Ekrandaki metin elemanlarını analiz et ve başlık seviyelerini belirle. Geliştirici hangi metnin `<h1>`, `<h2>`, `<h3>` olduğunu bilmeli:
 
@@ -294,7 +313,7 @@ Başlık Hiyerarşisi:
 
 **Kural:** Ekranda yalnızca 1 adet H1 olmalı. Başlık seviyeleri atlanmamalı (H1 → H3 yanlış, H1 → H2 → H3 doğru).
 
-#### 7b. Form Alan-Etiket İlişkilendirme Notları
+#### 7c. Form Alan-Etiket İlişkilendirme Notları
 
 Form alanları ile etiketlerinin programatik olarak ilişkilendirilmesi gerekir. Aksi takdirde ekran okuyucu kullanıcıları alanın ne için olduğunu anlayamaz:
 
@@ -317,7 +336,7 @@ Form İlişkilendirme:
 
 **Kural:** Her form alanının bir `<label>` ile ilişkilendirilmesi **zorunludur**. Placeholder tek başına etiket yerine geçmez.
 
-#### 7c. Odak Sırası (Focus Order) Notları
+#### 7d. Odak Sırası (Focus Order) Notları
 
 Ekrandaki etkileşimli öğelerin odak sırası görsel sıradan farklı olabilir. Bu notlar geliştiriciye doğru `tabindex` sırasını bildirir:
 
@@ -334,7 +353,7 @@ Odak Sırası:
 
 **Kural:** Mantıksal akış yukarıdan aşağıya olmalı. Görsel olarak yan yana olan elemanlar (ör. iş ilanı + favori ikonu) için sıra açıkça belirtilmeli.
 
-#### 7d. Görsel Alternatif Metin Notları
+#### 7e. Görsel Alternatif Metin Notları
 
 Her görsel için alt text veya dekoratif işaretleme:
 
@@ -346,7 +365,7 @@ Görsel Notları:
 
 **Kural:** İçerik taşıyan görseller `alt` text almalı. Sadece estetik amaçlı görseller `role="presentation"` veya `aria-hidden="true"` ile gizlenmeli.
 
-#### 7e. Modal/Dialog ve Dinamik İçerik Notları
+#### 7f. Modal/Dialog ve Dinamik İçerik Notları
 
 Eğer ekranda modal, toast, alert gibi dinamik öğeler varsa:
 
@@ -371,14 +390,14 @@ const checks = [];
 // 1. Başlık hiyerarşisi — max 1 adet H1 (>= 24px)
 const allText = screen.findAll(n => n.type === "TEXT");
 const h1Count = allText.filter(n => n.fontSize >= 24).length;
-checks.push({ rule: "Single H1", pass: h1Count <= 2 });
+checks.push({ rule: "Single H1", pass: h1Count <= 1 });
 
 // 2. Min font size 12px
 const tooSmall = allText.filter(n => typeof n.fontSize === "number" && n.fontSize < 12);
 checks.push({ rule: "Min font 12px", pass: tooSmall.length === 0 });
 
 // 3. Body text min 14px
-const bodySmall = allText.filter(n => n.fontSize > 0 && n.fontSize < 18 && n.fontSize < 14);
+const bodySmall = allText.filter(n => n.fontSize >= 12 && n.fontSize < 14);
 checks.push({ rule: "Body min 14px", pass: bodySmall.length === 0 });
 
 // 4. Touch target min 44px (iOS HIG)

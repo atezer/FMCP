@@ -77,12 +77,26 @@ Faz 1: TEMELLERİ KUR (token'lar — her zaman bileşenlerden önce)
       Alternatif: Dokümantasyon sayfasında motion token tablosu olarak belgele.
   1g. Shadow/elevation token'ları: shadow/sm, shadow/md, shadow/lg, shadow/xl
       Effect style olarak oluştur (figma_execute ile dropShadow).
-  → Çıkış kriteri: planlanan her token mevcut, tüm scope'lar ayarlı, motion ve shadow dahil
+  → Çıkış kriteri: planlanan her token mevcut, FLOAT token scope'ları ayarlı, STRING token'lar (easing) scope gerektirmez, shadow effect style'lar oluşturulmuş
   ✋ KULLANICI ONAYI: variable özeti göster
 
 Faz 2: DOSYA YAPISI (bileşenlerden önce)
   2a. Sayfa iskeletini oluştur: Cover → Başlangıç → Temeller → Bileşenler → Yardımcılar
   2b. Temel dokümantasyon sayfaları (renk swatchleri, tipografi örnekleri, spacing barları)
+
+  **60-30-10 Renk Kuralı:**
+
+  Palette hiyerarşisi (token yapısı):
+  - **%60 Nötr** — Arka plan, yüzey, kenarlık renkleri (neutral/50-900, surface/*)
+  - **%30 Birincil** — Marka rengi, birincil aksiyonlar, vurgulanan alanlar (primary/*, brand/*)
+  - **%10 Vurgu** — CTA butonları, bildirimler, hata/uyarı durumları (accent/*, semantic/*)
+
+  UI kullanım rehberi (alan dağılımı):
+  - Ekran alanının ~%60'ı nötr renklerle kaplanmalı (beyaz/gri arka plan, yüzeyler)
+  - Ekran alanının ~%30'u birincil marka rengi ve türevleriyle dolmalı (navigasyon, başlıklar, paneller)
+  - Ekran alanının ~%10'u dikkat çekici vurgu renkleriyle işaretlenmeli (CTA, badge, durum göstergeleri)
+
+  Bu oran kesin olmaktan çok yol göstericidir; tasarımın görsel dengesini sağlamak amaçlanır.
   → Çıkış kriteri: planlanan tüm sayfalar mevcut
   ✋ KULLANICI ONAYI: sayfa listesi + screenshot
 
