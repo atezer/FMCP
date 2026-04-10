@@ -740,28 +740,28 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
 > Kaynak: 19 skill'in kapsamlı Figma testi sırasında tespit edildi. Plugin bozulmamalı, mevcut çağrılar geriye uyumlu kalmalı.
 
 #### C1. figma_setup_design_tokens: mode name → mode ID mapping
-- [ ] `f-mcp-plugin/code.js` satır 2719-2733: Mode name'leri mode ID'ye çeviren `modeNameToId` haritası ekle
-- [ ] İlk modu `renameMode()` ile kullanıcının istediği isme yeniden adlandır ("Mode 1" → "Light")
-- [ ] COLOR tipi token'lar için `hexToFigmaRGB()` dönüşümü ekle (mevcut fonksiyon satır 150'de)
-- [ ] Geriye uyumluluk: `modeNameToId[mid] || mid` — ham mode ID geçilirse de çalışır
+- [x] `f-mcp-plugin/code.js` satır 2719-2733: Mode name'leri mode ID'ye çeviren `modeNameToId` haritası ekle
+- [x] İlk modu `renameMode()` ile kullanıcının istediği isme yeniden adlandır ("Mode 1" → "Light")
+- [x] COLOR tipi token'lar için `hexToFigmaRGB()` dönüşümü ekle (mevcut fonksiyon satır 150'de)
+- [x] Geriye uyumluluk: `modeNameToId[mid] || mid` — ham mode ID geçilirse de çalışır
 - Doğrulama: `modes: ["Light", "Dark"]` + `values: { "Light": "#fff", "Dark": "#000" }` → başarılı olmalı
 
 #### C2. ALL_FILLS + spesifik fill scope çakışması doğrulaması
-- [ ] `f-mcp-plugin/code.js` satır 632-635: Scope atamadan önce ALL_FILLS mutual exclusion kontrolü ekle
-- [ ] `src/core/plugin-bridge-connector.ts` satır 56-63: `createVariable()` metoduna erken doğrulama ekle
-- [ ] Net hata mesajı: "ALL_FILLS cannot be combined with FRAME_FILL/SHAPE_FILL/TEXT_FILL..."
+- [x] `f-mcp-plugin/code.js` satır 632-635: Scope atamadan önce ALL_FILLS mutual exclusion kontrolü ekle
+- [x] `src/core/plugin-bridge-connector.ts` satır 56-63: `createVariable()` metoduna erken doğrulama ekle
+- [x] Net hata mesajı: "ALL_FILLS cannot be combined with FRAME_FILL/SHAPE_FILL/TEXT_FILL..."
 - Doğrulama: `["ALL_FILLS", "TEXT_FILL"]` → net hata, `["ALL_FILLS"]` tek başına → başarılı
 
 #### C3. FigJam shapeWithText varsayılan font Inter Medium dokümantasyonu
-- [ ] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu ekle
-- [ ] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Step 2'ye FigJam Font Kuralı bölümü ekle
-- [ ] Kural: `createShapeWithText()` → "Inter Medium" (Regular DEĞİL), `loadFontAsync(shape.text.fontName)` önerisi
+- [x] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu ekle
+- [x] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Step 2'ye FigJam Font Kuralı bölümü ekle
+- [x] Kural: `createShapeWithText()` → "Inter Medium" (Regular DEĞİL), `loadFontAsync(shape.text.fontName)` önerisi
 
 #### C4. FigJam timeout limiti dokümantasyonu
-- [ ] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması ekle
-- [ ] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü ekle
-- [ ] Güvenli limitler: 1-6 node → 5000ms | 7-12 → 10000ms | 13+ → böl veya 15000-30000ms
-- [ ] Font optimizasyonu: Tek seferde yükle, sonra tüm node'ları oluştur
+- [x] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması ekle
+- [x] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü ekle
+- [x] Güvenli limitler: 1-6 node → 5000ms | 7-12 → 10000ms | 13+ → böl veya 15000-30000ms
+- [x] Font optimizasyonu: Tek seferde yükle, sonra tüm node'ları oluştur
 
 #### Uygulama Sırası
 1. **C1** (en yüksek — araç tamamen kırık)
