@@ -880,7 +880,7 @@ export async function main() {
         description: "Create a new frame node on the current page. Returns the created node ID.",
         inputSchema: {
             name: z.string().optional().default("Frame").describe("Frame name"),
-            x: z.number().optional().default(0),
+            x: z.number().optional().describe("X position. If omitted, auto-positions to the right of existing content"),
             y: z.number().optional().default(0),
             width: z.number().optional().default(200),
             height: z.number().optional().default(200),
@@ -890,14 +890,27 @@ export async function main() {
     }, async ({ name, x, y, width, height, fillColor, parentId }) => {
         try {
             const conn = getConnector(bridge);
+            const autoPosition = x === undefined && !parentId;
             const code = `
+					${autoPosition ? `
+					let posX = 0;
+					const children = figma.currentPage.children;
+					if (children.length > 0) {
+						let maxX = 0;
+						children.forEach(c => {
+							const right = c.x + c.width;
+							if (right > maxX) maxX = right;
+						});
+						posX = maxX + 100;
+					}
+					` : `let posX = ${x ?? 0};`}
 					const frame = figma.createFrame();
 					frame.name = ${JSON.stringify(name)};
-					frame.x = ${x}; frame.y = ${y};
+					frame.x = posX; frame.y = ${y};
 					frame.resize(${width}, ${height});
 					${fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(frame);` : ""}
-					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height };
+					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
             return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
