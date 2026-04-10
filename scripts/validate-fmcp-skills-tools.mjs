@@ -19,9 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const SOURCE_FILES = [
-	join(ROOT, "src/local.ts"),
 	join(ROOT, "src/local-plugin-only.ts"),
-	join(ROOT, "src/core/figma-tools.ts"),
 ];
 
 const SKILLS_DIR = join(ROOT, ".cursor/skills/f-mcp");

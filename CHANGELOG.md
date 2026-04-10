@@ -12,6 +12,36 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.23] - 2026-04-11
+
+### Refactor: Local Full + Cloudflare Modları Kaldırıldı
+
+Proje artık yalnızca **plugin-only** modunu destekliyor. CDP debug port (9222), Figma REST API ve Cloudflare Workers modları kaldırıldı. ~15.000+ satır kod temizlendi.
+
+**Kaldırılan:**
+- `src/local.ts` — Full local server (CDP + REST + Puppeteer)
+- `src/index.ts` — Cloudflare Workers entry point
+- `src/browser/` — Tüm browser modülleri (Puppeteer, Cloudflare Browser Rendering)
+- `src/cloud-*.ts` — Cloudflare cloud-specific modüller
+- `src/core/figma-tools.ts` — REST API araç kaydı (3,564 satır)
+- `src/core/figma-desktop-connector.ts` — CDP connector (1,391 satır)
+- `src/core/figma-api.ts`, `console-monitor.ts`, `snippet-injector.ts`, `design-system-manifest.ts`, `figma-reconstruction-spec.ts`
+- `src/core/enrichment/` — Tüm enrichment modülleri
+- `tsconfig.cloudflare.json`, `wrangler.jsonc`, `worker-configuration.d.ts`
+- Bağımlılıklar: `@cloudflare/puppeteer`, `agents`, `puppeteer-core`, `wrangler`
+
+**Güncellenen:**
+- `package.json` — main/types → local-plugin-only, bin sadeleştirildi, 3 runtime + 1 dev bağımlılık kaldırıldı
+- `tsconfig.local.json` — Sadece plugin-only + core
+- `scripts/validate-fmcp-skills-tools.mjs` — Kaynak: sadece local-plugin-only.ts
+- `.github/workflows/ci.yml` — local.ts version check kaldırıldı
+- `KURULUM.md`, `CONTRIBUTING.md`, `f-mcp-plugin/README.md`, `f-mcp-plugin/manifest.json`
+- `.cursor/skills/f-mcp/TOOL_MAPPING.md` — 19 kaldırılan araç temizlendi
+- `src/core/types/index.ts` — Kullanılmayan tipler kaldırıldı
+- `src/core/config.ts` — Browser/console/screenshot config kaldırıldı
+
+**Korunan:** 46 MCP aracı, 19 skill, plugin bridge (WebSocket 5454), audit log
+
 ## [1.7.19] - 2026-04-10
 
 ### Fix: `figma_create_frame` Otomatik Pozisyonlama

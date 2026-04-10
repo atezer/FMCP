@@ -10,12 +10,12 @@ This plugin enables AI assistants like Claude Code and Claude Desktop to access 
 
 **For Variables (pre-loaded):**
 ```
-Figma Plugin Worker → postMessage → Plugin UI Iframe → window object → Puppeteer → MCP Server
+Figma Plugin Worker → postMessage → Plugin UI Iframe → WebSocket → MCP Server
 ```
 
 **For Components (on-demand):**
 ```
-MCP Request → Plugin UI → postMessage → Plugin Worker → figma.getNodeByIdAsync() → Returns with description
+MCP Request → WebSocket → Plugin UI → postMessage → Plugin Worker → figma.getNodeByIdAsync() → Returns with description
 ```
 
 **Key Features:**
@@ -40,9 +40,9 @@ The plugin runs in **both** Figma Design and Dev Mode (`"editorType": ["figma", 
 
 So: Design vs Dev mode does **not** block MCP. Users with only Dev Mode access can run the plugin and use all read-only MCP tools.
 
-### Plugin Bridge (no Figma debug port)
+### Plugin Bridge (WebSocket)
 
-You can use MCP **without** launching Figma with a debug port. When the plugin runs, it connects to the MCP server over WebSocket (`ws://127.0.0.1:5454`). No `--remote-debugging-port=9222` needed.
+When the plugin runs, it connects to the MCP server over WebSocket (`ws://127.0.0.1:5454`).
 
 1. Start Claude (or your MCP client) so the MCP server is running (it starts the bridge server on port 5454).
 2. Open Figma **normally** (no special launch args).
@@ -61,7 +61,7 @@ The bridge is **one** WebSocket server on **one** port (default **5454**). It su
 
 ### Plugin-only mode (recommended: no REST API, no token)
 
-You can run **without** the full MCP server (figma-mcp-bridge) and **without** any Figma REST API token:
+Run **without** any Figma REST API token:
 
 1. Use the **plugin-only MCP relay**: `node dist/local-plugin-only.js` (or add it to Claude as the only MCP server).
 2. All data comes from the plugin: variables, file structure, components, styles, execute, screenshot. No `FIGMA_ACCESS_TOKEN` needed.
@@ -124,7 +124,7 @@ The plugin will:
    ```
 3. **Restart Claude.** Then open Figma, run **Plugins → Development → F-MCP ATezer Bridge**. When the plugin shows "ready", ask Claude e.g. "Figma'daki variable'ları listele" or "design system özetini ver".
 
-No Figma REST API token or debug port required.
+No Figma REST API token required.
 
 ### Accessing Data via MCP
 
@@ -179,17 +179,11 @@ figma_get_component({
 4. Resolves promise when `COMPONENT_DATA` message received
 5. Includes 10-second timeout and error handling
 
-### MCP connection: WebSocket (default) or CDP
+### MCP connection: WebSocket
 
-**WebSocket (plugin-only, no debug port):**
 1. Plugin UI connects to MCP server at `ws://127.0.0.1:5454`
 2. MCP sends RPCs (getVariables, getComponent, execute, etc.) over the WebSocket
 3. No Figma debug port or token required
-
-**CDP (optional, for console logs):**
-1. When using `local.js` and Figma started with `--remote-debugging-port=9222`, MCP can connect via Puppeteer
-2. Enumerates plugin UI iframes and reads `window.__figmaVariablesData` / calls `window.requestComponentData(nodeId)`
-3. Returns variables and component data to MCP tools
 
 ## Troubleshooting
 
@@ -201,8 +195,7 @@ figma_get_component({
 ### "No plugin UI found with variables data" or "No plugin UI found with requestComponentData"
 - Ensure plugin is running (check for open plugin window showing "✓ F-MCP ATezer Bridge active" or "ready")
 - Try closing and reopening the plugin
-- **Plugin-only (WebSocket):** Ensure MCP server is running and nothing else is using port 5454; open Figma normally (debug port not required)
-- **CDP mode:** If using debug port, verify Figma was launched with `--remote-debugging-port=9222`
+- Ensure MCP server is running and nothing else is using port 5454; open Figma normally
 
 ### Variables not updating
 - Close and reopen the plugin to refresh data

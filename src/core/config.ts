@@ -8,55 +8,11 @@ import { join } from 'path';
 import type { ServerConfig } from './types/index.js';
 
 /**
- * Auto-detect server mode based on environment
- */
-function detectMode(): 'local' | 'cloudflare' {
-  // If running in Workers environment, return cloudflare
-  if (typeof globalThis !== 'undefined' && 'caches' in globalThis) {
-    return 'cloudflare';
-  }
-
-  // Explicit env var override
-  const modeEnv = process.env.FIGMA_MCP_MODE?.toLowerCase();
-  if (modeEnv === 'local' || modeEnv === 'cloudflare') {
-    return modeEnv;
-  }
-
-  // Default to local for Node.js environments
-  return 'local';
-}
-
-/**
  * Default configuration values
  */
 const DEFAULT_CONFIG: ServerConfig = {
-  mode: detectMode(),
-  browser: {
-    headless: false,
-    args: [
-      '--disable-blink-features=AutomationControlled',
-      '--disable-dev-shm-usage',
-      '--no-sandbox', // Note: Only use in trusted environments
-    ],
-  },
-  console: {
-    bufferSize: 1000,
-    filterLevels: ['log', 'info', 'warn', 'error', 'debug'],
-    truncation: {
-      maxStringLength: 500,
-      maxArrayLength: 10,
-      maxObjectDepth: 3,
-      removeDuplicates: true,
-    },
-  },
-  screenshots: {
-    defaultFormat: 'png',
-    quality: 90,
-    storePath: join(process.env.TMPDIR || '/tmp', 'figma-mcp-bridge', 'screenshots'),
-  },
+  mode: 'local',
   local: {
-    debugHost: process.env.FIGMA_DEBUG_HOST || 'localhost',
-    debugPort: parseInt(process.env.FIGMA_DEBUG_PORT || '9222', 10),
     pluginBridgePort: parseInt(process.env.FIGMA_MCP_BRIDGE_PORT || process.env.FIGMA_PLUGIN_BRIDGE_PORT || '5454', 10),
     auditLogPath: process.env.FIGMA_MCP_AUDIT_LOG_PATH || undefined,
   },
@@ -87,10 +43,14 @@ export function loadConfig(): ServerConfig {
         const fileContent = readFileSync(configPath, 'utf-8');
         const userConfig = JSON.parse(fileContent);
 
-        // Deep merge with defaults
-        const config = mergeConfig(DEFAULT_CONFIG, userConfig);
-
-        return config;
+        // Merge with defaults
+        return {
+          mode: 'local',
+          local: {
+            ...DEFAULT_CONFIG.local!,
+            ...(userConfig.local || {}),
+          },
+        };
       } catch (error) {
         console.error(`Failed to load config from ${configPath}:`, error);
         // Continue to next config path
@@ -103,78 +63,8 @@ export function loadConfig(): ServerConfig {
 }
 
 /**
- * Deep merge two configuration objects
- */
-function mergeConfig(defaults: ServerConfig, overrides: Partial<ServerConfig>): ServerConfig {
-  return {
-    mode: overrides.mode || defaults.mode,
-    browser: {
-      ...defaults.browser,
-      ...(overrides.browser || {}),
-    },
-    console: {
-      ...defaults.console,
-      ...(overrides.console || {}),
-      truncation: {
-        ...defaults.console.truncation,
-        ...(overrides.console?.truncation || {}),
-      },
-    },
-    screenshots: {
-      ...defaults.screenshots,
-      ...(overrides.screenshots || {}),
-    },
-    local: {
-      ...defaults.local!,
-      ...(overrides.local || {}),
-    },
-  };
-}
-
-/**
- * Validate configuration
- */
-export function validateConfig(config: ServerConfig): void {
-  // Validate browser config
-  if (!Array.isArray(config.browser.args)) {
-    throw new Error('browser.args must be an array');
-  }
-
-  // Validate console config
-  if (config.console.bufferSize <= 0) {
-    throw new Error('console.bufferSize must be positive');
-  }
-
-  if (!Array.isArray(config.console.filterLevels)) {
-    throw new Error('console.filterLevels must be an array');
-  }
-
-  // Validate truncation config
-  const { truncation } = config.console;
-  if (truncation.maxStringLength <= 0) {
-    throw new Error('console.truncation.maxStringLength must be positive');
-  }
-  if (truncation.maxArrayLength <= 0) {
-    throw new Error('console.truncation.maxArrayLength must be positive');
-  }
-  if (truncation.maxObjectDepth <= 0) {
-    throw new Error('console.truncation.maxObjectDepth must be positive');
-  }
-
-  // Validate screenshot config
-  if (!['png', 'jpeg'].includes(config.screenshots.defaultFormat)) {
-    throw new Error('screenshots.defaultFormat must be "png" or "jpeg"');
-  }
-  if (config.screenshots.quality < 0 || config.screenshots.quality > 100) {
-    throw new Error('screenshots.quality must be between 0 and 100');
-  }
-}
-
-/**
- * Get configuration with validation
+ * Get configuration
  */
 export function getConfig(): ServerConfig {
-  const config = loadConfig();
-  validateConfig(config);
-  return config;
+  return loadConfig();
 }
