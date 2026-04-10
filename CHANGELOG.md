@@ -12,6 +12,16 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.19] - 2026-04-10
+
+### Fix: `figma_create_frame` Otomatik Pozisyonlama
+
+Frame'ler x parametresi verilmeden oluşturulduğunda (0,0)'da üst üste biniyordu. Artık x belirtilmezse `figma.currentPage.children` taranarak mevcut içeriğin sağına +100px boşlukla otomatik konumlandırma yapılır.
+
+- `x` parametresi opsiyonel, default değer kaldırıldı — verilmezse auto-position
+- `parentId` kullanıldığında veya explicit x verildiğinde eski davranış korunur
+- Response'a `x` ve `y` bilgisi eklendi
+
 ## [1.7.18] - 2026-04-10
 
 ### Fix: P3.6 MCP Bridge Araç Sorunları Düzeltmesi
