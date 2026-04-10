@@ -2,7 +2,7 @@
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@1.7.22", "figma-mcp-bridge-plugin"]
+      "args": ["-y", "@atezer/figma-mcp-bridge@1.7.23", "figma-mcp-bridge-plugin"]
     }
   }
 }
