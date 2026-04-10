@@ -31,8 +31,8 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build (local)
-        run: npm run build:local
+      - name: Build
+        run: npm run build
 
       - name: Validate Cursor skill figma_* refs vs registerTool
         run: npm run validate:fmcp-skills
