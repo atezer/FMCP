@@ -147,7 +147,16 @@
       "mcp__612958df-f605-474e-9e3d-8584257217b8__use_figma",
       "mcp__figma-mcp-bridge__figma_get_design_context",
       "mcp__figma-mcp-bridge__figma_get_file_data",
-      "Bash(node -p \"require\\('./package.json'\\).version\")"
+      "Bash(node -p \"require\\('./package.json'\\).version\")",
+      "Bash(mkdir -p commands)",
+      "Bash(cp .claude/commands/*.md commands/)",
+      "Bash(cp -r /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.cursor/skills/f-mcp/ /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/skills/)",
+      "Bash(cp '/Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.claude/commands/*.md' /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/commands/)",
+      "Bash(ln -s ../../../skills /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.cursor/skills/f-mcp)",
+      "Bash(rm -rf /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.claude/commands)",
+      "Bash(ln -s ../../commands /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.claude/commands)",
+      "Bash(gh pr create --title 'feat: add Claude Code plugin support' --body ':*)",
+      "Bash(gh pr:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "F-MCP Bridge plugin'i aktif. İlk Figma işleminden önce figma_get_status() ile bağlantı durumunu kontrol etmeyi unutma. Bağlı değilse kullanıcıyı bilgilendir: Figma'da F-MCP ATezer Bridge plugin'ini aç."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__figma-mcp-bridge__figma_execute",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "figma_execute çağrılmadan önce kontrol et: (1) Kullanılacak fontlar figma.loadFontAsync() ile yüklendi mi? (2) Kod 30 satırı aşmıyor mu? (3) Try-catch ile sarılı mı? (4) Hardcoded renk/boyut yerine DS variable bağlanıyor mu? figma-canvas-ops skill kurallarına uyulduğundan emin ol."
+          }
+        ]
+      }
+    ]
+  }
+}

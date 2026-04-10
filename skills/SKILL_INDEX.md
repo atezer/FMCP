@@ -2,7 +2,7 @@
 
 ## Workspace kökü (önemli)
 
-Cursor veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, yani `package.json` ve `.cursor/` bu kökte görünecek şekilde) açın. Bu dizindeki skill yolları `.cursor/skills/f-mcp/<skill>/SKILL.md` biçimindedir; kök yanlış açılırsa göreli linkler ve arama yolları kırılır.
+Cursor, Claude Code veya VS Code'da **klasör / workspace kökü olarak bu repoyu** (`FCM`, yani `package.json` bu kökte görünecek şekilde) açın. Skill'ler `skills/<skill>/SKILL.md` dizinindedir. Eski `.cursor/skills/f-mcp/` yolu da symlink ile desteklenir.
 
 ## Personalar
 
@@ -19,7 +19,13 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 
 **Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
 
-## Skill Listesi (19 skill)
+## Skill Listesi (20 skill)
+
+### Temel Kurallar
+
+| Skill | Dosya | Personalar | Kısa açıklama |
+|---|---|---|---|
+| `fmcp-project-rules` | [fmcp-project-rules/SKILL.md](fmcp-project-rules/SKILL.md) | designer, designops, uidev, po | Design Token Kuralı, Bağlı Token Kuralı, kütüphane yönetimi, otomatik yanıt kuralları — tüm skill'ler için geçerli |
 
 ### Dokümantasyon ve İçerik
 

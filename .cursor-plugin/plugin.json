@@ -10,7 +10,8 @@
   "license": "MIT",
   "keywords": ["figma", "mcp", "design", "design-system", "design-tokens", "ui", "cursor", "plugin"],
   "logo": "assets/logo.png",
-  "skills": ".cursor/skills/f-mcp/",
+  "skills": "./skills/",
+  "commands": "./commands/",
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "npx",

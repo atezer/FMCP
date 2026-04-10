@@ -15,6 +15,13 @@
 		"dist/local-plugin-only.d.ts.map",
 		"dist/core",
 		"f-mcp-plugin",
+		"skills",
+		"commands",
+		"agents",
+		"hooks",
+		".claude-plugin",
+		".cursor-plugin",
+		"assets",
 		"README.md",
 		"CHANGELOG.md",
 		"LICENSE"
