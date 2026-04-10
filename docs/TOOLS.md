@@ -1,127 +1,105 @@
 # FMCP araç envanteri (tek doğruluk kaynağı)
 
-Kaynak: `dist/local.js`, `dist/local-plugin-only.js`, `dist/core/figma-tools.js` içindeki `registerTool("figma_*")` çağrıları. Sürüm değişince bu dosya güncellenmeli.
+Kaynak: `dist/local-plugin-only.js` içindeki `registerTool("figma_*")` çağrıları. Sürüm değişince bu dosya güncellenmeli.
 
-## Giriş modları
+## Mimari
 
-| Mod | Dosya | Özet |
-|-----|--------|------|
-| **Tam (local)** | `dist/local.js` | Tasarım sistemi önbelleği, tarayıcı/CDP tabanlı REST araçları (`figma-tools.js` ile birlikte), plugin bridge yazma araçları. `FIGMA_ACCESS_TOKEN` vb. gerekebilir. |
-| **Plugin-only** | `dist/local-plugin-only.js` | REST token yok; veri WebSocket + plugin. Önerilen zero-trust akış. |
-| **Hibrit** | `local.js` içinde `figma-tools` | Bulut REST + yerel ekran görüntüsü (`figma_capture_screenshot`) birlikte. |
-| **Hosted Worker** | `src/index.ts` → `dist/cloudflare/` | OAuth + Browser Rendering + Figma REST (`figma-tools.js`). **Cloud Mode** ile plugin relay: `fmcp_*` araçları + `fmcp_plugin_bridge_request` (tam `local-plugin-only` yüzeyi tek tek kayıtlı değil; genel RPC kaçışı). |
+F-MCP yalnızca **plugin-only** modunu destekler:
+- **Giriş:** `dist/local-plugin-only.js` (46 araç)
+- **Bağlantı:** WebSocket plugin bridge (port 5454)
+- **Gereksinim:** F-MCP ATezer Bridge plugin Figma’da çalışıyor olmalı
+- **REST token:** Zorunlu değil (opsiyonel `figma_set_rest_token` ile ayarlanabilir)
 
-## Hosted Worker (`FigmaMCP`) — `fmcp_*` ve relay
+## `local-plugin-only.js` — Tüm `figma_*` araçları
 
-- `fmcp_generate_pairing_code`, `fmcp_cloud_bind`, `fmcp_cloud_status`, `fmcp_cloud_disconnect`
-- `fmcp_plugin_bridge_request` — `PluginBridgeConnector` ile aynı `method` adları (ör. `getVariables`, `executeCodeViaUI`). Bağlı oturum ve plugin WebSocket gerekir.
-- Önceden var olan hosted `figma_*` araçları (konsol, navigate, REST) Cloud Mode’dan bağımsız çalışır; plugin-öncelikli işler için relay + bu araç kullanılır.
+- **Bağlantı / durum:** `figma_list_connected_files`, `figma_get_status`, `figma_plugin_diagnostics`, `figma_set_port`
+- **Dosya / yapı:** `figma_get_file_data`, `figma_get_design_context`
+- **Bileşenler:** `figma_get_component`, `figma_get_component_image`, `figma_get_component_for_development`, `figma_search_components`, `figma_search_assets`, `figma_instantiate_component`, `figma_arrange_component_set`, `figma_set_instance_properties`, `figma_set_description`
+- **Değişkenler:** `figma_get_variables`, `figma_create_variable`, `figma_create_variable_collection`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_get_token_browser`
+- **Stiller:** `figma_get_styles`
+- **Tasarım oluşturma:** `figma_execute`, `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group`
+- **Konsol:** `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`
+- **Export / görsel:** `figma_capture_screenshot`, `figma_export_nodes`
+- **Parity:** `figma_check_design_parity`
+- **REST API:** `figma_rest_api`, `figma_set_rest_token`, `figma_get_rest_token_status`, `figma_clear_rest_token`
 
-## `local.js` — `figma_*` araçları
-
-- `figma_get_console_logs`, `figma_take_screenshot`, `figma_watch_console`, `figma_reload_plugin`, `figma_clear_console`
-- `figma_navigate`, `figma_get_status`, `figma_reconnect`, `figma_execute`
-- Değişkenler: `figma_update_variable`, `figma_create_variable`, `figma_create_variable_collection`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`
-- Tasarım sistemi önbelleği: `figma_get_design_system_summary`, `figma_search_components`, `figma_get_component_details`, `figma_get_token_values`
-- Bileşen / node yazma: `figma_instantiate_component`, `figma_set_description`, `figma_add_component_property`, `figma_edit_component_property`, `figma_delete_component_property`
-- Geometri / görünüm: `figma_resize_node`, `figma_move_node`, `figma_set_fills`, `figma_set_strokes`, `figma_clone_node`, `figma_delete_node`, `figma_rename_node`, `figma_set_text`, `figma_create_child`
-- **Kütüphane arama:** `figma_search_assets` (takım kütüphanesi), `figma_search_components` (dosya-içi). `figma_get_code_connect` ve `figma_use` henüz uygulanmamıştır (bkz. [FUTURE.md](../FUTURE.md)). Yapılandırılmış işlemler için `figma_execute` kullanılır. Çoklu dosya: `fileKey` / `figmaUrl` ile connector yönlendirmesi.
-
-## `local-plugin-only.js` — `figma_*` araçları
-
-- `figma_list_connected_files`, `figma_get_file_data`, `figma_get_design_context`
-- `figma_get_variables`, `figma_get_component`, `figma_get_styles`, `figma_execute`, `figma_capture_screenshot`, `figma_set_instance_properties`
-- Değişken CRUD / mod: `figma_update_variable` … `figma_rename_mode` (local.js ile aynı set)
-- `figma_get_design_system_summary`, `figma_search_components`, `figma_instantiate_component`, `figma_refresh_variables`
-- Konsol: `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`
-- `figma_set_description`, `figma_get_component_image`, `figma_get_component_for_development`
-- Toplu token: `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_arrange_component_set`, `figma_check_design_parity`, `figma_get_token_browser`, `figma_get_status`
-- **v1.6+ yeni araçlar:** `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group`, `figma_export_nodes` (SVG/PNG batch), `figma_search_assets` (kütüphane), `figma_plugin_diagnostics`, REST API araçları (`figma_set_rest_token`, `figma_rest_api`, `figma_get_rest_token_status`, `figma_clear_rest_token`). Tam liste: [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md).
-
-## `figma-tools.js` (REST / tarayıcı tarafı)
-
-`figma_get_file_data`, `figma_get_variables`, `figma_get_component`, `figma_get_styles`, `figma_get_component_image`, `figma_get_component_for_development`, `figma_get_file_for_plugin`, `figma_capture_screenshot`, `figma_set_instance_properties`
+Tam liste: [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md).
 
 ## Şeffaf sınırlar
 
-- **Published library bileşen envanteri:** Plugin API, etkin kütüphanelerdeki değişken koleksiyonlarını `figma.teamLibrary` ile listeler; tüm published component kataloğu için REST veya Code Connect CLI gibi ek kanallar gerekebilir. Bu bridge’de bileşen araması **`figma_search_components`** ile dosyadaki yerel / içe aktarılabilir bileşenler üzerinden yapılır; sonuçlarda `key` alanı `figma_instantiate_component` ile uyumludur.
-- **Code Connect dosya yolu eşlemesi:** Bridge’de ayrı bir `figma_get_code_connect` aracı yoktur. İpuçları için `figma_get_component`, `figma_get_component_for_development` veya `figma_execute` ile node üzerindeki `documentationLinks` / açıklama / `key` okunabilir; tam harita için Code Connect CLI veya Figma REST kullanın.
+- **Published library bileşen envanteri:** Plugin API, etkin kütüphanelerdeki değişken koleksiyonlarını `figma.teamLibrary` ile listeler. Bileşen araması `figma_search_components` ile dosyadaki yerel / içe aktarılabilir bileşenler üzerinden yapılır.
+- **Code Connect:** Bridge’de ayrı bir `figma_get_code_connect` aracı yoktur. İpuçları için `figma_get_component`, `figma_get_component_for_development` veya `figma_execute` kullanılır.
 
 ---
 
 # Available Tools - Detailed Documentation
 
-Bu rehber her araç için **detaylı kullanım** (parametreler, örnekler, best practice) içerir. **Kısa liste (32 araç, tek sayfa):** [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
+Bu rehber her araç için **detaylı kullanım** (parametreler, örnekler, best practice) içerir. **Kısa liste (46 araç, tek sayfa):** [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
 
-This guide provides detailed documentation for each tool, including when to use them and best practices.
+## Çalışma modu
 
-## Çalışma modları (debug portu gerekmez)
-
-Araçlar **iki şekilde** kullanılabilir:
-
-1. **Plugin-only / WebSocket (önerilen, debug yok)**  
-   Figma’yı **normal** açarsınız; **F-MCP ATezer Bridge** plugin’ini çalıştırırsınız. Plugin, MCP sunucusuna WebSocket (port 5454) ile bağlanır. **`--remote-debugging-port=9222` gerekmez.** Variables, components, file data, execute, screenshot vb. bu modda çalışır. Token zorunlu değildir.
-
-2. **Local + CDP (debug portu ile)**  
-   Figma’yı `--remote-debugging-port=9222` ile açarsanız console log izleme, sayfa yenileme gibi ek özellikler kullanılabilir. Bu mod **isteğe bağlıdır**; sadece plugin bridge ile de tüm tasarım araçları kullanılır.
+F-MCP yalnızca **plugin-only / WebSocket** modunu destekler:
+- Figma’yı **normal** açarsınız; **F-MCP ATezer Bridge** plugin’ini çalıştırırsınız
+- Plugin, MCP sunucusuna WebSocket (port 5454) ile bağlanır
+- `--remote-debugging-port=9222` **gerekmez**, `FIGMA_ACCESS_TOKEN` **zorunlu değildir**
 
 ## Quick Reference
 
-| Category | Tool | Purpose | Mode |
-|----------|------|---------|------|
-| **🧭 Navigation** | `figma_navigate` | Open a Figma URL and start monitoring | All |
-| | `figma_get_status` | Check browser and monitoring status | All |
-| **📋 Console** | `figma_get_console_logs` | Retrieve console logs with filters | All |
-| | `figma_watch_console` | Stream logs in real-time | All |
-| | `figma_clear_console` | Clear log buffer | All |
-| **🔍 Debugging** | `figma_take_screenshot` | Capture UI screenshots | All |
-| | `figma_reload_plugin` | Reload current page | All |
-| **🎨 Design System** | `figma_get_variables` | Extract design tokens/variables | All |
-| | `figma_get_styles` | Get color, text, effect styles | All |
-| | `figma_get_component` | Get component data | All |
-| | `figma_get_component_for_development` | Component + visual reference | All |
-| | `figma_get_component_image` | Just the component image | All |
-| | `figma_get_file_data` | File structure with verbosity control | All |
-| | `figma_get_file_for_plugin` | File data optimized for plugins | All |
-| **✏️ Design Creation** | `figma_execute` | Run Figma Plugin API code | Local |
-| **🔧 Variables** | `figma_create_variable_collection` | Create collections with modes | Local |
-| | `figma_create_variable` | Create new variables | Local |
-| | `figma_update_variable` | Update variable values | Local |
-| | `figma_rename_variable` | Rename variables | Local |
-| | `figma_delete_variable` | Delete variables | Local |
-| | `figma_delete_variable_collection` | Delete collections | Local |
-| | `figma_add_mode` | Add modes to collections | Local |
-| | `figma_rename_mode` | Rename modes | Local |
-| **Design–Code Parity** | `figma_check_design_parity` | Compare Figma vs code tokens (design-code gap) | All |
-| **Token Browser** | `figma_get_token_browser` | Hierarchical variables + styles browse | All |
+| Category | Tool | Purpose |
+|----------|------|---------|
+| **Bağlantı / Durum** | `figma_get_status` | Check plugin bridge connection status |
+| | `figma_list_connected_files` | List connected Figma files |
+| | `figma_plugin_diagnostics` | Plugin connection health diagnostics |
+| | `figma_set_port` | Change WebSocket bridge port |
+| **Konsol** | `figma_get_console_logs` | Retrieve console logs with filters |
+| | `figma_watch_console` | Stream logs in real-time |
+| | `figma_clear_console` | Clear log buffer |
+| **Tasarım Sistemi** | `figma_get_variables` | Extract design tokens/variables |
+| | `figma_get_styles` | Get color, text, effect styles |
+| | `figma_get_component` | Get component data |
+| | `figma_get_component_for_development` | Component + visual reference |
+| | `figma_get_component_image` | Just the component image |
+| | `figma_get_file_data` | File structure with verbosity control |
+| | `figma_get_design_context` | Design context for a node or file |
+| **Tasarım Oluşturma** | `figma_execute` | Run Figma Plugin API code |
+| | `figma_create_frame` | Create a frame node |
+| | `figma_create_text` | Create a text node |
+| | `figma_create_rectangle` | Create a rectangle node |
+| | `figma_create_group` | Group existing nodes |
+| **Değişkenler** | `figma_create_variable_collection` | Create collections with modes |
+| | `figma_create_variable` | Create new variables |
+| | `figma_update_variable` | Update variable values |
+| | `figma_rename_variable` | Rename variables |
+| | `figma_delete_variable` | Delete variables |
+| | `figma_delete_variable_collection` | Delete collections |
+| | `figma_add_mode` | Add modes to collections |
+| | `figma_rename_mode` | Rename modes |
+| | `figma_refresh_variables` | Refresh variables from file |
+| | `figma_batch_create_variables` | Batch create variables |
+| | `figma_batch_update_variables` | Batch update variables |
+| | `figma_setup_design_tokens` | Atomically create collection + tokens |
+| **Bileşenler** | `figma_search_components` | Search local components |
+| | `figma_search_assets` | Search published library assets |
+| | `figma_instantiate_component` | Create component instance |
+| | `figma_arrange_component_set` | Combine into component set |
+| | `figma_set_instance_properties` | Set instance properties |
+| | `figma_set_description` | Set component description |
+| **Design–Code Parity** | `figma_check_design_parity` | Compare Figma vs code tokens |
+| **Token Browser** | `figma_get_token_browser` | Hierarchical variables + styles browse |
+| **Export / Görsel** | `figma_capture_screenshot` | Capture node screenshot |
+| | `figma_export_nodes` | Export nodes as SVG/PNG/JPG/PDF |
+| **REST API** | `figma_rest_api` | Call Figma REST API directly |
+| | `figma_set_rest_token` | Set REST API token |
+| | `figma_get_rest_token_status` | Check REST token status |
+| | `figma_clear_rest_token` | Clear REST token |
 
 ---
 
-## 🧭 Navigation & Status Tools
-
-### `figma_navigate`
-
-Navigate to any Figma URL to start monitoring.
-
-**Usage:**
-```javascript
-figma_navigate({
-  url: 'https://www.figma.com/design/abc123/My-Design?node-id=1-2'
-})
-```
-
-**Always use this first** to initialize the browser and start console monitoring.
-
-**Returns:**
-- Navigation status
-- Current URL
-- Console monitoring status
-
----
+## Bağlantı & Durum Araçları
 
 ### `figma_get_status`
 
-Check connection and monitoring status. **Debug portu olmadan (plugin-only)** çalışır: plugin’in WebSocket ile bağlı olup olmadığını ve veri alınıp alınamayacağını gösterir.
+Plugin bridge bağlantı durumunu kontrol eder: plugin’in WebSocket ile bağlı olup olmadığını ve veri alınıp alınamayacağını gösterir.
 
 **Usage:**
 ```javascript
@@ -129,40 +107,21 @@ figma_get_status()
 ```
 
 **Returns:**
-- **Plugin-only / WebSocket modunda:** Plugin bridge bağlantısı (port 5454), plugin "ready" durumu, mevcut dosya bilgisi. Figma’yı debug portu ile açmanız gerekmez.
-- **CDP modunda (isteğe bağlı):** Ek olarak `setup.valid` — Figma’nın `--remote-debugging-port=9222` ile açılıp açılmadığı; console izleme açık mı. Bu alanlar sadece debug portu kullanıyorsanız dolu gelir.
-- Browser/bridge connection status
-- Console monitoring active/inactive (yalnızca CDP modunda anlamlı)
-- Current URL (if navigated)
-- Number of captured console logs
+- Plugin bridge bağlantısı (port 5454), plugin "ready" durumu, mevcut dosya bilgisi
+- Bağlı dosya sayısı
 
-**Example Response (Plugin-only – no debug port):**
+**Example Response:**
 ```json
 {
   "mode": "local",
   "pluginBridge": "connected",
-  "message": "✅ Plugin connected via WebSocket; no debug port required"
+  "message": "Plugin connected via WebSocket"
 }
 ```
-
-**Example Response (CDP mode – setup valid, optional):**
-```json
-{
-  "mode": "local",
-  "setup": {
-    "valid": true,
-    "message": "✅ Figma Desktop is running with remote debugging enabled"
-  }
-}
-```
-
-**Example Response (CDP mode – setup invalid):**  
-Sadece debug portu kullanıyorsanız ve Figma 9222 ile açılmamışsa `setup.valid: false` ve yeniden başlatma talimatları döner. **Plugin-only kullanıyorsanız bu adımlara gerek yok.**
 
 **Best Practice:**
-- Önce bu aracı çağırın; bağlantı tipini (plugin bridge vs CDP) ve durumu görün.
-- Debug portu kullanmıyorsanız: Figma’yı normal açın, plugin’i çalıştırın; `figma_get_status` bridge bağlantısını doğrular.
-- Console log araçları kullanacaksanız ve `setup.valid` false ise, kullanıcıya Figma’yı `--remote-debugging-port=9222` ile yeniden başlatmasını söyleyin veya sadece plugin bridge ile devam edin (console log’lar CDP modunda çalışır).
+- Önce bu aracı çağırın; plugin bridge bağlantı durumunu görün.
+- Figma’yı normal açın, F-MCP ATezer Bridge plugin’ini çalıştırın; `figma_get_status` bridge bağlantısını doğrular.
 
 ---
 
@@ -170,8 +129,8 @@ Sadece debug portu kullanıyorsanız ve Figma 9222 ile açılmamışsa `setup.va
 
 ### `figma_get_console_logs`
 
-> **💡 Plugin Developers in Local Mode**: This tool works immediately - no navigation required!
-> Just check logs, run your plugin in Figma Desktop, check logs again. All `[Main]`, `[Swapper]`, etc. plugin logs appear instantly.
+> **Plugin geliştiriciler için:** Bu araç hemen çalışır — navigasyon gerekmez!
+> Log'ları kontrol edin, plugin'inizi Figma Desktop'ta çalıştırın, tekrar kontrol edin. Tüm `[Main]`, `[Swapper]` vb. plugin log'ları anında görünür.
 
 Retrieve console logs with filters.
 
@@ -248,58 +207,9 @@ figma_clear_console()
 
 ---
 
-## 🔍 Debugging Tools
+## Tasarım Sistemi Araçları
 
-### `figma_take_screenshot`
-
-Capture screenshots of Figma UI.
-
-**Usage:**
-```javascript
-figma_take_screenshot({
-  target: 'plugin',           // 'plugin', 'full-page', or 'viewport'
-  format: 'png',              // 'png' or 'jpeg'
-  quality: 90,                // JPEG quality 0-100 (default: 90)
-  filename: 'my-screenshot'   // Optional filename
-})
-```
-
-**Parameters:**
-- `target` (optional): What to screenshot
-  - `'plugin'`: Just the plugin UI (default)
-  - `'full-page'`: Entire scrollable page
-  - `'viewport'`: Current visible viewport
-- `format` (optional): Image format (default: 'png')
-- `quality` (optional): JPEG quality 0-100 (default: 90)
-- `filename` (optional): Custom filename
-
-**Returns:**
-- Screenshot image
-- Metadata (dimensions, format, size)
-
----
-
-### `figma_reload_plugin`
-
-Reload the current Figma page.
-
-**Usage:**
-```javascript
-figma_reload_plugin({
-  clearConsole: true   // Clear console logs before reload (default: true)
-})
-```
-
-**Returns:**
-- Reload status
-- New page URL (if changed)
-
----
-
-## 🎨 Design System Tools
-
-> **Plugin-only modda** (WebSocket, debug portu yok): **Token gerekmez.** Plugin açık ve MCP’ye bağlı olsun; variables, components, file data plugin üzerinden alınır.  
-> **Remote / CDP modda** token gerekebilir. Bkz. [SETUP.md](SETUP.md).
+> **Token gerekmez.** Plugin açık ve MCP’ye bağlı olsun; variables, components, file data plugin üzerinden alınır. Opsiyonel olarak `figma_set_rest_token` ile REST API token ayarlanabilir.
 
 ### `figma_get_variables`
 
@@ -505,36 +415,6 @@ figma_get_file_data({
 
 ---
 
-### `figma_get_file_for_plugin`
-
-Get file data optimized for plugin development.
-
-**Usage:**
-```javascript
-figma_get_file_for_plugin({
-  fileUrl: 'https://figma.com/design/abc123',
-  depth: 3,                  // Higher depth allowed (max: 5)
-  nodeIds: ['123:456']       // Specific nodes (optional)
-})
-```
-
-**Parameters:**
-- `fileUrl` (optional): Figma file URL
-- `depth` (optional): Depth of children (max: 5, default: 2)
-- `nodeIds` (optional): Specific nodes only
-
-**Returns:**
-- Filtered file data with:
-  - IDs, names, types
-  - Plugin data (pluginData, sharedPluginData)
-  - Component relationships
-  - Lightweight bounds
-  - Structure for navigation
-
-**Excludes:** Visual properties (fills, strokes, effects) - optimized for plugin work
-
----
-
 ## Tool Comparison
 
 ### When to Use Each Tool
@@ -545,7 +425,6 @@ figma_get_file_for_plugin({
 - `figma_get_component` - Need full component metadata
 
 **For Plugin Development:**
-- `figma_get_file_for_plugin` - Optimized file structure for plugins
 - `figma_get_console_logs` - Debug plugin code
 - `figma_watch_console` - Monitor plugin execution
 
@@ -557,16 +436,16 @@ figma_get_file_for_plugin({
 **For Debugging:**
 - `figma_get_console_logs` - Retrieve specific logs
 - `figma_watch_console` - Live monitoring
-- `figma_take_screenshot` - Visual debugging
+- `figma_capture_screenshot` - Visual debugging
 - `figma_get_status` - Check connection health
 
 ---
 
 ---
 
-## ✏️ Design Creation Tools (Local Mode Only)
+## Tasarım Oluşturma Araçları
 
-> **⚠️ Requires F-MCP ATezer Bridge Plugin**: These tools only work in Local Mode with the F-MCP ATezer Bridge plugin running in Figma.
+> **F-MCP ATezer Bridge Plugin gerektirir**: Bu araçlar Figma'da F-MCP ATezer Bridge plugin'i çalışırken kullanılır.
 
 ### `figma_execute`
 
@@ -658,9 +537,9 @@ frame.paddingRight = 16;
 
 ---
 
-## 🔧 Variable Management Tools (Local Mode Only)
+## Değişken Yönetimi Araçları
 
-> **⚠️ Requires F-MCP ATezer Bridge Plugin**: These tools only work in Local Mode with the F-MCP ATezer Bridge plugin running in Figma.
+> **F-MCP ATezer Bridge Plugin gerektirir**: Bu araçlar Figma'da F-MCP ATezer Bridge plugin'i çalışırken kullanılır.
 
 ### `figma_create_variable_collection`
 
@@ -896,14 +775,11 @@ figma_rename_mode({
 | Add themes (Light/Dark) | `figma_add_mode` |
 | Rename themes | `figma_rename_mode` |
 
-### Prerequisites Checklist
+### Ön Koşullar
 
-Before using write tools, ensure:
-1. ✅ Running in **Local Mode** (not Remote SSE)
-2. ✅ **F-MCP ATezer Bridge plugin** is running in Figma (Plugins → Development → F-MCP ATezer Bridge)
-3. ✅ Plugin connected to MCP (WebSocket bridge or CDP): `figma_get_status` shows connection OK
-
-**Debug portu zorunlu değil:** Variables, components, execute, screenshot **plugin-only** (WebSocket) ile çalışır; Figma’yı `--remote-debugging-port=9222` ile açmanız gerekmez. Console log izleme kullanacaksanız isteğe bağlı olarak Figma’yı 9222 ile başlatabilirsiniz.
+Araçları kullanmadan önce:
+1. **F-MCP ATezer Bridge plugin** Figma’da çalışıyor olmalı (Plugins → Development → F-MCP ATezer Bridge)
+2. Plugin, MCP sunucusuna WebSocket (port 5454) ile bağlı olmalı: `figma_get_status` bağlantıyı doğrular
 
 ---
 
@@ -920,8 +796,7 @@ All tools return structured error responses:
 ```
 
 Common errors:
-- `"FIGMA_ACCESS_TOKEN not configured"` - When using plugin-only, token is not required. If using REST fallback, set token (see [SETUP](SETUP.md)).
-- `"Failed to connect to browser"` - Browser initializing or connection issue
+- `"FIGMA_ACCESS_TOKEN not configured"` - Token zorunlu değildir. REST API kullanmak istiyorsanız `figma_set_rest_token` ile ayarlayın.
 - `"Invalid Figma URL"` - Check URL format
 - `"Node not found"` - Verify node ID is correct
 - `"F-MCP ATezer Bridge plugin not found"` - Ensure plugin is running in Figma
