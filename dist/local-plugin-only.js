@@ -89,7 +89,7 @@ export async function main() {
     bridge.start();
     const server = new McpServer({
         name: "F-MCP ATezer Bridge (Plugin-only)",
-        version: "1.7.23",
+        version: "1.7.24",
     });
     // ---- figma_list_connected_files (multi-client discovery) ----
     server.registerTool("figma_list_connected_files", {
