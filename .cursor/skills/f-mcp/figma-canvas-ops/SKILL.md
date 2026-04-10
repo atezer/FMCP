@@ -44,6 +44,12 @@ Detaylı eşleme: [TOOL_MAPPING.md](../TOOL_MAPPING.md)
 
 5. **Küçük adımlarla çalış.** Büyük işlemleri birden fazla `figma_execute` çağrısına böl. Her adımdan sonra doğrula. Bug'lardan kaçınmanın en önemli pratiği budur.
 
+   **Timeout yapılandırması:** `figma_execute` varsayılan timeout 5000ms'dir. Çok node oluşturma veya karmaşık işlemlerde `timeout` parametresini artır (maksimum 30000ms):
+   ```
+   figma_execute({ code: "...", timeout: 15000 })
+   ```
+   Kılavuz: 1-5 node → 5000ms | 6-12 node → 10000ms | 13+ node → işlemi böl veya 15000-30000ms
+
 6. **Renkler 0–1 aralığında** (0–255 değil): `{r: 1, g: 0, b: 0}` = kırmızı.
 
 7. **Fills/strokes read-only array** — klonla, değiştir, geri ata:
@@ -57,6 +63,17 @@ node.fills = fills;
 ```js
 await figma.loadFontAsync({ family: "Inter", style: "Regular" });
 ```
+
+   **FigJam özel durumu:** `createShapeWithText()` varsayılan fontu **"Inter Medium"**'dir ("Inter Regular" DEĞİL). FigJam shape text'i düzenlemek için:
+   ```js
+   await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+   const shape = figma.createShapeWithText();
+   shape.text.characters = "Metin"; // Medium yüklenmeden hata verir
+   ```
+   Genel kural: metin düzenlemeden önce **mevcut fontu kontrol et** ve o fontu yükle:
+   ```js
+   await figma.loadFontAsync(shape.text.fontName); // dinamik font algılama
+   ```
 
 9. **Sayfa konteksti her çağrıda sıfırlanır** — `figma.currentPage` her `figma_execute` çağrısında ilk sayfaya döner. Farklı sayfada çalışacaksan:
 ```js

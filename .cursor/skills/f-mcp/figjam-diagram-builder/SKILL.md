@@ -52,6 +52,21 @@ figma_list_connected_files()
 
 Asla büyük node listesi, `currentPage.children`, büyük JSON veya pluginData dump döndürme.
 
+**Timeout:** Varsayılan 5000ms. Çok node oluşturma işlemlerinde `timeout` parametresini artır (maks 30000ms). Bkz. "Common Issues" bölümü.
+
+### FigJam Font Kuralı
+
+`createShapeWithText()` varsayılan fontu **"Inter Medium"**'dir. Shape text düzenlemeden ÖNCE:
+
+```js
+await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+```
+
+"Inter Regular" yüklemek YETMEZ — FigJam shape'leri "Medium" kullanır. Alternatif olarak mevcut fontu dinamik kontrol et:
+```js
+await figma.loadFontAsync(shape.text.fontName);
+```
+
 ### Step 3: Adımlar arası veri stratejisi
 
 Veriyi `setPluginData/getPluginData` ile taşımak yerine her adımda aynı layout sabitlerinden yeniden hesapla.
@@ -126,6 +141,29 @@ Her `figma_execute` öncesi kontrol et:
 ### Sorun: Bağlantı koptu
 
 Çözüm: `figma_get_status()` ile kontrol et, plugin'i ilgili dosyada yeniden başlat, `figma_list_connected_files()` ile doğrula.
+
+### Sorun: Timeout — çok node tek çağrıda
+
+FigJam `createShapeWithText()` her biri font yükleme gerektirdiğinden Figma Design node'larından yavaştır.
+
+**Güvenli node limitleri (tek `figma_execute` çağrısı, varsayılan 5000ms):**
+- 1-6 shapeWithText: varsayılan timeout yeterli
+- 7-12 node: `timeout: 10000` kullan
+- 13+ node: İşlemi birden fazla çağrıya böl (önerilen)
+
+```
+figma_execute({ code: "...", timeout: 15000 })
+```
+
+Fontu her çağrıda bir kez yükle, ardından tüm node'ları oluştur (her node için ayrı `loadFontAsync` çağırma):
+```js
+await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+// Tüm node'ları oluştur — font zaten yüklü
+for (let i = 0; i < 8; i++) {
+  const s = figma.createShapeWithText();
+  s.text.characters = "Node " + i;
+}
+```
 
 ## Evolution Triggers
 

@@ -629,9 +629,18 @@ figma.ui.onmessage = async (msg) => {
         variable.description = msg.description;
       }
 
-      // Set scopes if provided
+      // Set scopes if provided — validate mutual exclusion
       if (msg.scopes) {
-        variable.scopes = msg.scopes;
+        var scopeArr = msg.scopes;
+        if (scopeArr.indexOf('ALL_FILLS') !== -1) {
+          var fillConflicts = ['FRAME_FILL', 'SHAPE_FILL', 'STROKE_COLOR', 'TEXT_FILL', 'FILL_COLOR'];
+          for (var si = 0; si < fillConflicts.length; si++) {
+            if (scopeArr.indexOf(fillConflicts[si]) !== -1) {
+              throw new Error('Scope conflict: ALL_FILLS cannot be combined with ' + fillConflicts[si] + '. Use ALL_FILLS alone or use specific fill scopes (FRAME_FILL, SHAPE_FILL, TEXT_FILL, etc.).');
+            }
+          }
+        }
+        variable.scopes = scopeArr;
       }
 
       console.log('🌉 [F-MCP ATezer Bridge] Variable created:', variable.id);
@@ -2717,8 +2726,16 @@ figma.ui.onmessage = async (msg) => {
     var collection = null;
     try {
       collection = figma.variables.createVariableCollection(collectionName);
+      // İlk modu kullanıcının istediği isme yeniden adlandır ("Mode 1" → modes[0])
+      collection.renameMode(collection.modes[0].modeId, modes[0]);
+      // Ek modları ekle (indeks 1'den başla)
       if (modes.length > 1) {
         for (var m = 1; m < modes.length; m++) collection.addMode(modes[m]);
+      }
+      // Mode name → mode ID eşleme haritası oluştur
+      var modeNameToId = {};
+      for (var mi = 0; mi < collection.modes.length; mi++) {
+        modeNameToId[collection.modes[mi].name] = collection.modes[mi].modeId;
       }
       var defaultModeId = collection.modes[0].modeId;
       for (var t = 0; t < tokens.length; t++) {
@@ -2728,7 +2745,16 @@ figma.ui.onmessage = async (msg) => {
         var values = (typeof tok === 'object' && tok.values) ? tok.values : (typeof tok === 'object' ? tok.value : undefined);
         var valsByMode = typeof values === 'object' && !Array.isArray(values) ? values : { [defaultModeId]: values };
         var variable = figma.variables.createVariable(name, collection, type);
-        for (var mid in valsByMode) variable.setValueForMode(mid, valsByMode[mid]);
+        for (var mid in valsByMode) {
+          // Mode name veya ham mode ID kabul et (geriye uyumlu)
+          var resolvedModeId = modeNameToId[mid] || mid;
+          var val = valsByMode[mid];
+          // COLOR tipi için hex string → Figma RGB dönüşümü
+          if (type === 'COLOR' && typeof val === 'string') {
+            val = hexToFigmaRGB(val);
+          }
+          variable.setValueForMode(resolvedModeId, val);
+        }
         createdVarIds.push(variable.id);
       }
       figma.ui.postMessage({

@@ -159,7 +159,7 @@ npm run build:local
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.7.17**) |
+| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.7.18**) |
 | Ne değişti | Kök [CHANGELOG.md](CHANGELOG.md) |
 | Yayın bildirimi | GitHub [Releases](https://github.com/atezer/FMCP/releases) — depoyu izleyin (*Watch* → *Custom* → *Releases*) |
 | npm paket sürümü | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) veya `npm view @atezer/figma-mcp-bridge version` |
@@ -217,4 +217,4 @@ bash <(curl -fsSL https://raw.githubusercontent.com/atezer/FMCP/main/scripts/set
 ---
 
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)
-**Sürüm:** 1.7.17 (`package.json` ile uyumlu)
+**Sürüm:** 1.7.18 (`package.json` ile uyumlu)
