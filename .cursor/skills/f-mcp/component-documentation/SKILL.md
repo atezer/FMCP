@@ -11,6 +11,8 @@ metadata:
 
 # Component Documentation
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Workflow
 
 1. **Standart kontrolü:** `reference_industry_design_standards.md` oku. "Son güncelleme" 1 yıldan eskiyse kullanıcıya güncelleme öner (kaynak listesi aşağıda).

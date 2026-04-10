@@ -10,6 +10,8 @@ metadata:
 
 # Generate Figma Screen — Kod/Açıklamadan Figma Ekranı
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, bir kod tabanından veya metin açıklamasından Figma'da tam sayfa/ekran oluşturur. Temel ilke: hardcode hex renk ve piksel değerleri yerine **yayınlanmış design system** bileşenlerini (component instance), değişkenlerini (variable) ve stillerini (text/effect style) kullanmak.
@@ -102,6 +104,16 @@ figma_get_styles()
 
 Text style ve effect style'ları not al.
 
+#### 3d: Font belirleme (ZORUNLU)
+
+Ekranda metin oluşturmadan önce font ailesini belirle:
+
+1. **Önce text style'lardan oku:** `figma_get_styles()` sonucundaki text style'ların font ailesini kontrol et. Kütüphane dosyası (`.claude/libraries/`) varsa oradaki bilgiyi de referans al.
+2. **Bulunamazsa kullanıcıya sor:** "Tasarım sisteminde tanımlı bir font bulamadım. Hangi fontu kullanmamı istersiniz?"
+3. **Kullanıcı "sen seç" derse:** `Inter` kullan.
+
+**Asla** hardcoded font varsayma — bu adımı atlamadan metin node oluşturma.
+
 ### Step 4: Boş Alan Bul ve Wrapper Frame Oluştur
 
 ```js
@@ -120,6 +132,7 @@ frame.resize(1440, 900); // Masaüstü varsayılan; mobil için 390x844
 frame.layoutMode = "VERTICAL";
 frame.primaryAxisSizingMode = "AUTO";
 frame.counterAxisSizingMode = "FIXED";
+// Arka plan rengini DS'den oku — aşağıdaki beyaz sadece fallback
 frame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
 
 return { frameId: frame.id, position: { x: frame.x, y: frame.y } };

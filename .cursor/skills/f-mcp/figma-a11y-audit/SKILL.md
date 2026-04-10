@@ -11,6 +11,8 @@ metadata:
 
 # Figma A11y Audit — Erişilebilirlik Denetimi
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, Figma ekranını erişilebilirlik (a11y) standartlarına göre denetler. Platform-bazlı (iOS VoiceOver, Android TalkBack, Web ARIA) raporlar üretir. Topluluk "Uber a11y ekran okuyucu spesifikasyonları" örneğinden esinlenilmiştir.
@@ -175,11 +177,15 @@ return { smallTextIssues: smallText };
 
 **Referans:** Indeed Figma Accessibility Annotation Kit yaklaşımı. Denetim sonuçlarına göre, Figma tasarımına geliştirici notları eklenir. Bu notlar tasarım dosyasında kalır ve geliştirici handoff'unda kritik bilgi sağlar.
 
-`figma_execute` ile ekranın yanına annotation frame'i oluştur:
+`figma_execute` ile ekranın yanına annotation frame'i oluştur.
+
+> **Font kuralı:** Annotation metinlerinde de DS fontunu kullan. Kayıtlı kütüphane varsa (`.claude/libraries/`) text style'lardan font ailesini oku. Bulunamazsa kullanıcıya sor. Kullanıcı "sen seç" derse `Inter` kullan. Aşağıdaki örnekte `FONT_FAMILY` kütüphaneden okunan font adıdır.
 
 ```js
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-await figma.loadFontAsync({ family: "Inter", style: "Bold" });
+// FONT_FAMILY'yi kütüphaneden veya kullanıcıdan belirle
+const FONT_FAMILY = "KütüphanedenOkunanFont";
+await figma.loadFontAsync({ family: FONT_FAMILY, style: "Regular" });
+await figma.loadFontAsync({ family: FONT_FAMILY, style: "Bold" });
 
 const screen = await figma.getNodeByIdAsync("<NODE_ID>");
 
@@ -194,6 +200,7 @@ annotFrame.paddingLeft = 24;
 annotFrame.paddingRight = 24;
 annotFrame.paddingTop = 24;
 annotFrame.paddingBottom = 24;
+// Aşağıdaki renkler annotation UI'a özel değerlerdir, DS token'ı değildir — ancak DS'de karşılığı varsa oradan okunması tercih edilir
 annotFrame.fills = [{ type: "SOLID", color: { r: 0.98, g: 0.95, b: 0.85 } }];
 annotFrame.cornerRadius = 12;
 annotFrame.x = screen.x + screen.width + 40;
@@ -213,14 +220,16 @@ function addAnnotation(parent, emoji, title, body) {
   const heading = figma.createText();
   heading.characters = emoji + " " + title;
   heading.fontSize = 14;
-  heading.fontName = { family: "Inter", style: "Bold" };
+  heading.fontName = { family: FONT_FAMILY, style: "Bold" };
+  // Annotation metin renkleri — DS'de karşılığı varsa oradan okunması tercih edilir
   heading.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
   item.appendChild(heading);
 
   const desc = figma.createText();
   desc.characters = body;
   desc.fontSize = 12;
-  desc.fontName = { family: "Inter", style: "Regular" };
+  desc.fontName = { family: FONT_FAMILY, style: "Regular" };
+  // Annotation açıklama rengi — DS'de karşılığı varsa oradan okunması tercih edilir
   desc.fills = [{ type: "SOLID", color: { r: 0.3, g: 0.3, b: 0.3 } }];
   item.appendChild(desc);
   desc.layoutSizingHorizontal = "FILL";

@@ -44,19 +44,31 @@ Detaylı eşleme: [TOOL_MAPPING.md](../TOOL_MAPPING.md)
 
 5. **Küçük adımlarla çalış.** Büyük işlemleri birden fazla `figma_execute` çağrısına böl. Her adımdan sonra doğrula. Bug'lardan kaçınmanın en önemli pratiği budur.
 
-6. **Renkler 0–1 aralığında** (0–255 değil): `{r: 1, g: 0, b: 0}` = kırmızı.
+6. **Renkler 0–1 aralığında** (0–255 değil): `{r: 1, g: 0, b: 0}` = kırmızı. Renk değerlerini hardcoded yazma — tasarım sisteminden (`figma_get_variables` / `figma_get_styles`) oku.
 
 7. **Fills/strokes read-only array** — klonla, değiştir, geri ata:
 ```js
+// Renk değerini DS'den oku, aşağıdaki sadece API FORMAT örneğidir
 const fills = [...node.fills];
-fills[0] = { ...fills[0], color: { r: 1, g: 0, b: 0 } };
+fills[0] = { ...fills[0], color: DS_COLOR }; // DS'den okunan değer
 node.fills = fills;
 ```
 
-8. **Font yükleme zorunlu** — metin işleminden önce:
+8. **Font yükleme zorunlu** — metin işleminden önce font yükle. Hangi fontu kullanacağını belirlemek için şu sırayı takip et:
+
+   **a)** Kayıtlı kütüphane varsa (`.claude/libraries/`) text style'lardan veya variable'lardan font ailesini oku. Örnek: kütüphanedeki text style `global/surface/body` → font family ve style bilgisini al.
+
+   **b)** Kütüphane yoksa veya font bilgisi bulunamazsa kullanıcıya sor: "Hangi fontu kullanmamı istersiniz?"
+
+   **c)** Kullanıcı "sen seç" derse `Inter` kullan.
+
 ```js
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+// Fontu belirledikten sonra yükle:
+await figma.loadFontAsync({ family: "FONT_ADI", style: "Regular" });
+// Gerekli diğer ağırlıklar:
+await figma.loadFontAsync({ family: "FONT_ADI", style: "Bold" });
 ```
+   **Asla** hardcoded font varsayma — her zaman bu sırayı takip et. Bu kural font, renk, boyut, spacing dahil TÜM design token'lar için geçerlidir. Detay: `project-context.md` → "Design Token Kuralı".
 
 9. **Sayfa konteksti her çağrıda sıfırlanır** — `figma.currentPage` her `figma_execute` çağrısında ilk sayfaya döner. Farklı sayfada çalışacaksan:
 ```js

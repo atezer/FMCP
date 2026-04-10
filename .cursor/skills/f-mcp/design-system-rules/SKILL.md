@@ -10,6 +10,8 @@ metadata:
 
 # Design System Rules Generator (Multi-Platform)
 
+> **Design Token Kuralı:** Bu skill'deki kod örneklerinde geçen font adları, renk kodları, piksel boyutları yalnızca FORMAT gösterimidir. Çalışma anında tüm design token değerleri (font, renk, boyut, spacing, radius, gölge) kayıtlı kütüphaneden (`figma_get_variables`, `figma_get_styles`) veya kullanıcıdan okunmalıdır. Hardcoded token değeri kullanma. Detay: `project-context.md` → "Design Token Kuralı".
+
 ## Overview
 
 Bu skill, **iOS, Android ve Web** platformlarına özel design system kuralları oluşturur. Her platformun kendi framework'ü, naming convention'ı ve dosya yapısı olduğu için, kurallar platform-spesifik olarak üretilir.

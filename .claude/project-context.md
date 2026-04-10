@@ -100,6 +100,39 @@ Kullanıcıya ASLA terminal komutu söyleme, teknik adım açıklama. Her şeyi 
 ### Dil
 Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, ğ, ö, ü, ı, İ) doğru kullanılmalı.
 
+## Design System Kütüphaneleri
+
+Kullanıcı lokal olarak design system kütüphaneleri kaydedebilir. Kayıtlı kütüphaneler `.claude/libraries/` dizininde bulunur (gitignored — repo'ya dahil edilmez).
+
+### Kullanım kuralları
+
+1. **Skill çalıştırmadan önce** `.claude/libraries/` dizinini kontrol et. Kayıtlı kütüphane varsa oku.
+2. **Varsayılan kütüphane:** Kullanıcı "hangi kütüphane?" demişse veya context'ten anlaşılamıyorsa, kayıtlı kütüphanelerden ilkini kullan.
+3. **Figma file key'leri** kütüphane dosyasındaki tablolardan al — URL'den parse etme, doğrudan `File Key` alanını kullan.
+4. **Token okuma** her zaman kütüphanenin WEB/ana dosyasından yapılır.
+5. **Platform seçimi:** Web ekranı → WEB dosyası, Mobil ekran → Mobil dosyası (yoksa WEB fallback).
+
+### Design Token Kuralı (TÜM skill'ler için geçerli — ZORUNLU)
+
+Hiçbir skill gömülü/hardcoded design token değeri içeremez ve kullanamaz. Font ailesi, renk kodu, font boyutu, spacing, radius, gölge — hiçbir tasarım değeri skill içine yazılmaz.
+
+**Her tasarım değeri çalışma anında tasarım sisteminden okunur:**
+
+1. **Önce kayıtlı kütüphaneyi oku:** `.claude/libraries/` dizinindeki kütüphane dosyasını kontrol et. Font ailesi, variable collection'lar ve style listesi orada.
+2. **Canlı değerleri Figma'dan al:**
+   - Font → `figma_get_styles()` text style'larından veya kütüphanenin `Font Ailesi` alanından
+   - Renkler → `figma_get_variables()` veya `figma_get_styles()` paint style'larından
+   - Boyutlar/spacing → `figma_get_variables()` variable collection'larından
+   - Gölgeler → `figma_get_styles()` effect style'larından
+3. **Bulunamazsa kullanıcıya sor.**
+4. **Kullanıcı "sen seç" derse:** Font için `Inter`, renkler için Figma varsayılanları kullan.
+
+**Skill'lerdeki kod örnekleri:** Örneklerde geçen değerler (renk hex, font adı, piksel boyutu) yalnızca FORMAT gösterimi içindir. Çalışma anında bu değerler her zaman tasarım sisteminden okunmalıdır.
+
+### Mevcut kütüphaneler
+
+Kayıtlı kütüphaneleri görmek için `.claude/libraries/` dizinini kontrol et. Her `.md` dosyası bir kütüphanedir. Kütüphane eklemek için `/add-library` komutunu kullan.
+
 ## References
 
 - [Architecture](../docs/ARCHITECTURE.md) - Technical design
