@@ -17,6 +17,8 @@ import { createChildLogger } from "./core/logger.js";
 import { testBrowserRendering } from "./test-browser.js";
 import { FigmaAPI, extractFileKey } from "./core/figma-api.js";
 import { registerFigmaAPITools } from "./core/figma-tools.js";
+import { FMCP_VERSION } from "./core/version.js";
+import { FMCP_INSTRUCTIONS } from "./core/instructions.js";
 import { FmcpRelaySession } from "./cloud-relay-session.js";
 import { handleCloudModeRoutes, maybeTightenMcpCors } from "./cloud-mode-routes.js";
 import { clientIp, deleteBind, deletePairing, FMCP_RL_PREFIX, generatePairingCode, generatePairingSecret, getBind, getPairing, PAIRING_TTL_SEC, putBind, putPairing, rateLimitAllow, } from "./cloud-mode-kv.js";
@@ -31,10 +33,7 @@ export class FigmaMCP extends McpAgent {
         super(...arguments);
         // Root @modelcontextprotocol/sdk vs agents' nested copy — types diverge; runtime is compatible.
         // @ts-ignore TS2416 — McpServer duplicate package resolution
-        this.server = new McpServer({
-            name: "F-MCP ATezer",
-            version: "0.1.0",
-        });
+        this.server = new McpServer({ name: "F-MCP ATezer", version: FMCP_VERSION }, { instructions: FMCP_INSTRUCTIONS });
         this.browserManager = null;
         this.consoleMonitor = null;
         this.figmaAPI = null;
@@ -1127,7 +1126,7 @@ export default {
             return new Response(JSON.stringify({
                 status: "healthy",
                 service: "F-MCP ATezer",
-                version: "0.1.0",
+                version: FMCP_VERSION,
                 endpoints: [
                     "/sse",
                     "/mcp",

@@ -2,6 +2,7 @@
  * FMCP Cloud Mode — per-pairing-code Durable Object.
  * Holds the Figma plugin WebSocket and forwards PluginBridge RPC to the plugin.
  */
+import { FMCP_VERSION } from "./core/version.js";
 const RPC_TIMEOUT_MS = 120_000;
 export class FmcpRelaySession {
     constructor(ctx, env) {
@@ -100,7 +101,7 @@ export class FmcpRelaySession {
             try {
                 ws.send(JSON.stringify({
                     type: "welcome",
-                    bridgeVersion: "cloud-1.0.0",
+                    bridgeVersion: `cloud-${FMCP_VERSION}`,
                     port: 0,
                     clientId: `cloud_${Date.now()}`,
                     multiClient: false,

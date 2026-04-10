@@ -32,6 +32,8 @@ import { registerFigmaAPITools } from "./core/figma-tools.js";
 import { FigmaDesktopConnector } from "./core/figma-desktop-connector.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
+import { FMCP_VERSION } from "./core/version.js";
+import { FMCP_INSTRUCTIONS } from "./core/instructions.js";
 
 const logger = createChildLogger({ component: "local-server" });
 
@@ -58,10 +60,10 @@ class LocalFigmaMCP {
 	}> = new Map();
 
 	constructor() {
-		this.server = new McpServer({
-			name: "F-MCP ATezer (Local)",
-			version: "1.7.19",
-		});
+		this.server = new McpServer(
+			{ name: "F-MCP ATezer (Local)", version: FMCP_VERSION },
+			{ instructions: FMCP_INSTRUCTIONS },
+		);
 	}
 
 	/**

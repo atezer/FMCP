@@ -4,6 +4,7 @@
  */
 
 import type { Env } from "./browser-manager.js";
+import { FMCP_VERSION } from "./core/version.js";
 
 type Pending = {
 	resolve: (v: unknown) => void;
@@ -121,7 +122,7 @@ export class FmcpRelaySession implements DurableObject {
 				ws.send(
 					JSON.stringify({
 						type: "welcome",
-						bridgeVersion: "cloud-1.0.0",
+						bridgeVersion: `cloud-${FMCP_VERSION}`,
 						port: 0,
 						clientId: `cloud_${Date.now()}`,
 						multiClient: false,
