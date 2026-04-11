@@ -128,7 +128,8 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 ## Teknik detaylar
 
 - **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ([tam liste](docs/TOOLS_FULL_LIST.md))
-- **17 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi ([test raporu](docs/TEST_REPORT.md))
+- **20 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi, DS denetim ([skill dizini](skills/SKILL_INDEX.md))
+- **3 otonom agent** — DS denetim, token senkronizasyon, ekran oluşturma (Claude Code)
 - **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda çalışır
 - **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internetsiz (air-gap) ortamlarda çalışır
@@ -138,7 +139,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | | |
 |---|---|
-| Güncel sürüm | **1.7.23** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
+| Güncel sürüm | **1.7.24** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 
