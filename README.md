@@ -51,7 +51,7 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 |------|-------------------|-----|
 | **Claude Desktop** (masaüstü uygulaması) | ✅ | Sohbet arayüzü — günlük kullanım için önerilen |
 | **Claude Code** (terminal uygulaması) | ✅ | Kod yazma ve geliştirme için |
-| **Cursor** | ✅ | Kod editörü — geliştirciler için |
+| **Cursor** | ✅ | Kod editörü — geliştiriciler için |
 | **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
 
 ---
