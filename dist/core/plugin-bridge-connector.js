@@ -199,7 +199,8 @@ export class PluginBridgeConnector {
     }
     async arrangeComponentSet(nodeIds) {
         const res = (await this.bridge.request("arrangeComponentSet", { nodeIds }, this.fileKey));
-        return res?.data ?? res ?? { nodeId: "", name: "" };
+        const data = res?.data;
+        return data ?? { nodeId: res?.nodeId ?? "", name: res?.name ?? "" };
     }
     async dispose() {
         logger.info("Plugin bridge connector disposed");

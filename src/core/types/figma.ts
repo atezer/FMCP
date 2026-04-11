@@ -154,6 +154,15 @@ export interface PluginDocumentStructure {
 	fileName?: string;
 }
 
+// ---- CRUD operation result ----
+
+export interface PluginCrudResult {
+	success?: boolean;
+	error?: string;
+	data?: unknown;
+	[key: string]: unknown;
+}
+
 // ---- Batch export types ----
 
 export interface PluginExportResult {

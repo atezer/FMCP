@@ -62,9 +62,13 @@ export function loadConfig(): ServerConfig {
   return DEFAULT_CONFIG;
 }
 
+let cachedConfig: ServerConfig | null = null;
+
 /**
- * Get configuration
+ * Get configuration (cached after first load)
  */
 export function getConfig(): ServerConfig {
-  return loadConfig();
+  if (cachedConfig) return cachedConfig;
+  cachedConfig = loadConfig();
+  return cachedConfig;
 }

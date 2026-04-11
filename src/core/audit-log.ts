@@ -78,3 +78,13 @@ export function auditTool(
 export function auditPlugin(path: string | undefined, event: "plugin_connect" | "plugin_disconnect"): void {
 	auditLog(path, { event });
 }
+
+/**
+ * Flush and close the audit log stream. Call on graceful shutdown.
+ */
+export function closeAuditLog(): void {
+	if (stream) {
+		try { stream.end(); } catch { /* ignore */ }
+		stream = null;
+	}
+}

@@ -16,6 +16,7 @@ import { createServer, get as httpGet, request as httpRequest } from "http";
 import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
+import { FMCP_VERSION } from "./version.js";
 
 const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
@@ -73,7 +74,7 @@ export class PluginBridgeServer {
 	private clients = new Map<string, ClientInfo>();
 	private pending = new Map<string, Pending>();
 	private requestTimeoutMs = 120000;
-	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+	private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
 	private auditLogPath: string | undefined;
 	private clientIdCounter = 0;
 
@@ -81,7 +82,7 @@ export class PluginBridgeServer {
 	private figmaRestToken: FigmaRestTokenInfo | null = null;
 
 	/** AI client name detected from parent process (Claude, Cursor, etc.) */
-	private readonly clientName: string;
+	private clientName: string;
 
 	/** User/config preferred port (before clamp and fallback). */
 	private readonly preferredPort: number;
@@ -91,37 +92,32 @@ export class PluginBridgeServer {
 		this.preferredPort = clamped;
 		this.port = clamped;
 		this.auditLogPath = options?.auditLogPath;
-		this.clientName = this.detectClientName();
+		this.clientName = this.detectClientNameSync();
 	}
 
-	/** Detect AI client name by env vars and process tree. */
-	private detectClientName(): string {
-		// 1. Explicit env var (highest priority)
+	/** Detect AI client name from env vars (instant, no I/O). */
+	private detectClientNameSync(): string {
 		if (process.env.FIGMA_MCP_CLIENT_NAME) return process.env.FIGMA_MCP_CLIENT_NAME;
-
-		// 2. Claude Code env detection
 		if (process.env.CLAUDECODE === "1") return "Claude Code";
+		if (process.env.CURSOR_TRACE_ID) return "Cursor";
+		return "MCP";
+	}
 
-		// 3. Cursor env detection
-		if (process.env.CURSOR_TRACE_ID || process.env.VSCODE_PID) {
-			if (process.env.CURSOR_TRACE_ID) return "Cursor";
-		}
-
-		// 4. Walk up process tree (max 5 levels)
+	/** Async detection via process tree walk — updates clientName in background. */
+	private detectClientNameAsync(): void {
+		if (this.clientName !== "MCP") return; // Already detected via env
 		try {
 			let pid = process.ppid;
 			for (let i = 0; i < 5 && pid > 1; i++) {
 				const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
 				const comm = line.replace(/^\s*\d+\s+/, "");
 				const ppidMatch = line.match(/^\s*(\d+)/);
-				if (/[Cc]ursor/i.test(comm)) return "Cursor";
-				if (/[Cc]laude/i.test(comm)) return "Claude";
-				if (/[Ww]indsurf/i.test(comm)) return "Windsurf";
+				if (/[Cc]ursor/i.test(comm)) { this.clientName = "Cursor"; return; }
+				if (/[Cc]laude/i.test(comm)) { this.clientName = "Claude"; return; }
+				if (/[Ww]indsurf/i.test(comm)) { this.clientName = "Windsurf"; return; }
 				pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
 			}
 		} catch { /* ignore */ }
-
-		return "MCP";
 	}
 	private port: number;
 
@@ -134,6 +130,7 @@ export class PluginBridgeServer {
 			return;
 		}
 		this.startError = null;
+		this.detectClientNameAsync();
 		this.tryListenFixed(this.preferredPort, false);
 	}
 
@@ -418,7 +415,7 @@ export class PluginBridgeServer {
 
 							ws.send(JSON.stringify({
 								type: "welcome",
-								bridgeVersion: "1.7.24",
+								bridgeVersion: FMCP_VERSION,
 								port: this.port,
 								clientId,
 								multiClient: true,
@@ -455,6 +452,9 @@ export class PluginBridgeServer {
 								auditTool(this.auditLogPath, p.method, false, msg.error, durationMs);
 								p.reject(new Error(msg.error));
 							} else {
+								if (msg.result === undefined) {
+									logger.warn({ method: p.method, msgId: msg.id }, "Plugin bridge: response has no result and no error");
+								}
 								auditTool(this.auditLogPath, p.method, true, undefined, durationMs);
 								p.resolve(msg.result);
 							}
@@ -479,7 +479,7 @@ export class PluginBridgeServer {
 			this._listenResolve?.(true);
 			this._listenResolve = null;
 
-			this.heartbeatTimer = setInterval(() => {
+			const heartbeat = () => {
 				for (const [clientId, info] of this.clients) {
 					if (info.ws.readyState !== 1) {
 						this.removeClient(clientId, "WebSocket not open");
@@ -501,7 +501,9 @@ export class PluginBridgeServer {
 						info.ws.send(JSON.stringify({ type: "ping" }));
 					} catch { /* ignore */ }
 				}
-			}, HEARTBEAT_INTERVAL_MS);
+				this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
+			};
+			this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
 		});
 	}
 
@@ -662,7 +664,7 @@ export class PluginBridgeServer {
 
 	stop(): void {
 		if (this.heartbeatTimer) {
-			clearInterval(this.heartbeatTimer);
+			clearTimeout(this.heartbeatTimer);
 			this.heartbeatTimer = null;
 		}
 		this.rejectAllPending("Plugin bridge server stopped");

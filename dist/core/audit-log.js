@@ -60,4 +60,16 @@ export function auditTool(path, method, success, error, durationMs) {
 export function auditPlugin(path, event) {
     auditLog(path, { event });
 }
+/**
+ * Flush and close the audit log stream. Call on graceful shutdown.
+ */
+export function closeAuditLog() {
+    if (stream) {
+        try {
+            stream.end();
+        }
+        catch { /* ignore */ }
+        stream = null;
+    }
+}
 //# sourceMappingURL=audit-log.js.map

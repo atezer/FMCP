@@ -15,6 +15,7 @@ import { createServer, get as httpGet, request as httpRequest } from "http";
 import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
+import { FMCP_VERSION } from "./version.js";
 const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
 const MAX_PORT = 5470;
@@ -39,39 +40,44 @@ export class PluginBridgeServer {
         this.preferredPort = clamped;
         this.port = clamped;
         this.auditLogPath = options?.auditLogPath;
-        this.clientName = this.detectClientName();
+        this.clientName = this.detectClientNameSync();
     }
-    /** Detect AI client name by env vars and process tree. */
-    detectClientName() {
-        // 1. Explicit env var (highest priority)
+    /** Detect AI client name from env vars (instant, no I/O). */
+    detectClientNameSync() {
         if (process.env.FIGMA_MCP_CLIENT_NAME)
             return process.env.FIGMA_MCP_CLIENT_NAME;
-        // 2. Claude Code env detection
         if (process.env.CLAUDECODE === "1")
             return "Claude Code";
-        // 3. Cursor env detection
-        if (process.env.CURSOR_TRACE_ID || process.env.VSCODE_PID) {
-            if (process.env.CURSOR_TRACE_ID)
-                return "Cursor";
-        }
-        // 4. Walk up process tree (max 5 levels)
+        if (process.env.CURSOR_TRACE_ID)
+            return "Cursor";
+        return "MCP";
+    }
+    /** Async detection via process tree walk — updates clientName in background. */
+    detectClientNameAsync() {
+        if (this.clientName !== "MCP")
+            return; // Already detected via env
         try {
             let pid = process.ppid;
             for (let i = 0; i < 5 && pid > 1; i++) {
                 const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
                 const comm = line.replace(/^\s*\d+\s+/, "");
                 const ppidMatch = line.match(/^\s*(\d+)/);
-                if (/[Cc]ursor/i.test(comm))
-                    return "Cursor";
-                if (/[Cc]laude/i.test(comm))
-                    return "Claude";
-                if (/[Ww]indsurf/i.test(comm))
-                    return "Windsurf";
+                if (/[Cc]ursor/i.test(comm)) {
+                    this.clientName = "Cursor";
+                    return;
+                }
+                if (/[Cc]laude/i.test(comm)) {
+                    this.clientName = "Claude";
+                    return;
+                }
+                if (/[Ww]indsurf/i.test(comm)) {
+                    this.clientName = "Windsurf";
+                    return;
+                }
                 pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
             }
         }
         catch { /* ignore */ }
-        return "MCP";
     }
     start() {
         if (this.wss) {
@@ -79,6 +85,7 @@ export class PluginBridgeServer {
             return;
         }
         this.startError = null;
+        this.detectClientNameAsync();
         this.tryListenFixed(this.preferredPort, false);
     }
     /** Get last startup error (null if running fine). */
@@ -326,7 +333,7 @@ export class PluginBridgeServer {
                             logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName }, "Plugin bridge: client registered (fileKey=%s, fileName=%s)", incomingFileKey, incomingFileName);
                             ws.send(JSON.stringify({
                                 type: "welcome",
-                                bridgeVersion: "1.7.24",
+                                bridgeVersion: FMCP_VERSION,
                                 port: this.port,
                                 clientId,
                                 multiClient: true,
@@ -360,6 +367,9 @@ export class PluginBridgeServer {
                                 p.reject(new Error(msg.error));
                             }
                             else {
+                                if (msg.result === undefined) {
+                                    logger.warn({ method: p.method, msgId: msg.id }, "Plugin bridge: response has no result and no error");
+                                }
                                 auditTool(this.auditLogPath, p.method, true, undefined, durationMs);
                                 p.resolve(msg.result);
                             }
@@ -380,7 +390,7 @@ export class PluginBridgeServer {
             // Notify async restart() that binding succeeded
             this._listenResolve?.(true);
             this._listenResolve = null;
-            this.heartbeatTimer = setInterval(() => {
+            const heartbeat = () => {
                 for (const [clientId, info] of this.clients) {
                     if (info.ws.readyState !== 1) {
                         this.removeClient(clientId, "WebSocket not open");
@@ -407,7 +417,9 @@ export class PluginBridgeServer {
                     }
                     catch { /* ignore */ }
                 }
-            }, HEARTBEAT_INTERVAL_MS);
+                this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
+            };
+            this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
         });
     }
     /**
@@ -555,7 +567,7 @@ export class PluginBridgeServer {
     }
     stop() {
         if (this.heartbeatTimer) {
-            clearInterval(this.heartbeatTimer);
+            clearTimeout(this.heartbeatTimer);
             this.heartbeatTimer = null;
         }
         this.rejectAllPending("Plugin bridge server stopped");

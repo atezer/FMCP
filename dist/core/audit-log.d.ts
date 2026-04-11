@@ -23,4 +23,8 @@ export declare function auditTool(path: string | undefined, method: string, succ
  * Log plugin connection / disconnection.
  */
 export declare function auditPlugin(path: string | undefined, event: "plugin_connect" | "plugin_disconnect"): void;
+/**
+ * Flush and close the audit log stream. Call on graceful shutdown.
+ */
+export declare function closeAuditLog(): void;
 //# sourceMappingURL=audit-log.d.ts.map

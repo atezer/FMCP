@@ -11,7 +11,7 @@ import { logger } from "./logger.js";
 import type {
 	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload,
 	PluginDocumentStructure, PluginScreenshotPayload, PluginExecuteResult,
-	DesignSystemSummary,
+	DesignSystemSummary, PluginCrudResult,
 } from "./types/figma.js";
 
 export class PluginBridgeConnector {
@@ -49,7 +49,7 @@ export class PluginBridgeConnector {
 		return this.bridge.request("executeCodeViaUI", { code, timeout }, this.fileKey);
 	}
 
-	async updateVariable(variableId: string, modeId: string, value: unknown): Promise<unknown> {
+	async updateVariable(variableId: string, modeId: string, value: unknown): Promise<PluginCrudResult> {
 		return this.bridge.request("updateVariable", { variableId, modeId, value }, this.fileKey);
 	}
 
@@ -58,7 +58,7 @@ export class PluginBridgeConnector {
 		collectionId: string,
 		resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN",
 		options?: { valuesByMode?: Record<string, unknown>; description?: string; scopes?: string[] }
-	): Promise<unknown> {
+	): Promise<PluginCrudResult> {
 		// Validate mutually exclusive scope combinations early (defense in depth)
 		if (options?.scopes) {
 			const fillScopes = ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "FILL_COLOR"];
@@ -72,31 +72,31 @@ export class PluginBridgeConnector {
 	async createVariableCollection(
 		name: string,
 		options?: { initialModeName?: string; additionalModes?: string[] }
-	): Promise<unknown> {
+	): Promise<PluginCrudResult> {
 		return this.bridge.request("createVariableCollection", { name, options }, this.fileKey);
 	}
 
-	async deleteVariable(variableId: string): Promise<unknown> {
+	async deleteVariable(variableId: string): Promise<PluginCrudResult> {
 		return this.bridge.request("deleteVariable", { variableId }, this.fileKey);
 	}
 
-	async deleteVariableCollection(collectionId: string): Promise<unknown> {
+	async deleteVariableCollection(collectionId: string): Promise<PluginCrudResult> {
 		return this.bridge.request("deleteVariableCollection", { collectionId }, this.fileKey);
 	}
 
-	async renameVariable(variableId: string, newName: string): Promise<unknown> {
+	async renameVariable(variableId: string, newName: string): Promise<PluginCrudResult> {
 		return this.bridge.request("renameVariable", { variableId, newName }, this.fileKey);
 	}
 
-	async addMode(collectionId: string, modeName: string): Promise<unknown> {
+	async addMode(collectionId: string, modeName: string): Promise<PluginCrudResult> {
 		return this.bridge.request("addMode", { collectionId, modeName }, this.fileKey);
 	}
 
-	async renameMode(collectionId: string, modeId: string, newName: string): Promise<unknown> {
+	async renameMode(collectionId: string, modeId: string, newName: string): Promise<PluginCrudResult> {
 		return this.bridge.request("renameMode", { collectionId, modeId, newName }, this.fileKey);
 	}
 
-	async refreshVariables(): Promise<unknown> {
+	async refreshVariables(): Promise<PluginCrudResult> {
 		return this.bridge.request("refreshVariables", {}, this.fileKey);
 	}
 
@@ -206,11 +206,11 @@ export class PluginBridgeConnector {
 		return this.bridge.request("createChildNode", { parentId, nodeType, properties }, this.fileKey);
 	}
 
-	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number }): Promise<unknown> {
+	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number }): Promise<PluginScreenshotPayload> {
 		return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
 	}
 
-	async setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<unknown> {
+	async setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult> {
 		return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
 	}
 
@@ -225,7 +225,7 @@ export class PluginBridgeConnector {
 			includeCodeReady?: boolean;
 			outputHint?: "react" | "tailwind";
 		}
-	): Promise<unknown> {
+	): Promise<PluginDocumentStructure> {
 		const params: Record<string, unknown> = { depth: depth ?? 1, verbosity: verbosity ?? "summary" };
 		if (opts?.excludeScreenshot !== undefined) params.excludeScreenshot = opts.excludeScreenshot;
 		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;
@@ -248,7 +248,7 @@ export class PluginBridgeConnector {
 			includeCodeReady?: boolean;
 			outputHint?: "react" | "tailwind";
 		}
-	): Promise<unknown> {
+	): Promise<PluginDocumentStructure> {
 		const params: Record<string, unknown> = {
 			nodeId,
 			depth: depth ?? 2,
@@ -263,7 +263,7 @@ export class PluginBridgeConnector {
 		return this.bridge.request("getNodeContext", params, this.fileKey);
 	}
 
-	async getLocalStyles(verbosity?: string): Promise<unknown> {
+	async getLocalStyles(verbosity?: string): Promise<PluginStylesPayload> {
 		return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" }, this.fileKey);
 	}
 
@@ -301,7 +301,7 @@ export class PluginBridgeConnector {
 		collectionName: string;
 		modes: string[];
 		tokens: Array<{ name: string; type?: string; value?: unknown; values?: Record<string, unknown> }> | Record<string, unknown>;
-	}): Promise<unknown> {
+	}): Promise<PluginCrudResult> {
 		const tokens = Array.isArray(payload.tokens)
 			? payload.tokens
 			: Object.entries(payload.tokens || {}).map(([name, v]) =>
@@ -317,8 +317,9 @@ export class PluginBridgeConnector {
 	}
 
 	async arrangeComponentSet(nodeIds: string[]): Promise<{ nodeId: string; name: string }> {
-		const res = (await this.bridge.request("arrangeComponentSet", { nodeIds }, this.fileKey)) as any;
-		return res?.data ?? res ?? { nodeId: "", name: "" };
+		const res = (await this.bridge.request("arrangeComponentSet", { nodeIds }, this.fileKey)) as Record<string, unknown>;
+		const data = res?.data as { nodeId: string; name: string } | undefined;
+		return data ?? { nodeId: (res?.nodeId as string) ?? "", name: (res?.name as string) ?? "" };
 	}
 
 	async dispose(): Promise<void> {

@@ -423,3 +423,78 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 | Kaynak dosya (src/) | 23 | 10 |
 | Runtime bağımlılıklar | 7 | 4 |
 | Entry point | 3 | 1 |
+
+---
+
+## 10. v1.7.26 Performans ve Stabilite Optimizasyonu
+
+**Tarih:** 2026-04-11
+**Scope:** Satirsatir kod taramasi, 5 kritik bug fix, performans optimizasyonu, stabilite iyilestirmeleri, tip guvenligi, skill/agent dokumantasyonu.
+
+### 10.1 Kritik Bug Duzeltmeleri (5 bug)
+
+| # | Bug | Konum | Aciklama |
+|---|-----|-------|----------|
+| 1 | Versiyon uyumsuzlugu | `local-plugin-only.ts:108`, `plugin-bridge-server.ts:421` | `"1.7.24"` hardcoded, `FMCP_VERSION` sabiti import edildi |
+| 2 | response-guard agresif truncation no-op | `response-guard.ts:102-113` | Ikinci pas ayni limitlerle calisiyordu, parametrik `truncate()` ile duzeltildi |
+| 3 | figma_search_assets dead code | `local-plugin-only.ts:1306` | `getAvailableLibraryComponentsAsync` cagirilmiyordu, `typeof` guard eklendi |
+| 4 | figma_watch_console busy-loop | `local-plugin-only.ts:616-634` | 120 WebSocket istegi -> backoff + early exit + watermark dedup |
+| 5 | Manifest trailing comma | `f-mcp-plugin/manifest.json:31` | Gecersiz JSON, Figma plugin yuklenemiyordu |
+
+### 10.2 Performans Optimizasyonlari (6 iyilestirme)
+
+| # | Iyilestirme | Dosya | Aciklama |
+|---|-------------|-------|----------|
+| 1 | `safeToolHandler()` wrapper | `local-plugin-only.ts` | Tum tool handler'lara try-catch |
+| 2 | JSON.stringify temizligi | `local-plugin-only.ts` | 25 yer `null, 0` gereksiz parametre kaldirildi |
+| 3 | TTL response cache | `response-cache.ts` (YENi) | Read-only tool'lar icin 5-10s cache, LRU eviction |
+| 4 | Tek-pas parity check | `local-plugin-only.ts` | codeMap.delete ile cift dongu kaldirildi |
+| 5 | Heartbeat setTimeout | `plugin-bridge-server.ts` | setInterval -> recursive setTimeout (overlap riski yok) |
+| 6 | Async process detection | `plugin-bridge-server.ts` | Constructor'daki execSync bloklama kaldirildi |
+
+### 10.3 Stabilite Iyilestirmeleri (5 iyilestirme)
+
+| # | Iyilestirme | Dosya | Aciklama |
+|---|-------------|-------|----------|
+| 1 | 30+ tool handler try-catch | `local-plugin-only.ts` | Tum handler'lar safeToolHandler ile sarild |
+| 2 | Audit log stream kapatma | `audit-log.ts` | `closeAuditLog()` eklendi, shutdown'da cagirilir |
+| 3 | Config caching | `config.ts` | `getConfig()` ilk load sonrasi cache'ler |
+| 4 | figma_execute kod limiti | `local-plugin-only.ts` | 50,000 karakter ustu reject edilir |
+| 5 | Cache invalidation | `local-plugin-only.ts` | Mutating tool'lar otomatik cache temizler |
+
+### 10.4 Tip Guvenligi (3 iyilestirme)
+
+| # | Iyilestirme | Dosya | Aciklama |
+|---|-------------|-------|----------|
+| 1 | Connector return tipleri | `plugin-bridge-connector.ts` | 15+ method `Promise<unknown>` -> tipli return |
+| 2 | as any kaldirildi | `local-plugin-only.ts`, `plugin-bridge-connector.ts` | Tip guvenli cast'ler |
+| 3 | BridgeResponse validasyonu | `plugin-bridge-server.ts` | Bos result uyari logu eklendi |
+
+### 10.5 Skill/Agent/Validation Iyilestirmeleri
+
+| # | Iyilestirme | Dosya | Aciklama |
+|---|-------------|-------|----------|
+| 1 | 6 skill'e Hata Yonetimi | 6 SKILL.md | Standart hata yonetimi bolumu eklendi |
+| 2 | 3 agent'a Hata Kurtarma | 3 agent .md | Hata kurtarma dokumantasyonu |
+| 3 | Validation script genisletme | `validate-fmcp-skills-tools.mjs` | YAML frontmatter + hata bolumu kontrolu |
+
+### 10.6 Gercek Figma Testi (v1.7.26)
+
+| Test | Sonuc | Detay |
+|------|-------|-------|
+| figma_get_status | PASS | 6 plugin, port 5456 |
+| figma_list_connected_files | PASS | 6 dosya aninda |
+| figma_get_variables (inventory) | PASS | 30 variable, 5 collection |
+| figma_get_variables (summary, buyuk DS) | PASS | 309KB veri, response guard devrede |
+| figma_get_design_system_summary | PASS | 1100 variable, paralel cagri |
+| figma_get_styles | PASS | 2 paint, 36 text, 20 effect style |
+| figma_search_components | PASS | 110+ component |
+| figma_get_design_context | PASS | 52 sayfa, aninda |
+| figma_execute (basarili) | PASS | 21 sayfa, 7 node |
+| figma_execute (hata) | PASS | Hata yakalandi, crash yok |
+| figma_plugin_diagnostics | PASS | 53MB RSS, 22MB heap |
+| figma_check_design_parity | PASS | 1 match, 1 divergent, 28 figma-only |
+| Hata yonetimi (3 gecersiz key) | PASS | Temiz JSON, crash yok |
+| Paralel cagrilar (3 tool) | PASS | Hepsi aninda |
+| Build + 36 test | PASS | 0 hata |
+| Skill validation (46 tool) | PASS | 46/46 uyumlu |

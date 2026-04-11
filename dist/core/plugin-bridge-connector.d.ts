@@ -6,7 +6,7 @@
  * Supports optional fileKey routing for multi-client scenarios.
  */
 import type { PluginBridgeServer } from "./plugin-bridge-server.js";
-import type { PluginVariablesPayload, PluginComponentPayload } from "./types/figma.js";
+import type { PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload, PluginDocumentStructure, PluginScreenshotPayload, PluginCrudResult } from "./types/figma.js";
 export declare class PluginBridgeConnector {
     private bridge;
     private fileKey?;
@@ -18,22 +18,22 @@ export declare class PluginBridgeConnector {
     getVariables(fileKey?: string): Promise<PluginVariablesPayload>;
     getComponentByNodeId(nodeId: string): Promise<PluginComponentPayload>;
     executeCodeViaUI(code: string, timeout?: number): Promise<unknown>;
-    updateVariable(variableId: string, modeId: string, value: unknown): Promise<unknown>;
+    updateVariable(variableId: string, modeId: string, value: unknown): Promise<PluginCrudResult>;
     createVariable(name: string, collectionId: string, resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN", options?: {
         valuesByMode?: Record<string, unknown>;
         description?: string;
         scopes?: string[];
-    }): Promise<unknown>;
+    }): Promise<PluginCrudResult>;
     createVariableCollection(name: string, options?: {
         initialModeName?: string;
         additionalModes?: string[];
-    }): Promise<unknown>;
-    deleteVariable(variableId: string): Promise<unknown>;
-    deleteVariableCollection(collectionId: string): Promise<unknown>;
-    renameVariable(variableId: string, newName: string): Promise<unknown>;
-    addMode(collectionId: string, modeName: string): Promise<unknown>;
-    renameMode(collectionId: string, modeId: string, newName: string): Promise<unknown>;
-    refreshVariables(): Promise<unknown>;
+    }): Promise<PluginCrudResult>;
+    deleteVariable(variableId: string): Promise<PluginCrudResult>;
+    deleteVariableCollection(collectionId: string): Promise<PluginCrudResult>;
+    renameVariable(variableId: string, newName: string): Promise<PluginCrudResult>;
+    addMode(collectionId: string, modeName: string): Promise<PluginCrudResult>;
+    renameMode(collectionId: string, modeId: string, newName: string): Promise<PluginCrudResult>;
+    refreshVariables(): Promise<PluginCrudResult>;
     getLocalComponents(opts?: {
         currentPageOnly?: boolean;
         limit?: number;
@@ -95,8 +95,8 @@ export declare class PluginBridgeConnector {
     captureScreenshot(nodeId: string | null, options?: {
         format?: string;
         scale?: number;
-    }): Promise<unknown>;
-    setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<unknown>;
+    }): Promise<PluginScreenshotPayload>;
+    setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;
         includeLayout?: boolean;
@@ -104,7 +104,7 @@ export declare class PluginBridgeConnector {
         includeTypography?: boolean;
         includeCodeReady?: boolean;
         outputHint?: "react" | "tailwind";
-    }): Promise<unknown>;
+    }): Promise<PluginDocumentStructure>;
     getNodeContext(nodeId: string, depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;
         includeLayout?: boolean;
@@ -112,8 +112,8 @@ export declare class PluginBridgeConnector {
         includeTypography?: boolean;
         includeCodeReady?: boolean;
         outputHint?: "react" | "tailwind";
-    }): Promise<unknown>;
-    getLocalStyles(verbosity?: string): Promise<unknown>;
+    }): Promise<PluginDocumentStructure>;
+    getLocalStyles(verbosity?: string): Promise<PluginStylesPayload>;
     getConsoleLogs(limit?: number): Promise<{
         logs: Array<{
             level: string;
@@ -162,7 +162,7 @@ export declare class PluginBridgeConnector {
             value?: unknown;
             values?: Record<string, unknown>;
         }> | Record<string, unknown>;
-    }): Promise<unknown>;
+    }): Promise<PluginCrudResult>;
     arrangeComponentSet(nodeIds: string[]): Promise<{
         nodeId: string;
         name: string;
