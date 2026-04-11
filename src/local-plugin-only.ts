@@ -83,7 +83,7 @@ const PLUGIN_NOT_CONNECTED =
 
 /** Categorize figma_execute errors for actionable user feedback. */
 function categorizeExecuteError(message: string, durationMs: number, timeoutMs: number): string {
-	const msg = message.toLowerCase();
+	const msg = (message ?? "").toLowerCase();
 	if (msg.includes("timed out") || msg.includes("timeout") || (durationMs >= timeoutMs * 0.9)) return "TIMEOUT";
 	if (msg.includes("syntax error") || msg.includes("unexpected token") || msg.includes("unexpected identifier")) return "SYNTAX";
 	if (msg.includes("not connected") || msg.includes("plugin bridge") || msg.includes("websocket") || msg.includes("bridge active")) return "CONNECTION";
@@ -401,25 +401,32 @@ export async function main() {
 				// Plugin may return { success: false, error: "..." } without throwing
 				if (typeof result === "object" && result !== null && (result as Record<string, unknown>).success === false) {
 					const pluginError = String((result as Record<string, unknown>).error || "Unknown plugin error");
-					const category = categorizeExecuteError(pluginError, durationMs, clampedTimeout);
+					let category = "RUNTIME";
+					let hint = "Hata mesajini kontrol et.";
+					try { category = categorizeExecuteError(pluginError, durationMs, clampedTimeout); hint = getErrorHint(category); } catch { /* safe fallback */ }
 					return {
 						content: [{ type: "text" as const, text: JSON.stringify({
 							...(result as Record<string, unknown>),
 							errorCategory: category,
 							_metrics: { durationMs, timeoutMs: clampedTimeout },
-							hint: getErrorHint(category),
+							hint,
 						}) }],
 						isError: true,
 					};
 				}
-				const enriched = typeof result === "object" && result !== null
-					? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout } }
-					: result;
+				let enriched: unknown;
+				try {
+					enriched = typeof result === "object" && result !== null
+						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout } }
+						: result;
+				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
 			} catch (err) {
 				const durationMs = Date.now() - startTime;
 				const msg = err instanceof Error ? err.message : String(err);
-				const category = categorizeExecuteError(msg, durationMs, clampedTimeout);
+				let category = "RUNTIME";
+				let hint = "Hata mesajini kontrol et.";
+				try { category = categorizeExecuteError(msg, durationMs, clampedTimeout); hint = getErrorHint(category); } catch { /* safe fallback */ }
 				logger.warn({ errorCategory: category, durationMs, timeout: clampedTimeout }, "figma_execute failed: %s", msg);
 				return {
 					content: [{ type: "text" as const, text: JSON.stringify({
@@ -427,7 +434,7 @@ export async function main() {
 						errorCategory: category,
 						error: msg,
 						_metrics: { durationMs, timeoutMs: clampedTimeout },
-						hint: getErrorHint(category),
+						hint,
 					}) }],
 					isError: true,
 				};

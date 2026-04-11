@@ -72,7 +72,7 @@ function normalizeForCompare(s) {
 const PLUGIN_NOT_CONNECTED = "F-MCP ATezer Bridge plugin not connected. Open Figma → Plugins → Development → F-MCP ATezer Bridge, wait for 'ready'.";
 /** Categorize figma_execute errors for actionable user feedback. */
 function categorizeExecuteError(message, durationMs, timeoutMs) {
-    const msg = message.toLowerCase();
+    const msg = (message ?? "").toLowerCase();
     if (msg.includes("timed out") || msg.includes("timeout") || (durationMs >= timeoutMs * 0.9))
         return "TIMEOUT";
     if (msg.includes("syntax error") || msg.includes("unexpected token") || msg.includes("unexpected identifier"))
@@ -353,26 +353,44 @@ export async function main() {
             // Plugin may return { success: false, error: "..." } without throwing
             if (typeof result === "object" && result !== null && result.success === false) {
                 const pluginError = String(result.error || "Unknown plugin error");
-                const category = categorizeExecuteError(pluginError, durationMs, clampedTimeout);
+                let category = "RUNTIME";
+                let hint = "Hata mesajini kontrol et.";
+                try {
+                    category = categorizeExecuteError(pluginError, durationMs, clampedTimeout);
+                    hint = getErrorHint(category);
+                }
+                catch { /* safe fallback */ }
                 return {
                     content: [{ type: "text", text: JSON.stringify({
                                 ...result,
                                 errorCategory: category,
                                 _metrics: { durationMs, timeoutMs: clampedTimeout },
-                                hint: getErrorHint(category),
+                                hint,
                             }) }],
                     isError: true,
                 };
             }
-            const enriched = typeof result === "object" && result !== null
-                ? { ...result, _metrics: { durationMs, timeoutMs: clampedTimeout } }
-                : result;
+            let enriched;
+            try {
+                enriched = typeof result === "object" && result !== null
+                    ? { ...result, _metrics: { durationMs, timeoutMs: clampedTimeout } }
+                    : result;
+            }
+            catch {
+                enriched = result;
+            }
             return { content: [{ type: "text", text: JSON.stringify(enriched) }] };
         }
         catch (err) {
             const durationMs = Date.now() - startTime;
             const msg = err instanceof Error ? err.message : String(err);
-            const category = categorizeExecuteError(msg, durationMs, clampedTimeout);
+            let category = "RUNTIME";
+            let hint = "Hata mesajini kontrol et.";
+            try {
+                category = categorizeExecuteError(msg, durationMs, clampedTimeout);
+                hint = getErrorHint(category);
+            }
+            catch { /* safe fallback */ }
             logger.warn({ errorCategory: category, durationMs, timeout: clampedTimeout }, "figma_execute failed: %s", msg);
             return {
                 content: [{ type: "text", text: JSON.stringify({
@@ -380,7 +398,7 @@ export async function main() {
                             errorCategory: category,
                             error: msg,
                             _metrics: { durationMs, timeoutMs: clampedTimeout },
-                            hint: getErrorHint(category),
+                            hint,
                         }) }],
                 isError: true,
             };
