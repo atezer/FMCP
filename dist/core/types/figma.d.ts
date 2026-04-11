@@ -117,6 +117,20 @@ export interface PluginExecuteResult {
     success: boolean;
     result?: unknown;
     error?: string;
+    errorCategory?: "TIMEOUT" | "SYNTAX" | "RUNTIME" | "CONNECTION" | "SERIALIZATION" | "FONT_NOT_LOADED" | "VALIDATION";
+    hint?: string;
+    executionMs?: number;
+    resultAnalysis?: {
+        type: string;
+        isNull: boolean;
+        isUndefined: boolean;
+        isEmpty: boolean;
+        warning: string | null;
+    };
+    _metrics?: {
+        durationMs: number;
+        timeoutMs: number;
+    };
 }
 export interface PluginDocumentStructure {
     document?: {

@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "figma_execute çağrılmadan önce kontrol et: (1) Kullanılacak fontlar figma.loadFontAsync() ile yüklendi mi? (2) Kod 30 satırı aşmıyor mu? (3) Try-catch ile sarılı mı? (4) Hardcoded renk/boyut yerine DS variable bağlanıyor mu? figma-canvas-ops skill kurallarına uyulduğundan emin ol."
+            "prompt": "figma_execute kontrol listesi: (1) Metin düzenliyorsan figma.loadFontAsync() kodun İÇİNDE var mı? Yoksa FONT_NOT_LOADED hatası alırsın. (2) Farklı sayfada çalışıyorsan kodun başında await figma.setCurrentPageAsync(page) var mı? Her çağrıda sayfa sıfırlanır. (3) Sonucu return ile plain object/array olarak dönüyor musun? Figma node objelerini doğrudan return etme — { id: node.id, name: node.name } yap. (4) Büyük işlemler (>10 node) için timeout: 30000 veya daha yüksek ayarla. Varsayılan 15000ms. (5) findAll büyük dosyalarda yavaş — mümkünse findOne veya ID ile erişim kullan. (6) Hardcoded renk/boyut yerine DS variable bağla."
           }
         ]
       }
