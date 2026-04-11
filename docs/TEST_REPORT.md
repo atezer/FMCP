@@ -1,9 +1,9 @@
 # F-MCP ATezer Bridge — Kapsamlı Test Raporu
 
-**Tarih:** 2026-04-04
+**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27 canli test)
 **Test Ortamı:** macOS Darwin 25.4.0 (ARM64)
-**Node.js:** v22.22.2
-**FMCP Sürüm:** 1.7.14
+**Node.js:** v22.14.0
+**FMCP Sürüm:** 1.7.27
 **Figma Planı:** Free
 **AI Aracı:** Claude Code (Opus 4.6, 1M context)
 **Bağlantı:** Plugin Bridge, port 5454
@@ -320,9 +320,26 @@ Tüm katmanlarda Türkçe özel karakter (ş, ı, ö, ü, ç, ğ, İ, Ş, Ç, Ğ
 | `test-output/HANDOFF.md` | Geliştirici handoff | Ekran yapısı, token ref, a11y notları |
 | `docs/TEST_REPORT.md` | Bu dosya | Kapsamlı test raporu |
 
+### 2.15 Faz 13: v1.7.27 figma_execute Canli Test (2026-04-11) — 6/6 PASS
+
+figma_execute enrichment (errorCategory, _metrics, hint) canli dogrulama:
+
+| # | Test | errorCategory | _metrics | hint | Sonuc |
+|---|------|--------------|----------|------|-------|
+| 91 | `figma_get_status` | — | — | — | PASS — 8 client, port 5456 |
+| 92 | Basarili calisma (`return {ok:true, pages}`) | — | `durationMs:19, timeoutMs:15000` | — | PASS |
+| 93 | Syntax hatasi (`this is not valid {{{`) | SYNTAX | `durationMs:6, timeoutMs:15000` | JavaScript syntax hatasi... | PASS |
+| 94 | Runtime hatasi (`null.name`) | RUNTIME | `durationMs:21, timeoutMs:15000` | Kod calisma hatasi... | PASS |
+| 95 | Timeout (`5s sleep, 3s limit`) | TIMEOUT | `durationMs:3006, timeoutMs:3000` | Islem cok uzun surdu... | PASS |
+| 96 | safeSerialize (`currentPage.children.map(c => c)`) | — | `durationMs:8, timeoutMs:15000` | — | PASS — `{__figmaNode:true}` format |
+
+**Kok neden:** Bridge server sureci (PID 31028) 21 saat once baslatilmis ve enrichment kodunu icermeyen eski dist'i calistiriyordu. Surecin yeniden baslatilmasi ile yeni dist yuklendi ve tum testler gecti.
+
+**Savunmaci iyilestirme:** `categorizeExecuteError` null-safety + figma_execute handler'indaki 3 code path'e (success, plugin-error, catch) ic try-catch eklendi.
+
 ---
 
-## 6. Bilinen Kısıtlamalar
+## 6. Bilinen Kisitlamalar
 
 | # | Kısıt | Etkilenen Araç | Sebep | Çözüm / Workaround |
 |---|-------|---------------|-------|---------------------|

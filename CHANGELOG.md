@@ -46,6 +46,12 @@ Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` ku
 - PreToolUse hook: 6 maddelik kontrol listesi (font, sayfa reset, return formati, timeout, findAll, DS)
 - `PluginExecuteResult` tipi genisletildi: errorCategory, hint, executionMs, resultAnalysis, _metrics
 
+**Savunmaci Enrichment Fix (canli test sonrasi):**
+- `categorizeExecuteError()` null-safety: `(message ?? "").toLowerCase()`
+- figma_execute handler'indaki 3 code path'e (success, plugin-error, catch) ic try-catch eklendi — `safeToolHandler` dis catch'ine kacan hatalar artik enrichment kaybetmez
+- `.claude-plugin/plugin.json` versiyon senkronizasyonu (1.7.25 → 1.7.27)
+- 6/6 canli test GECTI: errorCategory (SYNTAX/RUNTIME/TIMEOUT), _metrics, hint, safeSerialize
+
 ## [1.7.26] - 2026-04-11
 
 ### Performans ve Stabilite Optimizasyonu
