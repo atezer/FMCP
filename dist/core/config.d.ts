@@ -7,7 +7,7 @@ import type { ServerConfig } from './types/index.js';
  */
 export declare function loadConfig(): ServerConfig;
 /**
- * Get configuration
+ * Get configuration (cached after first load)
  */
 export declare function getConfig(): ServerConfig;
 //# sourceMappingURL=config.d.ts.map

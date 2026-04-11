@@ -129,6 +129,12 @@ export interface PluginDocumentStructure {
     fileKey?: string;
     fileName?: string;
 }
+export interface PluginCrudResult {
+    success?: boolean;
+    error?: string;
+    data?: unknown;
+    [key: string]: unknown;
+}
 export interface PluginExportResult {
     nodeId: string;
     name: string;

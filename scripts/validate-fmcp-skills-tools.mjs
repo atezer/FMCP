@@ -82,6 +82,44 @@ function collectSkillToolRefs(files) {
 	return { byFile, all };
 }
 
+/** Check YAML frontmatter structure in skill files */
+function validateSkillFrontmatter(files) {
+	const warnings = [];
+	for (const file of files) {
+		const text = readFileSync(file, "utf8");
+		const relPath = file.replace(ROOT + "/", "");
+
+		// Check YAML frontmatter exists
+		if (!text.startsWith("---")) {
+			warnings.push(`${relPath}: YAML frontmatter eksik`);
+			continue;
+		}
+		const endIdx = text.indexOf("---", 3);
+		if (endIdx === -1) {
+			warnings.push(`${relPath}: YAML frontmatter kapanmamis`);
+			continue;
+		}
+		const frontmatter = text.slice(3, endIdx);
+
+		// Check required fields
+		if (!frontmatter.includes("name:")) {
+			warnings.push(`${relPath}: frontmatter'da 'name' alani eksik`);
+		}
+		if (!frontmatter.includes("description:")) {
+			warnings.push(`${relPath}: frontmatter'da 'description' alani eksik`);
+		}
+		if (!frontmatter.includes("mcp-server:")) {
+			warnings.push(`${relPath}: frontmatter'da 'mcp-server' alani eksik`);
+		}
+
+		// Check for error handling section
+		if (!text.includes("## Hata Yonetimi") && !text.includes("## Hata yönetimi") && !text.includes("## Error Handling")) {
+			warnings.push(`${relPath}: 'Hata Yonetimi' bolumu eksik`);
+		}
+	}
+	return warnings;
+}
+
 function main() {
 	const registered = collectRegisteredTools();
 	const mdFiles = walkMarkdownFiles(SKILLS_DIR);
@@ -108,6 +146,17 @@ function main() {
 	}
 
 	console.log("Tüm skill araç referansları kaynakla uyumlu.\n");
+
+	// Structural validation
+	const structWarnings = validateSkillFrontmatter(mdFiles);
+	if (structWarnings.length) {
+		console.warn("Yapisal uyarilar:\n");
+		for (const w of structWarnings) {
+			console.warn(`  ⚠ ${w}`);
+		}
+		console.warn("");
+	}
+
 	if (process.env.VERBOSE === "1") {
 		console.log("(VERBOSE) Skill'de hiç geçmeyen kayıtlı araçlar (bilgi):\n");
 		for (const t of onlyInSource.slice(0, 40)) {

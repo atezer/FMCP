@@ -55,10 +55,14 @@ export function loadConfig() {
     // No config file found, use defaults
     return DEFAULT_CONFIG;
 }
+let cachedConfig = null;
 /**
- * Get configuration
+ * Get configuration (cached after first load)
  */
 export function getConfig() {
-    return loadConfig();
+    if (cachedConfig)
+        return cachedConfig;
+    cachedConfig = loadConfig();
+    return cachedConfig;
 }
 //# sourceMappingURL=config.js.map

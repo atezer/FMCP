@@ -57,14 +57,16 @@ export declare class PluginBridgeServer {
     /** Figma REST API token (in-memory only, never written to disk). */
     private figmaRestToken;
     /** AI client name detected from parent process (Claude, Cursor, etc.) */
-    private readonly clientName;
+    private clientName;
     /** User/config preferred port (before clamp and fallback). */
     private readonly preferredPort;
     constructor(port: number, options?: {
         auditLogPath?: string;
     });
-    /** Detect AI client name by env vars and process tree. */
-    private detectClientName;
+    /** Detect AI client name from env vars (instant, no I/O). */
+    private detectClientNameSync;
+    /** Async detection via process tree walk — updates clientName in background. */
+    private detectClientNameAsync;
     private port;
     /** Last error message when bridge could not bind (port conflict, etc.) */
     private startError;

@@ -183,6 +183,14 @@ Token bağlama kuralları için bkz: `generate-figma-library` skill'i.
 - `voiceTone` → Bileşen açıklama ve kullanım notlarının ton kalibrasyonu
 - `copyRules` → Copy Spec bölümünde CTA max karakter, kaçınılacak kelimeler referansı
 
+## Hata Yonetimi
+
+1. **Plugin baglanti hatasi:** `figma_get_status()` ile kontrol et. Bagli degilse kullaniciya Figma'da F-MCP ATezer Bridge plugin'ini acmasini soyler.
+2. **Tool timeout:** Bir kez tekrar dene. Basarisizsa kapsami daralt (daha az node, daha dusuk depth).
+3. **Bos yanit:** Hedef node veya sayfa var mi kontrol et. Kullaniciya net bilgi ver.
+4. **Rate limit (REST tool'lar):** `figma_get_rest_token_status()` ile kontrol et. Limit dolduysa bekle.
+5. **Beklenmeyen hata:** Hata mesajini kullaniciya goster, alternatif yaklasim oner.
+
 ## Skill Koordinasyonu
 
 - Öncesi: `generate-figma-library` veya `figma-canvas-ops`

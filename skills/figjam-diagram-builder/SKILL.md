@@ -165,6 +165,14 @@ for (let i = 0; i < 8; i++) {
 }
 ```
 
+## Hata Yonetimi
+
+1. **Plugin baglanti hatasi:** `figma_get_status()` ile kontrol et. Bagli degilse kullaniciya Figma'da F-MCP ATezer Bridge plugin'ini acmasini soyler.
+2. **Tool timeout:** Bir kez tekrar dene. Basarisizsa kapsami daralt (daha az node, daha dusuk depth).
+3. **Bos yanit:** Hedef node veya sayfa var mi kontrol et. Kullaniciya net bilgi ver.
+4. **Rate limit (REST tool'lar):** `figma_get_rest_token_status()` ile kontrol et. Limit dolduysa bekle.
+5. **Beklenmeyen hata:** Hata mesajini kullaniciya goster, alternatif yaklasim oner.
+
 ## Evolution Triggers
 
 - Bridge'e FigJam-spesifik araçlar eklenirse (ör. connector oluşturma aracı) adımlı üretim stratejisi basitleştirilebilir

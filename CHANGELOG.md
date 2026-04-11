@@ -12,6 +12,43 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.26] - 2026-04-11
+
+### Performans ve Stabilite Optimizasyonu
+
+Satirsatir kod taramasi ile tespit edilen 5 kritik bug, 6 performans sorunu ve 6 stabilite riski duzeltildi.
+
+**Bug Duzeltmeleri:**
+- `local-plugin-only.ts`, `plugin-bridge-server.ts` — Versiyon uyumsuzlugu: hardcoded `"1.7.24"` yerine `FMCP_VERSION` sabiti
+- `response-guard.ts` — Agresif truncation ikinci pasi etkisizdi, parametrik `truncate()` ile duzeltildi
+- `local-plugin-only.ts` — `figma_search_assets` dead code: `getAvailableLibraryComponentsAsync` cagirilmiyordu
+- `local-plugin-only.ts` — `figma_watch_console` busy-loop: 120 WebSocket istegi yerine backoff + early exit
+- `f-mcp-plugin/manifest.json` — Trailing comma gecersiz JSON, Figma plugin yuklenemiyordu
+
+**Performans:**
+- `safeToolHandler()` wrapper ile tum tool handler'lara try-catch (30+ handler)
+- `JSON.stringify(x, null, 0)` gereksiz parametreler kaldirildi (25 yer)
+- `ResponseCache` sinifi: read-only tool'lar icin TTL cache (5-10s), LRU eviction (yeni dosya: `src/core/response-cache.ts`)
+- `figma_check_design_parity` tek-pas optimizasyonu (`codeMap.delete` ile cift dongu kaldirildi)
+- Heartbeat `setInterval` -> recursive `setTimeout` (overlap riski yok)
+- Process tree walk async: constructor'daki `execSync` bloklama kaldirildi
+
+**Stabilite:**
+- `closeAuditLog()` eklendi, shutdown handler'da cagirilir (`audit-log.ts`)
+- `getConfig()` ilk load sonrasi cache'ler (`config.ts`)
+- `figma_execute` 50,000 karakter limiti
+- Mutating tool'lar (`create_*`, `update_*`, `delete_*`, `execute`) cache invalidation
+
+**Tip Guvenligi:**
+- `PluginBridgeConnector`: 15+ method `Promise<unknown>` -> tipli return
+- `as any` cast'ler kaldirildi
+- `BridgeResponse` bos result uyari logu
+
+**Skill/Agent:**
+- 6 skill'e standart Hata Yonetimi bolumu eklendi
+- 3 agent'a Hata Kurtarma dokumantasyonu eklendi
+- `validate-fmcp-skills-tools.mjs`: YAML frontmatter ve hata bolumu yapisal kontrolu
+
 ## [1.7.23] - 2026-04-11
 
 ### Refactor: Local Full + Cloudflare Modları Kaldırıldı

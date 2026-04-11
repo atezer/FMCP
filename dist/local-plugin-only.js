@@ -18,6 +18,9 @@ import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse } from "./core/response-guard.js";
+import { closeAuditLog } from "./core/audit-log.js";
+import { FMCP_VERSION } from "./core/version.js";
+import { ResponseCache } from "./core/response-cache.js";
 const logger = createChildLogger({ component: "plugin-only-mcp" });
 /** Resolve fileKey from figmaUrl (parse) or explicit fileKey. Returns undefined if neither yields a key. */
 function resolveFileKey(figmaUrl, explicitFileKey) {
@@ -67,6 +70,21 @@ function normalizeForCompare(s) {
     return s.replace(/\s/g, "");
 }
 const PLUGIN_NOT_CONNECTED = "F-MCP ATezer Bridge plugin not connected. Open Figma → Plugins → Development → F-MCP ATezer Bridge, wait for 'ready'.";
+/** Wrap a tool handler with try-catch to prevent unhandled rejections. */
+function safeToolHandler(handler) {
+    return async (params) => {
+        try {
+            return await handler(params);
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                isError: true,
+            };
+        }
+    };
+}
 function getConnector(bridge, fileKey) {
     if (!bridge.isConnected(fileKey)) {
         if (fileKey) {
@@ -87,9 +105,12 @@ export async function main() {
     const auditLogPath = config.local?.auditLogPath;
     const bridge = new PluginBridgeServer(port, { auditLogPath });
     bridge.start();
+    const cache = new ResponseCache();
+    /** Invalidate cache after any mutating operation. */
+    function invalidateCache() { cache.invalidate(); }
     const server = new McpServer({
         name: "F-MCP ATezer Bridge (Plugin-only)",
-        version: "1.7.24",
+        version: FMCP_VERSION,
     });
     // ---- figma_list_connected_files (multi-client discovery) ----
     server.registerTool("figma_list_connected_files", {
@@ -108,7 +129,7 @@ export async function main() {
                         message: files.length === 0
                             ? "No plugins connected. Open Figma and run the F-MCP ATezer Bridge plugin."
                             : `${files.length} plugin(s) connected. Use fileKey parameter in other tools to target a specific file.`,
-                    }, null, 0),
+                    }),
                 }],
         };
     });
@@ -132,7 +153,7 @@ export async function main() {
             const resolvedKey = resolveFileKey(figmaUrl, fileKey);
             if (figmaUrl && !resolvedKey) {
                 return {
-                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }, null, 0) }],
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }) }],
                     isError: true,
                 };
             }
@@ -149,13 +170,13 @@ export async function main() {
                 ? JSON.stringify({ success: false, error: "No data from plugin" })
                 : typeof data === "string"
                     ? data
-                    : JSON.stringify(data, null, 0);
+                    : JSON.stringify(data);
             return { content: [{ type: "text", text }] };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
                 isError: true,
             };
         }
@@ -182,7 +203,7 @@ export async function main() {
             const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
             if (figmaUrl && !resolvedKey) {
                 return {
-                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }, null, 0) }],
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }) }],
                     isError: true,
                 };
             }
@@ -203,13 +224,13 @@ export async function main() {
                 ? JSON.stringify({ success: false, error: "No data from plugin" })
                 : typeof data === "string"
                     ? data
-                    : JSON.stringify(data, null, 0);
+                    : JSON.stringify(data);
             return { content: [{ type: "text", text }] };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
                 isError: true,
             };
         }
@@ -223,7 +244,7 @@ export async function main() {
             verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, verbosity }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const raw = await conn.getVariablesFromPluginUI();
         if (!raw || !raw.variables) {
@@ -247,8 +268,8 @@ export async function main() {
                 valuesByMode: v.valuesByMode,
             }));
         }
-        return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(out) }] };
+    }));
     // ---- figma_get_component ----
     server.registerTool("figma_get_component", {
         description: "Get component metadata by node ID from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
@@ -258,11 +279,11 @@ export async function main() {
             nodeId: z.string(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, nodeId }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.getComponentFromPluginUI(nodeId);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- figma_get_styles (plugin only) ----
     server.registerTool("figma_get_styles", {
         description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
@@ -272,11 +293,11 @@ export async function main() {
             verbosity: z.enum(["summary", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, verbosity }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const data = await conn.getLocalStyles(verbosity);
-        return { content: [{ type: "text", text: JSON.stringify(data || {}, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(data || {}) }] };
+    }));
     // ---- figma_execute ----
     server.registerTool("figma_execute", {
         description: "Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file.",
@@ -287,11 +308,18 @@ export async function main() {
             timeout: z.number().optional().default(5000),
         },
         annotations: { destructiveHint: true },
-    }, async ({ figmaUrl, fileKey, code, timeout }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, code, timeout }) => {
+        if (code.length > 50000) {
+            return {
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: "Code too long (max 50,000 characters). Break into smaller pieces." }) }],
+                isError: true,
+            };
+        }
+        invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.executeCodeViaUI(code, timeout);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- figma_capture_screenshot ----
     server.registerTool("figma_capture_screenshot", {
         description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey or figmaUrl to target a specific file.",
@@ -303,11 +331,11 @@ export async function main() {
             scale: z.number().optional().default(2),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, nodeId, format, scale }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.captureScreenshot(nodeId ?? null, { format, scale });
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- figma_set_instance_properties ----
     server.registerTool("figma_set_instance_properties", {
         description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.). Use fileKey or figmaUrl to target a specific file.",
@@ -318,11 +346,12 @@ export async function main() {
             properties: z.record(z.union([z.string(), z.boolean()])),
         },
         annotations: { destructiveHint: true },
-    }, async ({ figmaUrl, fileKey, nodeId, properties }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, properties }) => {
+        invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.setInstanceProperties(nodeId, properties);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- Variable CRUD ----
     server.registerTool("figma_update_variable", {
         description: "Update a variable value in a mode. Get IDs from figma_get_variables.",
@@ -332,11 +361,12 @@ export async function main() {
             value: z.union([z.string(), z.number(), z.boolean()]),
         },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.updateVariable(p.variableId, p.modeId, p.value);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_create_variable", {
         description: "Create a variable in a collection. Get collectionId from figma_get_variables.",
         inputSchema: {
@@ -346,65 +376,72 @@ export async function main() {
             options: z.record(z.any()).optional(),
         },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.createVariable(p.name, p.collectionId, p.resolvedType, p.options);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_create_variable_collection", {
         description: "Create a variable collection.",
         inputSchema: { name: z.string(), options: z.record(z.any()).optional() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.createVariableCollection(p.name, p.options);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_delete_variable", {
         description: "Delete a variable.",
         inputSchema: { variableId: z.string() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.deleteVariable(p.variableId);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_delete_variable_collection", {
         description: "Delete a variable collection.",
         inputSchema: { collectionId: z.string() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.deleteVariableCollection(p.collectionId);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_rename_variable", {
         description: "Rename a variable.",
         inputSchema: { variableId: z.string(), newName: z.string() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.renameVariable(p.variableId, p.newName);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_add_mode", {
         description: "Add a mode to a collection.",
         inputSchema: { collectionId: z.string(), modeName: z.string() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.addMode(p.collectionId, p.modeName);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_rename_mode", {
         description: "Rename a mode in a collection.",
         inputSchema: { collectionId: z.string(), modeId: z.string(), newName: z.string() },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.renameMode(p.collectionId, p.modeId, p.newName);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- Design system summary (minimal tokens) ----
     server.registerTool("figma_get_design_system_summary", {
         description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
@@ -415,7 +452,7 @@ export async function main() {
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, currentPageOnly, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, currentPageOnly, limit }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const [vars, components] = await Promise.all([
             conn.getVariablesFromPluginUI(),
@@ -430,8 +467,8 @@ export async function main() {
             components: compData?.totalComponents ?? 0,
             componentSets: compData?.totalComponentSets ?? 0,
         };
-        return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(out) }] };
+    }));
     // ---- figma_search_components ----
     server.registerTool("figma_search_components", {
         description: "Search local components by name. Returns nodeIds and names. No REST API. Use fileKey or figmaUrl to target a specific file.",
@@ -443,7 +480,7 @@ export async function main() {
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, query, currentPageOnly, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, query, currentPageOnly, limit }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = (await conn.getLocalComponents({ currentPageOnly, limit }));
         const data = result?.data;
@@ -456,8 +493,8 @@ export async function main() {
             list = list.filter((c) => (c.name || "").toLowerCase().includes(q));
         }
         const summary = list.map((c) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, components: summary }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, components: summary }) }] };
+    }));
     // ---- Node operations (short list) ----
     server.registerTool("figma_instantiate_component", {
         description: "Create a component instance. Use componentKey from figma_search_components or nodeId for local components.",
@@ -473,63 +510,80 @@ export async function main() {
                 .optional(),
         },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.instantiateComponent(p.componentKey, p.options || {});
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_refresh_variables", {
         description: "Refresh variables from the file.",
         inputSchema: {},
         annotations: { readOnlyHint: false, destructiveHint: false },
-    }, async () => {
+    }, safeToolHandler(async () => {
         const conn = getConnector(bridge);
         const result = await conn.refreshVariables();
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     // ---- Console (plugin buffer, no CDP) ----
     server.registerTool("figma_get_console_logs", {
         description: "Get plugin console logs (log/warn/error) from the F-MCP plugin buffer. No CDP. Limit default 50.",
         inputSchema: { limit: z.number().min(1).max(200).optional().default(50) },
         annotations: { readOnlyHint: true },
-    }, async ({ limit }) => {
+    }, safeToolHandler(async ({ limit }) => {
         const conn = getConnector(bridge);
         const data = await conn.getConsoleLogs(limit);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }) }] };
+    }));
     server.registerTool("figma_watch_console", {
         description: "Stream new plugin console logs until timeout. Polls the plugin buffer. Timeout default 30s.",
         inputSchema: { timeoutSeconds: z.number().min(1).max(120).optional().default(30) },
         annotations: { readOnlyHint: true },
-    }, async ({ timeoutSeconds }) => {
+    }, safeToolHandler(async ({ timeoutSeconds }) => {
         const conn = getConnector(bridge);
         const deadline = Date.now() + timeoutSeconds * 1000;
-        const seen = new Set();
+        let lastSeenTime = 0;
         const stream = [];
+        let pollIntervalMs = 1000;
+        let consecutiveEmptyPolls = 0;
         while (Date.now() < deadline) {
             const { logs } = await conn.getConsoleLogs(200);
+            let newCount = 0;
             for (const entry of logs) {
-                const key = `${entry.time}-${JSON.stringify(entry.args)}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
+                if (entry.time > lastSeenTime) {
                     stream.push(entry);
+                    newCount++;
+                    if (entry.time > lastSeenTime)
+                        lastSeenTime = entry.time;
                 }
             }
-            await new Promise((r) => setTimeout(r, 1000));
+            if (newCount > 0) {
+                consecutiveEmptyPolls = 0;
+                pollIntervalMs = 1000;
+            }
+            else {
+                consecutiveEmptyPolls++;
+                if (consecutiveEmptyPolls >= 10)
+                    break;
+                if (consecutiveEmptyPolls >= 3) {
+                    pollIntervalMs = Math.min(pollIntervalMs * 2, 5000);
+                }
+            }
+            await new Promise((r) => setTimeout(r, pollIntervalMs));
         }
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: true, stream, count: stream.length }, null, 0) }],
+            content: [{ type: "text", text: JSON.stringify({ success: true, stream, count: stream.length }) }],
         };
-    });
+    }));
     server.registerTool("figma_clear_console", {
         description: "Clear the plugin console log buffer.",
         inputSchema: {},
         annotations: { destructiveHint: true },
-    }, async () => {
+    }, safeToolHandler(async () => {
         const conn = getConnector(bridge);
         await conn.clearConsole();
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Console cleared" }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Console cleared" }) }] };
+    }));
     // ---- set_description, get_component_image, get_component_for_development ----
     server.registerTool("figma_set_description", {
         description: "Set description on a component, component set, or style node. Supports markdown (descriptionMarkdown).",
@@ -539,11 +593,12 @@ export async function main() {
             descriptionMarkdown: z.string().optional(),
         },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.setNodeDescription(p.nodeId, p.description, p.descriptionMarkdown);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_get_component_image", {
         description: "Get screenshot of a node (component/frame). Returns base64 image. No REST API.",
         inputSchema: {
@@ -552,11 +607,11 @@ export async function main() {
             format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId, scale, format }) => {
+    }, safeToolHandler(async ({ nodeId, scale, format }) => {
         const conn = getConnector(bridge);
         const result = await conn.captureScreenshot(nodeId, { scale, format });
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_get_component_for_development", {
         description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows.",
         inputSchema: {
@@ -565,7 +620,7 @@ export async function main() {
             format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId, scale, format }) => {
+    }, safeToolHandler(async ({ nodeId, scale, format }) => {
         const conn = getConnector(bridge);
         const [component, screenshot] = await Promise.all([
             conn.getComponentFromPluginUI(nodeId),
@@ -573,8 +628,8 @@ export async function main() {
         ]);
         const comp = component?.component ?? component;
         const out = { success: true, component: comp, image: screenshot?.image ?? screenshot?.data };
-        return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(out) }] };
+    }));
     // ---- Batch variables & setup_design_tokens & arrange_component_set ----
     server.registerTool("figma_batch_create_variables", {
         description: "Create up to 100 variables in one call. Each item: collectionId, name, resolvedType (COLOR/FLOAT/STRING/BOOLEAN), value, modeId. Returns created and failed lists.",
@@ -589,11 +644,12 @@ export async function main() {
             })).max(100),
         },
         annotations: { destructiveHint: true },
-    }, async ({ items }) => {
+    }, safeToolHandler(async ({ items }) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.batchCreateVariables(items);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+    }));
     server.registerTool("figma_batch_update_variables", {
         description: "Update up to 100 variables. Each item: variableId, modeId, value. Returns updated and failed lists.",
         inputSchema: {
@@ -604,11 +660,12 @@ export async function main() {
             })).max(100),
         },
         annotations: { destructiveHint: true },
-    }, async ({ items }) => {
+    }, safeToolHandler(async ({ items }) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.batchUpdateVariables(items);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+    }));
     server.registerTool("figma_setup_design_tokens", {
         description: "Atomically create a variable collection + modes + variables. Rollback on any error. Params: collectionName, modes (array), tokens (array of { name, type?, value? or values? }).",
         inputSchema: {
@@ -622,20 +679,22 @@ export async function main() {
             })),
         },
         annotations: { destructiveHint: true },
-    }, async (p) => {
+    }, safeToolHandler(async (p) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.setupDesignTokens(p);
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }));
     server.registerTool("figma_arrange_component_set", {
         description: "Combine multiple component nodes into one Figma component set (combineAsVariants). Params: nodeIds (array of at least 2 component node IDs). Returns new component set nodeId.",
         inputSchema: { nodeIds: z.array(z.string()).min(2) },
         annotations: { destructiveHint: true },
-    }, async ({ nodeIds }) => {
+    }, safeToolHandler(async ({ nodeIds }) => {
+        invalidateCache();
         const conn = getConnector(bridge);
         const result = await conn.arrangeComponentSet(nodeIds);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
-    });
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+    }));
     // ---- figma_check_design_parity (design–code gap analysis) ----
     server.registerTool("figma_check_design_parity", {
         description: "Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {\"primary\": \"#0066cc\", \"spacing.md\": 16} or {\"primary\": {\"value\": \"#0066cc\"}}.",
@@ -714,7 +773,7 @@ export async function main() {
                     content: [
                         {
                             type: "text",
-                            text: JSON.stringify({ success: false, error: "codeTokens must be valid JSON" }, null, 0),
+                            text: JSON.stringify({ success: false, error: "codeTokens must be valid JSON" }),
                         },
                     ],
                     isError: true,
@@ -729,16 +788,18 @@ export async function main() {
                 if (codeVal === undefined) {
                     inFigmaOnly.push({ name, value: figVal });
                 }
-                else if (normalizeForCompare(figVal) === normalizeForCompare(codeVal)) {
-                    matching.push({ name, value: figVal });
-                }
                 else {
-                    divergent.push({ name, figmaValue: figVal, codeValue: codeVal });
+                    codeMap.delete(name);
+                    if (normalizeForCompare(figVal) === normalizeForCompare(codeVal)) {
+                        matching.push({ name, value: figVal });
+                    }
+                    else {
+                        divergent.push({ name, figmaValue: figVal, codeValue: codeVal });
+                    }
                 }
             }
             for (const [name, codeVal] of codeMap) {
-                if (!figmaMap.has(name))
-                    inCodeOnly.push({ name, value: codeVal });
+                inCodeOnly.push({ name, value: codeVal });
             }
             const out = {
                 success: true,
@@ -753,12 +814,12 @@ export async function main() {
                 inFigmaOnly,
                 inCodeOnly,
             };
-            return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify(out) }] };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
                 isError: true,
             };
         }
@@ -822,12 +883,12 @@ export async function main() {
                         : { id: s.id, name: s.name, fontSize: s.fontSize ?? s.style?.fontSize, fontName: s.fontName ?? s.style?.fontName }),
                 },
             };
-            return { content: [{ type: "text", text: JSON.stringify(out, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify(out) }] };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
                 isError: true,
             };
         }
@@ -871,7 +932,7 @@ export async function main() {
                         message: msg,
                         ...(startError && { startError }),
                         ...(portHint && { portHint }),
-                    }, null, 0),
+                    }),
                 }],
         };
     });
@@ -913,10 +974,10 @@ export async function main() {
 					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
         }
     });
     server.registerTool("figma_create_text", {
@@ -947,10 +1008,10 @@ export async function main() {
 					return { id: node.id, name: node.name, characters: node.characters };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
         }
     });
     server.registerTool("figma_create_rectangle", {
@@ -979,10 +1040,10 @@ export async function main() {
 					return { id: rect.id, name: rect.name };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
         }
     });
     server.registerTool("figma_create_group", {
@@ -1006,10 +1067,10 @@ export async function main() {
 					return { id: group.id, name: group.name, childCount: group.children.length };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
         }
     });
     // ---- figma_export_nodes (batch SVG/PNG/JPG/PDF export) ----
@@ -1062,13 +1123,13 @@ export async function main() {
                         ...(r.base64 && { base64: r.base64 }),
                         ...(r.error && { error: r.error }),
                     })),
-                }, null, 0),
+                }),
             });
             return { content: contentBlocks };
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }],
                 isError: true,
             };
         }
@@ -1087,7 +1148,7 @@ export async function main() {
             const code = `
 					if (!figma.teamLibrary) return { success: false, error: "teamLibrary API not available" };
 					const availableLibs = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-					const availableComps = await figma.teamLibrary.getAvailableLibraryComponentsAsync ? [] : [];
+					const availableComps = typeof figma.teamLibrary.getAvailableLibraryComponentsAsync === 'function' ? await figma.teamLibrary.getAvailableLibraryComponentsAsync() : [];
 					return {
 						variableCollections: availableLibs.map(c => ({ name: c.name, key: c.key, libraryName: c.libraryName })),
 						note: "Use figma_search_components for file-local components. Team library component search requires REST API (figma_rest_api)."
@@ -1099,10 +1160,10 @@ export async function main() {
                 const q = query.toLowerCase();
                 data.variableCollections = data.variableCollections.filter((c) => (c.name || "").toLowerCase().includes(q) || (c.libraryName || "").toLowerCase().includes(q));
             }
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }, null, 0) }] };
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }) }] };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }, null, 0) }], isError: true };
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
         }
     });
     // ---- figma_plugin_diagnostics ----
@@ -1132,7 +1193,7 @@ export async function main() {
                         hasRestToken: !!tokenInfo,
                         rateLimit: tokenInfo?.rateLimit || null,
                         nodeVersion: process.version,
-                    }, null, 0),
+                    }),
                 }],
         };
     });
@@ -1154,7 +1215,7 @@ export async function main() {
                         text: JSON.stringify({
                             success: false,
                             error: "Port değişikliği zaten devam ediyor. Lütfen tamamlanmasını bekleyin.",
-                        }, null, 0),
+                        }),
                     }],
                 isError: true,
             };
@@ -1173,7 +1234,7 @@ export async function main() {
                                 previousPort: oldPort,
                                 newPort: result.port,
                                 message: `Bridge restarted on port ${result.port}. Figma plugin'de Port: ${result.port} ayarlayın ve bağlanmasını bekleyin.`,
-                            }, null, 0),
+                            }),
                         }],
                 };
             }
@@ -1187,7 +1248,7 @@ export async function main() {
                                 attemptedPort: newPort,
                                 error: result.error || "Port bind failed",
                                 message: `Port ${newPort} bağlanamadı. Başka bir port deneyin (5454–5470).`,
-                            }, null, 0),
+                            }),
                         }],
                     isError: true,
                 };
@@ -1208,7 +1269,7 @@ export async function main() {
     }, async ({ token }) => {
         if (!token.startsWith("figd_")) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: "Token must start with 'figd_'" }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: "Token must start with 'figd_'" }) }],
                 isError: true,
             };
         }
@@ -1223,7 +1284,7 @@ export async function main() {
             clearTimeout(timeout);
             if (!res.ok) {
                 return {
-                    content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation failed: ${res.status} ${res.statusText}` }, null, 0) }],
+                    content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation failed: ${res.status} ${res.statusText}` }) }],
                     isError: true,
                 };
             }
@@ -1241,12 +1302,12 @@ export async function main() {
                             user: me.handle || me.email || "unknown",
                             message: "Token set. REST API tools are now available.",
                             rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                        }, null, 0) }],
+                        }) }],
             };
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation error: ${err instanceof Error ? err.message : String(err)}` }, null, 0) }],
+                content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation error: ${err instanceof Error ? err.message : String(err)}` }) }],
                 isError: true,
             };
         }
@@ -1256,7 +1317,7 @@ export async function main() {
         inputSchema: {},
     }, async () => {
         bridge.clearFigmaRestToken();
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Token cleared." }, null, 0) }] };
+        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Token cleared." }) }] };
     });
     server.registerTool("figma_rest_api", {
         description: "Call Figma REST API directly. Requires a token set via figma_set_rest_token. " +
@@ -1276,7 +1337,7 @@ export async function main() {
                 content: [{ type: "text", text: JSON.stringify({
                             success: false,
                             error: "No Figma REST API token set. Use figma_set_rest_token first. Or enter token in Figma plugin Advanced panel.",
-                        }, null, 0) }],
+                        }) }],
                 isError: true,
             };
         }
@@ -1289,7 +1350,7 @@ export async function main() {
                             success: false,
                             error: `API rate limit exhausted (0/${rl.limit}). Resets at ${resetDate.toISOString()}. Wait and retry.`,
                             rateLimit: rl,
-                        }, null, 0) }],
+                        }) }],
                 isError: true,
             };
         }
@@ -1332,7 +1393,7 @@ export async function main() {
                                         success: false, status: 429,
                                         error: `Rate limited. ${attempt + 1} attempts, total ${Math.round(elapsed / 1000)}s. Retry later.`,
                                         rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                                    }, null, 0) }],
+                                    }) }],
                             isError: true,
                         };
                     }
@@ -1354,7 +1415,7 @@ export async function main() {
                                     success: false, status: res.status, statusText: res.statusText,
                                     error: responseData,
                                     rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                                }, null, 0) }],
+                                }) }],
                         isError: true,
                     };
                 }
@@ -1381,7 +1442,7 @@ export async function main() {
                         data: result.data,
                         ...(result.wasTruncated && { _responseGuard: { originalSizeKB: Math.round(result.originalSizeKB), truncatedSizeKB: Math.round(result.truncatedSizeKB) } }),
                         rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                    }, null, 0),
+                    }),
                 });
                 return { content: contentBlocks };
             }
@@ -1396,14 +1457,14 @@ export async function main() {
                     content: [{ type: "text", text: JSON.stringify({
                                 success: false,
                                 error: `REST API call failed after ${attempt + 1} attempts: ${err instanceof Error ? err.message : String(err)}`,
-                            }, null, 0) }],
+                            }) }],
                     isError: true,
                 };
             }
         }
         // Should not reach here
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: false, error: "Unexpected: all retries exhausted" }, null, 0) }],
+            content: [{ type: "text", text: JSON.stringify({ success: false, error: "Unexpected: all retries exhausted" }) }],
             isError: true,
         };
     });
@@ -1418,7 +1479,7 @@ export async function main() {
                 content: [{ type: "text", text: JSON.stringify({
                             hasToken: false,
                             message: "No token set. Use figma_set_rest_token to add one.",
-                        }, null, 0) }],
+                        }) }],
             };
         }
         const rl = tokenInfo.rateLimit;
@@ -1439,11 +1500,12 @@ export async function main() {
                         rateLimit: rl || null,
                         ...(warning && { warning }),
                         message: warning || "Token is set. REST API tools are available.",
-                    }, null, 0) }],
+                    }) }],
         };
     });
     const shutdown = () => {
         logger.info("Shutting down plugin-only MCP server...");
+        closeAuditLog();
         try {
             bridge.stop();
         }

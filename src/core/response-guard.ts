@@ -58,51 +58,57 @@ export function truncateResponse(data: unknown, opts?: TruncateOptions): Truncat
 
 	let itemsRemoved = 0;
 
-	function truncate(val: unknown, depth: number): unknown {
+	function truncate(val: unknown, depth: number, limits: { maxArrayItems: number; maxStringLength: number; maxObjectDepth: number }): unknown {
 		if (val === null || val === undefined) return val;
 		if (typeof val === "string") {
-			if (val.length > o.maxStringLength) {
+			if (val.length > limits.maxStringLength) {
 				itemsRemoved++;
-				return val.slice(0, o.maxStringLength) + `... (${val.length - o.maxStringLength} chars truncated)`;
+				return val.slice(0, limits.maxStringLength) + `... (${val.length - limits.maxStringLength} chars truncated)`;
 			}
 			return val;
 		}
 		if (typeof val === "number" || typeof val === "boolean") return val;
-		if (depth >= o.maxObjectDepth) {
+		if (depth >= limits.maxObjectDepth) {
 			itemsRemoved++;
 			return typeof val === "object" && val !== null
 				? (Array.isArray(val) ? `[Array: ${val.length} items]` : `[Object: ${Object.keys(val as object).length} keys]`)
 				: val;
 		}
 		if (Array.isArray(val)) {
-			if (val.length > o.maxArrayItems) {
-				const sliced = val.slice(0, o.maxArrayItems).map((v) => truncate(v, depth + 1));
-				const removed = val.length - o.maxArrayItems;
+			if (val.length > limits.maxArrayItems) {
+				const sliced = val.slice(0, limits.maxArrayItems).map((v) => truncate(v, depth + 1, limits));
+				const removed = val.length - limits.maxArrayItems;
 				itemsRemoved += removed;
 				sliced.push({ _truncated: true, _message: `${removed} more items not shown` } as unknown);
 				return sliced;
 			}
-			return val.map((v) => truncate(v, depth + 1));
+			return val.map((v) => truncate(v, depth + 1, limits));
 		}
 		if (typeof val === "object") {
 			const obj = val as Record<string, unknown>;
 			const result: Record<string, unknown> = {};
 			for (const [key, v] of Object.entries(obj)) {
-				result[key] = truncate(v, depth + 1);
+				result[key] = truncate(v, depth + 1, limits);
 			}
 			return result;
 		}
 		return val;
 	}
 
-	const truncated = truncate(data, 0);
+	const firstLimits = { maxArrayItems: o.maxArrayItems, maxStringLength: o.maxStringLength, maxObjectDepth: o.maxObjectDepth };
+	const truncated = truncate(data, 0, firstLimits);
 	const truncatedJson = JSON.stringify(truncated);
 	const truncatedSizeKB = truncatedJson.length / 1024;
 
-	// If still too large after first pass, do aggressive array trimming
+	// If still too large after first pass, do aggressive truncation with halved limits
 	if (truncatedSizeKB > o.maxKB * 1.5) {
-		const aggressive = truncate(data, 0);
-		// Will use smaller limits on second pass if needed
+		itemsRemoved = 0;
+		const aggressiveLimits = {
+			maxArrayItems: Math.max(5, Math.floor(o.maxArrayItems / 2)),
+			maxStringLength: Math.max(100, Math.floor(o.maxStringLength / 2)),
+			maxObjectDepth: Math.max(2, o.maxObjectDepth - 1),
+		};
+		const aggressive = truncate(data, 0, aggressiveLimits);
 		return {
 			data: aggressive,
 			originalSizeKB,

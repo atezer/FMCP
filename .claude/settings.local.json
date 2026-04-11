@@ -156,7 +156,13 @@
       "Bash(rm -rf /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.claude/commands)",
       "Bash(ln -s ../../commands /Users/abdussamed.tezer/FCM/.claude/worktrees/happy-chebyshev/.claude/commands)",
       "Bash(gh pr create --title 'feat: add Claude Code plugin support' --body ':*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "WebFetch(domain:forum.figma.com)",
+      "mcp__figma-mcp-bridge__figma_get_styles",
+      "mcp__figma-mcp-bridge__figma_execute",
+      "mcp__figma-mcp-bridge__figma_plugin_diagnostics",
+      "mcp__figma-mcp-bridge__figma_get_component",
+      "mcp__figma-mcp-bridge__figma_check_design_parity"
     ],
     "deny": [],
     "ask": []
