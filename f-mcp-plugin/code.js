@@ -431,6 +431,7 @@ figma.ui.onmessage = async (msg) => {
   // EXECUTE_CODE - Arbitrary code execution (Power Tool)
   // ============================================================================
   if (msg.type === 'EXECUTE_CODE') {
+    var execStartTime = Date.now();
     try {
       console.log('🌉 [F-MCP ATezer Bridge] Executing code, length:', msg.code.length);
 
@@ -445,7 +446,7 @@ figma.ui.onmessage = async (msg) => {
       console.log('🌉 [F-MCP ATezer Bridge] Wrapped code for eval');
 
       // Execute with timeout
-      var timeoutMs = msg.timeout || 5000;
+      var timeoutMs = msg.timeout || 15000;
       var timeoutPromise = new Promise(function(_, reject) {
         setTimeout(function() {
           reject(new Error('Execution timed out after ' + timeoutMs + 'ms'));
@@ -511,13 +512,49 @@ figma.ui.onmessage = async (msg) => {
         console.warn('🌉 [F-MCP ATezer Bridge] ⚠️ Result warning:', resultAnalysis.warning);
       }
 
+      // Safe serialize to prevent silent JSON.stringify failures
+      function safeSerialize(val, depth) {
+        if (depth > 10) return '[nested too deep]';
+        if (val === null || val === undefined) return val;
+        if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'string') return val;
+        if (typeof val === 'function' || typeof val === 'symbol') return '[' + typeof val + ']';
+        if (typeof val === 'bigint') return val.toString();
+        // Figma node objects: extract key properties
+        if (val && typeof val === 'object' && val.id && val.type && typeof val.name === 'string') {
+          return { __figmaNode: true, id: val.id, type: val.type, name: val.name };
+        }
+        if (Array.isArray(val)) {
+          if (val.length > 500) {
+            var sliced = val.slice(0, 500).map(function(v) { return safeSerialize(v, depth + 1); });
+            sliced.push({ __truncated: true, totalItems: val.length });
+            return sliced;
+          }
+          return val.map(function(v) { return safeSerialize(v, depth + 1); });
+        }
+        var out = {};
+        var keys = Object.keys(val);
+        if (keys.length > 200) keys = keys.slice(0, 200);
+        for (var i = 0; i < keys.length; i++) {
+          try { out[keys[i]] = safeSerialize(val[keys[i]], depth + 1); } catch (_) { out[keys[i]] = '[unserializable]'; }
+        }
+        return out;
+      }
+
+      var safeResult;
+      try {
+        safeResult = safeSerialize(result, 0);
+        JSON.stringify(safeResult); // validate it actually stringifies
+      } catch (serErr) {
+        safeResult = { __serializationError: true, message: 'Result could not be serialized: ' + (serErr.message || String(serErr)), resultType: typeof result };
+      }
+
       figma.ui.postMessage({
         type: 'EXECUTE_CODE_RESULT',
         requestId: msg.requestId,
         success: true,
-        result: result,
+        result: safeResult,
         resultAnalysis: resultAnalysis,
-        // Include file context so users know which file this executed against
+        executionMs: Date.now() - execStartTime,
         fileContext: {
           fileName: figma.root.name,
           fileKey: figma.fileKey || null
