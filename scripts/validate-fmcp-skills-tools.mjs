@@ -6,7 +6,7 @@
  * Kaynak:
  *   src/local-plugin-only.ts
  *
- * Hedef: .cursor/skills/f-mcp/ altındaki tüm .md dosyaları
+ * Hedef: skills/ altındaki tüm .md dosyaları
  *
  * Çıkış kodu: 0 = uyumlu, 1 = skill'de bilinmeyen araç var
  */
@@ -22,7 +22,7 @@ const SOURCE_FILES = [
 	join(ROOT, "src/local-plugin-only.ts"),
 ];
 
-const SKILLS_DIR = join(ROOT, ".cursor/skills/f-mcp");
+const SKILLS_DIR = join(ROOT, "skills");
 
 const REGISTER_RE = /registerTool\(\s*["'](figma_[a-z0-9_]+)["']/g;
 /** Skill/markdown içindeki araç adları: `figma_foo` veya figma_foo( */
