@@ -12,6 +12,17 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.28] - 2026-04-11
+
+### figma_execute Savunmaci Enrichment Fix
+
+v1.7.27 canli testinde tespit edilen enrichment kaybi duzeltildi. 6/6 test GECTI.
+
+- `categorizeExecuteError()` null-safety: `(message ?? "").toLowerCase()`
+- figma_execute handler'indaki 3 code path'e (success, plugin-error, catch) ic try-catch — `safeToolHandler` dis catch'ine kacan hatalar artik enrichment kaybetmez
+- `.claude-plugin/plugin.json` ve `.cursor-plugin/plugin.json` versiyon senkronizasyonu
+- Canli test sonuclari: errorCategory (SYNTAX/RUNTIME/TIMEOUT), `_metrics` (durationMs, timeoutMs), hint (Turkce cozum onerisi), safeSerialize (`{__figmaNode:true}`)
+
 ## [1.7.27] - 2026-04-11
 
 ### figma_execute Hatasiz Calisma — Kok Neden Analizi ve Cozum

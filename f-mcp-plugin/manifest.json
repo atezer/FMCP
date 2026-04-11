@@ -28,7 +28,7 @@
       "http://localhost:5467", "ws://localhost:5467",
       "http://localhost:5468", "ws://localhost:5468",
       "http://localhost:5469", "ws://localhost:5469",
-      "http://localhost:5470", "ws://localhost:5470",
+      "http://localhost:5470", "ws://localhost:5470"
     ],
     "reasoning": "Local MCP WebSocket (5454–5470); add your custom host here if different."
   }

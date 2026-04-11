@@ -1,6 +1,6 @@
 {
   "name": "figma-mcp-bridge",
-  "version": "1.7.27",
+  "version": "1.7.28",
   "description": "Figma tasarım verilerini 46 MCP aracı ile AI asistanlarına açar. 19 uzman skill, 8 komut. REST API token gerektirmez, Zero Trust mimarisi.",
   "author": {
     "name": "Abdussamed Tezer",
