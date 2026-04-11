@@ -45,8 +45,28 @@ export class PluginBridgeConnector {
 		return this.bridge.request("getComponentByNodeId", { nodeId }, this.fileKey);
 	}
 
-	async executeCodeViaUI(code: string, timeout: number = 5000): Promise<unknown> {
-		return this.bridge.request("executeCodeViaUI", { code, timeout }, this.fileKey);
+	async executeCodeViaUI(code: string, timeout: number = 15000): Promise<unknown> {
+		const MAX_RETRIES = 1;
+		for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+			try {
+				return await this.bridge.request("executeCodeViaUI", { code, timeout }, this.fileKey);
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				const isTransient =
+					msg.includes("WebSocket") ||
+					msg.includes("not open") ||
+					msg.includes("send_failed") ||
+					msg.includes("WebSocket closed") ||
+					(msg.includes("Plugin bridge request") && msg.includes("failed:") && !msg.includes("timed out"));
+				if (isTransient && attempt < MAX_RETRIES) {
+					logger.warn({ attempt, error: msg }, "figma_execute: transient failure, retrying after 1s");
+					await new Promise(r => setTimeout(r, 1000));
+					continue;
+				}
+				throw err;
+			}
+		}
+		throw new Error("figma_execute: all retries exhausted");
 	}
 
 	async updateVariable(variableId: string, modeId: string, value: unknown): Promise<PluginCrudResult> {

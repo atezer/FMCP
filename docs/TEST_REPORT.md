@@ -498,3 +498,43 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 | Paralel cagrilar (3 tool) | PASS | Hepsi aninda |
 | Build + 36 test | PASS | 0 hata |
 | Skill validation (46 tool) | PASS | 46/46 uyumlu |
+
+---
+
+## 11. v1.7.27 figma_execute Hatasiz Calisma Optimizasyonu
+
+**Tarih:** 2026-04-11
+**Scope:** figma_execute lifecycle'i 4 katmanda (MCP → connector → bridge → plugin) satirsatir taranmis, 9 kok neden tespit ve cozulmustur.
+
+### 11.1 Kok Nedenler ve Cozumler
+
+| # | Kok Neden | Cozum | Sonuc |
+|---|-----------|-------|-------|
+| RC1 | Default timeout 5000ms yetersiz | 15000ms + clamping (3s-120s) | Premature timeout yok |
+| RC2 | WebSocket kopmasinda retry yok | Connector'da 1x transient retry | Gecici hatalar kurtariliyor |
+| RC4 | Response sessizce kayboluyor | console.error + SERIALIZATION_ERROR | 120s bekleme yok |
+| RC5 | Serialize edilemeyen sonuclar | safeSerialize() fonksiyonu | Figma node/circular ref korunakli |
+| RC6 | Hata kategorisi yok | categorizeExecuteError + getErrorHint | Kullanici cozumu biliyor |
+| RC9 | Buyuk sonuclar JSON.stringify patlatiyor | Array >500 truncate, keys >200 truncate | OOM riski yok |
+
+### 11.2 Gercek Figma Testi (Plugin Reload Sonrasi)
+
+| Test | Sonuc | Detay |
+|------|-------|-------|
+| figma_execute basarili kod | PASS | `executionMs: 1`, `resultAnalysis` donuyor |
+| figma_execute syntax hatasi | PASS | `"Syntax error: Unexpected identifier"` — crash yok |
+| figma_execute runtime hatasi | PASS | `"TypeError: Cannot read properties of null"` — crash yok |
+| figma_execute basarili metrikler | PASS | `pageCount: 21`, `executionMs` gercek sure |
+| Plugin reload sonrasi baglanti | PASS | 7 plugin bagli, Skill test aktif |
+| Build + 36 test | PASS | 0 hata |
+| Skill validation | PASS | 46/46 uyumlu |
+
+### 11.3 Yeni Ozellikler
+
+- **errorCategory**: TIMEOUT, SYNTAX, RUNTIME, CONNECTION, SERIALIZATION, FONT_NOT_LOADED, VALIDATION
+- **hint**: Her hata icin Turkce cozum onerisi
+- **executionMs**: Plugin tarafinda kod calisma suresi (ms)
+- **_metrics**: MCP handler tarafinda `{ durationMs, timeoutMs }`
+- **resultAnalysis**: Bos/null/undefined sonuc uyarilari
+- **safeSerialize**: Figma node → `{id, type, name}`, function → `[function]`, circular ref korunakli
+- **Retry**: Transient WebSocket hatalari icin 1x otomatik tekrar deneme

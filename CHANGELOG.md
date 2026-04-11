@@ -12,6 +12,40 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.27] - 2026-04-11
+
+### figma_execute Hatasiz Calisma — Kok Neden Analizi ve Cozum
+
+9 kok neden tespit edildi ve tumu duzeltildi. figma_execute artik hata kategorisi, cozum onerisi ve execution metrikleri donuyor.
+
+**Timeout Zinciri Duzeltmesi (En sik hata kaynagi):**
+- Default timeout 5000ms → 15000ms (tum 3 katman: MCP handler, UI, plugin)
+- Timeout clamping: min 3s, max 120s — asiri kisa/uzun degerler engellenir
+- UI deadline margin 2s → 5s — round-trip icin yeterli sure
+
+**Sonuc Serializasyon Guvenligi:**
+- `safeSerialize()` fonksiyonu: Figma node objeleri → `{id, type, name}`, circular ref korunakli, array >500 truncate
+- WebSocket sessiz catch kaldirild — response kaybi artik `console.error` ile loglanir, `SERIALIZATION_ERROR` mesaji donuyor
+- JSON.stringify basarisiz olursa sessizce yutmak yerine acik hata raporu
+
+**Hata Kategorilendirme:**
+- `categorizeExecuteError()`: TIMEOUT, SYNTAX, RUNTIME, CONNECTION, SERIALIZATION, FONT_NOT_LOADED, VALIDATION
+- `getErrorHint()`: Her kategori icin kullaniciya ozel Turkce cozum onerisi
+- Plugin `success: false` sonuclari da kategorilendiriliyor (onceden sadece throw edilen hatalar icin calisiyor)
+
+**Otomatik Retry:**
+- Connector'da 1 kez retry: sadece transient hatalar (WebSocket disconnect, send_failed)
+- Timeout ve runtime hatalari retry edilmez
+
+**Execution Metrikleri:**
+- Plugin: `executionMs` (kod calisma suresi)
+- MCP handler: `_metrics: { durationMs, timeoutMs }` (toplam sure + timeout limiti)
+- `resultAnalysis`: sonuc tipi, bos/null/undefined uyarilari
+
+**Hook ve Skill:**
+- PreToolUse hook: 6 maddelik kontrol listesi (font, sayfa reset, return formati, timeout, findAll, DS)
+- `PluginExecuteResult` tipi genisletildi: errorCategory, hint, executionMs, resultAnalysis, _metrics
+
 ## [1.7.26] - 2026-04-11
 
 ### Performans ve Stabilite Optimizasyonu

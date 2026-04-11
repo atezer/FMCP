@@ -81,6 +81,30 @@ function normalizeForCompare(s: string): string {
 const PLUGIN_NOT_CONNECTED =
 	"F-MCP ATezer Bridge plugin not connected. Open Figma → Plugins → Development → F-MCP ATezer Bridge, wait for 'ready'.";
 
+/** Categorize figma_execute errors for actionable user feedback. */
+function categorizeExecuteError(message: string, durationMs: number, timeoutMs: number): string {
+	const msg = message.toLowerCase();
+	if (msg.includes("timed out") || msg.includes("timeout") || (durationMs >= timeoutMs * 0.9)) return "TIMEOUT";
+	if (msg.includes("syntax error") || msg.includes("unexpected token") || msg.includes("unexpected identifier")) return "SYNTAX";
+	if (msg.includes("not connected") || msg.includes("plugin bridge") || msg.includes("websocket") || msg.includes("bridge active")) return "CONNECTION";
+	if (msg.includes("serialization") || msg.includes("could not be serialized") || msg.includes("circular")) return "SERIALIZATION";
+	if (msg.includes("font") && (msg.includes("not loaded") || msg.includes("loadfontasync"))) return "FONT_NOT_LOADED";
+	if (msg.includes("cannot read") || msg.includes("is not a function") || msg.includes("undefined")) return "RUNTIME";
+	return "RUNTIME";
+}
+
+function getErrorHint(category: string): string {
+	switch (category) {
+		case "TIMEOUT": return "Islem cok uzun surdu. timeout parametresini artir (max 120000ms), veya islemi daha kucuk parcalara bol.";
+		case "SYNTAX": return "JavaScript syntax hatasi. Kaçis karakterleri, eksik parantez veya reserved word kontrol et.";
+		case "CONNECTION": return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula.";
+		case "SERIALIZATION": return "Sonuc JSON serialize edilemedi. Figma node objesi degil, plain object don: { id: node.id, name: node.name }";
+		case "FONT_NOT_LOADED": return "Font yuklenmemis. Kodun basina await figma.loadFontAsync({family, style}) ekle.";
+		case "RUNTIME": return "Kod calisma hatasi. Yaygin: yanlis sayfa (setCurrentPageAsync eksik), null node, undefined property.";
+		default: return "Hata mesajini kontrol et.";
+	}
+}
+
 /** Wrap a tool handler with try-catch to prevent unhandled rejections. */
 function safeToolHandler<T>(handler: (params: T) => Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }>) {
 	return async (params: T) => {
@@ -356,21 +380,58 @@ export async function main() {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				code: z.string(),
-				timeout: z.number().optional().default(5000),
+				timeout: z.number().optional().default(15000),
 			},
 			annotations: { destructiveHint: true },
 		},
 		safeToolHandler(async ({ figmaUrl, fileKey, code, timeout }: { figmaUrl?: string; fileKey?: string; code: string; timeout: number }) => {
 			if (code.length > 50000) {
 				return {
-					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "Code too long (max 50,000 characters). Break into smaller pieces." }) }],
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, errorCategory: "VALIDATION", error: "Code too long (max 50,000 characters). Break into smaller pieces." }) }],
 					isError: true,
 				};
 			}
+			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 120000));
 			invalidateCache();
-			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-			const result = await conn.executeCodeViaUI(code, timeout);
-			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+			const startTime = Date.now();
+			try {
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+				const result = await conn.executeCodeViaUI(code, clampedTimeout);
+				const durationMs = Date.now() - startTime;
+				// Plugin may return { success: false, error: "..." } without throwing
+				if (typeof result === "object" && result !== null && (result as Record<string, unknown>).success === false) {
+					const pluginError = String((result as Record<string, unknown>).error || "Unknown plugin error");
+					const category = categorizeExecuteError(pluginError, durationMs, clampedTimeout);
+					return {
+						content: [{ type: "text" as const, text: JSON.stringify({
+							...(result as Record<string, unknown>),
+							errorCategory: category,
+							_metrics: { durationMs, timeoutMs: clampedTimeout },
+							hint: getErrorHint(category),
+						}) }],
+						isError: true,
+					};
+				}
+				const enriched = typeof result === "object" && result !== null
+					? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout } }
+					: result;
+				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
+			} catch (err) {
+				const durationMs = Date.now() - startTime;
+				const msg = err instanceof Error ? err.message : String(err);
+				const category = categorizeExecuteError(msg, durationMs, clampedTimeout);
+				logger.warn({ errorCategory: category, durationMs, timeout: clampedTimeout }, "figma_execute failed: %s", msg);
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						success: false,
+						errorCategory: category,
+						error: msg,
+						_metrics: { durationMs, timeoutMs: clampedTimeout },
+						hint: getErrorHint(category),
+					}) }],
+					isError: true,
+				};
+			}
 		})
 	);
 
