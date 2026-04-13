@@ -1,7 +1,7 @@
 # F-MCP -- Kalan Adımlar (Future)
 
-> Son güncelleme: 11 Nisan 2026 (v1.7.23 — Local full + Cloudflare modları kaldırıldı, plugin-only single-mode)
-> Paket sürümü (`package.json`): **1.7.23**
+> Son güncelleme: 13 Nisan 2026 (v1.7.29 — Smart port auto-increment, coexistence fix)
+> Paket sürümü (`package.json`): **1.7.29**
 
 ---
 
@@ -41,6 +41,10 @@ Plugin açılır → 5454-5470 tarar → bulunan bridge'lere bağlanır
 - [x] Plugin UI: ◀ port (AI aracı adı) ▶ geçiş + (i) info paneli (v1.7.0)
 - [x] "Otomatik tara" butonu kaldırıldı (v1.7.0)
 - [x] Test: Claude + Cursor + Claude Code aynı anda, plugin'de geçiş (v1.7.0)
+- [x] Smart port auto-increment: Saglikli bridge'leri oldurme, sonraki porta gec (v1.7.29)
+- [x] `GET /status` endpoint: Client sayisi + uptime — saglik kontrolu icin (v1.7.29)
+- [x] Race condition onleme: Yeni baslamis bridge (uptime < 30s) atlanir (v1.7.29)
+- [x] Eski versiyon uyumluluk: /status yoksa guvenli tarafta kal, atlama (v1.7.29)
 - [ ] (i) info panelinde bağlı dosya kaynaklarını göster — ör. "Figma Desktop: 1, Chrome: 3 Figma, 1 FigJam" (DÜŞÜK ÖNCELİK — değer/karmaşıklık oranı düşük)
 
 ### P0 — Tasarım Oluşturma Araçları (Node Creation)

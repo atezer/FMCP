@@ -12,6 +12,44 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.29] - 2026-04-13
+
+### Smart Port Auto-Increment — Coexistence Fix
+
+Birden fazla F-MCP bridge instance (Claude Desktop + Claude Code worktree) artik birbirini oldurmuyor. Yeni instance mevcut bridge'in sagligini kontrol eder ve uygun porta otomatik gecer.
+
+**Kor Degisiklik:**
+- `GET /status` endpoint: Client sayisi, uptime, versiyon dondurur — yeni instance'lar saglik kontrolu yapabilir
+- `tryListenWithAutoIncrement()`: Port 5454'ten baslayip 5470'e kadar otomatik deneme
+  - Saglikli bridge (clients > 0) → ATLA, sonraki porta gec
+  - Yeni baslamis bridge (uptime < 30s) → ATLA (race condition onleme)
+  - Stale bridge (0 client, uptime >= 30s) → TAKEOVER (mevcut davranis)
+  - Eski versiyon bridge (/status yok) → ATLA (guvenli taraf)
+  - Baska servis (non-FMCP) → ATLA
+- `probeStatus()`: Mevcut bridge'in client sayisi ve uptime bilgisini sorgular
+- `sendShutdownRequest()`: Callback tabanli shutdown helper
+- `createBridgeHttpServer()`: HTTP server factory — kod tekrari onlendi
+- `setupBridgeOnServer()`: WebSocket/heartbeat setup — kod tekrari onlendi
+
+**figma_get_status Iyilestirmeleri:**
+- `preferredPort`, `autoIncremented` alanlari eklendi
+- `portHint`: Otomatik port gecisi bilgisi gosterir
+
+**figma_plugin_diagnostics Iyilestirmeleri:**
+- `preferredPort`, `actualPort`, `autoIncremented` alanlari eklendi
+
+**tryListenAsync Timeout:**
+- 5000ms → 30000ms (17 port taramasi icin yeterli sure)
+
+**Canli Test Sonuclari:**
+- Port 5454 (Claude Desktop, eski versiyon) → ATLANDI (bilinmeyen saglik)
+- Port 5455 (Claude Code, yeni versiyon) → BAGLANDI, 2 plugin aktif
+- `figma_execute` port 5455 uzerinden basarili (36ms)
+- `GET /status` endpoint: `{"clients":2,"uptime":33,"version":"1.7.29"}` dondu
+- Her iki bridge ayni anda calisir — coexistence dogrulandi
+
+**Plugin UI:** Degisiklik gerekmez — zaten 5454-5470 portlarini tarar (`scanOtherPorts()`).
+
 ## [1.7.28] - 2026-04-11
 
 ### figma_execute Savunmaci Enrichment Fix

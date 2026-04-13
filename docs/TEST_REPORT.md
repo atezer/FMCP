@@ -1,12 +1,12 @@
 # F-MCP ATezer Bridge — Kapsamlı Test Raporu
 
-**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27 canli test)
-**Test Ortamı:** macOS Darwin 25.4.0 (ARM64)
+**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27 canli test), 2026-04-13 (v1.7.29 port coexistence canli test)
+**Test Ortamı:** macOS Darwin 25.3.0 (ARM64)
 **Node.js:** v22.14.0
-**FMCP Sürüm:** 1.7.27
+**FMCP Sürüm:** 1.7.29
 **Figma Planı:** Free
 **AI Aracı:** Claude Code (Opus 4.6, 1M context)
-**Bağlantı:** Plugin Bridge, port 5454
+**Bağlantı:** Plugin Bridge, port 5454 (Claude Desktop) + port 5455 (Claude Code, auto-incremented)
 **Test Türü:** Uçtan uca entegrasyon testi (araç + skill + iş akışı)
 
 ---
@@ -46,7 +46,7 @@ Token Oluşturma → Bileşen Tasarımı → Ekran Yapımı → DS Denetimi → 
 → Token Export → Geliştirici Handoff → Kod Üretimi → QA → Etki Analizi
 ```
 
-### 2.1 Faz 0: Bağlantı Doğrulama — 6/6 PASS
+### 2.1 Faz 0: Bağlantı Doğrulama — 6/6 PASS + Port Coexistence 5/5 PASS
 
 | # | Araç | Sonuç |
 |---|------|-------|
@@ -56,6 +56,16 @@ Token Oluşturma → Bileşen Tasarımı → Ekran Yapımı → DS Denetimi → 
 | 4 | `figma_get_file_data` | PASS — 1 sayfa |
 | 5 | `figma_capture_screenshot` | PASS — boş sayfa baseline |
 | 6 | Oturum yeniden bağlantı | PASS — eski oturum kapatıldı, yeni oturum açıldı; bridge port 5454 serbest, plugin otomatik bağlandı (1 client, "Untitled" dosyası) |
+
+#### v1.7.29 Port Coexistence Canli Test (2026-04-13)
+
+| # | Test | Sonuç |
+|---|------|-------|
+| C1 | Auto-increment: Port 5454 dolu → 5455'e gec | PASS — `autoIncremented: true`, `preferredPort: 5454`, `actualPort: 5455` |
+| C2 | Coexistence: Claude Desktop (5454) + Claude Code (5455) ayni anda | PASS — her iki bridge ayni anda calisiyor, birbirini oldurmuyor |
+| C3 | `GET /status` endpoint | PASS — `{"clients":2,"uptime":33,"version":"1.7.28"}` (yeni versiyon: 1.7.29) |
+| C4 | `figma_execute` port 5455 uzerinden | PASS — 36ms, SUI Mobil dosyasi, 16 child node |
+| C5 | Eski versiyon uyumluluk: /status yok → ATLA | PASS — port 5454'teki eski bridge oldurulmedi, `unknown health` logu |
 
 ### 2.2 Faz 1: Token & DS Kütüphanesi — 14/14 PASS + 1 EXPECTED FAIL
 
