@@ -268,6 +268,102 @@ Hedef: Figma Dev Mode'da doğrudan görünür geliştirici notları, ölçümler
 - Annotations: Plugin API ile node üzerine teknik not eklenir
 - Dev Mode CSS/iOS/Android code snippets: figma_execute ile okunabilir
 
+### P1 — Web Capture Entegrasyonu (Bookmarklet + Extension)
+
+Şimdi: FMCP sadece Figma içindeki veriyi okuyup yazabiliyor. Web'den tasarım kaynağı alma yolu yok.
+Hedef: Herhangi bir web sayfasını (rakip sitesi, canlı ürün, referans) doğrudan Figma'ya native node olarak import etmek ve AI-destekli analiz, karşılaştırma, token çıkarma iş akışlarını tetiklemek.
+
+**Arka plan:** Figma, `https://mcp.figma.com/mcp/html-to-design/capture.js` adresinde kamuya açık bir `capture.js` betiği sunuyor. Bu betik, herhangi bir web sayfasının DOM yapısını Figma-uyumlu formata dönüştürüyor. Viral LinkedIn paylaşımları bu betiği bir bookmarklet ile kullanmayı gösteriyor ama bu yaklaşım tek başına capture yapıyor — sonrasında analiz, karşılaştırma, token çıkarma yok. FMCP bu capture'ı AI-destekli bir iş akışının girişi olarak kullanarak farklılaşabilir.
+
+**Mimari karar:** Puppeteer/CDP geri eklenmez (v1.7.23'te kasıtlı kaldırıldı). Mevcut `PluginBridgeServer`'ın HTTP server'ına yeni endpoint eklenir. Bookmarklet/extension capture verisini bu endpoint'e POST eder. Tüm node oluşturma mevcut `executeCodeViaUI` pattern'i üzerinden yapılır.
+
+**Detaylı Plan:** [.claude/plans/greedy-booping-gem.md](../.claude/plans/greedy-booping-gem.md)
+
+#### Faz 1 — Temel Altyapı (P0 içinde)
+
+**Gerekli Yeni Araçlar:**
+- [ ] `figma_generate_bookmarklet` — Kullanıcıya özelleştirilmiş bookmarklet JS kodu üretir; capture verisi otomatik FMCP bridge'e POST edilir
+  - Parametreler: `mode` (full-page/select-element/viewport), `port` (default: aktif bridge portu)
+  - Output: `javascript:` URL + kurulum talimatları
+- [ ] `figma_import_web_capture` — Capture verisini alıp Figma'da native node olarak oluşturur
+  - Parametreler: `captureId` veya `captureData`, `targetNodeId`, `importMode` (full/layout-only/tokens-only), `namePrefix`
+  - Büyük sayfalar için chunked import (timeout önleme)
+- [ ] `figma_list_web_captures` — Buffer'daki capture'ları listeler (id, url, title, capturedAt, nodeCount)
+
+**Server-side değişiklikler:**
+- [ ] `src/core/plugin-bridge-server.ts` — `POST /api/capture` endpoint (mevcut `/shutdown` handler'ının yanına); capture buffer (`Map<string, WebCapturePayload>`, max 10, LRU); CORS preflight (`OPTIONS`) — mevcut `Access-Control-Allow-Origin: *` header'ları zaten var
+- [ ] `src/core/types/figma.ts` — `WebCaptureNode`, `WebCapturePayload` interface'leri
+- [ ] `src/core/plugin-bridge-connector.ts` — `importWebCapture()` metodu
+- [ ] `f-mcp-plugin/code.js` — `BATCH_CREATE_NODES` message handler (eval yerine güvenli, tipli node oluşturma; `EXECUTE_CODE` handler'ı model alınır)
+
+**Gerekli Yeni Skill:**
+- [ ] `web-capture-import` — Capture → import → analiz workflow'u
+  - Step 1: `figma_generate_bookmarklet` ile bookmarklet oluştur
+  - Step 2: Kullanıcıya kurulum talimatları ver
+  - Step 3: Kullanıcı sayfayı yakalar → veri FMCP'ye gelir
+  - Step 4: `figma_import_web_capture` ile Figma'ya aktar
+  - Step 5: Mevcut DS token'larıyla eşleştirme öner
+  - Persona: designer, uidev
+
+#### Faz 2 — Akıllı Katman
+
+**Gerekli Yeni Araçlar:**
+- [ ] `figma_compare_web_with_design` — Yakalanan web sayfası vs Figma tasarımı diff raporu
+  - Parametreler: `captureId`/`captureData`, `referenceNodeId`, `compareMode` (visual/tokens/layout/full)
+  - Output: Renk, tipografi, spacing, layout diff raporu
+- [ ] `figma_extract_tokens_from_capture` — CSS'den design token çıkarma + opsiyonel Figma variable oluşturma
+  - Parametreler: `captureData`, `createVariables`, `collectionName`, `deduplicateThreshold`
+
+**Gerekli Yeni Skill'ler:**
+- [ ] `competitor-design-analysis` — Rakip site analiz otomasyonu
+  - Akış: bookmarklet ile rakip sitesini yakala → "Competitors" sayfasına import → token çıkarma → kendi DS ile karşılaştırma → rapor (renk paleti, tipografi ölçek, erişilebilirlik/kontrast)
+  - Persona: designer, designops, po
+- [ ] `live-site-visual-qa` — Mevcut `visual-qa-compare` skill'inin web capture destekli versiyonu
+  - Akış: canlı siteyi yakala → Figma tasarımıyla otomatik karşılaştır → üç seviye rapor (yapısal, görsel, token)
+  - Örnek çıktı: "Button border-radius kodda 4px ama Figma'da 8px (token: radius.md)"
+  - Persona: uidev, designops
+
+**Gelişmiş Capture Kanalı:**
+- [ ] `fmcp-browser-extension/` — Chrome/Edge/Firefox extension (Manifest V3)
+  - Bookmarklet'e göre avantajları: CSP tarafından engellenmez, kalıcı WebSocket bağlantısı, gelişmiş element picker, `getComputedStyle` ile tam CSS erişimi, cross-origin iframe desteği
+  - Mimari: `background.js` (WebSocket), `content.js` (DOM capture), `popup.html` (UI)
+  - Özel capture implementasyonu (Figma `capture.js`'ye bağımlılık olmadan)
+
+#### Faz 3 — Gelişmiş (P2)
+
+- [ ] `figma_batch_capture_compare` — Çoklu sayfa toplu karşılaştırma (multi-page QA, çoklu rakip analizi)
+- [ ] `design-system-reverse-engineer` skill — Herhangi bir siteden tam DS çıkarma ve Figma library üretimi
+- [ ] Extension DevTools paneli — Gelişmiş CSS inspector entegrasyonu
+
+**Mevcut Skill Güncellemeleri:**
+- [ ] `visual-qa-compare` — Web capture'ı input kaynağı olarak destekle
+- [ ] `design-drift-detector` — Canlı site capture'ını drift kaynağı olarak destekle
+- [ ] `design-token-pipeline` — Web capture'dan çıkarılan token'ları pipeline girdisi olarak destekle
+
+**Teknik Notlar:**
+- Capture payload formatı: `WebCapturePayload` (yapılandırılmış node ağacı + extracted tokens)
+- Max payload boyutu: 5MB; `response-guard.ts` truncation uygulanır
+- Node oluşturma: `BATCH_CREATE_NODES` handler (recursive createFrame/createText/createRectangle)
+- Riskler: `capture.js` format değişikliği (adapter pattern ile soyutla), CSP engellemesi (extension fallback), büyük payload (chunked import)
+
+**Yeniden Kullanılacak Mevcut Kod:**
+- `PluginBridgeServer.createServer` HTTP handler (`plugin-bridge-server.ts:290`) — capture endpoint için
+- `conn.executeCodeViaUI()` pattern — import tool node oluşturma
+- `EXECUTE_CODE` message handler (`code.js:433`) — `BATCH_CREATE_NODES` model
+- `figma_create_frame/text/rectangle` tool pattern'i — node oluşturma kodu
+- `response-guard.ts` truncation — büyük payload kırpma
+- `response-cache.ts` LRU pattern — capture buffer
+
+**Farklılaşma:**
+1. Capture → Figma → AI Analiz tek akışta (bookmarklet sadece capture yapar)
+2. Design System eşleme (rakip/canlı site token'larını mevcut DS ile karşılaştırma)
+3. Rakip analizi otomasyonu (capture + token çıkarma + rapor)
+4. Visual QA otomasyonu (canlı site vs Figma tasarımı)
+5. Zero-trust korunur (tüm veri lokalde)
+6. CSP-proof (extension ile)
+
+**Öncelik:** P1 — FMCP'nin "Figma'ya veri girişi" kanalını genişleten kritik özellik. Bookmarklet yaklaşımının viral yayılımı düşünülürse FMCP'nin "sadece Figma içi iş akışı" algısını kırmak için stratejik.
+
 ### P2 — Component Documentation Skill Testi (Diğer Bileşenler)
 
 `component-documentation` skill'i şu an sadece Button bileşeninde test edildi.
