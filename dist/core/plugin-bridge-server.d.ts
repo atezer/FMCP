@@ -6,9 +6,14 @@
  * (e.g. Figma Desktop + FigJam browser + Figma browser — all on one port).
  * Each connected plugin identifies itself with a fileKey; requests are routed accordingly.
  *
- * Port strategy: graceful takeover. If the configured port is busy with another
- * F-MCP instance, the server sends a /shutdown request to the old bridge and
- * retries after it exits. Stale ports get one automatic retry after a short delay.
+ * Port strategy: smart auto-increment with coexistence.
+ * - If the preferred port (default 5454) is occupied by a HEALTHY F-MCP bridge
+ *   (active clients), the server skips to the next port (5455, 5456, …).
+ * - If the port is occupied by a STALE F-MCP bridge (0 clients, uptime ≥ 30s),
+ *   the server sends a /shutdown request and takes over.
+ * - If the port is occupied by a non-F-MCP service or unresponsive process,
+ *   the server skips to the next port.
+ * - The Figma plugin scans all ports 5454–5470 automatically.
  */
 import { type WebSocket } from "ws";
 export interface BridgeRequest {
@@ -79,12 +84,14 @@ export declare class PluginBridgeServer {
         port: number;
         error?: string;
     }>;
-    /** Async listen attempt — resolves when port binds successfully or fails. */
+    /** Async listen attempt — resolves when port binds successfully or all ports exhausted. */
     private tryListenAsync;
     /** Internal resolve callback for async listen flow. */
     private _listenResolve;
     /** Currently listening port (or preferred port if not yet listening). */
     getPort(): number;
+    /** User/config preferred port before auto-increment fallback. */
+    getPreferredPort(): number;
     /** Whether WebSocket server is actively listening. */
     isListening(): boolean;
     private generateClientId;
@@ -99,10 +106,44 @@ export declare class PluginBridgeServer {
      */
     private probePort;
     /**
+     * Probe a live F-MCP bridge's /status endpoint to get its health info.
+     * Returns { clients, uptime } or { -1, -1 } if the endpoint is unavailable
+     * (e.g. older bridge version without /status).
+     */
+    private probeStatus;
+    /**
+     * Send a POST /shutdown to an old F-MCP bridge. Calls onAccepted if the bridge
+     * responds with 200, or onRefused otherwise. On error/timeout, assumes the bridge
+     * may have already exited and calls onAccepted.
+     */
+    private sendShutdownRequest;
+    /**
      * Send a POST /shutdown to an old F-MCP bridge on the given port,
      * wait for it to exit, then retry binding to the same port.
+     * @deprecated Legacy method — kept for backward compatibility. New code uses sendShutdownRequest + tryListenWithAutoIncrement.
      */
     private requestShutdownAndRetry;
+    /** Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints. */
+    private createBridgeHttpServer;
+    /**
+     * Set up WebSocket server, heartbeat, client handling on a successfully bound HTTP server.
+     * Called from both tryListenFixed and tryListenWithAutoIncrement on bind success.
+     */
+    private setupBridgeOnServer;
+    /**
+     * Try to bind starting from `port`, auto-incrementing through the valid range.
+     * - Healthy F-MCP bridges (active clients) are skipped.
+     * - Stale F-MCP bridges (0 clients, uptime ≥ 30s) are taken over.
+     * - Freshly started bridges (0 clients, uptime < 30s) are skipped.
+     * - Unknown/old-version bridges and non-F-MCP services are skipped.
+     *
+     * `_listenResolve` is called exactly once: on success or when all ports are exhausted.
+     */
+    private tryListenWithAutoIncrement;
+    /**
+     * @deprecated Legacy method — new startup uses tryListenWithAutoIncrement().
+     * Kept for backward compatibility with requestShutdownAndRetry retry path.
+     */
     private tryListenFixed;
     /**
      * Send a request to a plugin and wait for the response.

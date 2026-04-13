@@ -1163,10 +1163,14 @@ export async function main() {
 				msg = PLUGIN_NOT_CONNECTED;
 			}
 
-			const portHint =
-				!listening || clientCount === 0
-					? `Bridge port: ${currentPort}. ${!listening ? "Use figma_set_port to switch to an available port." : `Figma plugin'de Port: ${currentPort} ayarlayın.`}`
-					: undefined;
+			const autoIncremented = bridge.getPreferredPort() !== currentPort;
+			const portHint = !listening
+				? `All ports (5454-5470) are in use. Free a port or restart a stale instance.`
+				: autoIncremented
+					? `Bridge auto-incremented to port ${currentPort} (preferred ${bridge.getPreferredPort()} was occupied). Plugin discovers automatically.`
+					: clientCount === 0
+						? `Bridge port: ${currentPort}. Configure Figma plugin to Port: ${currentPort} or use auto-scan.`
+						: undefined;
 
 			return {
 				content: [{
@@ -1177,6 +1181,7 @@ export async function main() {
 						connectedClients: clientCount,
 						connectedFiles,
 						bridgePort: currentPort,
+						...(autoIncremented && { preferredPort: bridge.getPreferredPort(), autoIncremented }),
 						message: msg,
 						...(startError && { startError }),
 						...(portHint && { portHint }),
@@ -1471,7 +1476,9 @@ export async function main() {
 				content: [{
 					type: "text" as const,
 					text: JSON.stringify({
-						bridgePort: bridge.getPort(),
+						preferredPort: bridge.getPreferredPort(),
+						actualPort: bridge.getPort(),
+						autoIncremented: bridge.getPreferredPort() !== bridge.getPort(),
 						bridgeListening: bridge.isListening(),
 						connectedClients: bridge.connectedClientCount(),
 						connectedFiles: clients.map((c) => ({ fileKey: c.fileKey, fileName: c.fileName })),
@@ -1844,7 +1851,13 @@ export async function main() {
 
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
-	logger.info({ port }, "F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s", port);
+	const actualPort = bridge.getPort();
+	const autoInc = bridge.getPreferredPort() !== actualPort;
+	logger.info(
+		{ port: actualPort, preferredPort: bridge.getPreferredPort(), autoIncremented: autoInc },
+		"F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s%s",
+		actualPort, autoInc ? ` (auto-incremented from ${bridge.getPreferredPort()})` : "",
+	);
 }
 
 main().catch((err) => {
