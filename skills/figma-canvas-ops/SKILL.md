@@ -95,12 +95,15 @@ await figma.setCurrentPageAsync(page);
 
 10. **Tüm tasarım değerleri DS variable'larına BAĞLANMALI (ZORUNLU).** Renk, spacing, padding, radius gibi hiçbir değer hardcoded yazılmaz. Akış:
 
-   **a) Kütüphaneden variable key'lerini oku:** `.claude/libraries/` dosyasını kontrol et. Key yoksa SUI/DS dosyasında `figma_execute` ile çek:
+   **a) Kütüphaneden variable key'lerini oku:** `.claude/libraries/` dosyasını kontrol et. Key yoksa **HEDEF dosyada** `figma_get_library_variables` veya `figma_execute` ile `figma.teamLibrary` API'sini kullan. **DS dosyasına F-MCP plugin bağlamak GEREKMEZ.**
    ```js
-   // DS dosyasında çalıştır (fileKey = DS dosyasının key'i)
-   const v = await figma.variables.getVariableByIdAsync("VariableID:...");
-   return { name: v.name, key: v.key };
+   // HEDEF dosyada çalıştır — DS dosyası değil!
+   var cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+   var semCol = cols.find(function(c) { return c.libraryName === "❖ SUI" && c.name.indexOf("Semantic Colors") !== -1; });
+   var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semCol.key);
+   return vars.map(function(v) { return { name: v.name, key: v.key, resolvedType: v.resolvedType }; });
    ```
+   Veya doğrudan: `figma_get_library_variables({ libraryName: "❖ SUI" })`
 
    **b) Hedef dosyada variable'ı import et:**
    ```js

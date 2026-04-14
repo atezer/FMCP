@@ -109,13 +109,15 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 
 Üç şey gerekiyor: **bileşenler**, **variable'lar**, **stiller**.
 
-**CACHE-FIRST KURALI (ZORUNLU):** Figma API'ye gitmeden önce `.claude/libraries/<ds>.md` dosyasını kontrol et. Cache varsa:
+**CACHE-FIRST KURALI (ZORUNLU):** Figma API'ye gitmeden önce `.claude/libraries/<ds>.md` dosyasını kontrol et. Cache varsa VE `lastUpdated` 24 saatten eski değilse:
 - Text style key'leri → cache'den oku (API çağrısı yapma)
 - Variable key'leri → cache'den oku
 - Component key'leri + override notları → cache'den oku
 - Font ailesi → cache'den oku
 
-Cache yoksa veya eksikse → keşif yap, sonucu cache'e yaz. **Bu, sonraki oturumlarda token tüketimini %60-70 düşürür.**
+Cache yoksa, eksikse VEYA 24 saatten eskiyse → keşif yap, sonucu cache'e yaz, `lastUpdated` alanını güncelle. **Bu, sonraki oturumlarda token tüketimini %60-70 düşürür.**
+
+**Cache Invalidation:** Cache dosyasının başına `lastUpdated: YYYY-MM-DD HH:mm` ekle. 24 saatten eski cache'ler otomatik yenilenmelidir. Kütüphane güncellendiğinde key'ler değişebilir.
 
 #### Kütüphane Cache Şablonu
 
@@ -201,24 +203,31 @@ Text style ve effect style'ları not al.
 Ekran oluşturmadan önce kullanılacak tüm DS token'larının **variable key'lerini** topla. Bu adım atlanamaz.
 
 1. **Kütüphane dosyasını oku:** `.claude/libraries/` dizinindeki kütüphane dosyasından font ailesi, variable collection ve text style bilgilerini al.
-2. **DS dosyasında variable key'lerini çek:** Ekranda kullanılacak renk, spacing, text style token'larının key'lerini DS dosyasında `figma_execute` ile oku:
+2. **HEDEF dosyada variable key'lerini çek** (DS dosyasına bağlanmak GEREKMEZ):
+   ```
+   figma_get_library_variables({ libraryName: "❖ SUI" })
+   ```
+   Veya `figma_execute` ile:
    ```js
-   // DS dosyasında çalıştır (fileKey = DS dosyasının file key'i)
-   const varIds = ["VariableID:...", "VariableID:..."];
-   const result = [];
-   for (const id of varIds) {
-     const v = await figma.variables.getVariableByIdAsync(id);
-     if (v) result.push({ name: v.name, key: v.key, type: v.resolvedType });
+   // HEDEF dosyada çalıştır — DS dosyası değil!
+   var cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+   var target = cols.filter(function(c) { return c.libraryName === "❖ SUI"; });
+   var results = [];
+   for (var ci = 0; ci < target.length; ci++) {
+     var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(target[ci].key);
+     for (var vi = 0; vi < vars.length; vi++) {
+       results.push({ name: vars[vi].name, key: vars[vi].key, type: vars[vi].resolvedType, collection: target[ci].name });
+     }
    }
-   return result;
+   return results;
    ```
-3. **Text style ID'lerini çek:** DS dosyasında text style'ları al:
+3. **Text style key'lerini çek:** Kütüphane cache'inde key varsa oku. Yoksa REST API ile DS dosyasından: `figma_rest_api GET /v1/files/{DS_FILE_KEY}/styles`
+   Alternatif: Hedef dosyada zaten import edilmiş style'lar:
    ```js
-   // DS dosyasında çalıştır
-   const styles = await figma.getLocalTextStylesAsync();
-   return styles.map(s => ({ id: s.id, name: s.name, key: s.key }));
+   var styles = await figma.getLocalTextStylesAsync();
+   return styles.map(function(s) { return { id: s.id, name: s.name, key: s.key }; });
    ```
-4. **Font ailesi:** Kütüphane dosyasındaki `Font Ailesi` alanından oku. Bulunamazsa kullanıcıya sor. Kullanıcı "sen seç" derse `Inter` kullan.
+4. **Font ailesi:** Kütüphane dosyasındaki `Font Ailesi` alanından oku. Bulunamazsa DS text style'larından font bilgisini çıkar. Kullanıcıya sor. Kullanıcı "sen seç" derse VE DS fontu bulunamadıysa `Inter` kullan.
 
 Bu adımda toplanan key'ler, sonraki adımlarda `importVariableByKeyAsync` ile hedef dosyaya import edilecek.
 

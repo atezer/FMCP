@@ -56,12 +56,16 @@ Hiçbir skill gömülü/hardcoded design token değeri içeremez ve kullanamaz. 
 
 1. **Önce kayıtlı kütüphaneyi oku:** `.claude/libraries/` dizinindeki kütüphane dosyasını kontrol et. Font ailesi, variable collection'lar ve style listesi orada.
 2. **Canlı değerleri Figma'dan al:**
-   - Font → `figma_get_styles()` text style'larından veya kütüphanenin `Font Ailesi` alanından
-   - Renkler → `figma_get_variables()` veya `figma_get_styles()` paint style'larından
-   - Boyutlar/spacing → `figma_get_variables()` variable collection'larından
-   - Gölgeler → `figma_get_styles()` effect style'larından
+   - **Kütüphane variable'ları (renkler, spacing)** → `figma_get_library_variables()` veya `figma_execute` ile `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()` + `getVariablesInLibraryCollectionAsync()` — DS dosyasına bağlanmak GEREKMEZ, hedef dosyadan çalışır
+   - **Lokal variable'lar** → `figma_get_variables()` — sadece dosya içi değerler
+   - **Lokal stiller** → `figma_get_styles()` — sadece dosya içi stiller
+   - **Kütüphane text style'ları** → cache'den key al, `figma.importStyleByKeyAsync(key)` ile import et. Cache yoksa REST API: `figma_rest_api GET /v1/files/{fileKey}/styles`
+   - Font → kütüphane text style'larından veya kütüphanenin `Font Ailesi` alanından
+   - Gölgeler → `figma_get_styles()` effect style'larından veya kütüphane cache'inden
 3. **Bulunamazsa kullanıcıya sor.**
-4. **Kullanıcı "sen seç" derse:** Font için `Inter`, renkler için Figma varsayılanları kullan.
+4. **Kullanıcı "sen seç" derse:** Önce DS kütüphanesi bağlıysa DS fontunu kullan (text style'lardan çıkar). DS fontu bulunamadıysa `Inter`, renkler için Figma varsayılanları kullan.
+
+**ÖNEMLİ:** `figma_get_styles()` ve `figma_get_variables()` sadece dosya İÇİ (local) değerleri döndürür. Team library'den gelen token'lar için `figma_get_library_variables` veya `figma.teamLibrary` API'si kullanılmalıdır.
 
 **Skill'lerdeki kod örnekleri:** Örneklerde geçen değerler (renk hex, font adı, piksel boyutu) yalnızca FORMAT gösterimidir. Çalışma anında bu değerler her zaman tasarım sisteminden okunmalıdır.
 

@@ -57,6 +57,7 @@ export class PluginBridgeConnector {
 					msg.includes("not open") ||
 					msg.includes("send_failed") ||
 					msg.includes("WebSocket closed") ||
+					msg.includes("No plugin connected for fileKey") ||
 					(msg.includes("Plugin bridge request") && msg.includes("failed:") && !msg.includes("timed out"));
 				if (isTransient && attempt < MAX_RETRIES) {
 					logger.warn({ attempt, error: msg }, "figma_execute: transient failure, retrying after 1s");
@@ -125,6 +126,20 @@ export class PluginBridgeConnector {
 		if (opts?.currentPageOnly !== undefined) params.currentPageOnly = opts.currentPageOnly;
 		if (opts?.limit != null && opts.limit > 0) params.limit = opts.limit;
 		return this.bridge.request("getLocalComponents", params, this.fileKey);
+	}
+
+	async searchLibraryAssets(opts?: {
+		query?: string;
+		assetTypes?: string[];
+		limit?: number;
+		currentPageOnly?: boolean;
+	}): Promise<unknown> {
+		const params: Record<string, unknown> = {};
+		if (opts?.query) params.query = opts.query;
+		if (opts?.assetTypes?.length) params.assetTypes = opts.assetTypes;
+		if (opts?.limit != null && opts.limit > 0) params.limit = opts.limit;
+		if (opts?.currentPageOnly === false) params.currentPageOnly = false;
+		return this.bridge.request("searchLibraryAssets", params, this.fileKey);
 	}
 
 	async batchExportNodes(params: {

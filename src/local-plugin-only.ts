@@ -105,6 +105,58 @@ function getErrorHint(category: string): string {
 	}
 }
 
+/** Analyze figma_execute code for common mistakes. Returns advisory warnings (never blocks execution). */
+function analyzeCodeForWarnings(code: string): string[] {
+	const warnings: string[] = [];
+
+	// 1. FILL before appendChild — must set FILL *after* node is in auto-layout parent
+	if (/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i.test(code)) {
+		const fillIdx = code.search(/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i);
+		const appendIdx = code.indexOf("appendChild");
+		if (appendIdx === -1 || fillIdx < appendIdx) {
+			warnings.push(
+				"layoutSizingHorizontal/Vertical = 'FILL' appendChild'dan ONCE ayarlanmis. " +
+				"Oncesinde hata verir. FILL'i appendChild SONRASINA tasi."
+			);
+		}
+	}
+
+	// 2. Sync API usage — should use Async versions
+	const syncApis = [
+		{ sync: "getLocalPaintStyles(", async: "getLocalPaintStylesAsync(" },
+		{ sync: "getLocalTextStyles(", async: "getLocalTextStylesAsync(" },
+		{ sync: "getLocalEffectStyles(", async: "getLocalEffectStylesAsync(" },
+		{ sync: "getLocalGridStyles(", async: "getLocalGridStylesAsync(" },
+	];
+	for (const api of syncApis) {
+		if (code.includes(api.sync) && !code.includes(api.async)) {
+			warnings.push(
+				`Sync API '${api.sync.slice(0, -1)}' tespit edildi. 'await ${api.async.slice(0, -1)}' kullanin — dynamic-page modunda sync API'ler calismaz.`
+			);
+		}
+	}
+
+	// 3. Font not loaded before text modification
+	if (
+		(/\.characters\s*=/.test(code) || code.includes(".insertCharacters") || code.includes(".deleteCharacters")) &&
+		!code.includes("loadFontAsync")
+	) {
+		warnings.push(
+			"Text icerik degisikligi (characters) tespit edildi, ancak loadFontAsync cagrisi yok. " +
+			"Metin degistirmeden once 'await figma.loadFontAsync(node.fontName)' ekleyin."
+		);
+	}
+
+	// 4. Sync page assignment — does not work
+	if (/figma\.currentPage\s*=/.test(code) && !code.includes("setCurrentPageAsync")) {
+		warnings.push(
+			"'figma.currentPage = ...' calismaz. 'await figma.setCurrentPageAsync(page)' kullanin."
+		);
+	}
+
+	return warnings;
+}
+
 /** Wrap a tool handler with try-catch to prevent unhandled rejections. */
 function safeToolHandler<T>(handler: (params: T) => Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }>) {
 	return async (params: T) => {
@@ -375,7 +427,14 @@ export async function main() {
 	server.registerTool(
 		"figma_execute",
 		{
-			description: "Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file.",
+			description:
+				"Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file. " +
+				"Common mistakes are detected and returned as _warnings: " +
+				"(1) layoutSizingHorizontal/Vertical='FILL' must be set AFTER appendChild, " +
+				"(2) use getLocalPaintStylesAsync not getLocalPaintStyles, " +
+				"(3) call loadFontAsync before .characters=, " +
+				"(4) use setCurrentPageAsync not figma.currentPage=. " +
+				"For component instances: use setProperties({...}), NOT findAll(TEXT).",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -414,10 +473,11 @@ export async function main() {
 						isError: true,
 					};
 				}
+				const codeWarnings = analyzeCodeForWarnings(code);
 				let enriched: unknown;
 				try {
 					enriched = typeof result === "object" && result !== null
-						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout } }
+						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout }, ...(codeWarnings.length > 0 && { _warnings: codeWarnings }) }
 						: result;
 				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
@@ -665,7 +725,10 @@ export async function main() {
 	server.registerTool(
 		"figma_instantiate_component",
 		{
-			description: "Create a component instance. Use componentKey from figma_search_components or nodeId for local components.",
+			description:
+				"Create a component instance. Use componentKey from figma_search_components, figma_search_assets, or REST API. " +
+				"Supports library components (importComponentByKeyAsync) and local components (by nodeId). " +
+				"After creation: use overrides with setProperties({...}) for component properties — do NOT use findAll(TEXT) to modify instance text.",
 			inputSchema: {
 				componentKey: z.string(),
 				options: z
@@ -1243,14 +1306,17 @@ export async function main() {
 	server.registerTool(
 		"figma_create_text",
 		{
-			description: "Create a new text node on the current page. Returns the created node ID.",
+			description:
+				"Create a new text node on the current page. Returns the created node ID. " +
+				"IMPORTANT: fontFamily defaults to 'Inter' — if using a design system (e.g. SUI uses SHBGrotesk), specify the DS font. " +
+				"For DS text with proper token binding, prefer figma_execute with importStyleByKeyAsync + setTextStyleIdAsync instead.",
 			inputSchema: {
 				text: z.string().describe("Text content"),
 				x: z.number().optional().default(0),
 				y: z.number().optional().default(0),
 				name: z.string().optional().describe("Node name (default: text content)"),
 				fontSize: z.number().optional().default(16),
-				fontFamily: z.string().optional().default("Inter"),
+				fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font if using a design system (e.g. SHBGrotesk for SUI)."),
 				fontStyle: z.string().optional().default("Regular"),
 				fillColor: z.string().optional().describe("Text color hex e.g. '#000000'"),
 				parentId: z.string().optional().describe("Parent node ID"),
@@ -1423,38 +1489,187 @@ export async function main() {
 		"figma_search_assets",
 		{
 			description:
-				"Search for published team library components and styles available in the current file. " +
-				"Uses Figma's teamLibrary API via plugin. Returns available components from enabled libraries.",
+				"Search for team library variable collections (with import keys) and file-local components/component sets. " +
+				"Variables come from enabled team libraries via figma.teamLibrary API. " +
+				"Components are file-local only — for remote library component discovery, use figma_rest_api GET /v1/files/{fileKey}/components. " +
+				"Pass assetTypes to filter: ['variables'], ['components'], or both (default).",
 			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
 				query: z.string().optional().describe("Search query to filter by name"),
+				assetTypes: z.array(z.string()).optional().describe("Asset types to search: 'variables', 'components'. Default: both."),
+				limit: z.number().min(1).max(80).optional().describe("Max results per asset type (default 25, max 80)"),
+				currentPageOnly: z.boolean().optional().describe("For components: search current page only (default true)"),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ query }) => {
-			try {
-				const conn = getConnector(bridge);
-				const code = `
-					if (!figma.teamLibrary) return { success: false, error: "teamLibrary API not available" };
-					const availableLibs = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-					const availableComps = typeof figma.teamLibrary.getAvailableLibraryComponentsAsync === 'function' ? await figma.teamLibrary.getAvailableLibraryComponentsAsync() : [];
-					return {
-						variableCollections: availableLibs.map(c => ({ name: c.name, key: c.key, libraryName: c.libraryName })),
-						note: "Use figma_search_components for file-local components. Team library component search requires REST API (figma_rest_api)."
-					};
-				`;
-				const result = await conn.executeCodeViaUI(code, 15000);
-				const data = result as Record<string, unknown>;
-				if (query && data.variableCollections && Array.isArray(data.variableCollections)) {
-					const q = query.toLowerCase();
-					data.variableCollections = (data.variableCollections as Array<Record<string, string>>).filter(
-						(c) => (c.name || "").toLowerCase().includes(q) || (c.libraryName || "").toLowerCase().includes(q)
-					);
+		safeToolHandler(async ({ figmaUrl, fileKey, query, assetTypes, limit, currentPageOnly }: {
+			figmaUrl?: string; fileKey?: string; query?: string; assetTypes?: string[]; limit?: number; currentPageOnly?: boolean;
+		}) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const result = await conn.searchLibraryAssets({
+				query: query || undefined,
+				assetTypes: assetTypes?.length ? assetTypes : undefined,
+				limit: limit ?? undefined,
+				currentPageOnly,
+			});
+			const data = result as Record<string, unknown>;
+			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...data }) }] };
+		})
+	);
+
+	// ---- figma_get_library_variables (team library variable discovery with import keys) ----
+
+	server.registerTool(
+		"figma_get_library_variables",
+		{
+			description:
+				"List variables from team library collections with import keys. " +
+				"Uses figma.teamLibrary API — works in the TARGET file, no need to connect the DS source file. " +
+				"Returns variable name, key (for importVariableByKeyAsync), resolvedType, collection, and library name. " +
+				"Use the returned keys with figma_bind_variable or figma.variables.importVariableByKeyAsync() in figma_execute.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				query: z.string().optional().describe("Filter variables by name (case-insensitive contains)"),
+				collectionName: z.string().optional().describe("Filter by collection name (exact match)"),
+				libraryName: z.string().optional().describe("Filter by library name (exact match, e.g. '❖ SUI')"),
+				limit: z.number().min(1).max(500).optional().describe("Max results (default 100)"),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, query, collectionName, libraryName, limit }: {
+			figmaUrl?: string; fileKey?: string; query?: string; collectionName?: string; libraryName?: string; limit?: number;
+		}) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const maxResults = limit ?? 100;
+			const q = query ? query.toLowerCase() : "";
+			const code = `
+				if (!figma.teamLibrary) return { success: false, error: "teamLibrary API not available" };
+				var cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+				var filtered = cols;
+				${collectionName ? `filtered = filtered.filter(function(c) { return c.name === ${JSON.stringify(collectionName)}; });` : ""}
+				${libraryName ? `filtered = filtered.filter(function(c) { return c.libraryName === ${JSON.stringify(libraryName)}; });` : ""}
+				var results = [];
+				for (var ci = 0; ci < filtered.length && results.length < ${maxResults}; ci++) {
+					var col = filtered[ci];
+					var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(col.key);
+					for (var vi = 0; vi < vars.length && results.length < ${maxResults}; vi++) {
+						var v = vars[vi];
+						var nm = (v.name || "").toLowerCase();
+						if (!${JSON.stringify(q)} || nm.indexOf(${JSON.stringify(q)}) >= 0) {
+							results.push({ name: v.name, key: v.key, resolvedType: v.resolvedType, collection: col.name, library: col.libraryName });
+						}
+					}
 				}
-				return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...data }) }] };
-			} catch (err) {
-				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
-			}
-		}
+				return { success: true, count: results.length, variables: results };
+			`;
+			const result = await conn.executeCodeViaUI(code, 30000);
+			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+		})
+	);
+
+	// ---- figma_bind_variable (import variable and bind to node property) ----
+
+	server.registerTool(
+		"figma_bind_variable",
+		{
+			description:
+				"Import a library variable by key and bind it to a node property. " +
+				"For colors: binds to fills or strokes via setBoundVariableForPaint. " +
+				"For spacing/sizing: binds via setBoundVariable (paddingLeft, itemSpacing, cornerRadius, etc.). " +
+				"Get variableKey from figma_get_library_variables. " +
+				"The node's fill/spacing will dynamically update when the DS token changes.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				nodeId: z.string().describe("Target node ID"),
+				variableKey: z.string().describe("Variable import key from figma_get_library_variables"),
+				property: z.enum([
+					"fills", "strokes",
+					"paddingLeft", "paddingRight", "paddingTop", "paddingBottom",
+					"itemSpacing", "counterAxisSpacing",
+					"topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius", "cornerRadius",
+					"strokeWeight", "opacity",
+					"width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight",
+				]).describe("Node property to bind the variable to"),
+				paintIndex: z.number().optional().default(0).describe("For fills/strokes: which paint index (default 0)"),
+			},
+			annotations: { destructiveHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, variableKey, property, paintIndex }: {
+			figmaUrl?: string; fileKey?: string; nodeId: string; variableKey: string; property: string; paintIndex: number;
+		}) => {
+			invalidateCache();
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const idx = paintIndex ?? 0;
+			const code = `
+				var variable = await figma.variables.importVariableByKeyAsync(${JSON.stringify(variableKey)});
+				var node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
+				if (!node) throw new Error("Node not found: " + ${JSON.stringify(nodeId)});
+				var prop = ${JSON.stringify(property)};
+				if (prop === "fills" || prop === "strokes") {
+					var paints = [];
+					for (var i = 0; i < node[prop].length; i++) paints.push(node[prop][i]);
+					if (!paints[${idx}]) throw new Error("No paint at index ${idx} on " + prop);
+					var boundPaint = figma.variables.setBoundVariableForPaint(paints[${idx}], "color", variable);
+					paints[${idx}] = boundPaint;
+					node[prop] = paints;
+				} else {
+					node.setBoundVariable(prop, variable);
+				}
+				return { success: true, nodeId: ${JSON.stringify(nodeId)}, property: prop, variableName: variable.name, variableId: variable.id };
+			`;
+			const result = await conn.executeCodeViaUI(code, 10000);
+			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+		})
+	);
+
+	// ---- figma_import_style (import text/paint/effect style from library) ----
+
+	server.registerTool(
+		"figma_import_style",
+		{
+			description:
+				"Import a text, paint, or effect style from a team library by key, and optionally apply it to a node. " +
+				"For TEXT styles: applies via setTextStyleIdAsync (includes font, size, weight). " +
+				"For PAINT styles: applies via fillStyleId. For EFFECT styles: applies via effectStyleId. " +
+				"Get style keys from .claude/libraries/ cache or REST API: figma_rest_api GET /v1/files/{fileKey}/styles.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				styleKey: z.string().describe("Style key to import"),
+				nodeId: z.string().optional().describe("Node ID to apply the style to (optional — omit to just import)"),
+			},
+			annotations: { destructiveHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, styleKey, nodeId }: {
+			figmaUrl?: string; fileKey?: string; styleKey: string; nodeId?: string;
+		}) => {
+			invalidateCache();
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const code = `
+				var style = await figma.importStyleByKeyAsync(${JSON.stringify(styleKey)});
+				var applied = false;
+				${nodeId ? `
+				var node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
+				if (!node) throw new Error("Node not found: " + ${JSON.stringify(nodeId)});
+				if (style.type === "TEXT" && node.type === "TEXT") {
+					await node.setTextStyleIdAsync(style.id);
+					applied = true;
+				} else if (style.type === "PAINT") {
+					node.fillStyleId = style.id;
+					applied = true;
+				} else if (style.type === "EFFECT") {
+					node.effectStyleId = style.id;
+					applied = true;
+				}
+				` : ""}
+				return { success: true, styleId: style.id, styleName: style.name, styleType: style.type, applied: applied };
+			`;
+			const result = await conn.executeCodeViaUI(code, 10000);
+			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+		})
 	);
 
 	// ---- figma_plugin_diagnostics ----
