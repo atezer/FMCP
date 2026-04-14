@@ -957,3 +957,243 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 - [ ] **Düşük:** D1-D4 (CORS, wrangler id, TMPDIR, debug host SSRF)
 
 OAuth / token logları **S9** ile birlikte ele alınmalı; düzeltmelerde tek PR veya sıralı sürüm önerilir.
+
+---
+
+## 11. AI-Ready DS Platformu (Spotify Encore'dan Esinlenmiş)
+
+**Kaynak:** [How Spotify is Making Their Design System AI-Ready (Into Design Systems, Şubat 2026)](https://www.intodesignsystems.com/blog/how-spotify-design-system-ai-ready) + [Multiple Layers of Abstraction in Design Systems (Spotify Engineering)](https://engineering.atspotify.com/2023/05/multiple-layers-of-abstraction-in-design-systems) + [Reimagining Design Systems at Spotify (Spotify Design)](https://spotify.design/article/reimagining-design-systems-at-spotify)
+
+### Özet — Spotify Encore Ne Yaptı?
+
+Spotify, **Encore** design system'ini AI-ready hale getirmek için:
+
+1. **Kendi MCP server'ını yazdı** — dokümantasyonu Cursor / Claude gibi AI agent'lara doğrudan açtı
+2. **Layered architecture** — Foundation (token/type/motion/spacing) → Component Style → Component Behavior 3 ayrı katman
+3. **Headless behavior** — React Aria / Base UI gibi sistemler "behavior" katmanını sağlar; Encore brand/a11y/tutarlılık'a odaklanır → AI'ın training set'inde olan yapılara çıkar
+4. **Semantic token layer** — token'ların "hangi context'te" kullanıldığını anlayan katman; değişikliklerin etkisi güvenle hesaplanır
+5. **AI Output Testing Framework** — üretilen bileşenleri gerçek Encore bileşenleriyle karşılaştırır: lint hataları, similarity skoru, görsel diff
+6. **MCP benchmarking** — farklı MCP araçlarını birbirine karşı test ederek hangisinin daha iyi sonuç verdiğini ölçer
+7. **İlkeler** — "Structure over generation", "Flexible over rigid", "DS, AI'ın çalıştığı yerde olmalı yoksa atlanır", "Gerçek AI çıktısını test et", "Küçük context bubble'ları"
+
+### FMCP'nin Mevcut Durumu (Karşılaştırma)
+
+FMCP zaten Spotify'ın yaptıklarının önemli bir kısmını kapsıyor:
+
+| Spotify Yaklaşımı | FMCP'de Var mı? | Notu |
+|---|---|---|
+| MCP server | ✅ | 46 araç, plugin-only modu |
+| Token pipeline | ✅ | `design-token-pipeline` skill |
+| Kod ↔ tasarım drift | ✅ | `design-drift-detector`, `figma_check_design_parity` |
+| Audit | ✅ | `audit-figma-design-system` |
+| Persona-aware skill'ler | ✅ | designer/designops/uidev/po |
+| Brand voice | ✅ | `.fmcp-brand-profile.json` |
+| **AI Output Evaluation Framework** | ❌ | **EKLENMELİ** |
+| **Layered architecture manifest** | ❌ (örtük) | **EKLENMELİ** |
+| **Semantic token graph** | ❌ | **EKLENMELİ** |
+| **Machine-readable llms.txt katalog** | ❌ | **EKLENMELİ** |
+| **Headless adapter (React Aria / Base UI)** | ❌ | **EKLENMELİ** |
+| **MCP benchmarking** | ❌ | **EKLENMELİ** |
+| **Visual baseline / AI drift CI** | ⚠ kısmi (`visual-qa-compare`) | Genişletilmeli |
+
+### P0 — Machine-Readable DS Katalog (`llms-catalog-export`)
+
+**Etki: Yüksek · Maliyet: Düşük**
+
+Spotify "DS makine-okur olmalı" diyor. FMCP bağlı dosyadan AI-readable bir katalog üretmeli.
+
+**Yeni skill:** `skills/llms-catalog-export/SKILL.md`
+
+**Yeni araç:** `figma_export_llms_context`
+- Bağlı Figma dosyasından bileşen → props → variants → token bağları → "do/don't" → kullanım örnekleri çıkarır
+- Çıktı: repo köküne `fmcp-ds-context.md` veya `encore.llms.txt` benzeri
+- AI agent (Claude, Cursor) bu dosyayı doğrudan okuyup tutarlı kod üretebilir
+
+**Tamamlanma kriteri:**
+- [ ] `llms-catalog-export/SKILL.md` skeleton + persona metadata
+- [ ] `figma_export_llms_context` tool registration (`local-plugin-only.ts`)
+- [ ] Çıktı format şeması (`docs/LLMS_CATALOG_SCHEMA.md`)
+- [ ] `validate:fmcp-skills` ile CI doğrulaması
+- [ ] README.md teknik detaylar bölümüne ekleme
+
+### P0 — AI Output Evaluation Framework (`ai-output-evaluator`)
+
+**Etki: Yüksek · Maliyet: Orta**
+
+Spotify'ın yaklaşımının kalbı — üretilen çıktının kalitesini ölçen sistem.
+
+**Yeni skill:** `skills/ai-output-evaluator/SKILL.md`
+
+**Yeni araç:** `figma_evaluate_ai_output`
+- Parametre: `generatedNodeId`, `referenceComponentKey`
+- Çıktı: similarity skoru (yapısal), token coverage %, lint hataları, görsel pixel diff
+- `generate-figma-screen` ve `generate-figma-library` skill'lerinden sonra otomatik tetiklenebilir
+
+**Golden set:** `tests/ai-golden/` — referans bileşen seti, her release'de regresyon test edilir
+
+**Tamamlanma kriteri:**
+- [ ] Skill skeleton + persona metadata (designops, uidev)
+- [ ] `figma_evaluate_ai_output` tool registration
+- [ ] Similarity / lint / visual diff hesaplama logic
+- [ ] Golden set dizini (`tests/ai-golden/README.md`)
+- [ ] CI'da regresyon testi
+
+### P1 — Semantic Token Graph + Safe Change
+
+**Etki: Yüksek · Maliyet: Orta**
+
+Spotify "token'ların hangi context'te kullanıldığını anlayan semantik katman" üzerinde çalışıyor. FMCP'de variable yönetimi var ama alias chain / semantic mapping yok.
+
+**Yeni araçlar:**
+- `figma_get_semantic_token_graph` — token alias zinciri (örn. `color/brand/primary` → `button/primary/background`)
+- `figma_propose_safe_token_change` — bir token değişikliğinin etkilediği bileşen/instance listesini önceden gösterir
+
+**`ds-impact-analysis` skill'i** semantic chain üzerinden derin analiz desteklemeli.
+
+**Tamamlanma kriteri:**
+- [ ] Token alias chain çıkarma logic
+- [ ] `figma_get_semantic_token_graph` tool
+- [ ] `figma_propose_safe_token_change` tool
+- [ ] `ds-impact-analysis` skill güncellemesi (semantic chain bölümü)
+
+### P1 — Layered Architecture Manifest (`ds-layer-classifier`)
+
+**Etki: Orta · Maliyet: Düşük**
+
+Spotify'ın 3 katmanı (foundation/style/behavior) FMCP'de örtük. Bunu açık manifest yapmak AI'a daha küçük "context bubble" verir.
+
+**Yeni dosya:** `.fmcp-layer-manifest.json`
+- Hangi token "foundation"
+- Hangi component "style-only"
+- Hangi component "behavior-only"
+
+**Yeni araç:** `figma_get_layer_manifest`
+
+**Yeni skill:** `skills/ds-layer-classifier/SKILL.md`
+
+**Tamamlanma kriteri:**
+- [ ] Manifest şema (`docs/LAYER_MANIFEST_SCHEMA.md`)
+- [ ] `figma_get_layer_manifest` tool
+- [ ] Skill skeleton + persona metadata (designops)
+
+### P1 — Component Usage Telemetry (`figma_find_component_usage`)
+
+**Etki: Yüksek · Maliyet: Düşük**
+
+Spotify'ın "safely change" özelliğinin temeli. Bir bileşenin tüm dosyalarda nerede instance'lanmış olduğunu listeler (REST API üzerinden).
+
+**Yeni araç:** `figma_find_component_usage`
+- Parametre: `componentKey` veya `componentSetKey`
+- Çıktı: dosya listesi, sayfa, frame ID, instance sayısı
+- AI değişiklik önermeden önce kapsamı görür
+
+**Tamamlanma kriteri:**
+- [ ] Tool implementation (REST API + cache)
+- [ ] `ds-impact-analysis` skill entegrasyonu
+- [ ] Dokümantasyon (`docs/TOOLS.md`)
+
+### P2 — Headless Adapter Mode (`code-design-mapper` uzantısı)
+
+**Etki: Orta · Maliyet: Orta**
+
+Spotify "headless system" yaklaşımıyla AI'ın training set'indeki yapılara çıkıyor (React Aria, Base UI, shadcn).
+
+`code-design-mapper` skill'ine **headless adapter mode** ekle:
+- Üretilen kod = headless behavior (örn. `react-aria-components`) + DS token'lar
+- Bu sayede AI çıktısı hem behavior'da güvenilir hem brand'da tutarlı
+
+**Yeni skill (opsiyonel):** `headless-binding-generator`
+
+**Tamamlanma kriteri:**
+- [ ] `code-design-mapper/SKILL.md` headless mode bölümü
+- [ ] Adapter tarifleri (React Aria, Base UI, shadcn)
+- [ ] Örnek üretim akışları
+
+### P2 — Visual Baseline + AI Drift CI
+
+**Etki: Orta · Maliyet: Orta**
+
+`visual-qa-compare` zaten var. Genişletme:
+- **`figma_capture_baseline`** — bir bileşenin baseline screenshot'ı saklanır
+- AI bileşeni güncelleyince diff otomatik hesaplanır → CI'da fail eder
+- DesignOps için "AI introduced visual drift" raporu
+
+**Tamamlanma kriteri:**
+- [ ] `figma_capture_baseline` tool
+- [ ] `visual-qa-compare` skill'inde AI drift bölümü
+- [ ] Baseline storage (`tests/visual-baseline/`)
+
+### P2 — AI-Aware Component Description Standard
+
+**Etki: Orta · Maliyet: Düşük**
+
+`figma_set_description` zaten var; Spotify ise description'ları AI için yapılandırılmış kullanıyor.
+
+**Yeni araç:** `figma_set_ai_description`
+- Markdown frontmatter: `props:`, `variants:`, `tokens:`, `a11y:`, `do:`, `dont:`
+- Schema valide eder
+
+**Tamamlanma kriteri:**
+- [ ] Schema (`docs/AI_DESCRIPTION_SCHEMA.md`)
+- [ ] Tool implementation
+- [ ] `component-documentation` skill entegrasyonu
+
+### P2 — Context Budget Optimization (`context-budget-planner`)
+
+**Etki: Orta · Maliyet: Düşük**
+
+Spotify "küçük context bubble" diyor. FMCP'de `figma_get_design_context` zaten var ama görev-bazlı profil yok.
+
+**Yeni araç:** `figma_get_minimal_context`
+- Sadece AI'ın görevi için zorunlu olan minimum yapı
+- Token / komponent / metin için ayrı **context profilleri**
+
+**Yeni skill:** `context-budget-planner` — task → minimum context şeması seçer
+
+**Tamamlanma kriteri:**
+- [ ] Tool + 4 profil (token, component, screen, drift)
+- [ ] Skill skeleton (designops, uidev)
+
+### P3 — MCP Benchmarking Script (`fmcp_benchmark`)
+
+**Etki: Düşük · Maliyet: Düşük**
+
+Spotify farklı MCP araçlarını karşılaştırıyor. FMCP için aynı yaklaşım:
+- Aynı görevi farklı MCP server'larda çalıştırıp sonuç tablosu üretir
+- README'ye "FMCP vs Figma resmi MCP" benchmark eklenir
+
+**Tamamlanma kriteri:**
+- [ ] `scripts/fmcp-benchmark.mjs`
+- [ ] Sonuç tablosu format
+- [ ] README'de karşılaştırma bölümü (opsiyonel)
+
+### P3 — Real Prompt Test Suite
+
+**Etki: Orta · Maliyet: Yüksek**
+
+Spotify "gerçek AI çıktısını test et" diyor.
+- `tests/ai-prompts/` — gerçek prompt → beklenen davranış eşleşmeleri
+- CI'da Claude/Cursor üzerinden çalıştırılan e2e prompt test runner
+
+**Tamamlanma kriteri:**
+- [ ] Test runner skeleton
+- [ ] İlk 10 prompt eşleşmesi
+- [ ] CI workflow (opsiyonel — manuel başlangıç)
+
+### Önerilen Uygulama Sırası
+
+| Sıra | Madde | Etki | Maliyet |
+|---|---|---|---|
+| 1 | `llms-catalog-export` (P0) | Yüksek | Düşük |
+| 2 | `ai-output-evaluator` (P0) | Yüksek | Orta |
+| 3 | `figma_find_component_usage` (P1) | Yüksek | Düşük |
+| 4 | Semantic token graph + safe-change (P1) | Yüksek | Orta |
+| 5 | Layer manifest + `ds-layer-classifier` (P1) | Orta | Düşük |
+| 6 | AI-aware description standard (P2) | Orta | Düşük |
+| 7 | Context budget planner (P2) | Orta | Düşük |
+| 8 | Headless adapter mode (P2) | Orta | Orta |
+| 9 | Visual baseline + AI drift CI (P2) | Orta | Orta |
+| 10 | MCP benchmarking (P3) | Düşük | Düşük |
+| 11 | Real prompt test suite (P3) | Orta | Yüksek |
+
+**Tek cümle özet:** FMCP, Spotify Encore'un MCP + tool katmanını zaten geçmiş durumda; eksik olan **(a) AI çıktısını ölçme**, **(b) DS'in semantik/katmanlı AI-context manifest'i** ve **(c) machine-readable llms.txt katalog üretimi**. Bu 3 alan FMCP'yi "Figma köprüsü"nden "Spotify-class AI-ready DS platformu"na taşır.
