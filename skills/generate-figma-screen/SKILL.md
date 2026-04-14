@@ -598,6 +598,76 @@ Screenshot'ı incele:
 
 Sorun varsa hedefli `figma_execute` ile düzelt.
 
+### Step 6.5: Self-Audit Mandate (ZORUNLU — v1.8.1+)
+
+**Ekranı kullanıcıya sunmadan ÖNCE kendi kendini denetle.** Bu adım **atlanamaz** — screenshot yeterli değil çünkü Claude görsel olarak "güzel" görünen ama token/bileşen disiplininden uzak ekranları fark edemez.
+
+#### Adım 1 — `figma_validate_screen` çağır
+
+```
+figma_validate_screen(nodeId="wrapper-frame-id", expectedDs="❖ SUI", minScore=80)
+```
+
+Tool şunu döner:
+```json
+{
+  "score": 92,
+  "passed": true,
+  "minScore": 80,
+  "breakdown": {
+    "instanceCoverage": 85,
+    "libraryInstanceCount": 7,
+    "autoLayoutCoverage": 100,
+    "tokenBindingCoverage": 90
+  },
+  "violations": [],
+  "recommendation": "Score 92/100 passed minimum 80. Screen is DS-compliant."
+}
+```
+
+#### Adım 2 — Skor değerlendirmesi
+
+| Skor | Karar | Davranış |
+|---|---|---|
+| **≥ 80** | ✅ Passed | Kullanıcıya sun, rapor et |
+| **60-79** | ⚠️ Kısmi | Violations listesini oku, targeted fix'ler uygula, tekrar validate et |
+| **< 60** | ❌ Failed | **Ekranı sil** (`figma_execute` → `node.remove()`), Step 3-5'e dön, DS bileşenleriyle yeniden inşa et |
+
+#### Adım 3 — Retry Loop (max 3 deneme)
+
+Eğer ilk denemede score < 80 ise:
+1. Violations listesini oku (en kritik 5'i)
+2. Her bir violation için `figma_execute` ile targeted fix uygula:
+   - `HARDCODED_FILL` → `figma_bind_variable` ile binding ekle
+   - `NO_AUTO_LAYOUT` → `layoutMode = "VERTICAL"` ekle
+3. Tekrar `figma_validate_screen` çağır
+4. **Max 3 deneme.** 3. denemede de fail ise:
+   - Ekranı sil
+   - Kullanıcıya rapor et: "3 denemede de minimum skoru yakalayamadım. Muhtemel sebepler: [list]. Elle düzeltmek mi, farklı yaklaşım mı denemek istersiniz?"
+
+#### Adım 4 — Pass sonrası raporlama
+
+Validation passed ise kullanıcıya özet çıkar:
+```
+✅ Ekran hazır: "Vadesiz TL - iPhone 17"
+   📊 DS Compliance Score: 92/100
+   🧩 Library Instances: 7
+   🎨 Token Bindings: 24
+   📐 Auto-Layout Coverage: 100%
+   ⏱️ Süre: 18 saniye
+```
+
+#### Anti-patterns (Self-Audit atlamak)
+
+❌ **YANLIŞ:** "Screenshot güzel görünüyor, validate'e gerek yok" → Bu bir **disiplin kaçırmasıdır**
+✅ **DOĞRU:** Screenshot güzel olsa bile validate çalıştır. Token binding eksikliği gözle görülmez.
+
+❌ **YANLIŞ:** Score 75 → "yeterince iyi, kullanıcıya sun"
+✅ **DOĞRU:** Score < 80 → retry loop, ekranı düzelt
+
+❌ **YANLIŞ:** Self-audit'i opsiyonel sayma
+✅ **DOĞRU:** generate-figma-screen akışının **tamamlanma koşulu** bu adımdır. Validate çalıştırılmadan akış TAMAMLANMIŞ sayılmaz.
+
 ### Step 7: Güncelleme Senaryosu
 
 Mevcut bir ekranı güncellerken:

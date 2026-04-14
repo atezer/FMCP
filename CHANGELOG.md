@@ -12,6 +12,110 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.8.1] - 2026-04-14
+
+### DS Discipline Enforcement + Intent Router + High-Level Screen Tools
+
+Root cause fix for "Claude ignores SUI tokens and builds screens from scratch". v1.8.0 added SKILL-level "MUTLAK ZORUNLU" wording but Claude still bypassed it on simple "ekran yap" requests. v1.8.1 combines three independent layers of enforcement:
+
+1. **Proaktif** — `figma_execute` code is statically analyzed for hardcoded colors/paddings/typography + no-instance usage; violations surface as `_designSystemViolations` banner Claude cannot ignore
+2. **Upstream** — `fmcp-intent-router` meta-SKILL forces Claude to gather missing inputs + obtain explicit confirmation BEFORE executing any write tool
+3. **Hızlı ve doğru kısayol** — `figma_clone_screen_to_device` + `figma_validate_screen` replace 100+ lines of hand-written `figma_execute` with 1 tool call each
+
+**Phase 12A — Static Analysis Enforcement:**
+- New module `src/core/code-warnings.ts` (extracted from `local-plugin-only.ts` for testability + single responsibility)
+- `CodeWarning` type with `SEVERE | ADVISORY` severity split
+- 6 new SEVERE categories: `HARDCODED_COLOR`, `NO_INSTANCE_USAGE`, `HARDCODED_FONT_SIZE`, `HARDCODED_SPACING`, `HAND_BUILT_SEPARATORS`, `NO_AUTO_LAYOUT`
+- Preserved 3 ADVISORY categories from v1.8.0: `ORDERING` (FILL/ABSOLUTE before appendChild), `SYNC_API`, `FONT_LOAD`
+- `figma_execute` response shape: SEVERE → `_designSystemViolations` top-level prominent field with `message`, `count`, `violations[]`, `action`. ADVISORY → `_warnings` legacy format
+- Regex patterns detect both multi-line and compact SOLID color literals, `.fontSize = N`, spacing property assignments, `createFrame`/`createRectangle` counts with instance/binding negation
+- 30 new unit tests in `tests/core/code-warnings.test.ts` — positive pattern detection + false-positive prevention + multi-violation + structural invariants
+
+**Phase 13 — Universal Intent Clarification & Skill Routing:**
+- New meta-SKILL `skills/fmcp-intent-router/SKILL.md` — 8-step protocol (analyze → state check → decide skill → read required_inputs → gather missing → summary+confirm → execute → persist)
+- Fast path (detailed request skips question gathering), repeat path (single "öncekiyle aynı mı?"), partial reuse path (only changed fields asked)
+- Ambiguity handling: generic request, multi-match, wrong-skill prevention
+- Anti-patterns documented: don't skip confirmation, don't assume defaults, don't execute without routing
+- `required_inputs` YAML metadata added to 8 priority skills:
+  - `generate-figma-screen` (device, ds, reference, type, sections, variants)
+  - `apply-figma-design-system` (target_scope, target_node, ds, backup, preserve_content, swap_strategy)
+  - `audit-figma-design-system` (target_scope, target_node, ds, severity, report_format)
+  - `generate-figma-library` (source_type, source_path, library_name, components, tokens, theme_support)
+  - `implement-design` (source_node, target_platform, output_dir, tests, existing_components)
+  - `code-design-mapper` (direction, figma_component, code_path, platform, output)
+  - `visual-qa-compare` (figma_source, rendered_source, rendered_url, threshold, categories)
+  - `design-token-pipeline` (direction, target_format, source_path, output_path, token_types, themes)
+- New state files: `.claude/design-systems/last-intent.md` (single most recent intent), `.claude/design-systems/intent-history.md` (LRU 5 — for fast reuse path)
+- `FMCP_INSTRUCTIONS` (src/core/instructions.ts) grew from 137 → ~220 lines: new "INTENT ROUTER ENTRY (ALWAYS FIRST)" section with 8-step protocol + fast/repeat paths + FORBIDDEN list
+
+**Phase 12B — `figma_clone_screen_to_device` tool:**
+- Primary answer to "hızlı ve doğru" — clones benchmark screen + adapts to target device dimension + preserves library instances + bound variables + auto-layout
+- 4-layer implementation: MCP tool schema + connector method + plugin handler `CLONE_SCREEN_TO_DEVICE` + ui.html dispatch
+- New `src/core/device-presets.ts` with 22 built-in presets (iPhone 17, iPhone 16 Pro Max, Android Compact, iPad Pro, MacBook Pro, Apple Watch, etc.) + custom "WxH" dimension support
+- Auto-layout resize fix: switch `primaryAxisSizingMode`/`counterAxisSizingMode` from AUTO to FIXED before `resize()` to prevent hug-content no-op
+- Clone counts preserved elements (totalNodes, instanceCount, libraryInstanceCount, boundVariableCount) and returns them in result for Claude to verify
+- Example: `figma_clone_screen_to_device({ sourceNodeId: "139:3407", targetDevice: "iPhone 17" })` → new node with all SUI instances preserved, root resized to 402×874, auto-layout intact
+
+**Phase 12D — `figma_validate_screen` tool:**
+- Post-creation audit. Iterative (stack-safe, max 5000 nodes) tree walker computes 3 DS compliance metrics:
+  - `instanceCoverage` (library instance usage — normalized 30-100 scale when any library instance exists)
+  - `autoLayoutCoverage` (frames with `layoutMode != NONE`)
+  - `tokenBindingCoverage` (nodes with `boundVariables` populated)
+- Weighted aggregate score: 40% instances + 30% bindings + 30% layout
+- Returns `{ score, passed, breakdown, violations (capped 20), recommendation }`
+- Read-only — never mutates the file
+- Violation categories: `NO_AUTO_LAYOUT`, `HARDCODED_FILL` (with node ID, name, severity, message)
+
+**Phase 12E — `generate-figma-screen` Step 6.5 Self-Audit Mandate:**
+- New ZORUNLU step in SKILL: call `figma_validate_screen` before reporting to user
+- Score ≥ 80 → accept, report breakdown
+- Score 60-79 → read violations, targeted fixes, re-validate
+- Score < 60 → delete screen, rebuild (max 3 attempts)
+- Anti-patterns documented: "screenshot güzel, validate'e gerek yok" (yanlış — token binding gözle görünmez)
+- Fail-after-3 → ask user "elle düzeltmek mi, farklı yaklaşım mı?"
+
+**Phase 12F — `figma_create_frame` DS token binding params:**
+- New params: `fillVariableKey`, `paddingVariableKey`, `itemSpacingVariableKey`, `cornerRadiusVariableKey`
+- `fillColor` and `cornerRadius` marked DEPRECATED in schema description — prefer variable keys
+- Plugin execution via `figma.variables.importVariableByKeyAsync` + `setBoundVariableForPaint` (fills) or `setBoundVariable` (spacing/radius)
+- Returns `boundVariableCount` in result so Claude can verify binding worked
+- Graceful fallback: if variable import fails, logs warning and proceeds without binding (caller can retry with correct key)
+
+**Files changed (v1.8.1 total):**
+- NEW: `src/core/code-warnings.ts` (analyzeCodeForWarnings + CodeWarning type)
+- NEW: `src/core/device-presets.ts` (22 presets + resolveDevice helper)
+- NEW: `skills/fmcp-intent-router/SKILL.md` (meta-skill, 400+ lines)
+- NEW: `.claude/design-systems/last-intent.md`, `intent-history.md` (state templates)
+- NEW: `tests/core/code-warnings.test.ts` (30 tests)
+- UPDATED: `src/local-plugin-only.ts` (import code-warnings + device-presets, figma_execute SEVERE split, figma_clone_screen_to_device, figma_validate_screen, figma_create_frame variable binding params)
+- UPDATED: `src/core/plugin-bridge-connector.ts` (cloneScreenToDevice, validateScreen methods)
+- UPDATED: `src/core/instructions.ts` (INTENT ROUTER ENTRY section)
+- UPDATED: `f-mcp-plugin/code.js` (CLONE_SCREEN_TO_DEVICE + VALIDATE_SCREEN handlers, FMCP_PLUGIN_VERSION='1.8.1')
+- UPDATED: `f-mcp-plugin/ui.html` (cloneScreenToDevice + validateScreen window functions + method dispatch, FMCP_PLUGIN_VERSION='1.8.1')
+- UPDATED: 8 SKILL files with `required_inputs` metadata (generate-figma-screen, apply-figma-design-system, audit-figma-design-system, generate-figma-library, implement-design, code-design-mapper, visual-qa-compare, design-token-pipeline)
+- UPDATED: `skills/generate-figma-screen/SKILL.md` Step 6.5 Self-Audit Mandate
+- UPDATED: `package.json` + `src/core/version.ts` (1.8.0 → 1.8.1)
+
+**Test coverage:**
+- 47 pre-existing tests preserved (regression-free)
+- 30 new code-warnings tests
+- **Total: 77/77 passing**
+- Build: TypeScript strict mode, 0 errors
+
+**Backwards compatibility:**
+- No API shape changes. All new tools are additive
+- `fillColor` / `cornerRadius` still work on `figma_create_frame` — just marked DEPRECATED
+- `_warnings` response field preserved for legacy SKILL consumers
+- Plugin v1.8.0 + server v1.8.1: `figma_clone_screen_to_device` and `figma_validate_screen` will return "Unknown message type" until plugin is reinstalled. `figma_get_status` warns about version mismatch
+- `FMCP_LEGACY_DEFAULTS=1` env flag from v1.8.0 still works
+
+**Migration from v1.8.0:**
+1. Reinstall plugin from `f-mcp-plugin/` in Figma (to get CLONE_SCREEN_TO_DEVICE + VALIDATE_SCREEN handlers)
+2. New Claude sessions will automatically use Intent Router protocol via updated `FMCP_INSTRUCTIONS`
+3. `figma_execute` calls with hardcoded patterns now show `_designSystemViolations` — Claude will self-correct
+
+**Referenced plan:** `.claude/plans/fmcp-v1.8.1-ds-discipline-enforcement.md` (Phases 12A, 12B, 12D, 12E, 12F, 13A, 13B, 13D, 13E)
+
 ## [1.8.0] - 2026-04-14
 
 ### Context-Safe Defaults + Plugin Response Guard + DS Context Enforcement

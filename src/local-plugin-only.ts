@@ -1447,7 +1447,7 @@ export async function main() {
 				y: z.number().optional().default(0),
 				width: z.number().optional().default(200),
 				height: z.number().optional().default(200),
-				fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'. PREFER binding to a DS variable via figma_bind_variable instead of hardcoding."),
+				fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'. DEPRECATED — prefer fillVariableKey for DS token binding (v1.8.1+)."),
 				parentId: z.string().optional().describe("Parent node ID (default: current page)"),
 				// Auto-layout parameters (v1.8.0)
 				layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().default("VERTICAL").describe("Auto-layout direction. VERTICAL by default; pass 'NONE' for free-form frames."),
@@ -1461,9 +1461,15 @@ export async function main() {
 				primaryAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "SPACE_BETWEEN"]).optional().describe("Main-axis alignment (MIN=top/left, MAX=bottom/right)"),
 				counterAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "BASELINE"]).optional().describe("Cross-axis alignment"),
 				layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Wrap children when they exceed primary axis"),
+				// v1.8.1+: DS token binding params — PREFER over hardcoded fillColor / padding / radius
+				fillVariableKey: z.string().optional().describe("DS variable key for fill binding (from figma_get_library_variables). Takes precedence over fillColor."),
+				paddingVariableKey: z.string().optional().describe("DS spacing variable key — applies to all 4 paddings via setBoundVariable."),
+				itemSpacingVariableKey: z.string().optional().describe("DS spacing variable key for itemSpacing via setBoundVariable."),
+				cornerRadiusVariableKey: z.string().optional().describe("DS radius variable key for cornerRadius via setBoundVariable."),
+				cornerRadius: z.number().optional().describe("Hardcoded corner radius in px. DEPRECATED — prefer cornerRadiusVariableKey."),
 			},
 		},
-		async ({ name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap }) => {
+		async ({ name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap, fillVariableKey, paddingVariableKey, itemSpacingVariableKey, cornerRadiusVariableKey, cornerRadius }) => {
 			try {
 				invalidateCache();
 				const conn = getConnector(bridge);
@@ -1499,9 +1505,51 @@ export async function main() {
 					${counterAxisAlignItems ? `frame.counterAxisAlignItems = ${JSON.stringify(counterAxisAlignItems)};` : ""}
 					${layoutWrap ? `frame.layoutWrap = ${JSON.stringify(layoutWrap)};` : ""}
 					` : ""}
-					${fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${cornerRadius != null ? `frame.cornerRadius = ${cornerRadius};` : ""}
+					// v1.8.1: DS token binding takes precedence over hardcoded values
+					${fillVariableKey ? `
+					try {
+						const fillVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(fillVariableKey)});
+						const baseFill = { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 };
+						const boundFill = figma.variables.setBoundVariableForPaint(baseFill, 'color', fillVar);
+						frame.fills = [boundFill];
+					} catch (fillBindErr) {
+						console.warn('[figma_create_frame] fillVariableKey binding failed:', fillBindErr.message);
+					}
+					` : fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${paddingVariableKey ? `
+					try {
+						const padVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(paddingVariableKey)});
+						frame.setBoundVariable('paddingTop', padVar);
+						frame.setBoundVariable('paddingBottom', padVar);
+						frame.setBoundVariable('paddingLeft', padVar);
+						frame.setBoundVariable('paddingRight', padVar);
+					} catch (padBindErr) {
+						console.warn('[figma_create_frame] paddingVariableKey binding failed:', padBindErr.message);
+					}
+					` : ""}
+					${itemSpacingVariableKey ? `
+					try {
+						const gapVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(itemSpacingVariableKey)});
+						frame.setBoundVariable('itemSpacing', gapVar);
+					} catch (gapBindErr) {
+						console.warn('[figma_create_frame] itemSpacingVariableKey binding failed:', gapBindErr.message);
+					}
+					` : ""}
+					${cornerRadiusVariableKey ? `
+					try {
+						const radVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(cornerRadiusVariableKey)});
+						frame.setBoundVariable('topLeftRadius', radVar);
+						frame.setBoundVariable('topRightRadius', radVar);
+						frame.setBoundVariable('bottomLeftRadius', radVar);
+						frame.setBoundVariable('bottomRightRadius', radVar);
+					} catch (radBindErr) {
+						console.warn('[figma_create_frame] cornerRadiusVariableKey binding failed:', radBindErr.message);
+					}
+					` : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(frame);` : ""}
-					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y, layoutMode: frame.layoutMode };
+					const boundCount = frame.boundVariables ? Object.keys(frame.boundVariables).length : 0;
+					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y, layoutMode: frame.layoutMode, boundVariableCount: boundCount };
 				`;
 				const result = await conn.executeCodeViaUI(code, 10000);
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...(result as Record<string, unknown>) }) }] };
