@@ -161,6 +161,20 @@ export class PluginBridgeConnector {
     async captureScreenshot(nodeId, options) {
         return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
     }
+    /**
+     * v1.8.1+: Clone a source screen and adapt it to a target device dimension.
+     * Preserves library instances, bound variables, and auto-layout where possible.
+     */
+    async cloneScreenToDevice(params) {
+        return this.bridge.request("cloneScreenToDevice", params, this.fileKey);
+    }
+    /**
+     * v1.8.1+: Validate a screen against design-system discipline criteria.
+     * Returns a DS compliance score + violation list.
+     */
+    async validateScreen(params) {
+        return this.bridge.request("validateScreen", params, this.fileKey);
+    }
     async setInstanceProperties(nodeId, properties) {
         return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
     }

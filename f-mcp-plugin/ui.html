@@ -702,6 +702,30 @@
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
+    // v1.8.1+: High-level clone-to-device (preserves instances + bindings)
+    window.cloneScreenToDevice = (params) => {
+      return window.sendPluginCommand('CLONE_SCREEN_TO_DEVICE', {
+        sourceNodeId: params.sourceNodeId,
+        targetWidth: params.targetWidth,
+        targetHeight: params.targetHeight,
+        targetDeviceName: params.targetDeviceName,
+        newName: params.newName || null,
+        targetParentId: params.targetParentId || null,
+        position: params.position || null,
+      }, 30000)
+        .catch(function(err) { return { success: false, error: err.message || String(err) }; });
+    };
+
+    // v1.8.1+: Validate screen DS compliance (read-only audit)
+    window.validateScreen = (params) => {
+      return window.sendPluginCommand('VALIDATE_SCREEN', {
+        nodeId: params.nodeId,
+        expectedDs: params.expectedDs || null,
+        minScore: typeof params.minScore === 'number' ? params.minScore : 80,
+      }, 30000)
+        .catch(function(err) { return { success: false, error: err.message || String(err) }; });
+    };
+
     // Delete a node
     window.deleteNode = (nodeId) => {
       return window.sendPluginCommand('DELETE_NODE', { nodeId: nodeId })
@@ -1578,6 +1602,12 @@
               if (method === 'setNodeCornerRadius') {
                 return window.setNodeCornerRadius(params.nodeId, params.radius);
               }
+              if (method === 'cloneScreenToDevice') {
+                return window.cloneScreenToDevice(params);
+              }
+              if (method === 'validateScreen') {
+                return window.validateScreen(params);
+              }
               if (method === 'cloneNode') {
                 return window.cloneNode(params.nodeId);
               }
@@ -1805,6 +1835,8 @@
               if (method === 'setNodeStrokes') return window.setNodeStrokes(params.nodeId, params.strokes, params.strokeWeight);
               if (method === 'setNodeOpacity') return window.setNodeOpacity(params.nodeId, params.opacity);
               if (method === 'setNodeCornerRadius') return window.setNodeCornerRadius(params.nodeId, params.radius);
+              if (method === 'cloneScreenToDevice') return window.cloneScreenToDevice(params);
+              if (method === 'validateScreen') return window.validateScreen(params);
               if (method === 'cloneNode') return window.cloneNode(params.nodeId);
               if (method === 'deleteNode') return window.deleteNode(params.nodeId);
               if (method === 'renameNode') return window.renameNode(params.nodeId, params.newName);

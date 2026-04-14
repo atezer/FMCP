@@ -103,6 +103,31 @@ export declare class PluginBridgeConnector {
         scale?: number;
         jpegQuality?: number;
     }): Promise<PluginScreenshotPayload>;
+    /**
+     * v1.8.1+: Clone a source screen and adapt it to a target device dimension.
+     * Preserves library instances, bound variables, and auto-layout where possible.
+     */
+    cloneScreenToDevice(params: {
+        sourceNodeId: string;
+        targetWidth: number;
+        targetHeight: number;
+        targetDeviceName: string;
+        newName?: string;
+        targetParentId?: string;
+        position?: {
+            x: number;
+            y: number;
+        };
+    }): Promise<unknown>;
+    /**
+     * v1.8.1+: Validate a screen against design-system discipline criteria.
+     * Returns a DS compliance score + violation list.
+     */
+    validateScreen(params: {
+        nodeId: string;
+        expectedDs?: string;
+        minScore?: number;
+    }): Promise<unknown>;
     setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;

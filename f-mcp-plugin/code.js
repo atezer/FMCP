@@ -2171,6 +2171,339 @@ figma.ui.onmessage = async (msg) => {
   }
 
   // ============================================================================
+  // CLONE_SCREEN_TO_DEVICE (v1.8.1+) - HIGH-LEVEL: Clone screen and adapt to device
+  //
+  // Clones the source node, preserves library instances + bound variables,
+  // resizes the root to target dimensions (handling auto-layout correctly),
+  // positions the clone (auto or explicit), and returns the new node ID.
+  // ============================================================================
+  else if (msg.type === 'CLONE_SCREEN_TO_DEVICE') {
+    try {
+      console.log('🌉 [F-MCP] Clone screen to device:', msg.sourceNodeId, '→', msg.targetDeviceName);
+
+      var sourceNode = await figma.getNodeByIdAsync(msg.sourceNodeId);
+      if (!sourceNode) throw new Error('Source node not found: ' + msg.sourceNodeId);
+      if (!('clone' in sourceNode)) {
+        throw new Error('Source node type ' + sourceNode.type + ' does not support cloning');
+      }
+
+      // Ensure the page containing the source is loaded (dynamic-page mode)
+      var sourcePage = sourceNode;
+      while (sourcePage.parent && sourcePage.parent.type !== 'PAGE' && sourcePage.parent.type !== 'DOCUMENT') {
+        sourcePage = sourcePage.parent;
+      }
+      if (sourcePage.parent && sourcePage.parent.type === 'PAGE' && sourcePage.parent.loadAsync) {
+        await sourcePage.parent.loadAsync();
+      }
+
+      // Clone — Figma auto-places at (original.x+10, original.y+10) in same parent
+      var clonedNode = sourceNode.clone();
+      console.log('🌉 [F-MCP] Cloned:', clonedNode.id);
+
+      // Reparent if requested
+      if (msg.targetParentId) {
+        var targetParent = await figma.getNodeByIdAsync(msg.targetParentId);
+        if (targetParent && 'appendChild' in targetParent) {
+          targetParent.appendChild(clonedNode);
+        } else {
+          console.warn('🌉 [F-MCP] Target parent not found or cannot append:', msg.targetParentId);
+        }
+      }
+
+      // Explicit position — or auto-place to the right of the source
+      if (msg.position) {
+        clonedNode.x = msg.position.x;
+        clonedNode.y = msg.position.y;
+      } else {
+        // Auto: place to the right of source + 100px gap
+        if ('x' in sourceNode && 'width' in sourceNode) {
+          clonedNode.x = sourceNode.x + sourceNode.width + 100;
+          clonedNode.y = sourceNode.y;
+        }
+      }
+
+      // Resize to target device dimensions
+      // For auto-layout frames, we must switch sizingMode to FIXED first,
+      // otherwise resize() is a no-op because the frame "hugs" its content.
+      var wasHuggingX = false;
+      var wasHuggingY = false;
+      if ('layoutMode' in clonedNode && clonedNode.layoutMode !== 'NONE') {
+        if (clonedNode.primaryAxisSizingMode === 'AUTO') {
+          wasHuggingX = clonedNode.layoutMode === 'HORIZONTAL';
+          wasHuggingY = clonedNode.layoutMode === 'VERTICAL';
+          clonedNode.primaryAxisSizingMode = 'FIXED';
+        }
+        if (clonedNode.counterAxisSizingMode === 'AUTO') {
+          if (clonedNode.layoutMode === 'HORIZONTAL') wasHuggingY = true;
+          if (clonedNode.layoutMode === 'VERTICAL') wasHuggingX = true;
+          clonedNode.counterAxisSizingMode = 'FIXED';
+        }
+      }
+
+      if ('resize' in clonedNode) {
+        try {
+          clonedNode.resize(msg.targetWidth, msg.targetHeight);
+        } catch (resizeErr) {
+          console.warn('🌉 [F-MCP] Resize error (may be a constraint):', resizeErr.message);
+        }
+      }
+
+      // Name the clone
+      if (msg.newName) {
+        clonedNode.name = msg.newName;
+      } else if ('name' in clonedNode) {
+        clonedNode.name = sourceNode.name + ' — ' + msg.targetDeviceName;
+      }
+
+      // Count preserved elements for reporting
+      var instanceCount = 0;
+      var libraryInstanceCount = 0;
+      var boundVarCount = 0;
+      if ('findAllWithCriteria' in clonedNode) {
+        try {
+          var instances = clonedNode.findAllWithCriteria({ types: ['INSTANCE'] }) || [];
+          instanceCount = instances.length;
+          for (var i = 0; i < instances.length; i++) {
+            var inst = instances[i];
+            try {
+              var mc = inst.mainComponent || (inst.getMainComponentAsync ? await inst.getMainComponentAsync() : null);
+              var remote = mc && (mc.remote || (mc.parent && mc.parent.remote));
+              if (remote) libraryInstanceCount++;
+            } catch (e) { /* skip */ }
+          }
+        } catch (e) { /* skip */ }
+      }
+      // Walk the tree counting boundVariables (iterative, stack-safe)
+      var stack = [clonedNode];
+      var totalNodes = 0;
+      while (stack.length > 0) {
+        var n = stack.pop();
+        totalNodes++;
+        if (n && n.boundVariables && Object.keys(n.boundVariables).length > 0) {
+          boundVarCount++;
+        }
+        if (n && n.children) {
+          for (var ci = 0; ci < n.children.length; ci++) stack.push(n.children[ci]);
+        }
+      }
+
+      figma.ui.postMessage({
+        type: 'CLONE_SCREEN_TO_DEVICE_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        clone: {
+          id: clonedNode.id,
+          name: clonedNode.name,
+          x: clonedNode.x,
+          y: clonedNode.y,
+          width: clonedNode.width,
+          height: clonedNode.height,
+          layoutMode: clonedNode.layoutMode || 'NONE',
+        },
+        source: {
+          id: sourceNode.id,
+          name: sourceNode.name,
+        },
+        targetDevice: {
+          name: msg.targetDeviceName,
+          width: msg.targetWidth,
+          height: msg.targetHeight,
+        },
+        preserved: {
+          totalNodes: totalNodes,
+          instanceCount: instanceCount,
+          libraryInstanceCount: libraryInstanceCount,
+          boundVariableCount: boundVarCount,
+        },
+      });
+    } catch (error) {
+      var errorMsg = error && error.message ? error.message : String(error);
+      console.error('🌉 [F-MCP] Clone to device error:', errorMsg);
+      figma.ui.postMessage({
+        type: 'CLONE_SCREEN_TO_DEVICE_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errorMsg,
+      });
+    }
+  }
+
+  // ============================================================================
+  // VALIDATE_SCREEN (v1.8.1+) - DS compliance audit
+  //
+  // Walks a node tree (iterative, stack-safe) and computes 3 metrics:
+  //   - instanceCoverage    — % of nodes that are library instances
+  //   - autoLayoutCoverage  — % of frames with layoutMode != NONE
+  //   - tokenBindingCoverage — % of stylable nodes with boundVariables
+  // Returns aggregate score (weighted 40/30/30) + violations list.
+  // Read-only — does not mutate the file.
+  // ============================================================================
+  else if (msg.type === 'VALIDATE_SCREEN') {
+    try {
+      console.log('🌉 [F-MCP] Validate screen:', msg.nodeId);
+
+      var rootNode = await figma.getNodeByIdAsync(msg.nodeId);
+      if (!rootNode) throw new Error('Node not found: ' + msg.nodeId);
+
+      // Iterative tree walk (stack-safe for deep trees up to 10,000+ nodes)
+      var metrics = {
+        totalNodes: 0,
+        frameNodes: 0,
+        autoLayoutFrames: 0,
+        instanceNodes: 0,
+        libraryInstanceNodes: 0,
+        stylableNodes: 0,
+        nodesWithBindings: 0,
+      };
+      var violations = [];
+      var maxViolations = 20; // cap to keep response small
+
+      var walkStack = [rootNode];
+      var visited = 0;
+      var maxVisit = 5000; // safety cap
+
+      while (walkStack.length > 0 && visited < maxVisit) {
+        var node = walkStack.pop();
+        visited++;
+        metrics.totalNodes++;
+
+        // Instance check
+        if (node.type === 'INSTANCE') {
+          metrics.instanceNodes++;
+          try {
+            var mc = node.mainComponent || (node.getMainComponentAsync ? await node.getMainComponentAsync() : null);
+            if (mc) {
+              var isRemote = mc.remote || (mc.parent && mc.parent.remote);
+              if (isRemote) metrics.libraryInstanceNodes++;
+            }
+          } catch (e) { /* skip */ }
+        }
+
+        // Frame auto-layout check
+        if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'COMPONENT_SET' || node.type === 'INSTANCE') {
+          metrics.frameNodes++;
+          if ('layoutMode' in node && node.layoutMode && node.layoutMode !== 'NONE') {
+            metrics.autoLayoutFrames++;
+          } else if ((node.type === 'FRAME' || node.type === 'COMPONENT') && violations.length < maxViolations) {
+            violations.push({
+              nodeId: node.id,
+              nodeName: node.name,
+              category: 'NO_AUTO_LAYOUT',
+              severity: 'HIGH',
+              message: "Frame '" + (node.name || node.id) + "' has no auto-layout (layoutMode=NONE). Not responsive.",
+            });
+          }
+        }
+
+        // Token binding check (any node with fills/strokes/effects that can have bound variables)
+        if ('fills' in node || 'strokes' in node || 'effects' in node) {
+          metrics.stylableNodes++;
+          var hasBindings = false;
+          try {
+            if (node.boundVariables && Object.keys(node.boundVariables).length > 0) {
+              hasBindings = true;
+            }
+          } catch (e) { /* skip */ }
+          if (hasBindings) {
+            metrics.nodesWithBindings++;
+          } else if (node.type !== 'INSTANCE' && violations.length < maxViolations) {
+            // Skip instances — their bindings come from the main component
+            var hasFills = false;
+            try {
+              if (Array.isArray(node.fills) && node.fills.length > 0 && node.fills[0].type !== 'IMAGE') {
+                hasFills = true;
+              }
+            } catch (e) { /* skip */ }
+            if (hasFills) {
+              violations.push({
+                nodeId: node.id,
+                nodeName: node.name,
+                category: 'HARDCODED_FILL',
+                severity: 'HIGH',
+                message: "Node '" + (node.name || node.id) + "' has hardcoded fills (no boundVariables). Bind to DS token.",
+              });
+            }
+          }
+        }
+
+        // Push children
+        if (node.children) {
+          for (var ci = 0; ci < node.children.length; ci++) {
+            walkStack.push(node.children[ci]);
+          }
+        }
+      }
+
+      // Compute scores (percentages)
+      var instanceCoverage = metrics.totalNodes > 0
+        ? Math.round((metrics.libraryInstanceNodes / Math.max(1, metrics.totalNodes)) * 100)
+        : 0;
+      var autoLayoutCoverage = metrics.frameNodes > 0
+        ? Math.round((metrics.autoLayoutFrames / metrics.frameNodes) * 100)
+        : 100;
+      var tokenBindingCoverage = metrics.stylableNodes > 0
+        ? Math.round((metrics.nodesWithBindings / metrics.stylableNodes) * 100)
+        : 100;
+
+      // Weighted aggregate (instance 40%, binding 30%, layout 30%)
+      // Note: instanceCoverage is vs total nodes which is lenient — library components
+      // contain many internal nodes that aren't instances themselves. We cap the
+      // library instance ratio so single instances don't drag the score too low.
+      // If at least 1 library instance exists, give partial credit up to 70 for this axis.
+      var normalizedInstanceScore = metrics.libraryInstanceNodes === 0
+        ? 0
+        : Math.min(100, Math.max(30, instanceCoverage * 3));
+      var score = Math.round(
+        (normalizedInstanceScore * 0.4) +
+        (tokenBindingCoverage * 0.3) +
+        (autoLayoutCoverage * 0.3)
+      );
+
+      var minScore = typeof msg.minScore === 'number' ? msg.minScore : 80;
+      var passed = score >= minScore;
+
+      var recommendation = passed
+        ? 'Score ' + score + '/100 passed minimum ' + minScore + '. Screen is DS-compliant.'
+        : 'Score ' + score + '/100 is below minimum ' + minScore + '. Consider deleting this screen and rebuilding using ' +
+          'DS components (figma_instantiate_component) and token bindings (figma_bind_variable).';
+
+      figma.ui.postMessage({
+        type: 'VALIDATE_SCREEN_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        score: score,
+        passed: passed,
+        minScore: minScore,
+        breakdown: {
+          instanceCoverage: instanceCoverage,
+          libraryInstanceCount: metrics.libraryInstanceNodes,
+          totalInstances: metrics.instanceNodes,
+          autoLayoutCoverage: autoLayoutCoverage,
+          autoLayoutFrames: metrics.autoLayoutFrames,
+          totalFrames: metrics.frameNodes,
+          tokenBindingCoverage: tokenBindingCoverage,
+          nodesWithBindings: metrics.nodesWithBindings,
+          totalStylable: metrics.stylableNodes,
+        },
+        violations: violations,
+        violationCount: violations.length,
+        violationCapped: violations.length >= maxViolations,
+        totalNodesWalked: visited,
+        recommendation: recommendation,
+      });
+    } catch (error) {
+      var errorMsg = error && error.message ? error.message : String(error);
+      console.error('🌉 [F-MCP] Validate screen error:', errorMsg);
+      figma.ui.postMessage({
+        type: 'VALIDATE_SCREEN_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errorMsg,
+      });
+    }
+  }
+
+  // ============================================================================
   // DELETE_NODE - Delete a node
   // ============================================================================
   else if (msg.type === 'DELETE_NODE') {

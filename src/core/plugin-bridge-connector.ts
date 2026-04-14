@@ -245,6 +245,34 @@ export class PluginBridgeConnector {
 		return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
 	}
 
+	/**
+	 * v1.8.1+: Clone a source screen and adapt it to a target device dimension.
+	 * Preserves library instances, bound variables, and auto-layout where possible.
+	 */
+	async cloneScreenToDevice(params: {
+		sourceNodeId: string;
+		targetWidth: number;
+		targetHeight: number;
+		targetDeviceName: string;
+		newName?: string;
+		targetParentId?: string;
+		position?: { x: number; y: number };
+	}): Promise<unknown> {
+		return this.bridge.request("cloneScreenToDevice", params, this.fileKey);
+	}
+
+	/**
+	 * v1.8.1+: Validate a screen against design-system discipline criteria.
+	 * Returns a DS compliance score + violation list.
+	 */
+	async validateScreen(params: {
+		nodeId: string;
+		expectedDs?: string;
+		minScore?: number;
+	}): Promise<unknown> {
+		return this.bridge.request("validateScreen", params, this.fileKey);
+	}
+
 	async setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult> {
 		return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
 	}

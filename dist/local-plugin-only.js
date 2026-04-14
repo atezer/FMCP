@@ -19,6 +19,7 @@ import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, truncatePluginResponse } from "./core/response-guard.js";
 import { analyzeCodeForWarnings } from "./core/code-warnings.js";
+import { resolveDevice, DEVICE_PRESETS } from "./core/device-presets.js";
 import { closeAuditLog } from "./core/audit-log.js";
 import { FMCP_VERSION } from "./core/version.js";
 import { ResponseCache } from "./core/response-cache.js";
@@ -491,6 +492,82 @@ export async function main() {
                 isError: true,
             };
         }
+    }));
+    // ============================================================================
+    // v1.8.1: HIGH-LEVEL "FAST AND CORRECT" TOOLS
+    // ============================================================================
+    //
+    // These tools sit above figma_execute and provide one-call solutions for
+    // common workflows. Claude should prefer these over hand-written execute
+    // code when possible — they handle token binding, auto-layout preservation,
+    // and DS instance preservation automatically.
+    // ============================================================================
+    // ---- figma_clone_screen_to_device ----
+    // "Clone a source screen to a target device size" — the primary answer to
+    // "hızlı ve doğru". Preserves library instances, bound variables, and
+    // auto-layout where possible.
+    server.registerTool("figma_clone_screen_to_device", {
+        description: "HIGH-LEVEL: Clone a Figma screen to a target device dimension. Preserves library instances, " +
+            "bound variables (tokens), and auto-layout. Use this INSTEAD of writing figma_execute code when " +
+            "the user wants a benchmark screen adapted to a different device size. " +
+            "Example: clone 139:3407 to 'iPhone 17' — returns new node with all SUI instances preserved. " +
+            "Supported device presets: iPhone 17, iPhone 16 Pro Max, iPhone 16, iPhone 14/15 Pro Max, " +
+            "Android Compact, Android Medium, iPad Pro 11, iPad Pro 13, Desktop, Desktop HD, and more. " +
+            "Custom dimensions: pass 'WxH' format (e.g. '1200x800').",
+        inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+            fileKey: z.string().optional().describe("Target a specific connected file."),
+            sourceNodeId: z.string().describe("Node ID of the source screen to clone (e.g. '139:3407')"),
+            targetDevice: z.string().describe("Device preset name (e.g. 'iPhone 17', 'Android Compact') or custom 'WxH' (e.g. '1200x800')"),
+            newName: z.string().optional().describe("Name for the cloned screen (default: source name + device suffix)"),
+            targetParentId: z.string().optional().describe("Parent node to place the clone under (default: current page)"),
+            position: z
+                .object({ x: z.number(), y: z.number() })
+                .optional()
+                .describe("Explicit position for the clone (default: auto-placed right of source)"),
+        },
+        annotations: { destructiveHint: true },
+    }, safeToolHandler(async ({ figmaUrl, fileKey, sourceNodeId, targetDevice, newName, targetParentId, position, }) => {
+        // Resolve device name to concrete dimensions
+        const resolved = resolveDevice(targetDevice);
+        if (!resolved) {
+            return errorResult(`Unknown device preset '${targetDevice}'. Supported presets: ${DEVICE_PRESETS.map((p) => p.name).join(", ")}. For custom, use 'WxH' format (e.g. '1200x800').`);
+        }
+        invalidateCache();
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+        const result = await conn.cloneScreenToDevice({
+            sourceNodeId,
+            targetWidth: resolved.width,
+            targetHeight: resolved.height,
+            targetDeviceName: resolved.name,
+            newName,
+            targetParentId,
+            position,
+        });
+        return toolResult(result, "figma_clone_screen_to_device");
+    }));
+    // ---- figma_validate_screen ----
+    // Post-creation audit tool. Walks a node tree and scores its DS compliance
+    // across 3 dimensions: instance coverage, token binding coverage, auto-layout
+    // coverage. Returns pass/fail + actionable violations.
+    server.registerTool("figma_validate_screen", {
+        description: "Validate a screen against design-system discipline criteria. Returns a compliance score (0-100) " +
+            "across 3 dimensions: instance coverage (library usage), token binding coverage (bound variables), " +
+            "and auto-layout coverage. Use this AFTER creating a screen to verify DS compliance. " +
+            "If score < minScore, Claude should delete the screen and rebuild it using DS components + token bindings. " +
+            "Read-only — never mutates the file.",
+        inputSchema: {
+            figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+            fileKey: z.string().optional().describe("Target a specific connected file."),
+            nodeId: z.string().describe("Node ID of the screen to validate"),
+            expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ SUI') for library match scoring"),
+            minScore: z.number().min(0).max(100).optional().default(80).describe("Minimum acceptable score (0-100). Below this, the screen is considered non-compliant."),
+        },
+        annotations: { readOnlyHint: true },
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, expectedDs, minScore, }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+        const result = await conn.validateScreen({ nodeId, expectedDs, minScore });
+        return toolResult(result, "figma_validate_screen");
     }));
     // ---- figma_capture_screenshot ----
     // v1.8.0: Default JPG@1x (~80% smaller base64 vs PNG@2x). Override via params.
