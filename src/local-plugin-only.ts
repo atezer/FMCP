@@ -452,6 +452,9 @@ export async function main() {
 			}
 			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 120000));
 			invalidateCache();
+			// Run static analysis BEFORE execution so warnings are available in ALL response paths
+			const codeWarnings = analyzeCodeForWarnings(code);
+			const warningsField = codeWarnings.length > 0 ? { _warnings: codeWarnings } : {};
 			const startTime = Date.now();
 			try {
 				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
@@ -469,15 +472,15 @@ export async function main() {
 							errorCategory: category,
 							_metrics: { durationMs, timeoutMs: clampedTimeout },
 							hint,
+							...warningsField,
 						}) }],
 						isError: true,
 					};
 				}
-				const codeWarnings = analyzeCodeForWarnings(code);
 				let enriched: unknown;
 				try {
 					enriched = typeof result === "object" && result !== null
-						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout }, ...(codeWarnings.length > 0 && { _warnings: codeWarnings }) }
+						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout }, ...warningsField }
 						: result;
 				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
@@ -495,6 +498,7 @@ export async function main() {
 						error: msg,
 						_metrics: { durationMs, timeoutMs: clampedTimeout },
 						hint,
+						...warningsField,
 					}) }],
 					isError: true,
 				};
@@ -1632,13 +1636,15 @@ export async function main() {
 		{
 			description:
 				"Import a text, paint, or effect style from a team library by key, and optionally apply it to a node. " +
+				"IMPORTANT: This API only imports PUBLISHED LIBRARY styles, NOT local file styles. " +
+				"For local styles, use 'node.fillStyleId = style.id' (or textStyleId/effectStyleId) directly via figma_execute. " +
+				"Get library style keys from .claude/libraries/ cache or REST API: figma_rest_api GET /v1/files/{fileKey}/styles. " +
 				"For TEXT styles: applies via setTextStyleIdAsync (includes font, size, weight). " +
-				"For PAINT styles: applies via fillStyleId. For EFFECT styles: applies via effectStyleId. " +
-				"Get style keys from .claude/libraries/ cache or REST API: figma_rest_api GET /v1/files/{fileKey}/styles.",
+				"For PAINT styles: applies via fillStyleId. For EFFECT styles: applies via effectStyleId.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
-				styleKey: z.string().describe("Style key to import"),
+				styleKey: z.string().describe("Library style key (must be from a PUBLISHED team library, not a local style)"),
 				nodeId: z.string().optional().describe("Node ID to apply the style to (optional — omit to just import)"),
 			},
 			annotations: { destructiveHint: true },
@@ -1649,7 +1655,19 @@ export async function main() {
 			invalidateCache();
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const code = `
-				var style = await figma.importStyleByKeyAsync(${JSON.stringify(styleKey)});
+				var style;
+				try {
+					style = await figma.importStyleByKeyAsync(${JSON.stringify(styleKey)});
+				} catch (e) {
+					var origMsg = e && e.message ? e.message : String(e);
+					throw new Error(
+						"importStyleByKeyAsync failed for key '" + ${JSON.stringify(styleKey)} + "'. " +
+						"This API only works with PUBLISHED LIBRARY styles. " +
+						"Local file styles cannot be imported this way — use 'node.fillStyleId/textStyleId/effectStyleId = <localStyleId>' directly via figma_execute. " +
+						"To find library style keys, use REST API: GET /v1/files/{fileKey}/styles. " +
+						"Original error: " + origMsg
+					);
+				}
 				var applied = false;
 				${nodeId ? `
 				var node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
