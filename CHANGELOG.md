@@ -12,6 +12,135 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.8.2] - 2026-04-14
+
+### DS Discipline Hotfix — Clone Tool Narrow Use + Build-from-Scratch Enforcement
+
+Hotfix for v1.8.1 live test findings. The root cause of "Claude produces 3 identical clones instead of 3 distinct alternatives" was diagnosed, validated against live Figma data, and fixed across 4 layers (plugin performance + static analysis + SKILL + instructions).
+
+**Live test evidence (what v1.8.1 did wrong):**
+- User requested "3 alternatives" (Hero Card / Liste Odaklı / Dark Header)
+- Claude used `figma_clone_screen_to_device` as shortcut → cloned benchmark 3 times → renamed → "done"
+- All 3 "alternatives" turned out **byte-for-byte identical** (same 14 children, same 3 SUI instances, zero layout variation)
+- Claude picked the **wrong benchmark** (139:3678 "Hesaplarım" draft with 14 children + `_childrenTruncated: 9`) instead of the ready-to-use `169:1917 v10 Hero Card` (4 clean children)
+- Clone timed out repeatedly (30s too short), leaving **7 orphan duplicates** in the file
+- `getNodeById` sync call hit dynamic-page error (Claude had no warning)
+- Validate timed out too (30s + serial `await getMainComponentAsync` on every instance)
+
+**Phase 14A — Plugin Performance Fix:**
+- `f-mcp-plugin/ui.html` — `cloneScreenToDevice` timeout 30s → **120s**, `validateScreen` timeout 30s → **90s**
+- `f-mcp-plugin/code.js:CLONE_SCREEN_TO_DEVICE` — orphan cleanup on error: if clone was created but resize/reparent failed, `clonedNode.remove()` runs in catch block + `orphanCleanedUp: true` flag in response
+- `f-mcp-plugin/code.js:CLONE_SCREEN_TO_DEVICE` — warn when source has 20+ children (likely timeout candidate)
+- `f-mcp-plugin/code.js:VALIDATE_SCREEN` — **Pass 2 batch optimization**: first pass collects instances serially using sync `mainComponent`, deferred instances batch-resolve via `Promise.all([getMainComponentAsync()...])` in Pass 2. ~10x faster for 100+ node trees (60s → 5s typical).
+
+**Phase 14B — Static Analysis Expansion:**
+- `src/core/code-warnings.ts` — 5 new SYNC_API patterns added (v1.8.2 dynamic-page fixes):
+  - `figma.getNodeById(` → `figma.getNodeByIdAsync(`
+  - `figma.getStyleById(` → `figma.getStyleByIdAsync(`
+  - `figma.variables.getVariableById(` → `figma.variables.getVariableByIdAsync(`
+  - `figma.variables.getVariableCollectionById(` → `figma.variables.getVariableCollectionByIdAsync(`
+  - `figma.importComponentByKey(` → `figma.importComponentByKeyAsync(`
+- `tests/core/code-warnings.test.ts` — **6 new unit tests** (test count 77 → 83)
+- Now Claude's `figma_execute` code is statically checked for the common `Cannot call with documentAccess: dynamic-page` failure BEFORE it runs.
+
+**Phase 14C — SKILL Recovery + Benchmark Validation:**
+- `skills/fmcp-intent-router/SKILL.md` — New section **"Tool Failure Recovery Protocol"**:
+  - Retry rules: max 1 retry with different params, then STOP and ask user
+  - Orphan cleanup mandate: `figma_get_file_data` → detect orphans → list to user → delete with consent
+  - Failure Escalation Template (retries exhausted → user choice menu)
+- `skills/fmcp-intent-router/SKILL.md` — New section **"Benchmark Selection Validation"**:
+  - If node.type === PAGE → list child alternatives, ask user which one
+  - If FRAME childCount > 15 → warn about timeout risk
+  - If FRAME childCount > 25 → REFUSE auto-selection, force user choice
+  - Sibling scan: look for `v10`, `v11`, `alternative`, `variant` keywords and suggest cleaner alternatives
+  - Responsive pre-check: warn if benchmark has `layoutMode === NONE`
+- `skills/generate-figma-screen/SKILL.md` — New **Step 6.6: Inter-Screen Checkpoint Gate + Turn Budget**:
+  - 90s per-turn time limit
+  - Max 2 failed tool calls per turn
+  - Each alternative = separate turn (NO multi-alternative in single turn)
+  - Mandatory AskUserQuestion checkpoint after each turn ([Beğendim/Revize/Dur])
+- `src/core/instructions.ts` — New **"TOOL FAILURE RECOVERY"** section with retry/cleanup/turn-budget rules
+
+**Phase 14F REVIZE — Clone Tool Narrow Use + Build-from-Scratch (EN KRITIK):**
+
+Paradigma düzeltmesi kullanıcıdan geldi:
+> "Mevcut benchmark her zaman fikir olsun diye var ama sen doğrusunu yapmakla yükümlüsün. Responsive, auto-layout'lu, tasarım sistemine uygun — skillerindeki tüm gereksinimleri uygulamış olmalısın."
+
+Claude v1.8.1'de `figma_clone_screen_to_device` tool'unu **shortcut** olarak kullandı. Clone, benchmark'ın mevcut yanlışlıklarını (hardcoded rectangle, missing token binding, non-responsive layout) kopyaladı. Sonuç: **3 identik "alternatif"**.
+
+v1.8.2 bu tool'un kullanımını **4 katmanda** sertleştirdi:
+
+1. **Tool description sertleştirildi** (`src/local-plugin-only.ts`):
+   ```
+   ⚠️ NARROW USE CASE — Device migration ONLY.
+   USE ONLY WHEN: same DS + same layout + only size changes.
+   DO NOT USE FOR: creating alternatives, variations, or new designs.
+   If the user says 'alternatif', 'varyasyon', 'farklı', 'yeni', 'tasarla'
+   — USE figma_execute + Step 5, NOT this tool.
+   Benchmark is INSPIRATION, not a copy source for variations.
+   Clone copies benchmark's EXISTING mistakes.
+   ```
+
+2. **`skills/generate-figma-screen/SKILL.md`** — New **Step 3.5: Clone Tool'u Tuzağı**:
+   - Decision matrix: user request → correct tool
+   - "alternatif/varyasyon/farklı/yeni/tasarla/iyileştir/redesign" → BUILD, NOT CLONE
+   - Build-from-scratch flow documented (search_assets → instantiate_component → setBoundVariable → auto-layout FILL)
+   
+3. **`skills/generate-figma-screen/SKILL.md`** — New **Step 5.17: Quality Gate**:
+   - Mandatory 12-item checklist after each section creation
+   - Covers: layoutMode, primaryAxisSizingMode, counterAxisSizingMode, fill bindings, padding bindings, itemSpacing binding, cornerRadius binding, setTextStyleIdAsync, DS instance count, layoutSizingHorizontal = FILL
+   - Fail → delete section, rewrite complying with all rules
+   - Automatic JS-level check example provided
+
+4. **`skills/fmcp-intent-router/SKILL.md`** — New **Adım 3b: Approach Karar Mantığı**:
+   - Keyword detection table: "alternatif/varyasyon/..." → `approach = build-from-scratch` (DEFAULT)
+   - "migrate/boyut/klonla" → `approach = clone-to-device`
+   - "hizala/tokenize" → `approach = apply-ds-to-existing`
+   - Summary screen shows chosen approach explicitly: "Clone tool kullanılmayacak çünkü alternatif istenmiş"
+
+5. **`src/core/instructions.ts`** — New **"CLONE vs BUILD DECISION"** section (v1.8.2+ CRITICAL):
+   - Explicit rule list with example user phrases
+   - "Benchmark is ALWAYS inspiration, never a copy source for alternatives"
+   - Critical rule enforced at session-start instructions level
+
+**Phase 14G — Orphan Cleanup (canlı dosya):**
+
+v1.8.1 test session'ından dosyada kalan **7 orphan node silindi**:
+- 6 duplicate "Hesaplarım — Hero Card — iPhone 17" frame (`175:12172`, `175:12302`, `176:12751`, `176:13011`, `176:13510`, `176:13511`)
+- 1 orphan "iOS & Android Status Bars" instance (`176:13512`)
+
+Cleanup `figma_execute` ile yapıldı, tümü başarılı: `removed: 7/7, failed: 0`.
+
+**Files changed (v1.8.2 total):**
+- `src/core/code-warnings.ts` — 5 new SYNC_API patterns
+- `tests/core/code-warnings.test.ts` — 6 new unit tests
+- `src/core/instructions.ts` — CLONE vs BUILD DECISION + TOOL FAILURE RECOVERY
+- `src/local-plugin-only.ts` — figma_clone_screen_to_device description sertleştirme
+- `f-mcp-plugin/code.js` — CLONE_SCREEN_TO_DEVICE cleanup + VALIDATE_SCREEN Pass 2 batch + FMCP_PLUGIN_VERSION='1.8.2'
+- `f-mcp-plugin/ui.html` — timeout 30s→120s + 30s→90s + FMCP_PLUGIN_VERSION='1.8.2'
+- `skills/fmcp-intent-router/SKILL.md` — Tool Failure Recovery + Benchmark Selection Validation + Adım 3b Approach Decision
+- `skills/generate-figma-screen/SKILL.md` — Step 3.5 Clone Tuzağı + Step 5.17 Quality Gate + Step 6.6 Turn Budget
+- `package.json` + `src/core/version.ts` — 1.8.1 → 1.8.2
+
+**Test coverage:** 83/83 passing (47 eski + 30 Phase 12A + 6 Phase 14B). Build clean, type-check clean.
+
+**Backwards compatibility:** 100% additive. All v1.8.1 tools still work; `figma_clone_screen_to_device` description changed but API unchanged. No breaking changes.
+
+**Migration from v1.8.1:**
+1. Reinstall Figma plugin from `f-mcp-plugin/` (new handlers require v1.8.2 plugin)
+2. Restart Claude Desktop (new `FMCP_INSTRUCTIONS` loads on session start)
+3. New test prompt: "alternatif" keyword triggers build-from-scratch automatically (no prompt changes needed)
+
+**Expected v1.8.2 test result:**
+- `figma_clone_screen_to_device` NOT called for alternatives
+- Claude uses `figma_execute` + Step 4-5 build pattern
+- Each alternative is ACTUALLY different (different layouts, different token usage)
+- Each turn has a user checkpoint
+- 0 orphans, 0 timeouts
+- Total time ≤ 5 minutes for 3 alternatives
+
+**Referenced plan:** `.claude/plans/compressed-wondering-lynx.md` (Phases 14A, 14B, 14C, 14F REVIZE, 14G)
+
 ## [1.8.1] - 2026-04-14
 
 ### DS Discipline Enforcement + Intent Router + High-Level Screen Tools

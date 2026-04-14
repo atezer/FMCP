@@ -75,11 +75,19 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 	}
 
 	// 1c. Sync API usage — should use Async versions
+	// v1.8.2: expanded to include node/style/variable lookup APIs that fail
+	// in dynamic-page mode (causing "Cannot call with documentAccess: dynamic-page" errors)
 	const syncApis = [
 		{ sync: "getLocalPaintStyles(", async: "getLocalPaintStylesAsync(" },
 		{ sync: "getLocalTextStyles(", async: "getLocalTextStylesAsync(" },
 		{ sync: "getLocalEffectStyles(", async: "getLocalEffectStylesAsync(" },
 		{ sync: "getLocalGridStyles(", async: "getLocalGridStylesAsync(" },
+		// v1.8.2: dynamic-page mode fixes
+		{ sync: "figma.getNodeById(", async: "figma.getNodeByIdAsync(" },
+		{ sync: "figma.getStyleById(", async: "figma.getStyleByIdAsync(" },
+		{ sync: "figma.variables.getVariableById(", async: "figma.variables.getVariableByIdAsync(" },
+		{ sync: "figma.variables.getVariableCollectionById(", async: "figma.variables.getVariableCollectionByIdAsync(" },
+		{ sync: "figma.importComponentByKey(", async: "figma.importComponentByKeyAsync(" },
 	];
 	for (const api of syncApis) {
 		if (code.includes(api.sync) && !code.includes(api.async)) {

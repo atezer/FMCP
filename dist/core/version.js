@@ -1,3 +1,3 @@
 /** F-MCP version — keep in sync with package.json during version bumps. */
-export const FMCP_VERSION = "1.8.1";
+export const FMCP_VERSION = "1.8.2";
 //# sourceMappingURL=version.js.map

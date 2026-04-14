@@ -65,6 +65,45 @@ Claude her seferinde üç state dosyasını okur:
 
 Bu dosyalar Claude'un "öncekiyle aynı mı?" sorusu sormasını sağlar.
 
+### Adım 3b — Approach Karar Mantığı (v1.8.2+)
+
+Target skill `generate-figma-screen` ise, **yaklaşım ayrımı** yap.
+Kullanıcının cümlesinde şu keyword'leri ara ve `approach` input'unu doldur:
+
+| Keyword | Yaklaşım | Tool Önerisi |
+|---|---|---|
+| "alternatif", "varyasyon", "farklı", "yeni", "tasarla", "redesign", "iyileştir" | `build-from-scratch` ⭐ | `figma_execute` + Step 5, **`figma_clone_screen_to_device` KULLANMA** |
+| "aynı ekranı X device'a migrate et", "boyut değiştir", "iPhone 13→17", "klonla" | `clone-to-device` | `figma_clone_screen_to_device` |
+| "mevcut ekranı DS'ye hizala", "tokenize et", "tokens bind et" | `apply-ds-to-existing` | `apply-figma-design-system` SKILL |
+| Hiçbiri net değil | **Kullanıcıya sor** | — |
+
+**⭐ ÖNEMLİ:** Eğer kullanıcı "3 alternatif" veya "varyasyon" derse, `approach = build-from-scratch` **DEFAULT**'tur. `figma_clone_screen_to_device` tool'u **ASLA önerilmez**. Clone tool'u kopyalama yaparken benchmark'ın **mevcut yanlışlıklarını** (hardcoded rectangle, missing token binding, non-responsive layout) kopyalar. Bu kullanıcının istediği **gerçek varyasyon yaratmaz**.
+
+Eğer `approach = build-from-scratch` ise, Claude'un akış haritası:
+```
+figma_search_assets ile SUI bileşenlerini bul
+  ↓
+figma_get_library_variables ile DS token key'lerini topla
+  ↓
+figma_execute ile bölüm bölüm inşa et:
+  - figma.createFrame() + layoutMode + padding (variable binding)
+  - importComponentByKeyAsync + createInstance (DS instance'lar)
+  - setBoundVariableForPaint (fills token bind)
+  - setBoundVariable (padding/itemSpacing/cornerRadius token bind)
+  - importStyleByKeyAsync + setTextStyleIdAsync (text style bind)
+  - appendChild sonrası layoutSizingHorizontal/Vertical = FILL
+  ↓
+figma_validate_screen ile skor kontrolü (≥80)
+```
+
+**Özet + Onay ekranında göster:**
+```
+📋 Yaklaşım: build-from-scratch ⭐
+ Bu kullanıcının "alternatif tasarım" isteğine uygun doğru yol.
+ Clone tool kullanılmayacak. Her alternatif sıfırdan SUI bileşenleriyle inşa edilecek.
+ Benchmark (139:xxx) sadece ilham kaynağı — kopyalanmayacak.
+```
+
 ### Adım 3 — Decide Target Skill
 
 Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL seç.
@@ -337,6 +376,136 @@ Router **sorar:**
  (a) Figma'da yeni variable/token oluştur (library)
  (b) Kod tarafındaki token'ları Figma'ya sync et (pipeline)
  (c) Figma token'larını CSS/Swift/Kotlin'a export et (pipeline)"
+```
+
+## Tool Failure Recovery Protocol (v1.8.2+)
+
+Tool çağrısı başarısız olursa (timeout, error, unexpected result),
+şu protokolü izle. **ASLA körü körüne retry yapma** — çöp birikir.
+
+### Retry Kuralları
+
+1. **İlk hata (timeout/error):** 1 kez retry et, **farklı parametre** ile:
+   - `figma_clone_screen_to_device` timeout → küçük source node dene veya farklı targetDevice
+   - `figma_execute` timeout → kod parçalarına böl, timeout param artır (max 30000)
+   - `figma_validate_screen` timeout → minScore düşür veya daha küçük alt-node'a uygula
+2. **İkinci hata (aynı tool):** **DUR**. Kullanıcıya git, strateji iste.
+3. **ASLA** aynı tool + aynı param ile 3 kez çağırma.
+
+### Orphan Cleanup (ZORUNLU)
+
+Clone/create tool'ları timeout aldıysa **dosyada yarım iş kalmış olabilir**.
+Her başarısız write-tool denemesi sonrası Claude cleanup protokolünü çalıştırır:
+
+1. `figma_get_file_data(depth=1, verbosity="summary")` ile hedef sayfayı tara
+2. Son 5 dakikada oluşmuş, beklenmedik isimde veya duplicate node'ları tespit et
+3. Her şüpheli node için `figma_get_design_context` ile detayına bak (content sağlamı mı?)
+4. Kullanıcıya listele:
+   ```
+   ⚠️ Timeout sonrası şu orphan node'ları buldum:
+    1. 175:12172 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 4)
+    2. 175:12302 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 8)
+   
+   Silmemi ister misin?
+   [✅ Sil] [👁️ Önce screenshot göster] [❌ Kalsın]
+   ```
+5. Onay sonrası `figma_execute` ile `node.remove()` uygula
+
+### Failure Escalation Template
+
+2+ retry sonrası kullanıcıya şu formatla git:
+
+```
+⚠️ Alternatif N ({name}) oluşturulamadı.
+
+**Denenen:**
+- figma_clone_screen_to_device (2 timeout)
+- figma_execute manual fallback (failed)
+
+**Orphan node'lar (dosyada kaldı):** [list of IDs]
+
+**Seçenekler:**
+[A] Orphan'ları sil ve farklı kaynak node ile yeniden dene
+[B] Orphan'ları sil ve bu alternatifi atla, Turn N+1'e geç
+[C] Dur, test iptal — orphan'ları manuel sileyim
+```
+
+## Benchmark Selection Validation (v1.8.2+)
+
+Kullanıcı benchmark node ID verdiğinde, Claude **HEMEN klonlamaya geçme**.
+Önce benchmark'ı DOĞRULA:
+
+### Adım 1: Node Tipini Kontrol Et
+
+`figma_get_design_context(nodeId=<user_input>)` çağır ve `node.type`'ı kontrol et:
+
+#### Eğer tip **PAGE** ise → Altındaki child'ları listele, kullanıcıya sor
+
+```
+Verdiğin node bir sayfa (PAGE). Altında şu adaylar var:
+
+ 1. Vadesiz TL — SUI v10 (Hero Card)       — 4 child (temiz, hızlı clone)
+ 2. Vadesiz TL — SUI v11 (Segmented)       — 5 child (temiz, hızlı clone)
+ 3. Vadesiz TL — SUI v12 (Dark Header)     — 3 child (temiz, hızlı clone)
+ 4. Hesaplarım                              — 14 child (kaba draft, yavaş)
+
+Hangisi asıl benchmark? Önerim: 1/2/3 (temiz v-numaralı alternatifler).
+```
+
+#### Eğer tip **FRAME** ise → `childCount` kontrol et
+
+- **≤ 5 child:** Kullan, hızlı
+- **5-15 child:** Kullan ama kullanıcıyı bilgilendir: "Benchmark orta büyüklükte, clone ~30s sürebilir"
+- **15-25 child:** **Uyar:**
+  ```
+  ⚠️ Benchmark {N} child içeriyor. Clone 60+ saniye sürebilir.
+  
+  Önerim:
+  [A] Yine de kullan (sabırlı ol)
+  [B] Parent'ın siblings'ini tara, daha küçük bir alternatif öner
+  [C] Farklı bir benchmark seç
+  ```
+- **25+ child:** **DUR**. Otomatik parent'ın siblings'ini tara, daha küçük alternatifler öner. Büyük benchmark'ı onaysız kullanma.
+
+#### Eğer tip başka ise (INSTANCE, COMPONENT, vs.) → Hata
+
+"Benchmark FRAME olmalı. {type} tipinde node benchmark olarak kullanılamaz."
+
+### Adım 2: Siblings Tara (PAGE/FRAME için)
+
+Parent'ta sibling node'lar varsa, `✦`, `v10`, `v11`, `alternative`, `variant`
+gibi keyword'lerle filtrele ve kullanıcıya alternatif öner:
+
+```
+Verdiğin benchmark: Hesaplarım (14 child)
+Aynı parent'ta daha küçük ve temiz alternatifler var:
+ - v10 Hero Card (4 child)
+ - v11 Segmented (5 child)
+Bunlardan birini kullanmak ister misin?
+```
+
+### Adım 3: Responsive/Auto-Layout Ön-Kontrol
+
+Benchmark'ı klonlamadan önce onun **zaten** responsive olup olmadığını
+kontrol et:
+
+```js
+// Claude figma_execute ile çalıştırır:
+var n = await figma.getNodeByIdAsync(benchmarkId);
+return {
+  layoutMode: n.layoutMode,
+  primaryAxisSizingMode: n.primaryAxisSizingMode,
+  counterAxisSizingMode: n.counterAxisSizingMode,
+  hasAutoLayout: n.layoutMode !== 'NONE',
+};
+```
+
+Eğer `layoutMode === 'NONE'` ise **uyar:**
+```
+⚠️ Bu benchmark'ın auto-layout'u yok (layoutMode=NONE).
+   Clone yaparsan yeni ekran da responsive olmayacak.
+   
+   Önerilen: clone yerine Step 5 "Build from Scratch" akışı kullan.
 ```
 
 ## Anti-Patterns (Claude'un Yapmaması Gerekenler)

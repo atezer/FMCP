@@ -424,7 +424,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.8.1';
+    var FMCP_PLUGIN_VERSION = '1.8.2';
 
     let requestIdCounter = 0;
 
@@ -703,6 +703,7 @@
     };
 
     // v1.8.1+: High-level clone-to-device (preserves instances + bindings)
+    // v1.8.2: Timeout 30s → 120s (complex benchmarks with 200+ children are slow)
     window.cloneScreenToDevice = (params) => {
       return window.sendPluginCommand('CLONE_SCREEN_TO_DEVICE', {
         sourceNodeId: params.sourceNodeId,
@@ -712,17 +713,18 @@
         newName: params.newName || null,
         targetParentId: params.targetParentId || null,
         position: params.position || null,
-      }, 30000)
+      }, 120000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
     // v1.8.1+: Validate screen DS compliance (read-only audit)
+    // v1.8.2: Timeout 30s → 90s (tree walker with Promise.all on getMainComponentAsync is slow for 100+ nodes)
     window.validateScreen = (params) => {
       return window.sendPluginCommand('VALIDATE_SCREEN', {
         nodeId: params.nodeId,
         expectedDs: params.expectedDs || null,
         minScore: typeof params.minScore === 'number' ? params.minScore : 80,
-      }, 30000)
+      }, 90000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 

@@ -331,6 +331,55 @@ Ekran oluşturmadan önce kullanılacak tüm DS token'larının **variable key'l
 
 Bu adımda toplanan key'ler, sonraki adımlarda `importVariableByKeyAsync` ile hedef dosyaya import edilecek.
 
+### Step 3.5: Clone Tool'u Tuzağı — Ne Zaman Clone, Ne Zaman Sıfırdan İnşa (v1.8.2+ ZORUNLU)
+
+`figma_clone_screen_to_device` tool'u v1.8.1'de eklendi ama **sadece dar bir use-case için** kullanılmalıdır. Yanlış kullanım, benchmark'ın mevcut yanlışlıklarını (hardcoded rectangle, eksik token binding, non-responsive layout) kopyalayarak disiplin ihlaline yol açar.
+
+#### Karar Matrisi
+
+| Kullanıcı isteği | Doğru yaklaşım | Tool |
+|---|---|---|
+| "Aynı ekranı iPhone 17'ye migrate et" (sadece boyut değişir) | Clone | `figma_clone_screen_to_device` |
+| "Aynı DS ile benzer ekran" (tek varyant) | Clone + validate | `figma_clone_screen_to_device` + Step 6.5 |
+| **"3 farklı alternatif tasarım"** | **Build from scratch** ⭐ | `figma_execute` + Step 4-5 |
+| **"Hero Card varyasyonu yap"** | **Build from scratch** | `figma_execute` + Step 4-5 |
+| **"Yeni ekran sıfırdan"** | **Build from scratch** | `figma_execute` + Step 4-5 |
+| **"Benchmark'tan ilham al, daha iyisini yap"** | **Build from scratch** (benchmark = inspiration only) | `figma_execute` + Step 4-5 |
+| "Mevcut ekranda DS uyumunu düzelt" | Apply-DS workflow | `apply-figma-design-system` SKILL |
+
+#### Kullanıcının Gerçek İstediği Nedir?
+
+Kullanıcı "3 alternatif tasarım" dediğinde **neredeyse her zaman** istediği:
+- Farklı layout/renk/tipografi yaklaşımları
+- Her biri gerçekten **AYRI** (sadece isim değil, içerik de)
+- Hepsinde DS uyumu (instance + token binding)
+- Hepsi responsive (auto-layout + FILL sizing)
+
+Bu **clone'un kapsamında DEĞİL**. Clone sadece "kopyala, isim değiştir" yapar. Sonuçta **3 identik kopya** + farklı isimler olur. Bu kullanıcının istediği **GERÇEK varyasyon değildir**.
+
+#### Doğru Akış: Build-from-Scratch (Step 4-5)
+
+Benchmark varsa:
+1. **Step 3.x'te benchmark'ı `figma_get_design_context` ile OKU** — yapısal anlayış için
+2. Benchmark'ta kullanılan SUI instance'ları not al (NavigationTopBar, PillTabs, vb.)
+3. Benchmark'ta **yanlış olan şeyleri kopyalama**:
+   - Hardcoded rectangle separator'lar → DS Divider component kullan
+   - Non-responsive iç frame'ler → auto-layout FILL'e çevir
+   - Missing token bindings → her yerde `setBoundVariable*` kullan
+4. **Step 4 + Step 5 akışını takip et** — sıfırdan, SUI kurallarıyla
+5. Her alternatif için benzersiz layout çözümü:
+   - Hero Card: bakiye kartı büyütülmüş, quick actions altta sade
+   - Liste Odaklı: hesap listesi dominant, özet sağ-altta
+   - Dark Header: root fill `Global/primary/default`, text'ler `on-primary` token
+6. Step 6.5 validate → skor ≥ 80
+
+#### Kısıtlama Kuralı
+
+**Kullanıcı şu kelimelerden birini kullandıysa → `figma_clone_screen_to_device` KULLANMA:**
+- "alternatif", "varyasyon", "farklı", "yeni", "tasarla", "iyileştir", "redesign"
+
+Intent Router bu kelimeleri algıladığında `approach = build-from-scratch` otomatik set eder ve Claude'u Step 4-5 rotasına yönlendirir.
+
 ### Step 4: Boş Alan Bul ve Wrapper Frame Oluştur
 
 ```js
@@ -518,6 +567,44 @@ Screen: VERTICAL, counterAxis=CENTER, layoutSizingVertical=HUG
 
 **Mode adı eşleşmesi DİKKAT:** `indexOf("Web")` "Mobil & Web Mobil"i de yakalar. `indexOf("Desktop")` kullan.
 
+### Step 5.17: Quality Gate — Her Bölüm Yazıldıktan Sonra (ZORUNLU — v1.8.2+)
+
+Her bölüm (`figma.createFrame()` sonrası) için **aşağıdaki checklist ZORUNLU**. Herhangi biri ❌ ise → bölümü **yeniden yaz**. Claude bu checklist'i kendi kendine uygulamakla yükümlüdür.
+
+```
+[ ] Frame'in layoutMode'u atandı mı? (ASLA "NONE" olmamalı — HORIZONTAL veya VERTICAL)
+[ ] primaryAxisSizingMode doğru mu? (Hug: AUTO, Fixed width: FIXED)
+[ ] counterAxisSizingMode doğru mu?
+[ ] Tüm fills setBoundVariableForPaint ile DS token'a bağlı mı? (hardcoded SOLID YASAK)
+[ ] Tüm padding (top/bottom/left/right) setBoundVariable ile DS spacing token'a bağlı mı?
+[ ] itemSpacing setBoundVariable ile DS spacing token'a bağlı mı?
+[ ] cornerRadius (varsa) setBoundVariable ile DS radius token'a bağlı mı?
+[ ] Her text node setTextStyleIdAsync ile DS text style'a bağlı mı? (ASLA sadece fontSize hardcoded)
+[ ] Text fills setBoundVariableForPaint ile DS text color token'a bağlı mı?
+[ ] Bölüm içinde en az 1 DS INSTANCE var mı? (importComponentByKeyAsync ile). 
+    İstisna: Sadece text + frame olan bölümler (ör. başlık row) — bu durumda yine spacing/padding/renk token'ları zorunlu.
+[ ] Tüm child'lar appendChild sonrası layoutSizingHorizontal = "FILL" mi? (text istisna: HUG)
+[ ] Hiçbir node'un fills'i raw hex literal ile atandı mı? (grep: `{r:`, `color:` literal)
+```
+
+**Otomatik kontrol örneği:**
+
+```js
+// Her createFrame sonrası Claude bu kontrolü yapar:
+if (frame.layoutMode === "NONE") throw new Error("Quality Gate FAIL: NO_AUTO_LAYOUT");
+if (!frame.boundVariables || !frame.boundVariables.paddingLeft) {
+  console.warn("Quality Gate WARN: padding token binding eksik");
+}
+```
+
+**Quality Gate FAIL olursa ne yap?**
+1. Bölümü sil: `frame.remove()`
+2. Eksik token/instance'ı `figma_search_assets` + `figma_get_library_variables` ile ara
+3. Bölümü **yeniden yaz** — bu sefer tüm kuralları uyarak
+4. Tekrar kontrol et
+
+**Skor hedef:** `figma_validate_screen` sonrası ≥ 80 (Step 6.5). Quality Gate çalışırsa validate zaten geçer.
+
 ### Step 5.2: Instance Override Rehberi (ZORUNLU)
 
 **Component PROPERTY (TEXT/BOOLEAN/VARIANT tipi) → `setProperties`:**
@@ -667,6 +754,53 @@ Validation passed ise kullanıcıya özet çıkar:
 
 ❌ **YANLIŞ:** Self-audit'i opsiyonel sayma
 ✅ **DOĞRU:** generate-figma-screen akışının **tamamlanma koşulu** bu adımdır. Validate çalıştırılmadan akış TAMAMLANMIŞ sayılmaz.
+
+### Step 6.6: Inter-Screen Checkpoint Gate + Turn Budget (ZORUNLU — v1.8.2+)
+
+Kullanıcı birden fazla alternatif istediğinde (N > 1), her alternatif **ayrı bir turn** olmalıdır. Tek turn'de 2+ alternatif yapmak **YASAK** — tool-use limit'e takılır, chat donar.
+
+#### Turn Budget Kuralı
+
+**Her turn'ün bütçesi:**
+- Maksimum **90 saniye** toplam süre
+- Maksimum **2 başarısız tool call** (timeout/error)
+
+Eğer turn içinde:
+- 2 başarısız tool call (timeout/error) olursa, **VEYA**
+- 60+ saniye geçti ve sonuç gelmediyse
+
+→ **Turn'ü "FAILED" olarak işaretle.** Orphan cleanup uygula (fmcp-intent-router Tool Failure Recovery Protocol). Kullanıcıya checkpoint sorusunu sor.
+
+#### Checkpoint Gate (Her Turn Sonrası)
+
+Alternatif N tamamlandığında (başarılı veya fail), kullanıcıya `AskUserQuestion` ile sor:
+
+```
+✅/⚠️ Alternatif N/M ({name}) tamamlandı
+   Node ID: 173:xxxxx
+   Skor: XX/100
+   Library instances: X
+   Token bindings: Y
+   Süre: Xs
+
+Ne yapayım?
+[✅ Beğendim, Alternatif N+1'e geç]
+[✏️ Revize et (ne değişsin söyle)]
+[🛑 Dur, bu yeter]
+```
+
+**Kullanıcı yanıtı gelmeden bir sonraki alternatife GEÇME.** Turn boundary kuralı budur.
+
+#### Yasaklar
+
+❌ **YANLIŞ:** Tek turn'de 3 alternatifi de yap, en sonda tek özet
+✅ **DOĞRU:** Her alternatif ayrı turn, her biri sonunda checkpoint
+
+❌ **YANLIŞ:** Turn içinde 3+ retry (sonsuz döngü)
+✅ **DOĞRU:** 2 retry max, sonra Turn FAILED + kullanıcıya sor
+
+❌ **YANLIŞ:** Alternatif N başarısız, sessizce N+1'e geç
+✅ **DOĞRU:** N başarısız olunca orphan cleanup + rapor + checkpoint
 
 ### Step 7: Güncelleme Senaryosu
 

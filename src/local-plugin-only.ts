@@ -550,20 +550,26 @@ export async function main() {
 	// ============================================================================
 
 	// ---- figma_clone_screen_to_device ----
-	// "Clone a source screen to a target device size" — the primary answer to
-	// "hızlı ve doğru". Preserves library instances, bound variables, and
-	// auto-layout where possible.
+	// v1.8.2: NARROW USE CASE ONLY — device migration.
+	// For alternatives/variations/new designs, use figma_execute with the
+	// generate-figma-screen SKILL Step 5 "build from scratch" pattern.
+	// Clone will copy benchmark's existing mistakes (hardcoded rectangles,
+	// missing token bindings, non-responsive layouts).
 	server.registerTool(
 		"figma_clone_screen_to_device",
 		{
 			description:
-				"HIGH-LEVEL: Clone a Figma screen to a target device dimension. Preserves library instances, " +
-				"bound variables (tokens), and auto-layout. Use this INSTEAD of writing figma_execute code when " +
-				"the user wants a benchmark screen adapted to a different device size. " +
-				"Example: clone 139:3407 to 'iPhone 17' — returns new node with all SUI instances preserved. " +
-				"Supported device presets: iPhone 17, iPhone 16 Pro Max, iPhone 16, iPhone 14/15 Pro Max, " +
-				"Android Compact, Android Medium, iPad Pro 11, iPad Pro 13, Desktop, Desktop HD, and more. " +
-				"Custom dimensions: pass 'WxH' format (e.g. '1200x800').",
+				"⚠️ NARROW USE CASE — Device migration ONLY. Clone a Figma screen to a target device " +
+				"dimension, preserving library instances, bound variables, and auto-layout. " +
+				"USE ONLY WHEN: same design system + same layout structure + only screen size changes. " +
+				"DO NOT USE FOR: creating alternatives, variations, or new designs — these REQUIRE " +
+				"building from scratch with figma_execute following the generate-figma-screen SKILL " +
+				"Step 5 pattern (search_assets → instantiate_component → setBoundVariable → auto-layout FILL). " +
+				"Clone copies benchmark's EXISTING mistakes (hardcoded rectangles, missing token bindings, " +
+				"non-responsive layouts). Benchmark is INSPIRATION, not a copy source for variations. " +
+				"If the user says 'alternatif', 'varyasyon', 'farklı', 'yeni', 'tasarla' — USE figma_execute + Step 5, NOT this tool. " +
+				"Device presets: iPhone 17, iPhone 16 Pro Max, Android Compact, iPad Pro 11, Desktop, " +
+				"and more. Custom: 'WxH' format.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),

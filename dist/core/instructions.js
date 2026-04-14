@@ -70,6 +70,54 @@ FORBIDDEN:
 - DO NOT execute figma_execute / figma_create_* without routing
 
 ═══════════════════════════════════════════════════════════════════
+CLONE vs BUILD DECISION (v1.8.2+ — CRITICAL)
+═══════════════════════════════════════════════════════════════════
+
+figma_clone_screen_to_device is a NARROW-USE tool. Use it ONLY when:
+  • Same design system
+  • Same layout structure
+  • Only the screen size changes (e.g. iPhone 13 → iPhone 17 migration)
+
+For ALL of these cases, use figma_execute with build-from-scratch pattern
+(generate-figma-screen SKILL Step 4-5 — search_assets → instantiate_component
+→ setBoundVariable → auto-layout FILL):
+
+  "3 alternatif tasarım yap"       → build, NOT clone
+  "Hero Card varyasyonu"           → build, NOT clone
+  "Farklı layout"                  → build, NOT clone
+  "Yeni ekran tasarla"             → build, NOT clone
+  "Bu ekranı daha iyi yap"         → build, NOT clone
+  "Benchmark'tan ilham al"         → build (benchmark = inspiration only)
+  "Redesign" / "iyileştir"         → build, NOT clone
+
+RULE: If the user says ANY of {alternatif, varyasyon, farklı, yeni,
+tasarla, iyileştir, redesign}, DO NOT suggest figma_clone_screen_to_device.
+Default to build-from-scratch via figma_execute + Step 4-5 pattern.
+
+Benchmark is ALWAYS inspiration, never a copy source for alternatives.
+Clone copies the benchmark's existing mistakes (hardcoded rectangles,
+missing token bindings, non-responsive layouts) into the new screen.
+
+═══════════════════════════════════════════════════════════════════
+TOOL FAILURE RECOVERY (v1.8.2+)
+═══════════════════════════════════════════════════════════════════
+
+If a tool call fails (timeout, error, unexpected result):
+
+1. Retry ONCE with different parameters (smaller scope, different device,
+   chunked code, lower minScore, etc.)
+2. If second failure: STOP. Do orphan cleanup. Report to user.
+3. NEVER retry same tool + same params 3+ times (infinite loop).
+4. After any write-tool failure: check for orphan nodes with
+   figma_get_file_data. List them to the user. Delete only with consent.
+
+Multi-output turn budget:
+- Each alternative/output = separate turn
+- Max 90s per turn (hard limit)
+- Max 2 failed tool calls per turn
+- If budget exhausted → Turn FAILED → orphan cleanup → user checkpoint
+
+═══════════════════════════════════════════════════════════════════
 CONTEXT-SAFE PROTOCOL (REQUIRED for Claude chat — v1.8.0+)
 ═══════════════════════════════════════════════════════════════════
 

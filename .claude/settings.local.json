@@ -162,7 +162,8 @@
       "mcp__figma-mcp-bridge__figma_execute",
       "mcp__figma-mcp-bridge__figma_plugin_diagnostics",
       "mcp__figma-mcp-bridge__figma_get_component",
-      "mcp__figma-mcp-bridge__figma_check_design_parity"
+      "mcp__figma-mcp-bridge__figma_check_design_parity",
+      "Bash(node -e \"console.log\\('version.js:', require\\('./dist/core/version.js'\\).FMCP_VERSION\\); const p = require\\('./package.json'\\); console.log\\('package.json:', p.version\\);\")"
     ],
     "deny": [],
     "ask": []

@@ -263,6 +263,47 @@ describe("analyzeCodeForWarnings — ADVISORY: SYNC_API", () => {
 		const warnings = analyzeCodeForWarnings(code);
 		expect(hasCategory(warnings, "SYNC_API")).toBe(false);
 	});
+
+	// v1.8.2: new dynamic-page sync API patterns
+	it("flags figma.getNodeById (v1.8.2)", () => {
+		const code = `const n = figma.getNodeById("1:2");`;
+		const warnings = analyzeCodeForWarnings(code);
+		const w = findByCategory(warnings, "SYNC_API");
+		expect(w).toBeDefined();
+		expect(w?.message).toContain("getNodeByIdAsync");
+	});
+
+	it("does NOT flag figma.getNodeByIdAsync (v1.8.2)", () => {
+		const code = `const n = await figma.getNodeByIdAsync("1:2");`;
+		const warnings = analyzeCodeForWarnings(code);
+		// Should have NO SYNC_API warning for getNodeById specifically
+		const nodeByIdWarnings = warnings.filter((w) => w.message.includes("getNodeById"));
+		expect(nodeByIdWarnings.length).toBe(0);
+	});
+
+	it("flags figma.getStyleById without Async (v1.8.2)", () => {
+		const code = `const s = figma.getStyleById("S:1");`;
+		const warnings = analyzeCodeForWarnings(code);
+		expect(hasCategory(warnings, "SYNC_API")).toBe(true);
+	});
+
+	it("flags figma.variables.getVariableById without Async (v1.8.2)", () => {
+		const code = `const v = figma.variables.getVariableById("V:1");`;
+		const warnings = analyzeCodeForWarnings(code);
+		expect(hasCategory(warnings, "SYNC_API")).toBe(true);
+	});
+
+	it("flags figma.variables.getVariableCollectionById without Async (v1.8.2)", () => {
+		const code = `const col = figma.variables.getVariableCollectionById("VC:1");`;
+		const warnings = analyzeCodeForWarnings(code);
+		expect(hasCategory(warnings, "SYNC_API")).toBe(true);
+	});
+
+	it("flags figma.importComponentByKey without Async (v1.8.2)", () => {
+		const code = `const c = figma.importComponentByKey("abc123");`;
+		const warnings = analyzeCodeForWarnings(code);
+		expect(hasCategory(warnings, "SYNC_API")).toBe(true);
+	});
 });
 
 describe("analyzeCodeForWarnings — ADVISORY: FONT_LOAD", () => {
