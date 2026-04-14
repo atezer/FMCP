@@ -181,10 +181,12 @@ export class PluginBridgeConnector {
         return this.bridge.request("getDocumentStructure", params, this.fileKey);
     }
     async getNodeContext(nodeId, depth, verbosity, opts) {
+        // v1.8.0: Aligned with MCP tool defaults (depth=1, verbosity=summary)
+        // for context safety. Pre-v1.8.0 was depth=2, verbosity=standard.
         const params = {
             nodeId,
-            depth: depth ?? 2,
-            verbosity: verbosity ?? "standard",
+            depth: depth ?? 1,
+            verbosity: verbosity ?? "summary",
         };
         if (opts?.excludeScreenshot !== undefined)
             params.excludeScreenshot = opts.excludeScreenshot;

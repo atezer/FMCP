@@ -31,6 +31,7 @@ export interface ClientInfo {
     clientId: string;
     fileKey: string | null;
     fileName: string | null;
+    pluginVersion: string | null;
     alive: boolean;
     missedHeartbeats: number;
     connectedAt: number;
@@ -39,6 +40,7 @@ export interface ConnectedFileInfo {
     clientId: string;
     fileKey: string | null;
     fileName: string | null;
+    pluginVersion: string | null;
     connectedAt: number;
 }
 export interface FigmaRestTokenInfo {

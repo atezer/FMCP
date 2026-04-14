@@ -370,6 +370,7 @@ export class PluginBridgeServer {
                 clientId,
                 fileKey: null,
                 fileName: null,
+                pluginVersion: null,
                 alive: true,
                 missedHeartbeats: 0,
                 connectedAt: Date.now(),
@@ -384,6 +385,7 @@ export class PluginBridgeServer {
                     if (msg.type === "ready") {
                         const incomingFileKey = msg.fileKey || null;
                         const incomingFileName = msg.fileName || null;
+                        const incomingPluginVersion = msg.pluginVersion || null;
                         if (incomingFileKey) {
                             const existing = this.findClientByFileKey(incomingFileKey);
                             if (existing && existing.clientId !== clientId) {
@@ -397,7 +399,8 @@ export class PluginBridgeServer {
                         }
                         clientInfo.fileKey = incomingFileKey;
                         clientInfo.fileName = incomingFileName;
-                        logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName }, "Plugin bridge: client registered (fileKey=%s, fileName=%s)", incomingFileKey, incomingFileName);
+                        clientInfo.pluginVersion = incomingPluginVersion;
+                        logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName, pluginVersion: incomingPluginVersion }, "Plugin bridge: client registered (fileKey=%s, fileName=%s, pluginVersion=%s)", incomingFileKey, incomingFileName, incomingPluginVersion ?? "unknown");
                         ws.send(JSON.stringify({
                             type: "welcome",
                             bridgeVersion: FMCP_VERSION,
@@ -734,6 +737,7 @@ export class PluginBridgeServer {
                     clientId: client.clientId,
                     fileKey: client.fileKey,
                     fileName: client.fileName,
+                    pluginVersion: client.pluginVersion,
                     connectedAt: client.connectedAt,
                 });
             }

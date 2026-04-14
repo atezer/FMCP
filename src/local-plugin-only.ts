@@ -19,7 +19,7 @@ import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
-import { truncateRestResponse, calculateSizeKB } from "./core/response-guard.js";
+import { truncateRestResponse, truncatePluginResponse, calculateSizeKB } from "./core/response-guard.js";
 import { closeAuditLog } from "./core/audit-log.js";
 import { FMCP_VERSION } from "./core/version.js";
 import { ResponseCache } from "./core/response-cache.js";
@@ -30,6 +30,16 @@ import type {
 } from "./core/types/figma.js";
 
 const logger = createChildLogger({ component: "plugin-only-mcp" });
+
+/**
+ * Legacy default flag — when set, restores pre-v1.8.0 default values for
+ * read-only tools (depth=2, verbosity="standard", scale=2, format="PNG").
+ * Allows downstream consumers to opt back into the heavier defaults during
+ * the v1.8.0 → v1.9.0 transition. Will be removed in v1.9.0.
+ *
+ * Set: FMCP_LEGACY_DEFAULTS=1
+ */
+const LEGACY_DEFAULTS = process.env.FMCP_LEGACY_DEFAULTS === "1";
 
 /** Resolve fileKey from figmaUrl (parse) or explicit fileKey. Returns undefined if neither yields a key. */
 function resolveFileKey(figmaUrl?: string, explicitFileKey?: string): string | undefined {
@@ -201,6 +211,54 @@ export async function main() {
 	/** Invalidate cache after any mutating operation. */
 	function invalidateCache() { cache.invalidate(); }
 
+	/**
+	 * Build a stable cache key from tool name + params. Sort keys for determinism.
+	 * fileKey is included to avoid cross-file leakage in multi-file sessions.
+	 */
+	function makeCacheKey(toolName: string, params: Record<string, unknown>): string {
+		const sortedEntries = Object.entries(params)
+			.filter(([_, v]) => v !== undefined)
+			.sort(([a], [b]) => a.localeCompare(b));
+		return `${toolName}::${JSON.stringify(sortedEntries)}`;
+	}
+
+	/**
+	 * Shared envelope wrapper for plugin tool results. Applies truncatePluginResponse
+	 * unless skipGuard is true (for cache hits whose data was already guarded).
+	 * When debug=true, the _responseGuard marker is preserved; otherwise stripped.
+	 */
+	function toolResult(
+		data: unknown,
+		toolName: string,
+		opts?: { skipGuard?: boolean; debug?: boolean },
+	): { content: Array<{ type: "text"; text: string }> } {
+		let payload: unknown;
+		if (data === undefined || data === null) {
+			payload = { success: false, error: "No data from plugin" };
+		} else if (opts?.skipGuard) {
+			payload = data;
+		} else {
+			const result = truncatePluginResponse(data, toolName);
+			payload = result.data;
+			// Strip _responseGuard marker unless debug=true
+			if (!opts?.debug && payload && typeof payload === "object" && (payload as Record<string, unknown>)._responseGuard) {
+				const stripped = { ...(payload as Record<string, unknown>) };
+				delete stripped._responseGuard;
+				payload = stripped;
+			}
+		}
+		const text = typeof payload === "string" ? payload : JSON.stringify(payload);
+		return { content: [{ type: "text" as const, text }] };
+	}
+
+	/** Helper for error responses with consistent shape. */
+	function errorResult(msg: string): { content: Array<{ type: "text"; text: string }>; isError: true } {
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: msg }) }],
+			isError: true,
+		};
+	}
+
 	const server = new McpServer({
 		name: "F-MCP ATezer Bridge (Plugin-only)",
 		version: FMCP_VERSION,
@@ -233,10 +291,11 @@ export async function main() {
 	);
 
 	// ---- figma_get_file_data_plugin (no REST, no token) ----
+	// v1.8.0: Defaults already conservative (depth=1, verbosity="summary"). Cached + truncated.
 	server.registerTool(
 		"figma_get_file_data",
 		{
-			description: "Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected (Figma Desktop, FigJam browser, Figma browser). Pass a Figma/FigJam URL in figmaUrl to route by link.",
+			description: "Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected. Defaults to depth=1, verbosity='summary'. Cached 60s per session.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey is extracted from the link for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
@@ -247,17 +306,15 @@ export async function main() {
 				includeTypography: z.boolean().optional(),
 				includeCodeReady: z.boolean().optional(),
 				outputHint: z.enum(["react", "tailwind"]).optional(),
+				debug: z.boolean().optional().describe("Bypass cache and include _responseGuard fields."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ figmaUrl, fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+		async ({ figmaUrl, fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug }) => {
 			try {
 				const resolvedKey = resolveFileKey(figmaUrl, fileKey);
 				if (figmaUrl && !resolvedKey) {
-					return {
-						content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }) }],
-						isError: true,
-					};
+					return errorResult("Invalid Figma/FigJam URL: could not extract file key.");
 				}
 				const conn = getConnector(bridge, resolvedKey);
 				const opts =
@@ -268,14 +325,13 @@ export async function main() {
 					outputHint !== undefined
 						? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
 						: undefined;
-				const data = await conn.getDocumentStructure(depth, verbosity, opts);
-				const text =
-					data === undefined || data === null
-						? JSON.stringify({ success: false, error: "No data from plugin" })
-						: typeof data === "string"
-							? data
-							: JSON.stringify(data);
-				return { content: [{ type: "text" as const, text }] };
+
+				const cacheK = makeCacheKey("figma_get_file_data", { resolvedKey, depth, verbosity, opts });
+				const cached = debug ? null : cache.get(cacheK, 60_000);
+				const data = cached ?? await conn.getDocumentStructure(depth, verbosity, opts);
+				if (!cached) cache.set(cacheK, data);
+
+				return toolResult(data, "figma_get_file_data", { skipGuard: !!cached, debug });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				return {
@@ -287,26 +343,29 @@ export async function main() {
 	);
 
 	// ---- figma_get_design_context (get_design_context tarzı, token tasarruflu, Figma token yok) ----
+	// v1.8.0: Context-safe defaults — depth=1, verbosity="summary"
+	// Override with FMCP_LEGACY_DEFAULTS=1 env var or pass explicit params.
 	server.registerTool(
 		"figma_get_design_context",
 		{
-			description: "Design context for a node or whole file: structure + text, layout/visual/typography. Use fileKey or figmaUrl to target a file when multiple plugins are connected. Pass a Figma/FigJam URL in figmaUrl; fileKey and node-id (if present in the link) are extracted automatically.",
+			description: "Design context for a node or whole file: structure + text, layout/visual/typography. Defaults to depth=1, verbosity='summary' for context safety. Pass depth/verbosity explicitly for deeper data. Cached 60s per session.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey and optional node-id are extracted for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				nodeId: z.string().optional(),
-				depth: z.number().min(0).max(3).optional().default(2),
-				verbosity: z.enum(["summary", "standard", "full"]).optional().default("standard"),
-				excludeScreenshot: z.boolean().optional(),
+				depth: z.number().min(0).max(3).optional().default(LEGACY_DEFAULTS ? 2 : 1),
+				verbosity: z.enum(["summary", "standard", "full"]).optional().default(LEGACY_DEFAULTS ? "standard" : "summary"),
+				excludeScreenshot: z.boolean().optional().describe("Reserved for future use; plugin currently does not embed screenshots in design_context."),
 				includeLayout: z.boolean().optional(),
 				includeVisual: z.boolean().optional(),
 				includeTypography: z.boolean().optional(),
 				includeCodeReady: z.boolean().optional(),
 				outputHint: z.enum(["react", "tailwind"]).optional(),
+				debug: z.boolean().optional().describe("Bypass cache and include _responseGuard/_metrics fields."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }) => {
+		async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug }) => {
 			try {
 				const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
 				if (figmaUrl && !resolvedKey) {
@@ -326,16 +385,16 @@ export async function main() {
 						? { excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
 						: undefined;
 				const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
-				const data = effectiveNodeId
+
+				// Cache lookup (60s TTL) — bypassed when debug=true
+				const cacheK = makeCacheKey("figma_get_design_context", { resolvedKey, effectiveNodeId, depth, verbosity, opts });
+				const cached = debug ? null : cache.get(cacheK, 60_000);
+				const data = cached ?? (effectiveNodeId
 					? await conn.getNodeContext(effectiveNodeId, depth, verbosity, opts)
-					: await conn.getDocumentStructure(depth, verbosity, opts);
-				const text =
-					data === undefined || data === null
-						? JSON.stringify({ success: false, error: "No data from plugin" })
-						: typeof data === "string"
-							? data
-							: JSON.stringify(data);
-				return { content: [{ type: "text" as const, text }] };
+					: await conn.getDocumentStructure(depth, verbosity, opts));
+				if (!cached) cache.set(cacheK, data);
+
+				return toolResult(data, "figma_get_design_context", { skipGuard: !!cached, debug });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				return {
@@ -507,23 +566,25 @@ export async function main() {
 	);
 
 	// ---- figma_capture_screenshot ----
+	// v1.8.0: Default JPG@1x (~80% smaller base64 vs PNG@2x). Override via params.
 	server.registerTool(
 		"figma_capture_screenshot",
 		{
-			description: "Capture screenshot of a node or current view from the plugin. No REST API. Use fileKey or figmaUrl to target a specific file.",
+			description: "Capture screenshot of a node or current view from the plugin. No REST API. Defaults to JPG@1x (q70) for context safety. Use scale/format/jpegQuality to override.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				nodeId: z.string().optional(),
-				format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
-				scale: z.number().optional().default(2),
+				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+				scale: z.number().optional().default(LEGACY_DEFAULTS ? 2 : 1),
+				jpegQuality: z.number().min(30).max(100).optional().default(70).describe("JPEG quality 30-100. Ignored when format=PNG."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale }: { figmaUrl?: string; fileKey?: string; nodeId?: string; format: string; scale: number }) => {
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale, jpegQuality }: { figmaUrl?: string; fileKey?: string; nodeId?: string; format: string; scale: number; jpegQuality: number }) => {
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-			const result = await conn.captureScreenshot(nodeId ?? null, { format, scale });
-			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+			const result = await conn.captureScreenshot(nodeId ?? null, { format, scale, jpegQuality });
+			return toolResult(result, "figma_capture_screenshot");
 		})
 	);
 
@@ -854,41 +915,43 @@ export async function main() {
 	server.registerTool(
 		"figma_get_component_image",
 		{
-			description: "Get screenshot of a node (component/frame). Returns base64 image. No REST API.",
+			description: "Get screenshot of a node (component/frame). Returns base64 image. Defaults to JPG@1x q70 (v1.8.0 context-safe).",
 			inputSchema: {
 				nodeId: z.string(),
-				scale: z.number().min(0.5).max(4).optional().default(2),
-				format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
+				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+				jpegQuality: z.number().min(30).max(100).optional().default(70),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ nodeId, scale, format }: { nodeId: string; scale: number; format: string }) => {
+		safeToolHandler(async ({ nodeId, scale, format, jpegQuality }: { nodeId: string; scale: number; format: string; jpegQuality: number }) => {
 			const conn = getConnector(bridge);
-			const result = await conn.captureScreenshot(nodeId, { scale, format });
-			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+			const result = await conn.captureScreenshot(nodeId, { scale, format, jpegQuality });
+			return toolResult(result, "figma_get_component_image");
 		})
 	);
 
 	server.registerTool(
 		"figma_get_component_for_development",
 		{
-			description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows.",
+			description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows. Defaults to JPG@1x q70 (v1.8.0 context-safe).",
 			inputSchema: {
 				nodeId: z.string(),
-				scale: z.number().min(0.5).max(4).optional().default(2),
-				format: z.enum(["PNG", "JPG"]).optional().default("PNG"),
+				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
+				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+				jpegQuality: z.number().min(30).max(100).optional().default(70),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ nodeId, scale, format }: { nodeId: string; scale: number; format: string }) => {
+		safeToolHandler(async ({ nodeId, scale, format, jpegQuality }: { nodeId: string; scale: number; format: string; jpegQuality: number }) => {
 			const conn = getConnector(bridge);
 			const [component, screenshot] = await Promise.all([
 				conn.getComponentFromPluginUI(nodeId),
-				conn.captureScreenshot(nodeId, { scale, format }),
+				conn.captureScreenshot(nodeId, { scale, format, jpegQuality }),
 			]);
 			const comp = (component as PluginComponentPayload)?.component ?? component;
 			const out = { success: true, component: comp, image: screenshot?.image ?? screenshot?.data };
-			return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
+			return toolResult(out, "figma_get_component_for_development");
 		})
 	);
 
@@ -1219,6 +1282,14 @@ export async function main() {
 			const currentPort = bridge.getPort();
 			const startError = bridge.getStartError();
 
+			// v1.8.0+: detect plugin/server version mismatch
+			const outdatedPlugins = connectedFiles.filter(
+				(f) => f.pluginVersion === null || (f.pluginVersion && f.pluginVersion !== FMCP_VERSION)
+			);
+			const versionWarning = outdatedPlugins.length > 0
+				? `⚠️ Plugin version mismatch detected: ${outdatedPlugins.map(f => `${f.fileName || "?"} (plugin v${f.pluginVersion ?? "<1.8.0"}, server v${FMCP_VERSION})`).join(", ")}. Reinstall the plugin from f-mcp-plugin/ for full v1.8.0 context-safe defaults.`
+				: undefined;
+
 			let msg: string;
 			if (!listening) {
 				msg = startError
@@ -1226,6 +1297,7 @@ export async function main() {
 					: "Bridge is starting up...";
 			} else if (connected) {
 				msg = `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected on port ${currentPort}. You can use all figma_* tools.`;
+				if (versionWarning) msg += " " + versionWarning;
 			} else {
 				msg = PLUGIN_NOT_CONNECTED;
 			}
@@ -1248,10 +1320,12 @@ export async function main() {
 						connectedClients: clientCount,
 						connectedFiles,
 						bridgePort: currentPort,
+						serverVersion: FMCP_VERSION,
 						...(autoIncremented && { preferredPort: bridge.getPreferredPort(), autoIncremented }),
 						message: msg,
 						...(startError && { startError }),
 						...(portHint && { portHint }),
+						...(versionWarning && { versionWarning }),
 					}),
 				}],
 			};
@@ -1260,24 +1334,44 @@ export async function main() {
 
 	// ---- Node Creation Tools ----
 
+	// v1.8.0: figma_create_frame now supports auto-layout out of the box.
+	// Default layoutMode="VERTICAL" with sensible padding/gap. Pass layoutMode="NONE"
+	// for a free-form frame (legacy behavior).
 	server.registerTool(
 		"figma_create_frame",
 		{
-			description: "Create a new frame node on the current page. Returns the created node ID.",
+			description:
+				"Create a new frame node with optional auto-layout. Returns the created node ID. " +
+				"v1.8.0: defaults to layoutMode='VERTICAL' with paddingTop/Bottom=16, paddingLeft/Right=16, itemSpacing=12, " +
+				"primaryAxisSizingMode='AUTO', counterAxisSizingMode='AUTO'. Pass layoutMode='NONE' for legacy free-form frames.",
 			inputSchema: {
 				name: z.string().optional().default("Frame").describe("Frame name"),
 				x: z.number().optional().describe("X position. If omitted, auto-positions to the right of existing content"),
 				y: z.number().optional().default(0),
 				width: z.number().optional().default(200),
 				height: z.number().optional().default(200),
-				fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'"),
+				fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'. PREFER binding to a DS variable via figma_bind_variable instead of hardcoding."),
 				parentId: z.string().optional().describe("Parent node ID (default: current page)"),
+				// Auto-layout parameters (v1.8.0)
+				layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().default("VERTICAL").describe("Auto-layout direction. VERTICAL by default; pass 'NONE' for free-form frames."),
+				paddingTop: z.number().optional().default(16),
+				paddingBottom: z.number().optional().default(16),
+				paddingLeft: z.number().optional().default(16),
+				paddingRight: z.number().optional().default(16),
+				itemSpacing: z.number().optional().default(12).describe("Gap between auto-layout children"),
+				primaryAxisSizingMode: z.enum(["FIXED", "AUTO"]).optional().default("AUTO").describe("AUTO = hug contents, FIXED = use width/height"),
+				counterAxisSizingMode: z.enum(["FIXED", "AUTO"]).optional().default("AUTO"),
+				primaryAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "SPACE_BETWEEN"]).optional().describe("Main-axis alignment (MIN=top/left, MAX=bottom/right)"),
+				counterAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "BASELINE"]).optional().describe("Cross-axis alignment"),
+				layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Wrap children when they exceed primary axis"),
 			},
 		},
-		async ({ name, x, y, width, height, fillColor, parentId }) => {
+		async ({ name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap }) => {
 			try {
+				invalidateCache();
 				const conn = getConnector(bridge);
 				const autoPosition = x === undefined && !parentId;
+				const useAutoLayout = layoutMode !== "NONE";
 				const code = `
 					${autoPosition ? `
 					let posX = 0;
@@ -1295,9 +1389,22 @@ export async function main() {
 					frame.name = ${JSON.stringify(name)};
 					frame.x = posX; frame.y = ${y};
 					frame.resize(${width}, ${height});
+					${useAutoLayout ? `
+					frame.layoutMode = ${JSON.stringify(layoutMode)};
+					frame.paddingTop = ${paddingTop};
+					frame.paddingBottom = ${paddingBottom};
+					frame.paddingLeft = ${paddingLeft};
+					frame.paddingRight = ${paddingRight};
+					frame.itemSpacing = ${itemSpacing};
+					frame.primaryAxisSizingMode = ${JSON.stringify(primaryAxisSizingMode)};
+					frame.counterAxisSizingMode = ${JSON.stringify(counterAxisSizingMode)};
+					${primaryAxisAlignItems ? `frame.primaryAxisAlignItems = ${JSON.stringify(primaryAxisAlignItems)};` : ""}
+					${counterAxisAlignItems ? `frame.counterAxisAlignItems = ${JSON.stringify(counterAxisAlignItems)};` : ""}
+					${layoutWrap ? `frame.layoutWrap = ${JSON.stringify(layoutWrap)};` : ""}
+					` : ""}
 					${fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(frame);` : ""}
-					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y };
+					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y, layoutMode: frame.layoutMode };
 				`;
 				const result = await conn.executeCodeViaUI(code, 10000);
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...(result as Record<string, unknown>) }) }] };
@@ -1423,11 +1530,12 @@ export async function main() {
 			description:
 				"Export one or multiple nodes as SVG, PNG, JPG, or PDF. Returns base64-encoded data for each node. " +
 				"Supports batch export (up to 50 nodes). No REST API token needed — uses plugin exportAsync. " +
-				"SVG preserves vectors; PNG/JPG are rasterized at configurable scale.",
+				"SVG preserves vectors; PNG/JPG are rasterized at configurable scale. " +
+				"v1.8.0: default scale=1 for context safety (was 2). Override for high-DPI exports.",
 			inputSchema: {
 				nodeIds: z.array(z.string()).min(1).max(50).describe("Node IDs to export (1-50)"),
 				format: z.enum(["PNG", "SVG", "JPG", "PDF"]).optional().default("PNG").describe("Export format"),
-				scale: z.number().min(0.5).max(4).optional().default(2).describe("Scale factor (0.5-4, default 2)"),
+				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1).describe("Scale factor (0.5-4, default 1)"),
 				svgOutlineText: z.boolean().optional().describe("SVG: render text as outlines (default true)"),
 				svgIncludeId: z.boolean().optional().describe("SVG: include node IDs in attributes"),
 			},
@@ -1493,9 +1601,13 @@ export async function main() {
 		"figma_search_assets",
 		{
 			description:
-				"Search for team library variable collections (with import keys) and file-local components/component sets. " +
-				"Variables come from enabled team libraries via figma.teamLibrary API. " +
-				"Components are file-local only — for remote library component discovery, use figma_rest_api GET /v1/files/{fileKey}/components. " +
+				"Search for design system assets in the current Figma file. Returns: " +
+				"(1) team library VARIABLES via figma.teamLibrary API (all enabled libraries), " +
+				"(2) file-local COMPONENTS / COMPONENT_SETS, and " +
+				"(3) v1.8.0+: REMOTE LIBRARY COMPONENTS discovered by scanning existing INSTANCE nodes (returned as 'libraryComponents'). " +
+				"For library components to appear, at least one DS instance must exist in the file — place one manually first if empty. " +
+				"Pass currentPageOnly=false to scan all pages for instance discovery. " +
+				"Use the returned componentKey with figma_instantiate_component to place new instances. " +
 				"Pass assetTypes to filter: ['variables'], ['components'], or both (default).",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),

@@ -101,6 +101,7 @@ export declare class PluginBridgeConnector {
     captureScreenshot(nodeId: string | null, options?: {
         format?: string;
         scale?: number;
+        jpegQuality?: number;
     }): Promise<PluginScreenshotPayload>;
     setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {

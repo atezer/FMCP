@@ -31,6 +31,63 @@ Detaylı eşleme: [TOOL_MAPPING.md](../TOOL_MAPPING.md)
 
 - F-MCP Bridge plugin Figma'da çalışıyor ve bağlı olmalı
 - `figma_get_status()` ile bağlantı doğrulanmalı
+- **Aktif DS context'i belirlenmiş olmalı** (`.claude/design-systems/active-ds.md` → `Status: ✅`)
+
+## 0. Design System Context (ZORUNLU — v1.8.0+)
+
+**Her ekran/bileşen yazma akışı ÖNCE bu kontrolü yapar.** DS context yoksa Claude
+herhangi bir node oluşturmaz, önce kullanıcıya sorar.
+
+### Adım 0a — Active DS check
+
+```
+1. Read .claude/design-systems/active-ds.md
+2. Status alanı kontrol et:
+   ✅ Aktif        → Library Name'i not al, Adım 0b'ye geç
+   ❌ Henüz seçilmedi → Adım 0c'ye geç (kullanıcıya sor)
+   "DS bypass mode"  → DS'siz devam et (token binding kuralı esnetilir)
+```
+
+### Adım 0b — DS asset cache hazırlığı
+
+Aktif DS varsa, kullanmadan önce key cache'inin hazır olduğundan emin ol:
+
+```
+1. .claude/design-systems/<library-id>/_meta.md mevcut mu? Sync güncel mi?
+2. Component key cache (.claude/design-systems/<library-id>/components.md) var mı?
+3. Token key cache (.claude/design-systems/<library-id>/tokens.md) var mı?
+4. Yoksa: figma_get_library_variables({libraryName: "❖ SUI"}) ve
+          figma_search_assets({assetTypes: ['components'], currentPageOnly: false})
+          ile keşfet, sonuçları MD dosyalarına yaz, sonra devam et.
+```
+
+### Adım 0c — Kullanıcıya DS seçimi sor
+
+active-ds.md `Status: ❌` ise, ekran oluşturmadan ÖNCE kullanıcıya şu soruyu sor:
+
+> "Hangi tasarım sistemi ile ilerleyelim?
+>  - ❖ SUI (varsa)
+>  - Material Design
+>  - Apple Human Interface Guidelines
+>  - Kendi DS'iniz (Figma library URL verin)
+>  - Hiçbiri (ham Figma, DS'siz)"
+
+Kullanıcı yanıtladıktan sonra:
+
+```
+1. .claude/design-systems/active-ds.md'yi update et:
+   - Status: ✅ Aktif
+   - Library Name: <kullanıcı seçimi>
+   - File Key: <varsa>
+   - Selected At: <bugünün tarihi>
+2. Adım 0b'ye geç (cache hazırlığı)
+3. Sonraki turlarda bu soruyu TEKRAR SORMA — active-ds.md zaten dolu
+```
+
+**ÖNEMLİ — tutarlılık:**
+- Kullanıcı bir kez DS seçtiğinde, sonraki tüm ekranlar/bileşenler aynı DS ile yapılır
+- Her seferinde sormak kullanıcıyı yorar
+- Kullanıcı açıkça "DS değiştir" demediği sürece active-ds.md'deki tercihi kullan
 
 ## 1. Kritik Kurallar
 
@@ -68,12 +125,58 @@ node.fills = fills;
 
    **c)** Kullanıcı "sen seç" derse `Inter` kullan.
 
+   **8a-1) Font weight availability check (ZORUNLU - v1.8.0+):**
+
+   `loadFontAsync` çağırmadan ÖNCE, o font ailesinin **gerçekten hangi stilleri sunduğunu** `figma.listAvailableFontsAsync()` ile kontrol et. DS fontlarının çoğunda **"Medium" yoktur** — varsayma!
+
+   ```js
+   // 1. Available styles listesi
+   const allFonts = await figma.listAvailableFontsAsync();
+   const familyStyles = allFonts
+     .filter(f => f.fontName.family === "SHBGrotesk")
+     .map(f => f.fontName.style);
+   // → ["Bold", "Bold Italic", "Italic", "Light", "Light Italic", "Regular", "Semi Bold", "Semi Bold Italic"]
+   //   (Note: "Medium" is NOT in this list — common gotcha for SUI/SHBGrotesk)
+
+   // 2. Weight fallback helper — istenen weight yoksa en yakınını seç
+   function pickStyle(desired, available) {
+     if (available.indexOf(desired) >= 0) return desired;
+     var fallbacks = {
+       "Medium":     ["Semi Bold", "Regular"],
+       "ExtraBold":  ["Bold", "Semi Bold"],
+       "Black":      ["Bold", "Semi Bold"],
+       "Thin":       ["Light", "Regular"],
+       "ExtraLight": ["Light", "Regular"],
+       "Heavy":      ["Bold", "Semi Bold"]
+     };
+     var alts = fallbacks[desired] || [];
+     for (var i = 0; i < alts.length; i++) {
+       if (available.indexOf(alts[i]) >= 0) return alts[i];
+     }
+     // Last resort: first non-italic style
+     return available.find(s => s.indexOf("Italic") < 0) || available[0];
+   }
+   var style = pickStyle("Medium", familyStyles);  // → "Semi Bold"
+
+   // 3. Şimdi güvenle yükle
+   await figma.loadFontAsync({ family: "SHBGrotesk", style: style });
+   ```
+
+   **DS-specific weight cache (önerilen):** Kütüphane keşfi sırasında her DS fontunun available weight'lerini `.claude/libraries/<ds>.md` "Font Weights" bölümüne yaz. Bu, sonraki oturumlarda `listAvailableFontsAsync` çağrısını gereksiz kılar.
+
 ```js
 // Fontu belirledikten sonra yükle:
 await figma.loadFontAsync({ family: "FONT_ADI", style: "Regular" });
-// Gerekli diğer ağırlıklar:
+// Gerekli diğer ağırlıklar (her zaman pickStyle ile geçtiğine emin ol):
 await figma.loadFontAsync({ family: "FONT_ADI", style: "Bold" });
 ```
+
+   **Yaygın yanlış varsayımlar (HATA):**
+   - ❌ `loadFontAsync({family: "SHBGrotesk", style: "Medium"})` — SHBGrotesk'te Medium YOK, hata verir
+   - ❌ `loadFontAsync({family: "Inter", style: "Black"})` — Inter'de Black yoksa hata
+   - ❌ Hardcoded `style: "Medium"` her DS fontu için
+   - ✅ `pickStyle("Medium", availableStyles)` ile dinamik fallback
+
    **Asla** hardcoded font varsayma — her zaman bu sırayı takip et. Bu kural font, renk, boyut, spacing dahil TÜM design token'lar için geçerlidir. Detay: `project-context.md` → "Design Token Kuralı".
 
    **FigJam özel durumu:** `createShapeWithText()` varsayılan fontu **"Inter Medium"**'dir ("Inter Regular" DEĞİL). FigJam shape text'i düzenlemek için:
@@ -93,7 +196,29 @@ const page = figma.root.children.find(p => p.name === "Hedef Sayfa");
 await figma.setCurrentPageAsync(page);
 ```
 
-10. **Tüm tasarım değerleri DS variable'larına BAĞLANMALI (ZORUNLU).** Renk, spacing, padding, radius gibi hiçbir değer hardcoded yazılmaz. Akış:
+10. **Tüm tasarım değerleri DS variable'larına BAĞLANMALI (MUTLAK ZORUNLU - v1.8.0+).**
+
+    **Kural:** Renk, spacing, padding, radius, font, size, line-height, opacity gibi
+    HİÇBİR değer hardcoded yazılmaz. Her değer DS variable veya style ile bağlanır.
+
+    **İhlal durumunda davranış:**
+    - Eğer ihtiyacın olan değer için DS'te token YOKSA → DURDUR, kullanıcıya sor:
+      "Bu değer için DS'te token bulamadım: `<değer>`. Ne yapmamı istersiniz?
+       (a) Yeni token ekleyeyim (önerilen), (b) Yakın bir mevcut token kullanayım, (c) Hardcoded olarak ekleyeyim (önerilmez)"
+    - Sessizce hardcoded fallback YAPMA — kullanıcı görmeden token disiplinini bozar
+    - Token binding'i opsiyonel sayma — bu kural her ekran/bileşen oluşturma akışında uygulanır
+
+    **Pre-flight checklist (ekran yapmaya başlamadan önce):**
+    ```
+    [ ] active-ds.md aktif mi?
+    [ ] DS'in component key cache (components.md) mevcut mu?
+    [ ] DS'in token key cache (tokens.md) mevcut mu?
+    [ ] Kullanılacak font ailesinin available weights'i biliniyor mu?
+    [ ] Kullanılacak renk/spacing token key'leri elde mi?
+    ```
+    Yukarıdakilerin tümü ✅ değilse — keşif/cache adımına dön, ekran üretimine başlama.
+
+    **Akış:**
 
    **a) Kütüphaneden variable key'lerini oku:** `.claude/libraries/` dosyasını kontrol et. Key yoksa **HEDEF dosyada** `figma_get_library_variables` veya `figma_execute` ile `figma.teamLibrary` API'sini kullan. **DS dosyasına F-MCP plugin bağlamak GEREKMEZ.**
    ```js
@@ -141,7 +266,51 @@ await figma.setCurrentPageAsync(page);
 
    **Asla** `node.fills = [{ type: "SOLID", color: { r: X, g: Y, b: Z } }]` gibi hardcoded renk yazma. Her zaman variable import et ve bağla.
 
-11. **`layoutSizingHorizontal/Vertical = 'FILL'` appendChild'DAN SONRA** ayarlanmalı — öncesinde hata verir.
+11. **appendChild sıralaması kritik (v1.8.0+ genişletilmiş kural).** Şu property'ler child node'a ÖNCE `appendChild` çağrıldıktan SONRA set edilmelidir, aksi takdirde Plugin API hata verir:
+
+    - `layoutSizingHorizontal = 'FILL'` / `'HUG'` / `'FIXED'`
+    - `layoutSizingVertical   = 'FILL'` / `'HUG'` / `'FIXED'`
+    - `layoutPositioning = 'ABSOLUTE'` *(parent'ın `layoutMode !== 'NONE'` olmalı)*
+    - `layoutGrow = 1`
+    - `layoutAlign = 'STRETCH'`
+
+    ```js
+    // ✅ DOĞRU — önce ekle, sonra layout properties
+    const parent = figma.createFrame();
+    parent.layoutMode = "VERTICAL";
+    const child = figma.createFrame();
+    parent.appendChild(child);              // ÖNCE append
+    child.layoutSizingHorizontal = "FILL";  // SONRA FILL
+    child.layoutPositioning = "ABSOLUTE";   // SONRA ABSOLUTE
+    child.x = 20; child.y = 40;             // (parent.layoutMode var olduğu için OK)
+
+    // ❌ YANLIŞ — child append edilmeden layoutPositioning
+    const bad = figma.createFrame();
+    bad.layoutPositioning = "ABSOLUTE";  // HATA: "Can only set layoutPositioning = ABSOLUTE
+                                         //         if the parent node has layoutMode !== NONE"
+    parent.appendChild(bad);
+    ```
+
+    **Helper pattern — overlay/floating child eklemek için:**
+    ```js
+    function appendAbsolute(child, parent, x, y) {
+      // 1. Append first so parent context is available
+      parent.appendChild(child);
+      // 2. Now safe to set ABSOLUTE positioning (parent has layoutMode set)
+      child.layoutPositioning = "ABSOLUTE";
+      child.x = x;
+      child.y = y;
+      return child;
+    }
+
+    // Usage:
+    const card = figma.createFrame();
+    card.layoutMode = "VERTICAL";
+    const badge = figma.createFrame();
+    appendAbsolute(badge, card, 12, -8);  // overlay top-right corner
+    ```
+
+    **Hata tanıma:** "Can only set layoutPositioning = ABSOLUTE if the parent node has layoutMode !== NONE" mesajını gördüysen → child henüz append edilmemiş demektir. `appendChild` çağrısını property atamasından önceye al.
 
 12. **Yeni üst-düzey node'ları (0,0)'dan uzağa konumlandır.** `figma.currentPage.children` tarayarak boş alan bul.
 
@@ -300,8 +469,11 @@ frame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
 3. Yaygın hatalar:
    - `Cannot read property of undefined` → Node ID geçersiz veya sayfa yüklenmemiş
    - `Font not loaded` → `loadFontAsync` eksik
-   - `Cannot set FILL before appendChild` → Sıralama hatası
+   - `The font "<family> <style>" could not be loaded` → DS'te o weight yok. Kural 8a-1'deki `pickStyle()` fallback'ini kullan, `listAvailableFontsAsync` ile mevcut weight'leri kontrol et
+   - `Cannot set FILL before appendChild` → Sıralama hatası, Kural 11
+   - `Can only set layoutPositioning = ABSOLUTE if the parent node has layoutMode !== NONE` → Child append edilmeden layoutPositioning set edildi. Kural 11 + `appendAbsolute` helper kullan
    - `Maximum call stack` → Sonsuz döngü; daha küçük parçalara böl
+   - `Resource links are not currently supported` → Yanlış MCP server (resmi Figma MCP) kullanıldı. F-MCP plugin bağlıysa `figma_search_assets` veya `figma_get_library_variables` kullan, `search_design_system` (resmi) DEĞİL.
 4. Scripti düzelt ve yeni çağrı yap
 
 ## 7. Doğrulama Adımları

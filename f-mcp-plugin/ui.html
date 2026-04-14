@@ -422,6 +422,9 @@
     window.__figmaPendingRequests = new Map();
     window.__figmaFileKey = null;
     window.__figmaFileName = null;
+    // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
+    // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
+    var FMCP_PLUGIN_VERSION = '1.8.0';
 
     let requestIdCounter = 0;
 
@@ -741,8 +744,9 @@
     window.captureScreenshot = (nodeId, options) => {
       var params = { nodeId: nodeId };
       if (options) {
-        if (options.format) params.format = options.format;  // PNG, JPG, SVG
-        if (options.scale) params.scale = options.scale;      // 1, 2, 4, etc.
+        if (options.format) params.format = options.format;            // PNG, JPG
+        if (options.scale != null) params.scale = options.scale;       // 1, 2, 4, etc.
+        if (options.jpegQuality != null) params.jpegQuality = options.jpegQuality;  // 30-100 (v1.8.0)
       }
       return window.sendPluginCommand('CAPTURE_SCREENSHOT', params, 30000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
@@ -1409,7 +1413,8 @@
           currentWs.send(JSON.stringify({
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
-            fileName: window.__figmaFileName || null
+            fileName: window.__figmaFileName || null,
+            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
           }));
           startKeepAlive(currentWs);
           if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
@@ -1709,7 +1714,8 @@
           ws.send(JSON.stringify({
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
-            fileName: window.__figmaFileName || null
+            fileName: window.__figmaFileName || null,
+            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
           }));
           handshakeTimer = setTimeout(function() {
             if (!handshakeOk) { try { ws.close(); } catch(e) {} }

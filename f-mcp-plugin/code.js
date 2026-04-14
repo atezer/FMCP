@@ -4,6 +4,10 @@
 // Uses postMessage to communicate with UI, bypassing worker sandbox limitations
 // Puppeteer can access UI iframe's window context to retrieve data
 
+// v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
+// Keep in sync with package.json and src/core/version.ts.
+var FMCP_PLUGIN_VERSION = '1.8.0';
+
 // Console log buffer for figma_get_console_logs (no CDP)
 var __consoleLogBuffer = [];
 var __consoleLogLimit = 200;
@@ -1304,7 +1308,10 @@ figma.ui.onmessage = async (msg) => {
       if (assetTypes.indexOf('components') >= 0) {
         var components = [];
         var componentSets = [];
+        var libraryComponents = [];  // v1.8.0+: discovered from existing instances
+        var seenLibKeys = {};         // dedupe library component/set keys
         var hitLimit = false;
+
         function extractComponentData(node, fromSet) {
           return {
             id: node.id,
@@ -1323,6 +1330,45 @@ figma.ui.onmessage = async (msg) => {
             variantCount: node.children ? node.children.length : 0
           };
         }
+
+        // v1.8.0: Library components discovered from INSTANCE nodes via mainComponent.key.
+        // The Figma Plugin API does not expose a list-library-components endpoint,
+        // so we walk existing instances in the file and collect their library keys.
+        // This finds SUI/DS components that have been used at least once in the file.
+        async function extractFromInstance(inst) {
+          if (libraryComponents.length >= limit) return;
+          try {
+            var mc = inst.mainComponent || (inst.getMainComponentAsync ? await inst.getMainComponentAsync() : null);
+            if (!mc) return;
+            var isSet = mc.parent && mc.parent.type === 'COMPONENT_SET';
+            var node = isSet ? mc.parent : mc;
+            var key = node.key;
+            if (!key || seenLibKeys[key]) return;
+            // Filter: prefer remote (library) components — local file components are already
+            // captured by the local-component scan below.
+            var isRemote = !!node.remote;
+            if (!isRemote) return;
+            var nname = (node.name || '').toLowerCase();
+            var ndesc = (node.description || '').toLowerCase();
+            var match = !q || nname.indexOf(q) >= 0 || ndesc.indexOf(q) >= 0;
+            if (!match) return;
+            seenLibKeys[key] = true;
+            libraryComponents.push({
+              name: node.name,
+              key: key,
+              description: node.description || null,
+              type: isSet ? 'COMPONENT_SET' : 'COMPONENT',
+              variantCount: isSet && node.children ? node.children.length : null,
+              libraryName: (node.documentationLinks && node.documentationLinks[0]) || null,
+              source: 'instance-discovery',
+              sampleInstanceId: inst.id,
+              sampleVariantName: isSet ? mc.name : null
+            });
+          } catch (e) {
+            // Some library components may not be importable — skip silently
+          }
+        }
+
         async function processNodeList(nodes) {
           for (var i = 0; i < nodes.length && !hitLimit; i++) {
             if (components.length + componentSets.length >= limit) {
@@ -1344,12 +1390,23 @@ figma.ui.onmessage = async (msg) => {
             }
           }
         }
+
+        async function scanInstancesOnPage(page) {
+          if (!page || !page.findAllWithCriteria) return;
+          var instances = page.findAllWithCriteria({ types: ['INSTANCE'] }) || [];
+          for (var i = 0; i < instances.length && libraryComponents.length < limit; i++) {
+            await extractFromInstance(instances[i]);
+          }
+        }
+
         if (currentPageOnly) {
           var page = figma.currentPage;
           if (page) {
             if (page.loadAsync) await page.loadAsync();
             var pn = page.findAllWithCriteria ? page.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }) : [];
             await processNodeList(pn);
+            // v1.8.0: also scan instances on current page for library component keys
+            await scanInstancesOnPage(page);
           }
         } else {
           await figma.loadAllPagesAsync();
@@ -1359,13 +1416,21 @@ figma.ui.onmessage = async (msg) => {
             if (pg && pg.loadAsync) await pg.loadAsync();
             var pageNodes = pg && pg.findAllWithCriteria ? pg.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] }) : [];
             await processNodeList(pageNodes);
+            // v1.8.0: scan instances across all pages
+            await scanInstancesOnPage(pg);
           }
         }
         out.components = components;
         out.componentSets = componentSets;
+        out.libraryComponents = libraryComponents;  // v1.8.0+
         out.truncatedByLimit = hitLimit;
         out.currentPageOnly = currentPageOnly;
-        out.notes.push('Components are from the current file (local + published keys via component.key). Full remote catalog may require REST API.');
+        if (libraryComponents.length > 0) {
+          out.notes.push('libraryComponents: discovered ' + libraryComponents.length + ' remote library component(s) via existing instance scan. Use these keys with figma_instantiate_component.');
+        } else if (assetTypes.indexOf('components') >= 0) {
+          out.notes.push('No library components found via instance scan. Either no DS instances exist in this file yet, or all instances are local. Hint: place one DS instance manually first, then re-run.');
+        }
+        out.notes.push('Components are from the current file (local + published keys via component.key).');
       }
 
       figma.ui.postMessage({
@@ -2353,14 +2418,21 @@ figma.ui.onmessage = async (msg) => {
         throw new Error('Node type ' + node.type + ' does not support export');
       }
 
-      // Configure export settings
-      var format = msg.format || 'PNG';
-      var scale = msg.scale || 2;
+      // v1.8.0: Default JPG@1x q70 for context safety. Plugin reads msg.format,
+      // msg.scale, msg.jpegQuality from the request payload (passed through
+      // captureScreenshot connector → bridge → here).
+      var format = (msg.format || 'JPG').toUpperCase();
+      var scale = msg.scale != null ? msg.scale : 1;
+      var jpegQuality = msg.jpegQuality != null ? msg.jpegQuality : 70;
 
       var exportSettings = {
         format: format,
         constraint: { type: 'SCALE', value: scale }
       };
+      // JPG quality (Figma Plugin API supports 'quality' for ExportSettingsImage)
+      if (format === 'JPG') {
+        exportSettings.quality = jpegQuality;
+      }
 
       // Export the node
       var bytes = await node.exportAsync(exportSettings);
@@ -2374,7 +2446,7 @@ figma.ui.onmessage = async (msg) => {
         bounds = node.absoluteBoundingBox;
       }
 
-      console.log('🌉 [F-MCP ATezer Bridge] Screenshot captured:', bytes.length, 'bytes');
+      console.log('🌉 [F-MCP ATezer Bridge] Screenshot captured:', bytes.length, 'bytes (' + format + ' @' + scale + 'x)');
 
       figma.ui.postMessage({
         type: 'CAPTURE_SCREENSHOT_RESULT',
@@ -2384,6 +2456,7 @@ figma.ui.onmessage = async (msg) => {
           base64: base64,
           format: format,
           scale: scale,
+          jpegQuality: format === 'JPG' ? jpegQuality : null,
           byteLength: bytes.length,
           node: {
             id: node.id,
@@ -2584,7 +2657,8 @@ figma.ui.onmessage = async (msg) => {
     try {
       await figma.loadAllPagesAsync();
 
-      var depth = Math.min(Math.max(msg.depth || 1, 0), 3);
+      // v1.8.0: Use != null instead of || so depth=0 is preserved (|| would rewrite 0 to default).
+      var depth = Math.min(Math.max(msg.depth != null ? msg.depth : 1, 0), 3);
       var verbosity = msg.verbosity || 'summary';
       var opts = {
         verbosity: verbosity,
@@ -2643,8 +2717,10 @@ figma.ui.onmessage = async (msg) => {
             error: 'Node not found: ' + nodeId
           });
         } else {
-          var depthNode = Math.min(Math.max(msg.depth || 2, 0), 3);
-          var verbosityNode = msg.verbosity || 'standard';
+          // v1.8.0: Context-safe defaults — depth=1, verbosity="summary" (was depth=2, verbosity="standard").
+          // Use != null instead of || so depth=0 is preserved.
+          var depthNode = Math.min(Math.max(msg.depth != null ? msg.depth : 1, 0), 3);
+          var verbosityNode = msg.verbosity || 'summary';
           var optsNode = {
             verbosity: verbosityNode,
             includeLayout: msg.includeLayout === true,

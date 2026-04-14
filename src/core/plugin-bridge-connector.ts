@@ -241,7 +241,7 @@ export class PluginBridgeConnector {
 		return this.bridge.request("createChildNode", { parentId, nodeType, properties }, this.fileKey);
 	}
 
-	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number }): Promise<PluginScreenshotPayload> {
+	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number; jpegQuality?: number }): Promise<PluginScreenshotPayload> {
 		return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
 	}
 
@@ -284,10 +284,12 @@ export class PluginBridgeConnector {
 			outputHint?: "react" | "tailwind";
 		}
 	): Promise<PluginDocumentStructure> {
+		// v1.8.0: Aligned with MCP tool defaults (depth=1, verbosity=summary)
+		// for context safety. Pre-v1.8.0 was depth=2, verbosity=standard.
 		const params: Record<string, unknown> = {
 			nodeId,
-			depth: depth ?? 2,
-			verbosity: verbosity ?? "standard",
+			depth: depth ?? 1,
+			verbosity: verbosity ?? "summary",
 		};
 		if (opts?.excludeScreenshot !== undefined) params.excludeScreenshot = opts.excludeScreenshot;
 		if (opts?.includeLayout !== undefined) params.includeLayout = opts.includeLayout;

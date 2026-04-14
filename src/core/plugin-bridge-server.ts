@@ -57,6 +57,7 @@ export interface ClientInfo {
 	clientId: string;
 	fileKey: string | null;
 	fileName: string | null;
+	pluginVersion: string | null;  // v1.8.0+: reported in "ready" handshake
 	alive: boolean;
 	missedHeartbeats: number;
 	connectedAt: number;
@@ -66,6 +67,7 @@ export interface ConnectedFileInfo {
 	clientId: string;
 	fileKey: string | null;
 	fileName: string | null;
+	pluginVersion: string | null;  // v1.8.0+: reported in handshake; null for older plugins
 	connectedAt: number;
 }
 
@@ -443,6 +445,7 @@ export class PluginBridgeServer {
 				clientId,
 				fileKey: null,
 				fileName: null,
+				pluginVersion: null,
 				alive: true,
 				missedHeartbeats: 0,
 				connectedAt: Date.now(),
@@ -458,11 +461,13 @@ export class PluginBridgeServer {
 						type?: string;
 						fileKey?: string;
 						fileName?: string;
+						pluginVersion?: string;
 					};
 
 					if (msg.type === "ready") {
 						const incomingFileKey = msg.fileKey || null;
 						const incomingFileName = msg.fileName || null;
+						const incomingPluginVersion = msg.pluginVersion || null;
 
 						if (incomingFileKey) {
 							const existing = this.findClientByFileKey(incomingFileKey);
@@ -478,10 +483,11 @@ export class PluginBridgeServer {
 
 						clientInfo.fileKey = incomingFileKey;
 						clientInfo.fileName = incomingFileName;
+						clientInfo.pluginVersion = incomingPluginVersion;
 						logger.info(
-							{ clientId, fileKey: incomingFileKey, fileName: incomingFileName },
-							"Plugin bridge: client registered (fileKey=%s, fileName=%s)",
-							incomingFileKey, incomingFileName
+							{ clientId, fileKey: incomingFileKey, fileName: incomingFileName, pluginVersion: incomingPluginVersion },
+							"Plugin bridge: client registered (fileKey=%s, fileName=%s, pluginVersion=%s)",
+							incomingFileKey, incomingFileName, incomingPluginVersion ?? "unknown"
 						);
 
 						ws.send(JSON.stringify({
@@ -847,6 +853,7 @@ export class PluginBridgeServer {
 					clientId: client.clientId,
 					fileKey: client.fileKey,
 					fileName: client.fileName,
+					pluginVersion: client.pluginVersion,
 					connectedAt: client.connectedAt,
 				});
 			}

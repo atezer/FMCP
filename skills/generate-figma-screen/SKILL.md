@@ -43,6 +43,33 @@ Topluluk `figma-generate-design` skill'inden uyarlanmış, F-MCP Bridge araçlar
 
 **Bu adımları sırayla uygula. Adım atlama.**
 
+### Step 0: Aktif Tasarım Sistemi Kontrolü (ZORUNLU - v1.8.0+)
+
+**Ekran yapmaya başlamadan önce DS context'inin belirli olduğundan emin ol.**
+
+```
+1. Read .claude/design-systems/active-ds.md
+2. Status alanı:
+   ✅ Aktif        → Library Name'i not al, Step 1'e geç
+   ❌ Henüz seçilmedi → Kullanıcıya sor:
+     "Hangi tasarım sistemi ile ilerleyelim?
+      - ❖ SUI (varsa)
+      - Material Design
+      - Apple HIG
+      - Kendi DS'iniz (Figma library URL verin)
+      - Hiçbiri (ham Figma)"
+3. Kullanıcı yanıtladıktan sonra active-ds.md'yi update et:
+   - Status: ✅ Aktif
+   - Library Name: <seçim>
+   - Selected At: <bugün>
+4. Sonraki turlarda bu soruyu TEKRAR SORMA — active-ds.md zaten dolu.
+   Kullanıcı açıkça "DS değiştir" demediği sürece aynı DS'i kullan.
+```
+
+**Bypass:** Kullanıcı "DS'siz devam et" derse `Status: DS bypass mode` olarak işaretle. Token binding kuralı esnetilir ama yine de kullanıcıya hardcoded değer kullandığını bildir.
+
+Detay: [figma-canvas-ops SKILL Section 0 — Design System Context](../figma-canvas-ops/SKILL.md#0-design-system-context-zorunlu--v180).
+
 ### Step 1: Plugin Bağlantısını Doğrula
 
 ```
@@ -109,13 +136,31 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 
 Üç şey gerekiyor: **bileşenler**, **variable'lar**, **stiller**.
 
-**CACHE-FIRST KURALI (ZORUNLU):** Figma API'ye gitmeden önce `.claude/libraries/<ds>.md` dosyasını kontrol et. Cache varsa VE `lastUpdated` 24 saatten eski değilse:
-- Text style key'leri → cache'den oku (API çağrısı yapma)
-- Variable key'leri → cache'den oku
-- Component key'leri + override notları → cache'den oku
-- Font ailesi → cache'den oku
+**⚠️ MCP TOOL SEÇİMİ (v1.8.0+):**
+- F-MCP plugin bağlıysa **`figma_search_assets`** veya **`figma_get_library_variables`** kullan
+- Resmi Figma MCP'nin **`search_design_system`** tool'unu **ÇAĞIRMA** — "Resource links not supported" / "file could not be accessed" hatası verir
+- Detay: FMCP_INSTRUCTIONS → "TOOL SELECTION" bölümü
 
-Cache yoksa, eksikse VEYA 24 saatten eskiyse → keşif yap, sonucu cache'e yaz, `lastUpdated` alanını güncelle. **Bu, sonraki oturumlarda token tüketimini %60-70 düşürür.**
+**CACHE-FIRST KURALI (MUTLAK ZORUNLU - PRE-FLIGHT BLOCKER):**
+
+Figma API'ye gitmeden önce `.claude/design-systems/<library-id>/` cache'ini kontrol et:
+
+```
+1. Read .claude/design-systems/<library-id>/_meta.md
+   ↓
+   ✅ Var, sync güncel (24h içinde) → cache'leri kullan, devam et
+   ❌ Yok / sync eski / yarım kalmış → Step 3a-3d'yi ÇALIŞTIR ve cache'i doldur,
+                                       ANCAK O ZAMAN ekran üretimine başla
+```
+
+**Cache eksik veya stale ise ekran üretimi BAŞLAYAMAZ** — önce keşif/cache, sonra üretim. Bu, hardcoded fallback'leri ve tekrar tekrar API çağrılarını engeller.
+
+- Text style key'leri → `.claude/design-systems/<library-id>/tokens.md` (text style key cache)
+- Variable key'leri → `.claude/design-systems/<library-id>/tokens.md`
+- Component key'leri + override notları → `.claude/design-systems/<library-id>/components.md`
+- Font ailesi + available weights → `.claude/design-systems/<library-id>/tokens.md` (Font Weights bölümü)
+
+Cache doldurulduktan sonra her oturumda 24 saat boyunca tekrar API'ye gitmeden okunabilir. **Bu, sonraki oturumlarda token tüketimini %60-70 düşürür.**
 
 **Cache Invalidation:** Cache dosyasının başına `lastUpdated: YYYY-MM-DD HH:mm` ekle. 24 saatten eski cache'ler otomatik yenilenmelidir. Kütüphane güncellendiğinde key'ler değişebilir.
 

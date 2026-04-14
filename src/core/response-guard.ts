@@ -12,6 +12,18 @@ export const RESPONSE_SIZE_THRESHOLDS = {
 	MAX_KB: 1000,
 } as const;
 
+/**
+ * Plugin-aware size thresholds — significantly tighter than REST limits because
+ * Claude chat sessions cannot tolerate single 200 KB+ responses without
+ * triggering "conversation too long" errors. Used by truncatePluginResponse.
+ */
+export const PLUGIN_SIZE_THRESHOLDS = {
+	IDEAL_KB: 40,
+	WARNING_KB: 80,
+	CRITICAL_KB: 160,
+	MAX_KB: 250,
+} as const;
+
 const DEFAULT_TRUNCATE_OPTIONS = {
 	maxArrayItems: 50,
 	maxStringLength: 500,
@@ -198,4 +210,130 @@ export function truncateRestResponse(endpoint: string, data: unknown, maxKB: num
 
 	// Fallback: generic truncation
 	return truncateResponse(data, { maxKB, maxArrayItems: 20, maxStringLength: 300, maxObjectDepth: 3 });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Plugin response guard (v1.8.0)
+//
+// Plugin tool responses (figma_get_design_context, figma_capture_screenshot,
+// figma_execute return values, etc.) bypass truncateRestResponse. They can
+// reach 500 KB+ on large frames, blowing Claude chat's context window. This
+// guard applies progressive pruning — children → effects → fills → minimal —
+// until the response fits under PLUGIN_SIZE_THRESHOLDS.WARNING_KB.
+// ────────────────────────────────────────────────────────────────────────────
+
+interface PluginNode {
+	id?: string;
+	name?: string;
+	type?: string;
+	children?: PluginNode[];
+	childCount?: number;
+	fills?: unknown;
+	strokes?: unknown;
+	effects?: unknown[];
+	boundVariables?: unknown;
+	absoluteBoundingBox?: unknown;
+	[k: string]: unknown;
+}
+
+/**
+ * Recursively prune a plugin node payload in-place, reducing detail at the
+ * given stage. Higher stages drop more fields:
+ *   stage 1: cap children arrays at 5 with _childrenTruncated marker
+ *   stage 2: drop effects, boundVariables
+ *   stage 3: drop fills, strokes, absoluteBoundingBox
+ *   stage 4: keep only id, name, type, children, childCount
+ */
+function pruneNodeTree(node: PluginNode, stage: number): void {
+	if (!node || typeof node !== "object") return;
+	if (Array.isArray(node.children)) {
+		for (const c of node.children) pruneNodeTree(c, stage);
+		if (stage >= 1 && node.children.length > 5) {
+			const removed = node.children.length - 5;
+			node.children = node.children.slice(0, 5);
+			(node as Record<string, unknown>)._childrenTruncated = removed;
+		}
+	}
+	if (stage >= 2) {
+		delete (node as Record<string, unknown>).effects;
+		delete (node as Record<string, unknown>).boundVariables;
+	}
+	if (stage >= 3) {
+		delete (node as Record<string, unknown>).fills;
+		delete (node as Record<string, unknown>).strokes;
+		delete (node as Record<string, unknown>).absoluteBoundingBox;
+	}
+	if (stage >= 4) {
+		const keep = new Set(["id", "name", "type", "children", "childCount", "_childrenTruncated"]);
+		for (const k of Object.keys(node)) {
+			if (!keep.has(k)) delete (node as Record<string, unknown>)[k];
+		}
+	}
+}
+
+/**
+ * Truncate a plugin tool response so it fits within Claude chat's context
+ * window. Walks the wrapper envelope ({data: {document|node|...}}) and applies
+ * progressive node-tree pruning. Adds a _responseGuard marker when truncated.
+ *
+ * @param data Raw plugin response (any shape — envelope-aware)
+ * @param toolName MCP tool name for telemetry/logging
+ * @param opts.maxKB Override the default WARNING_KB threshold
+ */
+export function truncatePluginResponse(
+	data: unknown,
+	toolName: string,
+	opts?: { maxKB?: number },
+): TruncateResult {
+	const maxKB = opts?.maxKB ?? PLUGIN_SIZE_THRESHOLDS.WARNING_KB;
+	const originalSizeKB = calculateSizeKB(data);
+	if (originalSizeKB <= maxKB) {
+		return { data, originalSizeKB, truncatedSizeKB: originalSizeKB, wasTruncated: false, itemsRemoved: 0 };
+	}
+
+	// Deep clone so we don't mutate the caller's data
+	let clone: unknown;
+	try {
+		clone = JSON.parse(JSON.stringify(data));
+	} catch {
+		// Fallback to generic truncation if clone fails (circular refs, BigInt, etc.)
+		return truncateResponse(data, { maxKB, maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 3 });
+	}
+
+	// Resolve the root node(s) — envelope-aware
+	const cloneObj = clone as Record<string, unknown>;
+	const dataField = cloneObj.data as Record<string, unknown> | undefined;
+	const candidates: PluginNode[] = [];
+	if (dataField?.document) candidates.push(dataField.document as PluginNode);
+	if (dataField?.node) candidates.push(dataField.node as PluginNode);
+	if (cloneObj.document) candidates.push(cloneObj.document as PluginNode);
+	if (cloneObj.node) candidates.push(cloneObj.node as PluginNode);
+	if (candidates.length === 0) candidates.push(clone as PluginNode);
+
+	// Try progressive stages
+	for (let stage = 1; stage <= 4; stage++) {
+		for (const root of candidates) pruneNodeTree(root, stage);
+		const sizeKB = calculateSizeKB(clone);
+		if (sizeKB <= maxKB) {
+			(clone as Record<string, unknown>)._responseGuard = {
+				originalSizeKB: Math.round(originalSizeKB * 10) / 10,
+				truncatedSizeKB: Math.round(sizeKB * 10) / 10,
+				strategy: `plugin-prune-stage-${stage}`,
+				tool: toolName,
+			};
+			return { data: clone, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved: 0 };
+		}
+	}
+
+	// Final fallback: aggressive generic truncation
+	const generic = truncateResponse(clone, { maxKB, maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 3 });
+	if (generic.data && typeof generic.data === "object") {
+		(generic.data as Record<string, unknown>)._responseGuard = {
+			originalSizeKB: Math.round(originalSizeKB * 10) / 10,
+			truncatedSizeKB: Math.round(generic.truncatedSizeKB * 10) / 10,
+			strategy: "plugin-prune-fallback-generic",
+			tool: toolName,
+		};
+	}
+	return generic;
 }

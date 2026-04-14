@@ -12,6 +12,83 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.8.0] - 2026-04-14
+
+### Context-Safe Defaults + Plugin Response Guard + DS Context Enforcement
+
+Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime hataları kökünden çözüldü. 1-2 tool çağrısından sonra "This conversation is too long" hatası alan kullanıcılar artık tek session'da tam bir Figma → SUI ekran üretim akışını tamamlayabilir.
+
+**Context Bloat Fix'leri (E1 — kritik):**
+- `figma_get_design_context`: default `depth=2 → 1`, `verbosity="standard" → "summary"`. Tipik response 150-400 KB → 5-25 KB. ~%75 token tasarrufu.
+- 3 katmanda eşzamanlı default alignment: MCP zod schema (`local-plugin-only.ts:298-299`) + connector (`plugin-bridge-connector.ts:289-290`) + plugin handler (`f-mcp-plugin/code.js:2587, 2646`). Tek katman update yetersizdi.
+- `figma_capture_screenshot`: default `format="PNG" → "JPG"`, `scale=2 → 1`, yeni `jpegQuality=70` param. Base64 boyutu ~%80 küçüldü. `figma_get_component_image`, `figma_get_component_for_development`, `figma_export_nodes` aynı default'ları kullanıyor.
+- **`truncatePluginResponse`** (yeni `response-guard.ts` fonksiyonu): Plugin response'ları için 4-stage progressive pruning (children cap → effects/boundVariables → fills/strokes → minimal). `PLUGIN_SIZE_THRESHOLDS` (40/80/160/250 KB) — REST limitlerinden çok daha sıkı. Worst-case'i capluyor.
+- `toolResult()` shared envelope helper — okuma tool'larını wrap eder, `_responseGuard` marker ile telemetri sunar.
+- **`ResponseCache` wire-up**: Önceden dormant olan cache (line 200, sadece `invalidateCache()` 19 yerden çağrılıyordu) artık `figma_get_design_context` ve `figma_get_file_data`'da TTL=60s ile aktif. SKILL chain içinde duplicate fetch'leri elimine ediyor. Yeni `debug=true` param cache bypass için.
+- Plugin handler falsy bug fix: `msg.depth || 2` → `msg.depth != null ? msg.depth : 1`. `depth=0` artık doğru iletiliyor.
+- `FMCP_LEGACY_DEFAULTS=1` env var: v1.7.x default'larına geri dönmek için escape hatch (v1.9.0'da kaldırılacak).
+
+**Runtime Hata Fix'leri (E2-E7):**
+- **E2 — SHBGrotesk Medium font hatası**: `figma-canvas-ops` Kural 8a-1 eklendi — `figma.listAvailableFontsAsync()` ile available weight check + `pickStyle()` fallback (Medium → Semi Bold → Regular). DS fontlarında "Medium"un yokluğu artık otomatik handle ediliyor.
+- **E3 — `layoutPositioning = ABSOLUTE` parent layoutMode hatası**: `figma-canvas-ops` Kural 11 genişletildi. `appendChild` ÖNCE, `layoutPositioning` SONRA. Yeni `appendAbsolute(child, parent, x, y)` helper pattern dokümante edildi.
+- **E4 — Wrong MCP server selection**: `FMCP_INSTRUCTIONS` (`src/core/instructions.ts`) tamamen yeniden yazıldı. Yeni "TOOL SELECTION" bölümü Claude'a F-MCP plugin bağlıyken resmi Figma MCP `search_design_system`'i çağırmamasını söylüyor. "Resource links not supported" hatası önlendi.
+- **E5 — Frame oluşturma auto-layout eksik**: `figma_create_frame` MCP tool'una auto-layout parametreleri eklendi: `layoutMode` (default `"VERTICAL"`), `paddingTop/Bottom/Left/Right` (default 16), `itemSpacing` (default 12), `primaryAxisSizingMode/counterAxisSizingMode` (default `"AUTO"`), `primaryAxisAlignItems`, `counterAxisAlignItems`, `layoutWrap`. `layoutMode="NONE"` ile legacy free-form frame de mümkün.
+- **E6 — Library bileşen keşfi (SUI Button vb.)**: Plugin handler `SEARCH_LIBRARY_ASSETS` genişletildi. INSTANCE node'larını tarayarak `mainComponent.key` üzerinden remote library bileşenlerini keşfediyor. Yeni `libraryComponents` field ile dönüyor. `figma_search_assets({assetTypes: ['components'], currentPageOnly: false})` artık SUI gibi DS bileşenlerini bulup `figma_instantiate_component` ile kullanılabilir hale getiriyor.
+- **E7 — Token binding eksik**: `figma-canvas-ops` Kural 10 (token binding) MUTLAK ZORUNLU olarak işaretlendi. Pre-flight checklist eklendi (active DS / component cache / token cache / font weights / variable keys). Eğer DS'te token yoksa Claude DURDURUR ve kullanıcıya sorar — sessizce hardcoded fallback YASAK.
+
+**DS Context Enforcement (yeni paradigm):**
+- **`.claude/design-systems/active-ds.md`**: Yeni state file. Kullanıcı bir kez DS seçtiğinde burada saklanır, sonraki ekran/bileşen oluşturma akışlarında otomatik kullanılır. "Hangi DS?" sorusu sadece active-ds.md `Status: ❌` ise sorulur.
+- `figma-canvas-ops` SKILL'e **Section 0 — Design System Context** eklendi. Her yazma akışının ilk adımı DS check.
+- `generate-figma-screen` SKILL'e **Step 0 — Aktif DS Kontrolü** eklendi. Cache-First Kuralı ZORUNLU PRE-FLIGHT BLOCKER yapıldı: cache yoksa ekran üretimi başlayamaz.
+- `FMCP_INSTRUCTIONS`'a **DESIGN SYSTEM CONTEXT** bölümü eklendi (Step A-D protokol).
+
+**Plugin Handshake Genişlemesi:**
+- WebSocket "ready" mesajına `pluginVersion` field eklendi (`f-mcp-plugin/ui.html:1410, 1710`).
+- `f-mcp-plugin/code.js` ve `ui.html`'e `FMCP_PLUGIN_VERSION = '1.8.0'` sabiti eklendi.
+- `ClientInfo` interface'e `pluginVersion?: string` (`plugin-bridge-server.ts:55-63`).
+- `ConnectedFileInfo` interface'e `pluginVersion: string | null`.
+- `figma_get_status` artık `serverVersion` ve plugin version mismatch warning (`versionWarning` field) döndürüyor. Eski plugin (v1.7.x) + yeni server (v1.8.0) çalışmaya devam eder ama kullanıcıya update öneri gelir.
+
+**FMCP_INSTRUCTIONS — Context-Safe Protocol:**
+- "CONTEXT-SAFE PROTOCOL (REQUIRED for Claude chat)" bölümü Claude'a 5 adımlı cheap-first workflow öğretiyor: plugin discovery → structural overview → minimum-verbosity targeting → screenshot only when needed → cache reuse.
+- "TOOL SELECTION" bölümü resmi Figma MCP vs F-MCP eşleşmesini açık yazıyor.
+- "DESIGN SYSTEM CONTEXT (REQUIRED for screen/component creation)" — DS soru protokolü ve token binding zorunluluğu.
+- "COMMON GOTCHAS" — Plugin API'nin 5 yaygın hatası (layoutSizing/layoutPositioning ordering, font weights, setCurrentPageAsync, import reserved word).
+
+**Test Coverage:**
+- `tests/core/response-guard.test.ts` 11 yeni test eklendi: `truncatePluginResponse` (8) + `PLUGIN_SIZE_THRESHOLDS` (2). Toplam 47 test, 3 suite, hepsi geçiyor.
+- Coverage: tree pruning (4 stage), envelope handling, custom maxKB, null/primitive handling, _responseGuard marker.
+
+**SKILL Güncellemeleri:**
+- `skills/figma-canvas-ops/SKILL.md`: Section 0 DS context check (yeni), Kural 8a-1 font availability check (genişletildi), Kural 10 token binding mutlak zorunluluk (güçlendirildi), Kural 11 layoutPositioning ABSOLUTE (genişletildi), Section 7 hata kurtarma (yeni hata satırları).
+- `skills/generate-figma-screen/SKILL.md`: Step 0 DS check (yeni), Step 3 cache-first ZORUNLU pre-flight blocker (güçlendirildi), Step 3 resmi Figma MCP uyarısı (yeni).
+- `.claude/design-systems/active-ds.md`: Yeni state file şablonu.
+
+**Backwards Compatibility:**
+- Default değişiklikleri observable ama API shape değişmedi. Explicit `verbosity="standard"`/`depth=2` geçen caller'lar etkilenmez.
+- `FMCP_LEGACY_DEFAULTS=1` env var: v1.7.x davranışına geri dön (v1.9.0'da kaldırılacak).
+- `debug=true` per-tool param: cache bypass + `_responseGuard` include (eski davranışa benzer).
+- `excludeScreenshot` param schema'da kaldı (SKILL'lerde kullanılıyor) ama plugin handler'ı zaten implement etmiyordu — değişiklik yok.
+- Plugin/server version mismatch'i `figma_get_status` warning ile bildirilir, çalışmaya devam eder.
+
+**Kritik Dosya Değişiklikleri:**
+- `src/local-plugin-only.ts`: defaults, helpers (`toolResult`, `makeCacheKey`, `errorResult`), figma_get_design_context+figma_get_file_data cache+truncation wireup, figma_capture_screenshot+component_image+component_for_development+export_nodes screenshot defaults, figma_create_frame auto-layout params, figma_get_status pluginVersion mismatch warning, figma_search_assets description update.
+- `src/core/response-guard.ts`: `PLUGIN_SIZE_THRESHOLDS` constant, `truncatePluginResponse()` with 4-stage progressive pruning, `pruneNodeTree()` helper.
+- `src/core/plugin-bridge-connector.ts`: `getNodeContext` defaults align (`depth ?? 1`, `verbosity ?? "summary"`), `captureScreenshot` `jpegQuality` param.
+- `src/core/plugin-bridge-server.ts`: `ClientInfo.pluginVersion`, `ConnectedFileInfo.pluginVersion`, "ready" handler reads `msg.pluginVersion`, `listConnectedFiles()` returns it.
+- `src/core/instructions.ts`: tamamen yeniden yazıldı — Context-Safe Protocol + Tool Selection + DS Context + Common Gotchas.
+- `src/core/version.ts`: `1.7.30` → `1.8.0`.
+- `package.json`: `1.7.30` → `1.8.0`.
+- `f-mcp-plugin/code.js`: `FMCP_PLUGIN_VERSION = '1.8.0'`, GET_NODE_CONTEXT defaults align, CAPTURE_SCREENSHOT format/scale/jpegQuality defaults, SEARCH_LIBRARY_ASSETS instance scan for library components.
+- `f-mcp-plugin/ui.html`: `FMCP_PLUGIN_VERSION` const, "ready" handshake `pluginVersion` field (2 lokasyon), `captureScreenshot` `jpegQuality` passthrough.
+- `skills/figma-canvas-ops/SKILL.md`, `skills/generate-figma-screen/SKILL.md`, `.claude/design-systems/active-ds.md`.
+- `tests/core/response-guard.test.ts`: 11 yeni test.
+
+**Migration:**
+- Yeni server v1.8.0 + eski plugin v1.7.x: çalışır, `figma_get_status` warning gösterir. Plugin'i Figma'da yeniden yükleyin (`f-mcp-plugin/manifest.json`).
+- Eski default'lara dönmek isteyenler: `FMCP_LEGACY_DEFAULTS=1` env var set edin.
+- Per-call cache bypass: tool çağrısına `debug: true` ekleyin.
+
 ## [1.7.30] - 2026-04-14
 
 ### SUI Design System Integration — search_assets bridge fix, new library tools, SKILL corrections
