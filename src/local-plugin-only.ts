@@ -20,6 +20,7 @@ import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, truncatePluginResponse, calculateSizeKB } from "./core/response-guard.js";
+import { analyzeCodeForWarnings, type CodeWarning } from "./core/code-warnings.js";
 import { closeAuditLog } from "./core/audit-log.js";
 import { FMCP_VERSION } from "./core/version.js";
 import { ResponseCache } from "./core/response-cache.js";
@@ -115,57 +116,8 @@ function getErrorHint(category: string): string {
 	}
 }
 
-/** Analyze figma_execute code for common mistakes. Returns advisory warnings (never blocks execution). */
-function analyzeCodeForWarnings(code: string): string[] {
-	const warnings: string[] = [];
-
-	// 1. FILL before appendChild — must set FILL *after* node is in auto-layout parent
-	if (/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i.test(code)) {
-		const fillIdx = code.search(/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i);
-		const appendIdx = code.indexOf("appendChild");
-		if (appendIdx === -1 || fillIdx < appendIdx) {
-			warnings.push(
-				"layoutSizingHorizontal/Vertical = 'FILL' appendChild'dan ONCE ayarlanmis. " +
-				"Oncesinde hata verir. FILL'i appendChild SONRASINA tasi."
-			);
-		}
-	}
-
-	// 2. Sync API usage — should use Async versions
-	const syncApis = [
-		{ sync: "getLocalPaintStyles(", async: "getLocalPaintStylesAsync(" },
-		{ sync: "getLocalTextStyles(", async: "getLocalTextStylesAsync(" },
-		{ sync: "getLocalEffectStyles(", async: "getLocalEffectStylesAsync(" },
-		{ sync: "getLocalGridStyles(", async: "getLocalGridStylesAsync(" },
-	];
-	for (const api of syncApis) {
-		if (code.includes(api.sync) && !code.includes(api.async)) {
-			warnings.push(
-				`Sync API '${api.sync.slice(0, -1)}' tespit edildi. 'await ${api.async.slice(0, -1)}' kullanin — dynamic-page modunda sync API'ler calismaz.`
-			);
-		}
-	}
-
-	// 3. Font not loaded before text modification
-	if (
-		(/\.characters\s*=/.test(code) || code.includes(".insertCharacters") || code.includes(".deleteCharacters")) &&
-		!code.includes("loadFontAsync")
-	) {
-		warnings.push(
-			"Text icerik degisikligi (characters) tespit edildi, ancak loadFontAsync cagrisi yok. " +
-			"Metin degistirmeden once 'await figma.loadFontAsync(node.fontName)' ekleyin."
-		);
-	}
-
-	// 4. Sync page assignment — does not work
-	if (/figma\.currentPage\s*=/.test(code) && !code.includes("setCurrentPageAsync")) {
-		warnings.push(
-			"'figma.currentPage = ...' calismaz. 'await figma.setCurrentPageAsync(page)' kullanin."
-		);
-	}
-
-	return warnings;
-}
+// analyzeCodeForWarnings + CodeWarning type moved to ./core/code-warnings.ts (v1.8.1)
+// Imported at the top of this file — this comment marks where the helper used to live.
 
 /** Wrap a tool handler with try-catch to prevent unhandled rejections. */
 function safeToolHandler<T>(handler: (params: T) => Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }>) {
@@ -488,11 +440,9 @@ export async function main() {
 		{
 			description:
 				"Run JavaScript in the Figma plugin context. Full Plugin API available. Use fileKey or figmaUrl to target a specific file. " +
-				"Common mistakes are detected and returned as _warnings: " +
-				"(1) layoutSizingHorizontal/Vertical='FILL' must be set AFTER appendChild, " +
-				"(2) use getLocalPaintStylesAsync not getLocalPaintStyles, " +
-				"(3) call loadFontAsync before .characters=, " +
-				"(4) use setCurrentPageAsync not figma.currentPage=. " +
+				"v1.8.1+: Static analysis detects design-system discipline violations (hardcoded colors, missing token bindings, no-instance usage, hardcoded typography). " +
+				"SEVERE warnings are promoted to the top of the response as _designSystemViolations — Claude must read and self-correct. " +
+				"Also detects gotchas: FILL/ABSOLUTE before appendChild, sync API usage, missing loadFontAsync, sync currentPage assignment. " +
 				"For component instances: use setProperties({...}), NOT findAll(TEXT).",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
@@ -511,9 +461,24 @@ export async function main() {
 			}
 			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 120000));
 			invalidateCache();
-			// Run static analysis BEFORE execution so warnings are available in ALL response paths
-			const codeWarnings = analyzeCodeForWarnings(code);
-			const warningsField = codeWarnings.length > 0 ? { _warnings: codeWarnings } : {};
+			// v1.8.1: Structured warnings with SEVERE vs ADVISORY severity
+			const codeWarnings: CodeWarning[] = analyzeCodeForWarnings(code);
+			const severeWarnings = codeWarnings.filter((w) => w.severity === "SEVERE");
+			const advisoryWarnings = codeWarnings.filter((w) => w.severity === "ADVISORY");
+			// SEVERE warnings go to a prominent field that Claude cannot ignore
+			const dsViolations = severeWarnings.length > 0
+				? {
+					_designSystemViolations: {
+						count: severeWarnings.length,
+						message: "⚠️ DESIGN SYSTEM DISIPLIN IHLALI TESPIT EDILDI — kodu duzelt ve tekrar calistir. Bu ekran kabul edilmez.",
+						violations: severeWarnings.map((w) => ({ category: w.category, message: w.message })),
+						action: "Her ihlal icin uygun DS token binding veya component instance kullan. Detay: figma-canvas-ops SKILL Kural 10.",
+					},
+				}
+				: {};
+			const warningsField = advisoryWarnings.length > 0
+				? { _warnings: advisoryWarnings.map((w) => w.message) }
+				: {};
 			const startTime = Date.now();
 			try {
 				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
@@ -527,6 +492,7 @@ export async function main() {
 					try { category = categorizeExecuteError(pluginError, durationMs, clampedTimeout); hint = getErrorHint(category); } catch { /* safe fallback */ }
 					return {
 						content: [{ type: "text" as const, text: JSON.stringify({
+							...dsViolations,  // v1.8.1: SEVERE warnings FIRST, before anything else
 							...(result as Record<string, unknown>),
 							errorCategory: category,
 							_metrics: { durationMs, timeoutMs: clampedTimeout },
@@ -539,8 +505,15 @@ export async function main() {
 				let enriched: unknown;
 				try {
 					enriched = typeof result === "object" && result !== null
-						? { ...(result as Record<string, unknown>), _metrics: { durationMs, timeoutMs: clampedTimeout }, ...warningsField }
-						: result;
+						? {
+							...dsViolations,  // v1.8.1: SEVERE warnings at top level
+							...(result as Record<string, unknown>),
+							_metrics: { durationMs, timeoutMs: clampedTimeout },
+							...warningsField,
+						}
+						: severeWarnings.length > 0 || advisoryWarnings.length > 0
+							? { ...dsViolations, result, ...warningsField }
+							: result;
 				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
 			} catch (err) {
