@@ -170,6 +170,23 @@ export class PluginBridgeServer {
         }
         return this.getDefaultClient();
     }
+    /**
+     * Wait for a client to become ready (fileKey populated via "ready" message).
+     * Polls at 200ms intervals. Used to handle the race between plugin connection
+     * and the first incoming MCP request.
+     */
+    async waitForClient(fileKey, timeoutMs = 2000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            const client = this.resolveClient(fileKey);
+            if (client && client.ws.readyState === 1) {
+                if (!fileKey || client.fileKey === fileKey)
+                    return client;
+            }
+            await new Promise(r => setTimeout(r, 200));
+        }
+        return this.resolveClient(fileKey);
+    }
     removeClient(clientId, reason) {
         const info = this.clients.get(clientId);
         if (!info)
@@ -653,7 +670,11 @@ export class PluginBridgeServer {
      * Otherwise routes to the most recently connected client.
      */
     async request(method, params, fileKey) {
-        const client = this.resolveClient(fileKey);
+        let client = this.resolveClient(fileKey);
+        // If no client found, wait briefly for plugin "ready" (race condition: plugin connected but fileKey not yet set)
+        if (!client || client.ws.readyState !== 1) {
+            client = await this.waitForClient(fileKey, 2000);
+        }
         if (!client || client.ws.readyState !== 1) {
             if (fileKey) {
                 const available = this.listConnectedFiles();

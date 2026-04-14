@@ -98,6 +98,12 @@ export declare class PluginBridgeServer {
     private findClientByFileKey;
     private getDefaultClient;
     private resolveClient;
+    /**
+     * Wait for a client to become ready (fileKey populated via "ready" message).
+     * Polls at 200ms intervals. Used to handle the race between plugin connection
+     * and the first incoming MCP request.
+     */
+    waitForClient(fileKey?: string, timeoutMs?: number): Promise<ClientInfo | undefined>;
     private removeClient;
     /**
      * Probe a port via HTTP to determine if a live F-MCP bridge is already

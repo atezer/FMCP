@@ -12,6 +12,43 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.7.30] - 2026-04-14
+
+### SUI Design System Integration — search_assets bridge fix, new library tools, SKILL corrections
+
+F-MCP Bridge ile SUI gibi team library tabanli tasarim sistemleri kullanmak artik tam destekli. `figma_search_assets` artik bridge handler'ini dogru kullaniyor (hem variable hem local component dondurur), 3 yeni arac ile team library variable/style import + binding mumkun, SKILL'lerdeki "DS dosyasinda calistir" celiskisi giderildi.
+
+**Kritik Bug Fix'leri:**
+- `figma_search_assets` artik plugin'in `SEARCH_LIBRARY_ASSETS` handler'ini kullaniyor (eski inline executeCodeViaUI bypass'i kaldirildi). `assetTypes`, `limit`, `currentPageOnly`, `figmaUrl`, `fileKey` parametreleri eklendi. Hem variable collection'lari hem local file component'lerini donduruyor.
+- `fileKey: null` race condition: Plugin baglandiginda fileKey "ready" mesajiyla set ediliyor, arada gelen istekler hata aliyordu. `waitForClient(2s)` polling + transient retry eklendi.
+- `figma_execute` static analysis (`_warnings`): FILL before appendChild, sync API kullanimi, eksik loadFontAsync, sync currentPage atamasi tespit edilip uyari donuyor. Uyarilar TUM response path'lerinde (success + plugin error + try-catch error).
+
+**Yeni Araclar:**
+- `figma_get_library_variables` — Team library variable koleksiyonlarini import key'leriyle birlikte listeler. Hedef dosyada calisir, DS source dosyasina baglanmak GEREKMEZ. Filter: `query`, `collectionName`, `libraryName`, `limit`.
+- `figma_bind_variable` — Library variable'ini import edip node property'sine baglar. Renkler icin `setBoundVariableForPaint` (fills/strokes), spacing/sizing icin `setBoundVariable` (paddingLeft, itemSpacing, cornerRadius, vb.). Token degisince node otomatik guncellenir.
+- `figma_import_style` — Team library text/paint/effect style'ini import edip node'a uygular. TEXT style: `setTextStyleIdAsync` (font + size + weight). PAINT/EFFECT: `fillStyleId` / `effectStyleId`. Sadece PUBLISHED LIBRARY style'lar — local style'lar icin acik hata mesaji ve cozum yonlendirmesi.
+
+**SKILL Duzeltmeleri:**
+- `figma-canvas-ops/SKILL.md` ve `generate-figma-screen/SKILL.md`: "DS dosyasinda calistir" yaklasimi kaldirildi, `figma.teamLibrary` API zinciri ile hedef dosyada calisma akisi eklendi.
+- `fmcp-project-rules/SKILL.md`: LOCAL vs LIBRARY token ayrimi netlestirildi. `figma_get_styles()` ve `figma_get_variables()` sadece dosya ici degerleri donduruyor — kutuphane token'lari icin yeni `figma_get_library_variables` araci kullanilmali.
+- Font fallback: Kullanici "sen sec" derse once DS kutuphanesi text style'larindan font cikarilir, sonra Inter fallback. SUI gibi custom font (SHBGrotesk) kullanan kutuphanelerde dogru calisir.
+- Cache invalidation: `.claude/libraries/<ds>.md` cache'i 24 saatten eski ise yenilenir, `lastUpdated` alani eklendi.
+
+**Tool Description Iyilestirmeleri:**
+- `figma_execute`: FILL ordering, sync API, font loading, setCurrentPageAsync gotcha'lari description'da.
+- `figma_create_text`: SUI/DS kullaniyorsan SHBGrotesk gibi DS fontunu belirt uyarisi (Inter default).
+- `figma_instantiate_component`: Library component destegi + `setProperties` kurali (findAll(TEXT) yerine).
+
+**Etkilenen Dosyalar:**
+- `src/core/plugin-bridge-connector.ts`: `searchLibraryAssets()` metodu + transient retry kosulu
+- `src/core/plugin-bridge-server.ts`: `waitForClient()` + race condition fix
+- `src/local-plugin-only.ts`: 1 bug fix + 1 enrichment + 3 yeni tool + description guncellemeleri
+- `skills/figma-canvas-ops/SKILL.md`, `skills/generate-figma-screen/SKILL.md`, `skills/fmcp-project-rules/SKILL.md`
+
+**Test Edildi:** Sahifinans Playground (`P31qJTP8XVupmZG4BlTtPG`) dosyasinda SUI kutuphanesi ile uctan uca dogrulandi: `figma_search_assets` 25 variable + 4 lib collection donduruyor, `figma_get_library_variables` 84-100 SUI variable key'iyle donuyor, frame olusturma → `figma_bind_variable` ile `Surface/background level-0` baglama → screenshot dogrulamasi basarili, `_warnings` static analiz hem success hem error path'lerinde calisiyor.
+
+---
+
 ## [1.7.29] - 2026-04-13
 
 ### Smart Port Auto-Increment — Coexistence Fix

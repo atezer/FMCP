@@ -38,6 +38,12 @@ export declare class PluginBridgeConnector {
         currentPageOnly?: boolean;
         limit?: number;
     }): Promise<PluginComponentPayload>;
+    searchLibraryAssets(opts?: {
+        query?: string;
+        assetTypes?: string[];
+        limit?: number;
+        currentPageOnly?: boolean;
+    }): Promise<unknown>;
     batchExportNodes(params: {
         nodeIds: string[];
         format?: "PNG" | "SVG" | "JPG" | "PDF";
