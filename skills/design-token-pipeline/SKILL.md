@@ -6,6 +6,50 @@ metadata:
   personas:
     - uidev
     - designops
+required_inputs:
+  - name: direction
+    type: enum
+    options:
+      - "Figma → Kod (variable'ları export et)"
+      - "Kod → Figma (kod token'larını Figma'ya yaz)"
+      - "Bi-directional sync (iki yönlü)"
+    question: "Hangi yönde token pipeline?"
+    required: true
+  - name: target_format
+    type: enum
+    options:
+      - "iOS Swift (Color/Font/Spacing)"
+      - "Android colors.xml + dimens.xml"
+      - "Android Compose Theme.kt"
+      - "Web CSS variables"
+      - "Web Tailwind config"
+      - "Web Sass/SCSS"
+      - "Web TypeScript/JSON"
+      - "Multi-format (tümü)"
+    question: "Hangi format(lar)?"
+    required: true
+    skip_if: "direction == 'Kod → Figma (kod token''larını Figma''ya yaz)'"
+  - name: source_path
+    type: string
+    question: "Kaynak path nedir? (Kod kaynağı için, örn: ./src/tokens veya ./design-tokens.json)"
+    required: false
+    skip_if: "direction == 'Figma → Kod (variable''ları export et)'"
+  - name: output_path
+    type: string
+    question: "Çıktı path nedir? (örn: ./src/design-tokens)"
+    required: false
+    default: "./design-tokens"
+    skip_if: "direction == 'Kod → Figma (kod token''larını Figma''ya yaz)'"
+  - name: token_types
+    type: string_list
+    question: "Hangi token türleri? (colors, typography, spacing, radius, shadow, z-index — 'all' veya seçili)"
+    required: false
+    default: "all"
+  - name: include_themes
+    type: boolean
+    question: "Theme modları (light/dark) dahil edilsin mi?"
+    required: false
+    default: true
 ---
 
 # Design Token Pipeline (Multi-Platform)

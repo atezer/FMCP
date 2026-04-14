@@ -6,6 +6,43 @@ metadata:
   personas:
     - designer
     - designops
+required_inputs:
+  - name: target_scope
+    type: enum
+    options:
+      - "Seçili frame (node ID ver)"
+      - "Mevcut sayfa (tüm frameler)"
+      - "Tüm dosya (tüm sayfalar)"
+    question: "Hangi kapsamı DS'ye hizalayalım?"
+    required: true
+  - name: target_node_id
+    type: string
+    question: "Hedef node ID nedir? (target_scope 'Seçili frame' ise zorunlu)"
+    required: false
+    skip_if: "target_scope != 'Seçili frame (node ID ver)'"
+  - name: design_system
+    type: from_state
+    source: ".claude/design-systems/active-ds.md#Library Name"
+    fallback_question: "Hangi tasarım sistemine hizalayalım? (❖ SUI / Material / Custom)"
+    required: true
+  - name: backup_before_apply
+    type: boolean
+    question: "Yazmadan önce mevcut ekranın yedeğini (duplicate) alayım mı?"
+    required: false
+    default: true
+  - name: preserve_content
+    type: boolean
+    question: "İçeriği (metin, değerler) koruyayım mı yoksa DS default'larıyla mı değiştirelim?"
+    required: false
+    default: true
+  - name: swap_strategy
+    type: enum
+    options:
+      - "Bölüm bölüm (güvenli, yavaş)"
+      - "Tümünü tek seferde (hızlı, risk)"
+    question: "Hangi swap stratejisi?"
+    required: false
+    default: "Bölüm bölüm (güvenli, yavaş)"
 ---
 
 # Apply Figma Design System (geniş yazma)

@@ -6,6 +6,44 @@ metadata:
   personas:
     - designops
     - designer
+required_inputs:
+  - name: source_type
+    type: enum
+    options:
+      - "Kod tabanı (path ver)"
+      - "Token JSON dosyası"
+      - "Mevcut tasarım sisteminden clone"
+      - "Sıfırdan (boş kütüphane)"
+    question: "Kütüphaneyi nereden inşa edelim?"
+    required: true
+  - name: source_path
+    type: string
+    question: "Kaynak path nedir? (örn: ./src/design-tokens veya ./tokens.json)"
+    required: false
+    skip_if: "source_type == 'Sıfırdan (boş kütüphane)'"
+  - name: library_name
+    type: string
+    question: "Kütüphane adı nedir? (örn: '❖ My DS')"
+    required: true
+  - name: components_to_generate
+    type: string_list
+    question: "Hangi bileşenleri üretelim? (örn: Button, Input, Card, Modal — 'all' veya virgülle ayır)"
+    required: false
+    default: "all"
+  - name: token_categories
+    type: string_list
+    question: "Hangi token kategorileri? (colors, spacing, typography, radius, shadow — 'all' veya seçili)"
+    required: false
+    default: "all"
+  - name: theme_support
+    type: enum
+    options:
+      - "Single theme (default)"
+      - "Light + Dark"
+      - "Multi-brand (3+ themes)"
+    question: "Tema desteği?"
+    required: false
+    default: "Single theme (default)"
 ---
 
 # Generate Figma Library — Koddan DS Kütüphanesi İnşa

@@ -6,6 +6,43 @@ metadata:
   personas:
     - uidev
     - designops
+required_inputs:
+  - name: direction
+    type: enum
+    options:
+      - "Figma → Kod (tek component kodla)"
+      - "Kod → Figma (mevcut koddan Figma component üret)"
+      - "Bi-directional mapping (mapping tablosu)"
+    question: "Hangi yönde eşleştirme?"
+    required: true
+  - name: figma_component_id
+    type: string
+    question: "Hangi Figma component? (node ID veya component key)"
+    required: false
+    skip_if: "direction == 'Kod → Figma (mevcut koddan Figma component üret)'"
+  - name: code_component_path
+    type: string
+    question: "Kod tarafındaki component path nedir? (örn: ./src/components/Button.tsx)"
+    required: false
+  - name: platform
+    type: enum
+    options:
+      - "iOS (SwiftUI)"
+      - "Android (Compose)"
+      - "Web (React)"
+      - "Web (Vue)"
+      - "Multi-platform (hepsi)"
+    question: "Hangi platform?"
+    required: true
+  - name: mapping_output
+    type: enum
+    options:
+      - "JSON mapping file"
+      - "Markdown tablo"
+      - "Code Connect format"
+    question: "Mapping çıktısı nasıl istersen?"
+    required: false
+    default: "Markdown tablo"
 ---
 
 # Code-Design Mapper (Multi-Platform)

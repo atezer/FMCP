@@ -9,6 +9,67 @@ export const FMCP_INSTRUCTIONS = `F-MCP ATezer Bridge — Plugin-based Figma MCP
 Tool namespace: "figma_*". Server name: "figma-mcp-bridge".
 
 ═══════════════════════════════════════════════════════════════════
+INTENT ROUTER ENTRY (ALWAYS FIRST — v1.8.1+)
+═══════════════════════════════════════════════════════════════════
+
+BEFORE executing ANY figma_* write tool (figma_execute, figma_create_*,
+figma_update_*, figma_clone_*, figma_instantiate_*, figma_set_*, etc.),
+you MUST follow the Intent Router protocol:
+
+Step 1 — Load router skill
+  Read skills/fmcp-intent-router/SKILL.md for the routing logic.
+
+Step 2 — Check state files
+  - .claude/design-systems/active-ds.md
+  - .claude/design-systems/last-intent.md
+  - .claude/design-systems/intent-history.md
+
+Step 3 — Decide target skill
+  Map user request to ONE of the 8 entry-point skills:
+  generate-figma-screen, apply-figma-design-system,
+  audit-figma-design-system, generate-figma-library,
+  implement-design, code-design-mapper, visual-qa-compare,
+  design-token-pipeline.
+  If ambiguous, ask the user with AskUserQuestion.
+
+Step 4 — Read target skill's required_inputs metadata
+  Parse the YAML frontmatter block "required_inputs".
+
+Step 5 — Gather missing inputs (smart skipping)
+  Apply in order:
+  (a) Use value from last-intent.md if default_source matches
+  (b) Use parsed value from user's original request
+  (c) Apply skip_if conditions (e.g., reference_benchmark given → skip
+      screen_type, sections)
+  (d) Ask ONE AskUserQuestion with max 4 remaining inputs
+  (e) If 5+ still needed, do a second AskUserQuestion
+
+Step 6 — Summary + explicit confirmation (separate AskUserQuestion)
+  Show ALL gathered inputs + approach summary + estimated outcome.
+  Options: [✅ Evet başla] [✏️ Değiştir] [❌ İptal]
+  DO NOT proceed without explicit confirmation.
+
+Step 7 — Execute target skill
+  Run the target skill's own Step 0-N (DS check, work, self-audit).
+
+Step 8 — Persist outcome
+  Update .claude/design-systems/last-intent.md
+  Prepend entry to .claude/design-systems/intent-history.md (LRU 5)
+
+FAST PATH: If the user's request contains all required inputs
+(e.g., "clone 139:3407 to iPhone 17 with SUI"), skip Step 5.
+Go directly to Step 6 (confirmation), then Step 7.
+
+REPEAT PATH: If last-intent.md matches the new request, ask a
+single question: "Öncekiyle aynı mı devam edeyim?"
+Options: [✅ Aynı] [✏️ Değiştir] [❌ İptal]
+
+FORBIDDEN:
+- DO NOT skip Step 6 (explicit confirmation gate)
+- DO NOT assume default values when input is required
+- DO NOT execute figma_execute / figma_create_* without routing
+
+═══════════════════════════════════════════════════════════════════
 CONTEXT-SAFE PROTOCOL (REQUIRED for Claude chat — v1.8.0+)
 ═══════════════════════════════════════════════════════════════════
 

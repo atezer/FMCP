@@ -7,6 +7,44 @@ metadata:
     - designer
     - designops
     - po
+required_inputs:
+  - name: target_scope
+    type: enum
+    options:
+      - "Seçili frame (node ID ver)"
+      - "Mevcut sayfa"
+      - "Tüm dosya"
+      - "Son oluşturulan ekran (last-intent.md'den)"
+    question: "Ne denetleyelim?"
+    required: true
+  - name: target_node_id
+    type: string
+    question: "Hedef node ID? (target_scope 'Seçili frame' ise zorunlu)"
+    required: false
+    skip_if: "target_scope != 'Seçili frame (node ID ver)'"
+  - name: design_system
+    type: from_state
+    source: ".claude/design-systems/active-ds.md#Library Name"
+    fallback_question: "Hangi DS'ye göre denet? (❖ SUI / Material / Custom)"
+    required: true
+  - name: severity_threshold
+    type: enum
+    options:
+      - "low (tüm bulgular)"
+      - "medium (önemli olanlar)"
+      - "high (sadece kritik)"
+    question: "En düşük severity seviyesi nedir?"
+    required: false
+    default: "medium (önemli olanlar)"
+  - name: report_format
+    type: enum
+    options:
+      - "Markdown rapor"
+      - "JSON çıktı"
+      - "Chat inline özet"
+    question: "Raporu nasıl istersin?"
+    required: false
+    default: "Markdown rapor"
 ---
 
 # Audit Figma Design System (tuval içi)

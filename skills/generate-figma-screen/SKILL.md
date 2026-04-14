@@ -6,6 +6,61 @@ metadata:
   personas:
     - designer
     - uidev
+required_inputs:
+  - name: device
+    type: enum
+    options:
+      - "iPhone 17 (402×874)"
+      - "iPhone 16 Pro Max (440×956)"
+      - "iPhone 16 (393×852)"
+      - "iPhone 13/14 (390×844)"
+      - "Android Compact (412×917)"
+      - "Android Medium (700×840)"
+      - "iPad Pro 11 (834×1194)"
+      - "iPad Pro 13 (1024×1366)"
+      - "Desktop (1440×1024)"
+      - "Custom (width×height ver)"
+    question: "Hangi device boyutunda olsun?"
+    required: true
+    default_source: ".claude/design-systems/last-intent.md#device"
+  - name: design_system
+    type: from_state
+    source: ".claude/design-systems/active-ds.md#Library Name"
+    fallback_question: "Hangi tasarım sistemi kullanılsın? (❖ SUI / Material / Apple HIG / Custom)"
+    required: true
+  - name: reference_benchmark
+    type: node_id_or_none
+    question: "Referans alınacak benchmark ekranı var mı? (Node ID veya Figma URL, yoksa 'yok')"
+    required: false
+    affects: ["screen_type", "sections"]
+  - name: screen_type
+    type: enum
+    options:
+      - "Dashboard / özet"
+      - "Liste / arama sonuçları"
+      - "Detay / profil"
+      - "Form / veri girişi"
+      - "Login / onboarding"
+      - "Confirmation / success"
+      - "Empty state"
+      - "Error / 404"
+    question: "Ne tür bir ekran?"
+    required: true
+    skip_if: "reference_benchmark != none"
+  - name: sections
+    type: string_list
+    question: "Hangi ana içerik bölümlerini istiyorsun? (örn: header, balance card, quick actions, transactions, bottom nav)"
+    required: true
+    skip_if: "reference_benchmark != none"
+  - name: variants
+    type: enum
+    options:
+      - "Tek varyant"
+      - "Light + Dark mode"
+      - "2-3 layout alternatifi"
+    question: "Kaç varyant istiyorsun?"
+    required: false
+    default: "Tek varyant"
 ---
 
 # Generate Figma Screen — Kod/Açıklamadan Figma Ekranı

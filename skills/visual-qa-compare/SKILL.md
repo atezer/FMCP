@@ -6,6 +6,39 @@ metadata:
   personas:
     - uidev
     - designops
+required_inputs:
+  - name: figma_source
+    type: string
+    question: "Figma kaynağı nedir? (Node ID veya Figma URL)"
+    required: true
+  - name: rendered_source
+    type: enum
+    options:
+      - "Local dev server URL (http://localhost:...)"
+      - "Production URL (https://...)"
+      - "Screenshot dosyası (path ver)"
+      - "Base64 image (clipboard)"
+    question: "Kod tarafındaki UI'ı nerede görelim?"
+    required: true
+  - name: rendered_url
+    type: string
+    question: "URL / path nedir?"
+    required: false
+    skip_if: "rendered_source == 'Base64 image (clipboard)'"
+  - name: diff_threshold
+    type: enum
+    options:
+      - "Sıkı (pixel-perfect)"
+      - "Normal (%5 tolerans)"
+      - "Gevşek (%15 tolerans)"
+    question: "Fark toleransı nedir?"
+    required: false
+    default: "Normal (%5 tolerans)"
+  - name: report_categories
+    type: string_list
+    question: "Hangi kategorilerde farkları raporlayayım? (spacing, color, typography, layout, shadows — 'all' veya seçili)"
+    required: false
+    default: "all"
 ---
 
 # Visual QA Compare — Figma vs Kod Görsel Karşılaştırma

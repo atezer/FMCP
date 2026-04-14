@@ -5,6 +5,38 @@ metadata:
   mcp-server: user-figma-mcp-bridge
   personas:
     - uidev
+required_inputs:
+  - name: source_node_id
+    type: string
+    question: "Hangi Figma node'unu kodlayalım? (node ID veya Figma URL)"
+    required: true
+  - name: target_platform
+    type: enum
+    options:
+      - "iOS (SwiftUI)"
+      - "iOS (UIKit)"
+      - "Android (Jetpack Compose)"
+      - "Android (XML)"
+      - "Web (React + TypeScript)"
+      - "Web (Vue)"
+      - "Web (vanilla HTML/CSS)"
+    question: "Hangi platform için kod üretelim?"
+    required: true
+  - name: output_dir
+    type: string
+    question: "Kod nereye yazılsın? (örn: ./src/components veya 'chat' - çıktıyı inline göster)"
+    required: false
+    default: "chat"
+  - name: include_tests
+    type: boolean
+    question: "Unit test dosyaları da üretilsin mi?"
+    required: false
+    default: false
+  - name: use_existing_components
+    type: boolean
+    question: "Mevcut proje component'lerini kullanıp genişleteyim mi, yoksa sıfırdan mı?"
+    required: false
+    default: true
 ---
 
 # Implement Design (Multi-Platform)
