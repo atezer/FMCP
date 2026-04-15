@@ -1,0 +1,12 @@
+{
+  "_comment": "FCM figma-mcp-bridge Cursor config template. Kullanmadan önce 'args' içindeki path'i kendi mutlak yolunla değiştir.",
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "node",
+      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "env": {
+        "FMCP_PORT": "5454"
+      }
+    }
+  }
+}

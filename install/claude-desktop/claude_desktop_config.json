@@ -1,0 +1,12 @@
+{
+  "_comment": "FCM figma-mcp-bridge Claude Desktop config template. Kullanmadan önce 'args' içindeki path'i kendi mutlak yolunla değiştir. Mevcut claude_desktop_config.json dosyanda başka mcpServers varsa bu bloğu üzerine yazma, merge et.",
+  "mcpServers": {
+    "figma-mcp-bridge": {
+      "command": "node",
+      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "env": {
+        "FMCP_PORT": "5454"
+      }
+    }
+  }
+}
