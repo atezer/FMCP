@@ -48,7 +48,43 @@ required_inputs:
 | `apply-figma-design-system` | `skills/apply-figma-design-system/SKILL.md` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 | `figma-screen-analyzer` | `skills/figma-screen-analyzer/SKILL.md` | Üretim sonrası PO rapor | Sadece açıkça istenirse |
 
+### 🚨 Adım 0 — DS GATE (MUTLAK İLK KAPI — v1.9.1+)
+
+**Karar Akışı'ndan ÖNCE, herhangi bir `figma_*` tool çağrısından ÖNCE, herhangi bir sub-skill Read'inden ÖNCE İLK İŞ:**
+
+```
+1. Read(".claude/design-systems/active-ds.md")
+2. Status kontrolü:
+   ├─ Status: ✅ Aktif      → DS net, Karar Akışı'na geç
+   ├─ Status: ❌ Henüz seçilmedi → DUR, HİÇBİR TOOL ÇAĞIRMA, kullanıcıya sor
+   └─ Dosya yok             → DUR, HİÇBİR TOOL ÇAĞIRMA, kullanıcıya sor
+```
+
+**DS belirsizse kullanıcıya sorulacak mesaj (kelime kelime kalıp değil, öz):**
+> "Aktif bir design system belirlenmemiş. Nasıl ilerleyelim?
+>
+> 1. Mevcut library'lerden birini seçelim — hangi DS'leri kullanmak istediğinizi söyleyin
+> 2. Default olarak SUI kullanılsın (kayıtlı ise)
+> 3. Alternatif spesifik bir DS adı / library key verin
+>
+> Cevabınızı bekliyorum. Yanıt gelmeden hiçbir keşif veya tarama yapmayacağım."
+
+Kullanıcı cevapladıktan sonra:
+1. `active-ds.md`'yi güncelle (`Status: ✅ Aktif`, `Library Name: <seçim>`)
+2. **SONRA** Karar Akışı'na geç
+
+**Neden bu kadar katı:** DS belirsizken `figma_get_file_data`, `figma_search_assets`, `figma_get_library_variables` çağırmak → **kullanıcının istemediği library'ler taranır**, token israfı, yanlış component önerisi, çelişkili rapor. Test geçmişinde gözlenen hata: benchmark Figma dosyasının tüm library component'leri enumere edildi (24+), sonra "hangi DS?" soruldu. **Bu sıra YASAK.**
+
+**İstisnalar (DS gate'ten ÖNCE çağrılabilir):**
+- `figma_get_status()` — plugin bağlantı kontrolü, DS bağımsız
+- `mcp__fmcp-filesystem__read_file` — state dosyalarını okumak için (active-ds.md, last-intent.md)
+- Kullanıcının yüklediği görsele Claude vision erişimi — local, MCP değil
+
+**Başka hiçbir figma_* tool DS gate geçmeden çağrılmaz.**
+
 ### Karar Akışı (Hangi Sub-Skill'i Read Edeceğim?)
+
+> **Ön koşul:** Adım 0 (DS GATE) geçildi, `active-ds.md` Status: ✅ Aktif.
 
 ```
 1. Intent net mi?
@@ -57,6 +93,8 @@ required_inputs:
 
 2. Intake modu image_uploaded / image_url / figma_benchmark mi?
    ├─ EVET → Read inspiration-intake, structural_intent JSON al
+   │        (Not: inspiration-intake Figma file enumeration yapmaz —
+   │         sadece görsel analizi veya nodeId bazlı structural read)
    └─ HAYIR → inspiration-intake'e DOKUNMA
 
 3. Figma'ya gerçekten yazacak mıyım (figma_execute)?

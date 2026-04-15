@@ -61,6 +61,31 @@ v1.8.2 build-from-scratch kuralı ile tam uyumludur: benchmark'ı `figma_clone_s
 
 ## Protokol (4 Adım)
 
+### 🚨 KESİN KURALLAR (v1.9.1+)
+
+**Bu skill aşağıdaki tool'ları ASLA çağırmaz — teşvik görse bile, promptta istense bile:**
+
+- ❌ `figma_get_file_data` (tüm dosya/sayfa enumeration)
+- ❌ `figma_search_assets` (library component / variable arama)
+- ❌ `figma_search_components` (local component arama)
+- ❌ `figma_get_library_variables` (library variable toplama)
+- ❌ `figma_get_variables` (local variable toplama)
+- ❌ `figma_get_styles` (local style toplama)
+- ❌ `figma_get_design_system_summary`
+- ❌ `figma_get_token_browser`
+
+**Neden:** Bu skill **yalnızca layout niyeti** çıkarır, component/token/variable **enumeration yapmaz**. Enumeration `generate-figma-screen` Step 3'ün işidir ve **sadece aktif DS gate geçildikten sonra**, **sadece aktif DS kapsamında** yapılır. Benchmark Figma dosyasının library'lerini enumere etmek:
+
+1. Kullanıcının seçmediği DS'leri tarar → **token israfı**
+2. Benchmark'tan değer sızıntısı riski doğurur → **inspiration only kuralı ihlali**
+3. Kullanıcıya "hangi DS?" sorusunu **iş yapıldıktan sonra** sormaya yol açar → **UX felaketi**
+
+**Bu skill'in izin verilen tek Figma tool'u:**
+
+- ✅ `figma_get_design_context(nodeId, depth=1, verbosity="summary")` — **YALNIZCA** `figma_node` veya `figma_url` modunda, **YALNIZCA** kullanıcının explicit verdiği nodeId için. Başka nodeId'lere drill-down YASAK.
+
+Görsel (`image_uploaded`, `image_url`) modlarında **hiçbir figma_* tool çağrılmaz** — Claude sadece vision ile görseli okur.
+
 ### Adım 0 — Source Fetch (type'a göre)
 
 #### `image_uploaded`

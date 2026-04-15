@@ -24,9 +24,32 @@ F-MCP Bridge'in 20+ SKILL'i var. Her biri farklı bir iş yapar (ekran oluşturm
 
 Bu SKILL bu üç soruyu **upstream** çözer. Claude intent'i netleştirmeden hiçbir `figma_execute`, `figma_create_frame`, `figma_clone_screen_to_device` çalıştırmaz. "Hızlı ve doğru" kuralı: yanlış varsayım yapmaktansa 1 soru sormak her zaman daha hızlıdır.
 
-## Protokol (8 Adım)
+## Protokol (9 Adım — v1.9.1+)
 
-Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 8 adımı SIRAYLA uygular. Hiçbir adım atlanmaz.
+Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 9 adımı SIRAYLA uygular. Hiçbir adım atlanmaz.
+
+### 🚨 Adım 0 — DS GATE (v1.9.1+ MUTLAK İLK KAPI)
+
+**Herhangi bir intent analysis veya figma_* tool çağrısından ÖNCE:**
+
+1. `.claude/design-systems/active-ds.md` dosyasını oku
+2. `Status:` alanını kontrol et:
+   - **`✅ Aktif`** → DS net, Adım 1'e (Intent Analysis) geç
+   - **`❌ Henüz seçilmedi`** VEYA dosya yok → **DUR**, hiçbir tool çağırma, kullanıcıya DS sorusu sor:
+     > "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz?
+     > (Mevcut seçenekler için library listesini vermenizi istiyorum, veya SUI gibi spesifik bir isim verin.)
+     > Bu sorunun cevabı gelmeden hiçbir keşif / tarama yapmayacağım."
+3. Kullanıcı cevabı gelince `active-ds.md`'yi güncelle (`Status: ✅ Aktif`, `Library Name: <isim>`), sonra Adım 1'e geç.
+
+**Neden bu kadar katı:**
+- DS belirsizken `figma_search_assets`, `figma_get_file_data`, `figma_get_library_variables` çağırmak = kullanıcının istemediği library'leri enumere etmek = **token israfı + UX bozulması**
+- Test geçmişinde gözlenen hata: benchmark Figma dosyasının 24+ library component'i enumere edildi, sonra "hangi DS?" soruldu. **Bu sıra YASAK.**
+
+**Bu adımda çağrılabilen tek Figma tool'u:**
+- ✅ `figma_get_status()` — plugin bağlantı kontrolü, DS bağımsız
+- **Başka HİÇBİR figma_* YASAK.** `figma_get_file_data`, `figma_search_assets`, `figma_search_components`, `figma_get_library_variables`, `figma_get_variables`, `figma_get_styles` — **hepsi YASAK** ta ki Adım 0 geçilene kadar.
+
+---
 
 ### Adım 1 — Intent Analysis
 
