@@ -215,3 +215,84 @@ Bu üç boyut **sadece mevcut mod** için ölçülüyor. Yani:
 ---
 
 Bu limitations listesi ileride Part 3 milestone planlanırken kaynak olarak kullanılır.
+
+---
+
+## Fast Path Mode (v1.9.3+, Part 3 Revised)
+
+Part 3'ün gerçek test sonrası revize edilmiş halinde yeni bir **Fast Path Recipe skill** eklendi: `skills/fmcp-screen-recipes/SKILL.md`. Bu skill common case (9 standart screen type) için generate-figma-screen ağır workflow'unu atlayıp linear recipe execution sağlar.
+
+### Fast Path Tetiklenme Koşulları
+
+Fast Path devreye girer ANCAK:
+- ✅ Tek ekran
+- ✅ Screen type match (login/payment/profile/list/detail/form/onboarding/dashboard/settings)
+- ✅ DS tanımlı (active-ds.md Status: ✅)
+- ✅ Platform belli
+- ✅ Custom animation/prototype yok
+
+Aksi → mevcut generate-figma-screen workflow'u.
+
+### Fast Path Token Profili (Beklenen, Manuel Test Sonrası Güncellenecek)
+
+| Bileşen | Mevcut akış | Fast Path | Kazanç |
+|---|---|---|---|
+| agent delegator | 1.5K | 1.5K | 0 |
+| fmcp-screen-orchestrator | 5K | 5.3K (+routing) | +0.3K |
+| fmcp-screen-recipes | — | 8K (YENİ, lazy-load) | +8K |
+| inspiration-intake | 4K | 0 (Fast Path image_uploaded değil) | −4K |
+| generate-figma-screen | 25K | **0 (SKIP)** | **−25K** |
+| figma-canvas-ops | 12K | 12K (pre-flight zorunlu) | 0 |
+| **Toplam sub-agent context** | **~47.5K** | **~26.8K** | **−20.7K (−44%)** |
+
+Baseline (Part 2 öncesi) 61K → Fast Path ~26.8K = **%56 azalma**.
+
+### Fast Path Süre Profili (Beklenen)
+
+| Senaryo | Mevcut (Part 2+v1.9.1) | Fast Path | Azalma |
+|---|---|---|---|
+| Mobil login | ~110 sn | ~60 sn | −45% |
+| Mobil payment | ~130 sn | ~75 sn | −42% |
+| Profile | ~100 sn | ~55 sn | −45% |
+| Dashboard | ~120 sn | ~70 sn | −42% |
+
+Not: Bu rakamlar **tahmin**. Manuel test (FP-1-R senaryosu) sonrası gerçek telemetri ile güncellenecek.
+
+### Chunking Kuralı (Rule 5a)
+
+Fast Path'in uygulanabilmesi için `figma-canvas-ops` Rule 5a CHUNKING MANDATE kritik:
+
+- Her `figma_execute` max 8 atomic operasyon
+- Her recipe component'i AYRI execute
+- Execute'ler arası state aktarımı (return nodeId → next getNodeByIdAsync)
+- Plugin timeout 60 sn, bridge timeout 4 dk — tek execute'ta 20+ op → kesin fail
+
+Gerçek test (2026-04-15) bu kuralın eksikliği sebebiyle 4 dk timeout yaşadı. Rule 5a ile fix edildi.
+
+### Progress Streaming
+
+Fast Path'in ana UX kazancı: Her figma_execute sonrası tek satır Türkçe micro-report. Kullanıcı her 5-10 sn'de bir progress görür, "sessizlik dönemi" yok.
+
+```
+✅ Pre-flight: screen_type=payment, platform=mobile, device=iPhone 17, variants=[light,dark]
+✅ Frame oluşturuldu: iPhone 17 (402×874), background: SUI/Surface/background level-0
+✅ Breakpoint: SUI/Breakpoints/Screen bound
+✅ Theme: Light (SUI/Semantic Colors), Size: Mobil (SUI/Semantic Size)
+✅ Auto-layout: VERTICAL, padding/spacing bound
+✅ Component keşfi: 5 bulundu, 1 eksik
+✅ AppBar eklendi: SUI/Navigation/TopBar
+✅ Amount Display eklendi: SUI/Display/Large
+⚠️ Payment Method Card eksik → token-bound primitive ile 3 adet inşa
+✅ CTA Button eklendi: SUI/Button/Primary
+✅ Dark variant oluşturuldu
+✅ Validate Light: 92/100, Dark: 89/100
+```
+
+Her satır 3-10 sn sonra görünür. Kullanıcı 60-90 sn boyunca sürekli geri-besleme alır.
+
+### Fast Path NE ZAMAN KULLANILMAZ
+
+- Custom complex layout (9 recipe hiçbirine uymayan)
+- Animation, prototype flow, micro-interaction
+- Multi-screen flow (checkout 3 sayfa)
+- Kullanıcı "generate-figma-screen tam workflow uygula" derse explicit

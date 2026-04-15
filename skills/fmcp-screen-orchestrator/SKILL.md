@@ -82,9 +82,51 @@ Kullanıcı cevapladıktan sonra:
 
 **Başka hiçbir figma_* tool DS gate geçmeden çağrılmaz.**
 
+### ⚡ Adım 0.5 — Fast Path Check (v1.9.3+)
+
+DS GATE geçtikten sonra, Karar Akışı'ndan ÖNCE **Fast Path uygun mu?** kontrolü:
+
+```
+Aşağıdaki 5 koşulun HEPSİ TRUE ise → Read("skills/fmcp-screen-recipes/SKILL.md"), recipe uygula.
+Biri bile FALSE ise → mevcut Karar Akışı (aşağıda).
+
+[ ] 1. Tek ekran mı? (multi-screen dashboard, checkout flow, onboarding wizard değil)
+[ ] 2. Standart ekran tipi mi? Intent'te şu keyword'lerden biri var mı:
+      - login, giriş, oturum aç, sign in
+      - payment, ödeme, checkout, satın al
+      - profile, profil, hesap, account
+      - list, liste, arama, search, katalog
+      - detail, detay, ürün
+      - form, başvuru, kayıt
+      - onboarding, tanıtım, karşılama, welcome
+      - dashboard, özet, summary, panel
+      - settings, ayarlar, tercihler
+[ ] 3. active-ds.md Status: ✅ Aktif mi? (DS GATE geçilmiş)
+[ ] 4. Platform belli mi? (mobile/tablet/desktop/web keyword veya intent-router'dan)
+[ ] 5. Custom animation / prototype / complex interaction YOK mu?
+
+TÜM ✅ ise:
+  → mcp__fmcp-filesystem__read_text_file("skills/fmcp-screen-recipes/SKILL.md")
+  → Recipe akışını (9 adım) uygula
+  → Her adım 1 figma_execute (max 8 op/execute — Rule 5a CHUNKING)
+  → Her adım sonrası Türkçe micro-report yaz
+  → Fast Path aktif, generate-figma-screen SKIP
+
+BİR VEYA DAHA FAZLASI ❌ ise:
+  → Fast Path atla, aşağıdaki Karar Akışı'nı uygula
+  → generate-figma-screen 7-adımlı full workflow
+```
+
+**Recipe kırılırsa fallback:** Recipe içinde "component bulunamadı" veya "variable missing" veya "3 validate fail" gibi kritik hata olursa → Recipe iptal → Karar Akışı'na otomatik geçiş. Recipe'in kendisi bu fallback'i Error Recovery bölümünde yönetir.
+
+**Token etkisi:**
+- Fast Path aktif: orchestrator (5K) + recipes (7K) + canvas-ops (12K) = ~24K (generate-figma-screen 25K skip)
+- Fast Path atla: eski akış (orchestrator 5K + generate-figma-screen 25K + canvas-ops 12K = 42K)
+- Kazanç: **~18K token** (Fast Path tetiklendiğinde)
+
 ### Karar Akışı (Hangi Sub-Skill'i Read Edeceğim?)
 
-> **Ön koşul:** Adım 0 (DS GATE) geçildi, `active-ds.md` Status: ✅ Aktif.
+> **Ön koşul:** Adım 0 (DS GATE) geçildi, Adım 0.5 (Fast Path Check) atlandı (ya match etmedi, ya recipe kırıldı).
 
 ```
 1. Intent net mi?

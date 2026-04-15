@@ -19,7 +19,7 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 
 **Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
 
-## Skill Listesi (24 skill)
+## Skill Listesi (25 skill)
 
 ### Temel Kurallar
 
@@ -53,6 +53,7 @@ Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (
 | `fmcp-screen-orchestrator` | [fmcp-screen-orchestrator/SKILL.md](fmcp-screen-orchestrator/SKILL.md) | designer, uidev | DS-compliant Figma ekran üretimi orkestratörü — 4 intake modu (text/benchmark/image/no_idea), DS fallback chain, step-by-step mode, self-audit gate |
 | `fmcp-ds-audit-orchestrator` | [fmcp-ds-audit-orchestrator/SKILL.md](fmcp-ds-audit-orchestrator/SKILL.md) | designops, uidev | 5 audit tipi orkestrasyonu (compliance / a11y / drift / visual_qa / impact), read-only discipline, cache-first audit |
 | `fmcp-token-sync-orchestrator` | [fmcp-token-sync-orchestrator/SKILL.md](fmcp-token-sync-orchestrator/SKILL.md) | designops, uidev | Token sync orkestratörü (CSS / Tailwind / Swift / Compose / Sass), diff preview zorunluluğu, binding coverage raporu |
+| `fmcp-screen-recipes` | [fmcp-screen-recipes/SKILL.md](fmcp-screen-recipes/SKILL.md) | designer, uidev | Fast Path cookbook — 9 standart ekran tipi (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için linear 9-adımlı recipe. Figma native device presets, SUI native variable modes, chunking built-in (Rule 5a), her adımda Türkçe micro-report. Common case'de %40-50 daha hızlı, generate-figma-screen'i atlar. |
 
 ### DS Denetim ve Düzeltme
 
