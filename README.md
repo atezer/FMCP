@@ -128,9 +128,10 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 ## Teknik detaylar
 
 - **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ([tam liste](docs/TOOLS_FULL_LIST.md))
-- **20 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi, DS denetim ([skill dizini](skills/SKILL_INDEX.md))
-- **3 otonom agent** — DS denetim, token senkronizasyon, ekran oluşturma (Claude Code)
+- **24 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi, DS denetim, cross-platform orkestrasyon ([skill dizini](skills/SKILL_INDEX.md))
+- **3 cross-platform orkestratör** — DS denetim, token senkronizasyon, ekran oluşturma. Claude Code'da agent + sub-agent isolation; Cursor / Claude Desktop'ta doğrudan skill. Tek kaynak, dört yüz.
 - **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda çalışır
+- **Cross-platform kurulum rehberleri** — [install/](install/) dizininde Claude Code, Cursor, Claude Desktop ve Claude Web için adım adım kurulum kitleri + token bütçe analizi
 - **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internetsiz (air-gap) ortamlarda çalışır
 - [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)

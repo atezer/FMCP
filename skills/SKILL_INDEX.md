@@ -19,7 +19,7 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 
 **Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
 
-## Skill Listesi (20 skill)
+## Skill Listesi (24 skill)
 
 ### Temel Kurallar
 
@@ -42,6 +42,17 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 | `generate-figma-screen` | [generate-figma-screen/SKILL.md](generate-figma-screen/SKILL.md) | designer, uidev | Kod/açıklamadan Figma'da ekran oluşturma |
 | `generate-figma-library` | [generate-figma-library/SKILL.md](generate-figma-library/SKILL.md) | designops, designer | Koddan DS kütüphanesi inşa (5 fazlı) |
 | `figjam-diagram-builder` | [figjam-diagram-builder/SKILL.md](figjam-diagram-builder/SKILL.md) | designer, designops, po | FigJam diyagram/süreç şeması |
+| `inspiration-intake` | [inspiration-intake/SKILL.md](inspiration-intake/SKILL.md) | designer, uidev | Image / Figma benchmark / URL'den structural_intent çıkarma ("inspiration only" disiplinle, değer çıkarmaz — ön-işleme katmanı) |
+
+### Cross-Platform Orkestratörler
+
+Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (Claude Code / Cursor / Claude Desktop / Claude Web). Condensed-first: her orchestrator Essentials bölümü %80 case'i kapsar, Advanced sadece edge case'lerde okunur. Kurulum rehberleri: [install/](../install/)
+
+| Skill | Dosya | Personalar | Kısa açıklama |
+|---|---|---|---|
+| `fmcp-screen-orchestrator` | [fmcp-screen-orchestrator/SKILL.md](fmcp-screen-orchestrator/SKILL.md) | designer, uidev | DS-compliant Figma ekran üretimi orkestratörü — 4 intake modu (text/benchmark/image/no_idea), DS fallback chain, step-by-step mode, self-audit gate |
+| `fmcp-ds-audit-orchestrator` | [fmcp-ds-audit-orchestrator/SKILL.md](fmcp-ds-audit-orchestrator/SKILL.md) | designops, uidev | 5 audit tipi orkestrasyonu (compliance / a11y / drift / visual_qa / impact), read-only discipline, cache-first audit |
+| `fmcp-token-sync-orchestrator` | [fmcp-token-sync-orchestrator/SKILL.md](fmcp-token-sync-orchestrator/SKILL.md) | designops, uidev | Token sync orkestratörü (CSS / Tailwind / Swift / Compose / Sass), diff preview zorunluluğu, binding coverage raporu |
 
 ### DS Denetim ve Düzeltme
 
