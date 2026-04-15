@@ -102,7 +102,19 @@ Biri bile FALSE ise → mevcut Karar Akışı (aşağıda).
       - dashboard, özet, summary, panel
       - settings, ayarlar, tercihler
 [ ] 3. active-ds.md Status: ✅ Aktif mi? (DS GATE geçilmiş)
-[ ] 4. Platform belli mi? (mobile/tablet/desktop/web keyword veya intent-router'dan)
+[ ] 4. Platform belli mi? Şu KAYNAKLARDAN BİRİ TRUE olmalı (v1.9.4+ Platform Assumption Ban):
+      (a) Kullanıcı intent'inde **explicit** keyword: "mobil/mobile/iphone/android/ios",
+          "tablet/ipad", "web/desktop/masaüstü"
+      (b) `active-ds.md` veya `last-intent.md`'de önceki intent'ten platform saved
+      (c) DS SADECE tek platform destekliyor (örn. iOS-only library)
+
+      **HİÇBİRİ TRUE değilse → DUR**, kullanıcıya sor:
+      > "Hangi platform için tasarlayalım? (mobile / tablet / desktop / web)"
+
+      HİÇBİR `figma_*` tool çağırma, cevap bekle. "Default mobile" veya
+      "payment → iPhone" gibi varsayımlar YASAK. Gerçek test #1 (2026-04-15):
+      Kullanıcı "ödeme sayfası oluştur" dedi, "mobil" geçmiyordu, Fast Path
+      default'u iPhone 17 seçti → kullanıcı tercihi ihlali.
 [ ] 5. Custom animation / prototype / complex interaction YOK mu?
 
 TÜM ✅ ise:
@@ -162,6 +174,24 @@ Her UI öğesi için sırayla dene. **Adım 3 LEGITIMATE bir fallback'tir** — 
 4. **Hardcoded değerli shape ASLA** — variable binding'siz `createFrame` / `createRectangle` → **gerçek ihlal**, plugin SEVERE `HARDCODED_COLOR`, `HARDCODED_SPACING` violation flag'i verir. Bu katmana inersen DUR, kullanıcıya gap raporu ver.
 
 **Önemli ayrım:** `createFrame` **kendisi** ihlal değil; variable binding'siz fill/padding/radius **ihlal**. Component bulunamadıysa primitive + token binding = doğru yol. Gerçek test (2026-04-15) bu karışıklık sebebiyle false positive DS violation warning üretmişti.
+
+### 🚫 Resmi Figma MCP (mcp.figma.com) Yasağı — v1.9.4+
+
+FCM projesinde **sadece `figma-mcp-bridge`** (local plugin) MCP server kullanılır. Anthropic'in resmi Figma MCP (`mcp.figma.com`) veya `Figma:*` prefix'li tool'lar **ASLA çağrılmaz**.
+
+**Yasaklı tool'lar:**
+- `Figma:search_design_system` — "Resource links are not currently supported" hatası verir
+- `Figma:use_figma` — "This figma file could not be accessed" hatası verir
+- `Figma:get_design_context`, `Figma:get_metadata`, `Figma:get_screenshot`, `Figma:get_variable_defs`, ve diğer tüm `Figma:*` tool'ları
+
+**Neden yasak:** Bu tool'lar farklı bir MCP server'dan gelir (`mcp.figma.com`), yetkilendirme farklı, FCM test dosyalarına (Sahifinans Playground gibi) erişim yok. `figma_search_assets` boş dönünce Claude'un otomatik olarak `Figma:search_design_system`'e düşmesi gereksiz tool call + hata + zaman kaybı yaratır (gerçek test #7 — 2026-04-15).
+
+**Doğru fallback:**
+- `figma_search_assets` boş → `figma-canvas-ops` Rule 24 Component Discovery Fallback (manuel `findAll(INSTANCE)` + `getMainComponentAsync`)
+- Design system search → `figma_get_design_system_summary` veya `figma_search_assets` (her ikisi de `figma-mcp-bridge`'ten)
+- Library variable discovery → `figma_get_library_variables({libraryName: "❖ SUI"})` veya `figma_execute` içinde `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()`
+
+**Kural (tek cümle):** Tool adı `figma_` (snake_case, lowercase) → `figma-mcp-bridge` → ✅ kullan. Tool adı `Figma:` (PascalCase, kolon) → resmi MCP → ❌ ASLA kullanma.
 
 ### 🚨 Filesystem MCP Kullanım Direktifi (v1.9.3+)
 

@@ -92,15 +92,124 @@ Herhangi biri FAIL → Fast Path iptal, orchestrator Karar Akışı'na dön.
 
 **Micro-report:** `✅ Pre-flight: screen_type=<X>, platform=<Y>, device=<Z>, variants=<V>`
 
-### Adım 2 — Wrapper Frame + Background
+### Adım 1.5 — Token Resolution Verification (YENİ v1.9.4+, Gerçek Test #4/5/12/13)
 
-**Amaç:** Ana frame'i Figma native device preset boyutunda oluştur, background'u DS variable'a bağla.
+**Amaç:** Recipe başlamadan önce kullanılacak **critical spacing/radius token'ların resolved px değerlerini** öğren. Tahmin YASAK — gerçek değerler orchestrator context'inde `tokenMap` olarak tutulur, sonraki adımlar bu map'i referans alır.
+
+**Neden:** Gerçek test (2026-04-15) `spacing-400` varsayıldı ~16px, gerçek 64px çıktı. Ekran kullanılamaz hale geldi (Payment Card'larda text dikey harflerle görüntülendi). 4-5 ek execute gerekti düzeltme için.
 
 ```js
-// figma_execute (tek call, 4 op)
+// figma_execute (tek call, 6-8 op — Rule 5a CHUNKING'e uyumlu)
+const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+
+// Spacing collection bul (name keyword match, trailing space vb. toleranslı)
+const spacingColl = colls.find(c => {
+  const n = c.name.toLowerCase().trim();
+  return n.includes("spacing") || n.includes("size");
+});
+
+if (!spacingColl) {
+  return { error: "Spacing collection bulunamadı", fallback: "manual px values" };
+}
+
+// Critical token listesi (recipe'de kullanılan isimler)
+const criticalTokenNames = [
+  "spacing-none", "spacing-050", "spacing-075", "spacing-100",
+  "spacing-125", "spacing-150", "spacing-200"
+];
+
+const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(spacingColl.key);
+const tokenMap = {};
+
+for (const name of criticalTokenNames) {
+  const found = vars.find(v => v.name === name);
+  if (found) {
+    const localVar = await figma.variables.importVariableByKeyAsync(found.key);
+    // valuesByMode'den ilk mode'un değerini oku (genelde default/mobile)
+    const modeIds = Object.keys(localVar.valuesByMode);
+    if (modeIds.length > 0) {
+      tokenMap[name] = localVar.valuesByMode[modeIds[0]];
+    }
+  }
+}
+
+return { tokenMap, spacingCollKey: spacingColl.key };
+```
+
+**Beklenen çıktı (örnek):**
+```json
+{
+  "tokenMap": {
+    "spacing-none": 0,
+    "spacing-050": 8,
+    "spacing-075": 12,
+    "spacing-100": 16,
+    "spacing-125": 20,
+    "spacing-150": 24,
+    "spacing-200": 32
+  }
+}
+```
+
+**Kullanım:** Adım 2-5 bu map'i referans alır: "padding = spacing-100 (16px, tokenMap'ten)" diyerek bind eder, **varsayım yapmaz**. Token adı map'te yoksa o adımda fallback uygular ve kullanıcıya bildirir.
+
+**Atomic operations:** 1 (collections) + 1 (vars fetch) + 7 (import × critical token count) = ~9 op. Rule 5a sınırında — 7 token üst sınır; 8. eklenirse execute'u ikiye böl.
+
+**Micro-report:** `✅ Token Resolution: <N> token resolved (spacing-none=0, spacing-100=16, ...)`
+
+### Adım 2 — Wrapper Frame + Background (Edge-to-Edge, v1.9.4+)
+
+**Amaç:** Ana frame'i Figma native device preset boyutunda oluştur, background'u DS variable'a bağla, **edge-to-edge yapı için padding=0 + gap=0** kuruluşu hemen burada yap.
+
+**🚨 Edge-to-Edge Frame Structure Kuralı (v1.9.4+, Gerçek Test #16):**
+
+Mobile/tablet/desktop **tüm** platformlar için:
+
+**Ana frame (bu adımda):**
+- Background renk token'ı (Surface/background level-0 vb.)
+- Auto-layout VERTICAL
+- **padding = spacing-none (0)** ← kritik, edge-to-edge için
+- **gap = spacing-none (0)** ← kritik, iç wrapper kendi spacing'ini yönetir
+- SADECE edge-to-edge component'leri doğrudan child olarak alır (NavigationTopBar, BottomNavBar, StatusBar, vb.)
+
+**Content Body wrapper** (Adım 5.5'te kurulur):
+- Padding ve gap BURADA (örn. spacing-100 = 16px, spacing-075 = 12px)
+- Recipe component'leri (Amount Display, Payment Cards, CTA, vb.) burada yaşar
+
+**Doğru yapı (tüm recipes için standart):**
+
+```
+Ana Frame (padding: spacing-none, gap: spacing-none, auto-layout VERTICAL)
+├── NavigationTopBar (FILL — edge-to-edge)
+├── Content Body Wrapper (FILL both, padding: spacing-100, gap: spacing-075)
+│   ├── Amount Display
+│   ├── Section Header
+│   ├── Payment Method Card × 3
+│   ├── Divider
+│   ├── CTA Button
+│   └── Security Info
+└── BottomNavBar (FILL — edge-to-edge) [varsa]
+```
+
+```js
+// figma_execute (tek call, 5-7 op)
 const frame = figma.createFrame();
 frame.name = "<Screen Name> — <Device Preset>";
 frame.resize(<width>, <height>);  // Device Presets Lookup'tan
+
+// Auto-layout VERTICAL + edge-to-edge padding/gap sıfır
+frame.layoutMode = "VERTICAL";
+frame.primaryAxisSizingMode = "FIXED";
+frame.counterAxisSizingMode = "FIXED";
+frame.paddingTop = 0; frame.paddingBottom = 0;
+frame.paddingLeft = 0; frame.paddingRight = 0;
+frame.itemSpacing = 0;
+
+// (Opsiyonel) spacing-none variable bind — tokenMap'ten geliyorsa
+// Not: direkt 0 da kabul, ama token bind DS-compliant için tercih edilen
+// const noneVar = await figma.variables.importVariableByKeyAsync(spacingNoneKey);
+// frame.setBoundVariable("paddingLeft", noneVar);
+// ... aynısı paddingRight/Top/Bottom + itemSpacing için
 
 // Background variable bind (try-catch with fallback)
 let bgVar = null;
@@ -119,9 +228,9 @@ if (bgVar) {
 return { frameId: frame.id, width: <width>, height: <height> };
 ```
 
-**Atomic operations (4):** createFrame, resize, getVariables, importVariableByKeyAsync, setBoundVariableForPaint (4-5 op, under 8).
+**Atomic operations (5-7):** createFrame, resize, layoutMode/sizing/padding setters (grouped), getVariables, importVariableByKeyAsync, setBoundVariableForPaint.
 
-**Micro-report:** `✅ Frame oluşturuldu: <device_preset> (<w>×<h>), background: <DS>/Surface/background level-0`
+**Micro-report:** `✅ Frame oluşturuldu: <device_preset> (<w>×<h>), edge-to-edge (padding=0, gap=0), background: <DS>/Surface/background level-0`
 
 ### Adım 3 — Breakpoint Variable Binding
 
@@ -150,87 +259,169 @@ if (screenVar) {
 
 **Micro-report:** `✅ Breakpoint: <DS>/Breakpoints/Screen bound` VEYA `⚠️ Breakpoint bulunamadı, fixed width devam`
 
-### Adım 4 — Theme + Size Mode Setup
+### Adım 4 — Theme + Size Mode Setup (Enumeration First, v1.9.4+)
 
-**Amaç:** Frame'e `setExplicitVariableModeForCollection` ile DS'in Semantic Colors (Light/Dark) + Semantic Size (Mobil/Tablet/Desktop) mode'larını uygula.
+**Amaç:** Collection ve mode isimlerini **ASLA varsayma**. Önce `getAvailableLibraryVariableCollectionsAsync()` ile tam listeyi al, keyword match ile doğru collection'ı bul. Mode listesini de tam oku, keyword match ile doğru mode'u seç. Sonuç: trailing space, karışık isimler (`"Semantic Sizes (Web/Mobil) "`), çoklu-kelime mode isimleri (`"Mobil & Web Mobil"`) gibi tüm varyasyonlara dayanıklı.
+
+**Neden:** Gerçek test (2026-04-15) `"Semantic Size"` varsayıldı, gerçek `"Semantic Sizes (Web/Mobil) "` (trailing space); `"Mobil"` varsayıldı, gerçek `"Mobil & Web Mobil"`. Enumeration-first yaklaşımı iki sorunu da önler.
+
+**Adım 4a — Collection & mode enumeration (ayrı execute):**
 
 ```js
-// figma_execute (tek call, 4-6 op)
-const frame = await figma.getNodeByIdAsync(frameId);
+// figma_execute #1 — Enumeration (tek call, 6-8 op)
 const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
 
-// Semantic Colors collection
-let semColors = null, lightModeId = null;
-try {
-  const sc = colls.find(c => c.name.toLowerCase().includes("semantic color") || c.name.includes("S Theme"));
-  if (sc) {
-    // Import any variable from collection to get local collection reference
-    const scVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(sc.key);
-    if (scVars.length > 0) {
-      const firstVar = await figma.variables.importVariableByKeyAsync(scVars[0].key);
-      const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
-      const lightMode = localColl.modes.find(m => m.name.toLowerCase() === "light" || m.name === "Açık");
-      if (lightMode) {
-        frame.setExplicitVariableModeForCollection(localColl, lightMode.modeId);
-        semColors = { id: localColl.id, lightModeId: lightMode.modeId };
-        // Dark mode ID de kaydet, Adım 8'de lazım
-        const darkMode = localColl.modes.find(m => m.name.toLowerCase() === "dark" || m.name === "Koyu");
-        if (darkMode) semColors.darkModeId = darkMode.modeId;
-      }
-    }
-  }
-} catch(e) {}
+// Collection bul — keyword match (case-insensitive, trim'li, multi-keyword fallback)
+function findCollByKeywords(keywords) {
+  return colls.find(c => {
+    const name = c.name.toLowerCase().trim();
+    return keywords.some(kw => name.includes(kw.toLowerCase()));
+  });
+}
 
-// Semantic Size collection
-let semSize = null;
-try {
-  const ss = colls.find(c => c.name.toLowerCase().includes("semantic size") || c.name.toLowerCase().includes("size"));
-  if (ss) {
-    const ssVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(ss.key);
-    if (ssVars.length > 0) {
-      const firstVar = await figma.variables.importVariableByKeyAsync(ssVars[0].key);
-      const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
-      // Platform → mode mapping
-      const modeName = platform === "mobile" ? "Mobil" : platform === "web" ? "Web" : "Tablet";
-      const sizeMode = localColl.modes.find(m => m.name === modeName || m.name.toLowerCase() === modeName.toLowerCase());
-      if (sizeMode) {
-        frame.setExplicitVariableModeForCollection(localColl, sizeMode.modeId);
-        semSize = { id: localColl.id, modeName };
-      }
-    }
-  }
-} catch(e) {}
+const semColorsColl = findCollByKeywords(["semantic color", "s theme", "theme"]);
+const semSizeColl = findCollByKeywords(["semantic size", "semantic sizes", "size"]);
 
-return { semColors, semSize };
+const result = {
+  semColors: null,
+  semSize: null,
+  availableColls: colls.map(c => c.name)  // debug için
+};
+
+// Semantic Colors mode discovery
+if (semColorsColl) {
+  const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semColorsColl.key);
+  if (vars.length > 0) {
+    const firstVar = await figma.variables.importVariableByKeyAsync(vars[0].key);
+    const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
+    // Mode'ları keyword match ile bul (Turkish + English toleranslı)
+    const lightMode = localColl.modes.find(m => {
+      const mn = m.name.toLowerCase();
+      return mn === "light" || mn === "açık" || mn.includes("light") || mn.includes("açık");
+    });
+    const darkMode = localColl.modes.find(m => {
+      const mn = m.name.toLowerCase();
+      return mn === "dark" || mn === "koyu" || mn.includes("dark") || mn.includes("koyu");
+    });
+    result.semColors = {
+      collId: localColl.id,
+      lightModeId: lightMode && lightMode.modeId,
+      darkModeId: darkMode && darkMode.modeId,
+      availableModes: localColl.modes.map(m => m.name)
+    };
+  }
+}
+
+// Semantic Size mode discovery
+if (semSizeColl) {
+  const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semSizeColl.key);
+  if (vars.length > 0) {
+    const firstVar = await figma.variables.importVariableByKeyAsync(vars[0].key);
+    const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
+    // Platform → mode keyword eşleme (karmaşık isimlere dayanıklı)
+    const platformKeywords = {
+      "mobile": ["mobil", "mobile"],
+      "tablet": ["tablet"],
+      "desktop": ["web", "desktop"],
+      "web": ["web", "desktop"]
+    };
+    const targetKws = platformKeywords[platform] || ["mobil"];
+    const sizeMode = localColl.modes.find(m => {
+      const mn = m.name.toLowerCase();
+      return targetKws.some(kw => mn.includes(kw));
+    });
+    result.semSize = {
+      collId: localColl.id,
+      modeId: sizeMode && sizeMode.modeId,
+      modeName: sizeMode && sizeMode.name,
+      availableModes: localColl.modes.map(m => m.name)
+    };
+  }
+}
+
+return result;
 ```
 
-**Atomic operations:** 6-8 (collections fetch, 2× variable import, 2× collection fetch, 2× mode set). **CHUNKING MANDATE sınırında** — dikkat, daha fazla mode gerekirse Adım 4'ü ikiye böl.
+**Atomic operations:** ~7 (collections, 2× vars fetch, 2× import, 2× getCollection).
 
-**Micro-report:** `✅ Theme: Light (<DS>/Semantic Colors), Size: <mode> (<DS>/Semantic Size)`
+**Micro-report:** `✅ Collection/Mode enum: Semantic Colors=<light+dark modes>, Semantic Size=<matched mode>`
 
-### Adım 5 — Auto-Layout Structure
+**Adım 4b — Mode apply to frame (ayrı execute):**
 
-**Amaç:** Frame'i auto-layout frame'ine dönüştür, padding/spacing'i DS token'larına bağla.
+Enumeration sonucunu kullanarak frame'e mode'ları uygula:
 
 ```js
-// figma_execute (tek call, 5-8 op)
+// figma_execute #2 — Apply (tek call, 3-4 op)
 const frame = await figma.getNodeByIdAsync(frameId);
 
-frame.layoutMode = "VERTICAL";
-frame.primaryAxisSizingMode = "FIXED";  // Height sabit (cihaz height)
-frame.counterAxisSizingMode = "FIXED";  // Width sabit (cihaz width veya Screen var)
-frame.counterAxisAlignItems = "CENTER";
-frame.itemSpacing = 16;  // fallback, variable bind ile override edilecek
+if (semColorsCollId && lightModeId) {
+  const semColorsColl = await figma.variables.getVariableCollectionByIdAsync(semColorsCollId);
+  frame.setExplicitVariableModeForCollection(semColorsColl, lightModeId);
+}
 
-// Padding + spacing variable bind (best-effort)
-// ... (spacing/padding variable'larını ara ve bind et — max 5 op)
+if (semSizeCollId && sizeModeId) {
+  const semSizeColl = await figma.variables.getVariableCollectionByIdAsync(semSizeCollId);
+  frame.setExplicitVariableModeForCollection(semSizeColl, sizeModeId);
+}
 
-return { autoLayoutDone: true };
+return { modesApplied: true };
 ```
 
-**Atomic operations:** 5-6 (layoutMode, sizing modes, align, spacing, padding).
+**Atomic operations:** 3-4 (getNodeByIdAsync, 2× getCollectionByIdAsync, 2× setExplicitMode).
 
-**Micro-report:** `✅ Auto-layout: VERTICAL, padding/spacing bound`
+**Micro-report:** `✅ Theme: Light (<semColors collName>), Size: <semSize modeName> (<semSize collName>)`
+
+### Adım 5 — Auto-Layout Finalization (v1.9.4+)
+
+**Amaç:** Ana frame'in auto-layout kuruluşu zaten **Adım 2'de** tamamlandı (VERTICAL + padding=0 + gap=0). Bu adımda yalnızca finalization kontrolleri yapılır:
+
+- `counterAxisAlignItems = "CENTER"` (eğer Content Body dikey merkezlemek istenirse)
+- Ana frame'in sizing mode'larının doğru olduğunu teyit et (FIXED × FIXED — device preset)
+- Edge-to-edge component'lerin FILL horizontal alabildiğini garanti et (parent layoutMode mevcut olmalı — Adım 2 bunu kurdu)
+
+**Eğer her şey Adım 2'de doğru kurulmuşsa bu adım no-op**, tek satır rapor yazılır ve geçilir.
+
+**Micro-report:** `✅ Auto-layout finalized: VERTICAL, ana frame padding=0, Content Body wrapper Adım 5.5'te kurulacak`
+
+### Adım 5.5 — Content Body Wrapper (YENİ v1.9.4+, Gerçek Test #16)
+
+**Amaç:** Ana frame'in içinde, NavigationTopBar (varsa) ile BottomNavBar (varsa) arasında, gerçek padding + gap değerlerini taşıyan iç bir auto-layout frame oluştur. Recipe'in NON-edge component'leri buraya appendChild edilir.
+
+**Neden:** Edge-to-edge component'ler (NavigationTopBar) ana frame kenarına dayanmalı. İçerik component'leri ise padding'li alan içinde yaşamalı. İki kuralı aynı container'da çözmek mümkün değil — iki katmanlı frame yapısı gerekli.
+
+```js
+// figma_execute (tek call, 5-8 op — Rule 5a CHUNKING'e uyumlu)
+const parentFrame = await figma.getNodeByIdAsync(frameId);
+
+const contentBody = figma.createFrame();
+contentBody.name = "Content Body";
+contentBody.layoutMode = "VERTICAL";
+
+// 🚨 KRİTİK SIRA: ÖNCE appendChild, SONRA layoutSizing — Rule 11
+parentFrame.appendChild(contentBody);
+contentBody.layoutSizingHorizontal = "FILL";
+contentBody.layoutSizingVertical = "FILL";
+
+// Padding + gap — tokenMap'ten (Adım 1.5'te resolve edildi)
+// Örn: spacing-100 = 16px padding, spacing-075 = 12px gap
+const paddingVar = await figma.variables.importVariableByKeyAsync(spacing100Key);
+const gapVar = await figma.variables.importVariableByKeyAsync(spacing075Key);
+
+contentBody.setBoundVariable("paddingLeft", paddingVar);
+contentBody.setBoundVariable("paddingRight", paddingVar);
+contentBody.setBoundVariable("paddingTop", paddingVar);
+contentBody.setBoundVariable("paddingBottom", paddingVar);
+contentBody.setBoundVariable("itemSpacing", gapVar);
+
+// Transparent background (parent surface'i geçecek)
+contentBody.fills = [];
+
+return { contentBodyId: contentBody.id };
+```
+
+**Atomic operations (5-8):** getNodeByIdAsync, createFrame, appendChild, layoutSizing×2, importVariable×2, setBoundVariable×5. Üst sınır — 5 setBoundVariable bir "atomic grouping" sayılsa da Rule 5a tehlikesi varsa ikiye böl (padding execute + gap execute).
+
+**Micro-report:** `✅ Content Body oluşturuldu: FILL both, padding=spacing-100 (16px), gap=spacing-075 (12px)`
 
 ### Adım 6 — Component Discovery
 
@@ -250,22 +441,41 @@ return { autoLayoutDone: true };
 
 ### Adım 7 — Recipe Component Placement
 
-**Amaç:** Recipe'teki her component'i sırayla frame'e yerleştir. **HER COMPONENT AYRI `figma_execute` ÇAĞRISI** — chunking mandate gereği.
+**Amaç:** Recipe'teki her component'i sırayla doğru parent'a yerleştir. **HER COMPONENT AYRI `figma_execute` ÇAĞRISI** — chunking mandate gereği.
+
+**🚨 Parent Routing Kuralı (v1.9.4+, Fix B Edge-to-Edge):**
+
+Her component için parent iki kaynaktan birinden seçilir:
+
+| Component Tipi | Parent | Neden |
+|---|---|---|
+| NavigationTopBar / TopBar / StatusBar | **Ana Frame** (`frameId`) | Edge-to-edge, kenarlara dayanmalı |
+| BottomNavBar / TabBar / BottomSheet | **Ana Frame** (`frameId`) | Edge-to-edge |
+| Diğer her şey (Amount Display, Cards, Buttons, List Items, Text, vb.) | **Content Body** (`contentBodyId` — Adım 5.5'te kuruldu) | Padding'li alan içinde |
+
+Component sırası korunur (yukarıdan aşağı), ama parent ID'leri farklı olabilir. Recipe loop'u parent seçimini isme/role bazlı yapar.
 
 ```
 recipe = getRecipe(screen_type)  // 9 recipe'ten biri
+const edgeNames = /^(navigation|nav|top|bottom|status|tab)/i;
+
 for (let i = 0; i < recipe.components.length; i++) {
   const spec = recipe.components[i]
   const comp = foundComponents[spec.name] || fallbackPrimitive(spec)
-  
+
+  // Parent routing — edge-to-edge vs. Content Body
+  const parentId = edgeNames.test(spec.name) ? frameId : contentBodyId;
+
   // figma_execute #(7+i): Tek component yerleştir (3-5 op)
   //   1. importComponentByKeyAsync (varsa)
   //   2. createInstance / createFrame (fallback)
   //   3. setProperties (component instance için)
-  //   4. parent.appendChild(child)  ← ÖNCE
-  //   5. child.layoutSizingHorizontal = "FILL"  ← SONRA (Rule 11)
-  
-  // Micro-report: "✅ <spec.name> eklendi" or "⚠️ <spec.name> eksik, primitive fallback"
+  //   4. parent = await figma.getNodeByIdAsync(parentId)
+  //   5. parent.appendChild(child)  ← ÖNCE (Rule 11)
+  //   6. child.layoutSizingHorizontal = "FILL"  ← SONRA
+
+  // Micro-report: "✅ <spec.name> eklendi (parent: <Ana Frame|Content Body>)"
+  //            or "⚠️ <spec.name> eksik, primitive fallback"
 }
 ```
 

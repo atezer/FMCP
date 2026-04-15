@@ -212,6 +212,48 @@ Bu üç boyut **sadece mevcut mod** için ölçülüyor. Yani:
 
 **Mitigation:** Step 5.6'daki "her frame için ayrı validate" kuralı + Step 6'daki "her frame için screenshot + kullanıcı onayı".
 
+### 5. Plugin `scanOtherPorts` Background Port Scanning
+
+**Durum:** Plugin code issue, Part 5 adayı, Part 4 scope dışı.
+
+**Açıklama:** F-MCP plugin'i browser console'unda port 5457-5470 aralığında sürekli WebSocket bağlantı denemesi yapıyor (`scanOtherPorts` fonksiyonu). Gerçek test oturumunda (2026-04-15, FP-1-R) 8251 saniyede **131 error + 912 warning** birikti. Plugin port 5454'te sağlıklı çalışıyor — bu scan başka AI client'larını (Cursor, Claude Code) keşfetmek için ama:
+
+1. Gereksiz kaynak tüketimi
+2. Ağır operasyonları (`figma_validate_screen` gibi) yavaşlatma potansiyeli
+3. Console flood (debugging zor)
+
+**Skill-side mitigation (Part 4):** Yok — bu plugin code issue'su, skill tarafında bypass edilemez.
+
+**Çözüm roadmap (Part 5 adayı):** Plugin code (`f-mcp-plugin/code.js` veya TypeScript equivalent):
+- `scanOtherPorts` frequency azaltma (örn. dakikada 1 kez)
+- Ağır operasyonlar sırasında scan durdurma (`figma_validate_screen` çalışırken)
+- Port tarama mantığını event-based yapma (yeni client algıladığında bir kez)
+
+### 6. `figma_validate_screen` Timeout on Large Files
+
+**Durum:** Plugin core speed limitation.
+
+**Açıklama:** Sahifinans Playground gibi 2000+ instance'lı büyük dosyalarda `figma_validate_screen` 90 sn default timeout'a tutarlı olarak düşüyor. Plugin içinde validate algoritması tüm node tree'yi walk ediyor, her node için variable binding + auto-layout + instance check yapıyor — büyük file'larda çok yavaş. Gerçek test (2026-04-15, FP-1-R): 3 denemede de timeout, skor alınamadı.
+
+**Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 25 — 3 seviyeli fallback:
+1. Timeout'u 180000ms (3 dk) yap
+2. Scope daralt (Content Body wrapper'ı validate et, ana frame değil; `minScore=70`)
+3. Manuel QA checklist (Türkçe göz kontrolü şablonu)
+
+Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayılmıyor — manuel göz onayı yeterli.
+
+**Plugin roadmap (Part 5 adayı):** Validate algorithmasında sampling (her 10. node'u kontrol et), incremental validation (sadece değişen node'lar), veya background worker'a taşıma.
+
+### 7. SUI Library Display/Heading Text Style Missing
+
+**Durum:** SUI library data issue — SUI'de "display" text style (büyük başlık) yayınlanmamış veya key expired. Recipe'de amount display gibi büyük metin komponentleri için workaround gerekli.
+
+**Gerçek hata (2026-04-15 FP-1-R):** Text style import key `fb3591835c86d00580e1f0cea2343d033107dc67` → `"Failed to import style by key"`. Recipe büyük başlıklar için `body-semibold + hardcoded fontSize=36` kullanmak zorunda kaldı → `HARDCODED_FONT_SIZE` SEVERE violation.
+
+**Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 26 — text style discovery strategy: instance scan → library search → kabul et, en büyük mevcut style'ı kullan + recipe'de `characters` property ile büyük metin. `HARDCODED_FONT_SIZE` violation kabul edilir (minimum violation, üretim kullanılabilir, kullanıcıya açıkça raporlanır).
+
+**SUI-side roadmap:** SUI library'sine `display` / `heading-large` text style yayınlanması (DS team işi, FCM scope dışı). FCM rapor kanalı üzerinden SUI ekibine iletilecek.
+
 ---
 
 Bu limitations listesi ileride Part 3 milestone planlanırken kaynak olarak kullanılır.

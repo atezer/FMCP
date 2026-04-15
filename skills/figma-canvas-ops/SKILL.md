@@ -616,6 +616,149 @@ return Array.from(componentMap.values());
 - **Boş sonuç:** Yukarıdaki manuel discovery ile fallback
 - **Key biliniyor ama tool ile alınamıyor:** `await figma.importComponentByKeyAsync(key)` direkt çağır
 
+25. **`figma_validate_screen` Timeout Fallback (v1.9.4+, Gerçek Test #14).** Büyük dosyalarda (Sahifinans Playground gibi 2000+ instance'lı file'larda) `figma_validate_screen` 90 sn default timeout'a düşebilir. Plugin core speed limitation — plugin-side fix gerekir (Part 5 adayı). Bu skill tarafında **3 seviyeli fallback**:
+
+**Seviye 1 — Timeout artır:**
+```
+figma_validate_screen(nodeId, minScore=80, timeout=180000)  // 3 dakika
+```
+Default timeout yetmezse explicit `180000ms` (3 dk) ver.
+
+**Seviye 2 — Scope daralt:**
+Eğer Seviye 1 de timeout'a düşerse, wrapper frame yerine **sadece tek bir section'ı** validate et:
+```
+figma_validate_screen(contentBodyWrapperId, minScore=70, timeout=120000)
+```
+Content Body wrapper (fmcp-screen-recipes Adım 5.5'teki iç frame) daha küçük node tree → hızlı validate. `minScore`'u 80'den 70'e düşür (daha az strict, timeout'a giden büyük dosyada %100 görünmeyen violation'lar olabilir).
+
+**Seviye 3 — Manuel QA Checklist Fallback:**
+Eğer Seviye 2 de timeout'a düşerse, `figma_validate_screen` skorunun **yerine** kullanıcıya manuel göz kontrolü için Türkçe checklist üret:
+
+```markdown
+## ⚠️ Validate Timeout — Manuel QA Checklist
+
+`figma_validate_screen` 2 denemede de timeout'a düştü (Sahifinans Playground gibi büyük dosyalarda bilinen sorun, plugin tarafında fix bekliyor). Sistematik skor alınamadı. Lütfen **Figma Desktop'ta göz kontrolü** ile doğrula:
+
+### Instance Coverage
+- [ ] Wrapper frame'i seç → Design panel → "Instances" sayısı kontrol et
+- [ ] Toplam node sayısının ≥60%'ı library instance olmalı
+- [ ] Ham `createFrame` veya `createRectangle` sayısı ≤40%
+
+### Token Binding Coverage
+- [ ] Rastgele 5 fill seç → her birinde variable icon 🎨 olmalı (hex kodu değil)
+- [ ] Rastgele 3 padding/spacing değer → hepsi variable-bound olmalı
+- [ ] Rastgele 3 text → Text Style dolu olmalı (font size manuel değil)
+
+### Auto-Layout Coverage
+- [ ] Wrapper frame → Auto layout aktif
+- [ ] İç section'lar → Auto layout aktif (hiçbir frame NONE mode'da değil)
+
+### Dark Mode Coverage
+- [ ] Dark frame'e geç → renklerin dark değere döndüğünü doğrula
+- [ ] Button fill'leri hâlâ variable-bound (hardcoded kalmadı)
+- [ ] Text color'lar dark theme'e uygun
+
+Her madde ✅ ise → manuel quality gate geçti, recipe başarılı sayılır.
+Herhangi biri ❌ → sorunlu node'un ID'sini raporla, hedefli fix uygulanır.
+```
+
+**Micro-report (timeout durumunda):**
+`⚠️ Validate: 2 denemede timeout → manuel QA checklist üretildi (bkz. yukarıda)`
+
+**Kullanım sırası:** Her üretim sonrası sırayla Seviye 1 → (fail ise) Seviye 2 → (fail ise) Seviye 3 dene. Seviye 3'e inilse bile recipe "başarısız" sayılmaz — manuel göz onayı yeterli.
+
+26. **Component Property Discovery — Tek Execute Pattern (v1.9.4+, Gerçek Test #9, #10).** Component instance'ının property'lerini ve variant'larını öğrenmek için **tek execute** yeterli. Deneme-yanılma ile 3-4 execute harcama.
+
+**Pattern:**
+
+```js
+// figma_execute — component set discovery (tek call, 3-4 op)
+const comp = await figma.importComponentByKeyAsync(componentKey);
+
+// Component set ise variant'lara eriş
+let componentSet = null;
+if (comp.parent && comp.parent.type === "COMPONENT_SET") {
+  componentSet = comp.parent;
+} else {
+  // Single component (variant yok)
+  componentSet = comp;
+}
+
+// Property definitions
+const propDefs = componentSet.componentPropertyDefinitions || {};
+
+// Variant children (sadece component set için)
+let variants = [];
+if (componentSet.type === "COMPONENT_SET") {
+  variants = componentSet.children.map(v => ({
+    name: v.name,
+    variantProps: v.variantProperties || {}
+  }));
+}
+
+return {
+  componentId: comp.id,
+  componentName: comp.name,
+  propertyDefinitions: Object.entries(propDefs).map(([name, def]) => ({
+    name,
+    type: def.type,  // TEXT, BOOLEAN, INSTANCE_SWAP, VARIANT
+    defaultValue: def.defaultValue,
+    variantOptions: def.variantOptions || []
+  })),
+  variants: variants
+};
+```
+
+**Çıktı (örnek NavigationTopBar için):**
+```json
+{
+  "componentName": "NavigationTopBar",
+  "propertyDefinitions": [
+    {
+      "name": "Type",
+      "type": "VARIANT",
+      "defaultValue": "Logo",
+      "variantOptions": ["Logo", "Tile-Sub"]
+    },
+    {
+      "name": "Title",
+      "type": "TEXT",
+      "defaultValue": "Başlık"
+    }
+  ],
+  "variants": [
+    { "name": "Type=Logo", "variantProps": { "Type": "Logo" } },
+    { "name": "Type=Tile-Sub", "variantProps": { "Type": "Tile-Sub" } }
+  ]
+}
+```
+
+Bu **tek execute** ile:
+- Tüm variant isimlerini öğrenirsin (örn. `Type=Title` YOK, `Type=Tile-Sub` VAR)
+- Tüm property'leri öğrenirsin (Title text, boolean icon, vb.)
+- Default değerleri bilirsin
+
+Sonraki `setProperties` çağrısı artık garantili doğru variant/property isimlerini kullanır.
+
+**`figma_instantiate_component` timeout alternatifi (Gerçek Test #8):** Bazı component'lerde `figma_instantiate_component(componentKey)` tool çağrısı 15 sn timeout'a düşer. O durumda `figma_execute` içinde direkt `importComponentByKeyAsync(key)` + `comp.createInstance()` pattern'ini kullan — bu tek execute'ta çalışır, tool overhead yok.
+
+**Text Style Discovery — Öncelik Sırası:**
+
+Text style'lar için strateji sırası:
+1. **Instance scan** (en hızlı, cache-friendly): `figma.currentPage.findAll(n => n.type === "TEXT")` → `textStyleId` → `figma.getStyleByIdAsync(styleId)` → unique style'ları topla
+2. Boş ise → `figma_search_assets(query="text style")` (bu da instance scan, farklı tool)
+3. Boş ise → Team library API: `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()` yaklaşımına benzer — style metadata discovery
+4. Boş ise → **kabul et, fallback** — yaygın style isimleri (body, heading, display, caption) primitive text + Inter fontu + hardcoded size (minimum violation, kullanıcıya bildir)
+
+**Kritik not — Display/Heading Style Missing (Gerçek Test #11):**
+
+Gerçek test (Sahifinans SUI library, 2026-04-15): `display` text style'ı hiçbir yöntemle bulunamadı. Recipe büyük başlıklar için `body-semibold + hardcoded fontSize=36` kullanmak zorunda kaldı → `HARDCODED_FONT_SIZE` violation. **Bu bir SUI library eksikliği**, skill tarafında tam çözümü yok. Workaround: recipe'de "display yerine en büyük mevcut text style (body-large veya heading)'i bul ve karakter büyüklüğünü ayarla" fallback'i. Detay: `install/TOKEN-BUDGET.md` Known Limitations #7.
+
+**Micro-report:**
+`✅ Component property discovery: <componentName>, <N> property, <M> variant`
+veya
+`⚠️ Text style <name> bulunamadı → fallback <yaygın style>, kullanıcıya bildirildi`
+
 ## 7. Hata Kurtarma
 
 1. `figma_execute` hata dönerse **hemen tekrar deneme**
