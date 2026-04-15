@@ -107,6 +107,55 @@ Kullanıcı yanıtladıktan sonra:
    ```
    Kılavuz: 1-5 node → 5000ms | 6-12 node → 10000ms | 13+ node → işlemi böl veya 15000-30000ms
 
+   ### 🚨 5a. CHUNKING MANDATE (v1.9.3+ ZORUNLU — Gerçek Test Bulgusu)
+
+   Her `figma_execute` çağrısı **maksimum 8 "atomic operation"** içermeli. Aşağıdakilerin her biri 1 atomic operation sayılır:
+
+   - Node oluşturma (`createFrame`, `createText`, `createRectangle`, `clone`)
+   - Instance oluşturma (`createInstance`, `importComponentByKeyAsync`)
+   - Variable import (`importVariableByKeyAsync`) — her key
+   - Style import (`importStyleByKeyAsync`) — her key
+   - Font load (`loadFontAsync`) — her font family/style
+   - Bind operasyonu (`setBoundVariable`, `setBoundVariableForPaint`, `setTextStyleIdAsync`, `setEffectStyleIdAsync`)
+   - `getMainComponentAsync` (her instance için)
+   - `getNodeByIdAsync`
+
+   **Neden bu kadar katı:** Plugin timeout **60 saniye** (internal), bridge timeout **4 dakika**. Bir execute çağrısında 20+ async round-trip (örn: 20 variable import + 6 style import + 15 node) → bridge kesin timeout'a düşer. **Gerçek test raporu (2026-04-15):** Tek execute'ta 20 var + 6 style + 15 node = **4 dakika timeout**. Aynı iş 10 execute'a bölününce her biri 18-66ms.
+
+   **Chunking patterns:**
+
+   - 1 execute = 1 atomic goal (örneğin: "wrapper frame + bg binding", "status bar instance + position", "title text + style bind")
+   - Büyük iş (20+ op) → 5-10 execute'a böl
+   - Execute'ler arası state aktar: nodeId'leri `return` et, sonraki execute `getNodeByIdAsync(returnedId)` ile al
+   - Her execute'tan sonra **1 satır Türkçe micro-report** yaz (progress streaming için)
+
+   **Anti-pattern örneği (YASAK):**
+   ```js
+   // ❌ Tek execute'ta 25+ operasyon — 4 dk timeout olacak
+   const v1 = await figma.variables.importVariableByKeyAsync(key1);
+   const v2 = await figma.variables.importVariableByKeyAsync(key2);
+   // ... 18 daha variable
+   const s1 = await figma.importStyleByKeyAsync(styleKey1);
+   // ... 5 daha style
+   const frame = figma.createFrame();
+   const child1 = figma.createFrame();
+   // ... 13 daha node
+   // Bind'lar ...
+   ```
+
+   **Doğru pattern (Execute #1, #2, #3...):**
+   ```js
+   // ✅ Execute #1: Sadece wrapper frame + bg binding (3 op)
+   const frame = figma.createFrame();
+   frame.resize(402, 874);
+   const bgVar = await figma.variables.importVariableByKeyAsync('bgKey');
+   const paint = { type: 'SOLID', color: {r:1,g:1,b:1} };
+   const bound = figma.variables.setBoundVariableForPaint(paint, 'color', bgVar);
+   frame.fills = [bound];
+   return { frameId: frame.id };
+   ```
+   Sonraki execute'te `getNodeByIdAsync(frameId)` ile frame'i tekrar al, yeni 5-8 op daha yap.
+
 6. **Renkler 0–1 aralığında** (0–255 değil): `{r: 1, g: 0, b: 0}` = kırmızı. Renk değerlerini hardcoded yazma — tasarım sisteminden (`figma_get_variables` / `figma_get_styles`) oku.
 
 7. **Fills/strokes read-only array** — klonla, değiştir, geri ata:
@@ -461,6 +510,111 @@ frame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
 ```
 
 21. **Escaped quote dikkat.** `figma_execute` code parametresinde `\"` yerine düz `"` kullan. Template literal içinde kaçış karakteri syntax error verir.
+
+22. **Async API Zorunluluğu — dynamic-page mode (v1.9.3+, Gerçek Test Bulgusu).** Plugin `dynamic-page` modunda aşağıdaki sync API'ler **throws**:
+
+| ❌ YASAK (sync) | ✅ ZORUNLU (async) | Kontext |
+|---|---|---|
+| `instance.mainComponent` | `await instance.getMainComponentAsync()` | Instance → main component erişimi |
+| `figma.getNodeById(id)` | `await figma.getNodeByIdAsync(id)` | Node ID ile node bulma |
+| `figma.variables.importVariableByKey(key)` | `await figma.variables.importVariableByKeyAsync(key)` | Variable import |
+| `figma.importComponentByKey(key)` | `await figma.importComponentByKeyAsync(key)` | Component import |
+| `figma.importStyleByKey(key)` | `await figma.importStyleByKeyAsync(key)` | Style import |
+| `node.effectStyleId = x` | `await node.setEffectStyleIdAsync(x)` | Effect style atama (Rule 18) |
+| `node.textStyleId = x` | `await node.setTextStyleIdAsync(x)` | Text style atama (Rule 19) |
+| `figma.listAvailableFonts()` | `await figma.listAvailableFontsAsync()` | Font listesi |
+| `figma.loadFont({family, style})` | `await figma.loadFontAsync({family, style})` | Font yükle (her zaman) |
+| `figma.variables.getVariableCollectionById(id)` | `await figma.variables.getVariableCollectionByIdAsync(id)` | Collection fetch |
+
+**Hata örneği (gerçek testten):** `"Cannot call with documentAccess: dynamic-page. Use node.getMainComponentAsync instead."`
+
+**Kural:** Figma Plugin API'de Async versiyon varsa **her zaman** onu kullan. Sync versiyonun çağrısı dynamic-page'de hata verir, readonly/minimal mode'da da yavaştır.
+
+23. **Style Import Sessiz Fail Pattern + Font Load Sequence (v1.9.3+, Gerçek Test Bulgusu).** Team library style'ları (text, paint, effect) `importStyleByKeyAsync` ile çağrıldığında **silent fail** olabilir — null döner veya throws, key unpublished/expired ise:
+
+**Gerçek hata örneği:** `fb3591835c86d00580e1f0cea2343d033107dc67` (display text style) → `"Failed to import style by key"`, ardından `"Cannot write to node with unloaded font 'SHBGrotesk Semi Bold'"` (font load edilmemiş çünkü style fail olmuş).
+
+**Zorunlu try-catch + font load sequence:**
+
+```js
+// 1. Style import try-catch ile wrap
+let textStyle = null;
+let styleImportError = null;
+try {
+  textStyle = await figma.importStyleByKeyAsync("fb3591835c86...");
+} catch (e) {
+  styleImportError = e.message;
+}
+
+// 2. Style varsa: set + font load (style içindeki font'u)
+if (textStyle) {
+  await textNode.setTextStyleIdAsync(textStyle.id);
+  // Style'ın kullandığı fontu yükle (style içeriğinden öğreniyoruz)
+  // NOT: textNode.fontName artık style'dan miras — direct load edemeyiz
+  // Bunun yerine: textNode.characters set etmeden önce fontName'i al
+  const fontName = textNode.fontName;  // Figma style'ı uyguladıktan sonra setliyor
+  if (fontName && fontName.family) {
+    try {
+      await figma.loadFontAsync(fontName);
+      textNode.characters = "Örnek metin";
+    } catch (fontErr) {
+      // Font da yüklenemedi → fallback
+      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+      textNode.fontName = { family: "Inter", style: "Regular" };
+      textNode.characters = "Örnek metin (font fallback)";
+    }
+  }
+} else {
+  // 3. Style fail → Fallback: default font + hardcoded boyut (son çare)
+  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  textNode.fontName = { family: "Inter", style: "Regular" };
+  textNode.fontSize = 14;
+  textNode.characters = "Örnek metin";
+  // Kullanıcıya raporla: "Style X import edilemedi (reason: ...), Inter 14pt ile çalışıyor"
+  console.warn(`Style import failed: ${styleImportError}`);
+}
+```
+
+**Önemli noktalar:**
+- Style import her zaman **try-catch** ile wrap edilmeli
+- Style başarılıysa → `setTextStyleIdAsync` → sonra font yüklemesi (style'dan gelen font)
+- Style fail ise → default font (Inter Regular) → fontSize hardcoded (son çare, kullanıcıya bildir)
+- `characters = "..."` **her zaman** font load'dan SONRA set edilmeli
+
+24. **Component Discovery Fallback — Instance Scan Boşsa (v1.9.3+, Gerçek Test Bulgusu).** `figma_search_assets` **mevcut instance node'larını** tarayarak library component'lerini bulur. File'da hiç instance yoksa boş sonuç. **Gerçek test:** İlk aramada "No library components found via instance scan" hatası alındı.
+
+**Manuel discovery pattern (figma_execute içinde):**
+
+```js
+// Tüm remote component'leri keşfet (instance scan bağımsız)
+const allInstances = figma.currentPage.findAll(function(n) { return n.type === "INSTANCE"; });
+const componentMap = new Map();
+
+for (const inst of allInstances) {
+  const main = await inst.getMainComponentAsync();
+  if (main && main.remote && main.key) {
+    if (!componentMap.has(main.name)) {
+      componentMap.set(main.name, {
+        name: main.name,
+        key: main.key,
+        id: main.id,
+        libraryName: main.remote ? "remote" : "local"
+      });
+    }
+  }
+}
+
+return Array.from(componentMap.values());
+```
+
+**Sonuç:** Bu pattern gerçek testte 143 unique remote component keşfetti. `figma_search_assets`'in bulamadığı component'leri manuel tarama ile yakalar.
+
+**Sınırlama:** File'da hiç instance yoksa (taze boş file) bu da boş sonuç verir. O durumda kullanıcıdan "kütüphane kullanan bir örnek file'ı açın veya bir component'i manuel yerleştirin" istenir.
+
+**Araç seçim rehberi:**
+- **İlk deneme:** `figma_search_assets(query="...")` — hızlı, cache-friendly
+- **Boş sonuç:** Yukarıdaki manuel discovery ile fallback
+- **Key biliniyor ama tool ile alınamıyor:** `await figma.importComponentByKeyAsync(key)` direkt çağır
 
 ## 7. Hata Kurtarma
 

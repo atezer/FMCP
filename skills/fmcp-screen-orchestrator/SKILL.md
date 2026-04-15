@@ -110,13 +110,33 @@ Kullanıcı cevapladıktan sonra:
    └─ "aynı ekranı X device'a klonla" → clone-to-device
 ```
 
-### DS Fallback Chain
+### DS Fallback Chain (v1.9.3+ Wording Fix)
 
-Her UI öğesi için sırayla dene:
-1. **DS component instance** (`figma_search_assets` → `figma_instantiate_component`)
+Her UI öğesi için sırayla dene. **Adım 3 LEGITIMATE bir fallback'tir** — DS ihlali değildir.
+
+1. **DS component instance** (`figma_search_assets` → `figma_instantiate_component`) — en çok tercih edilen
 2. **DS primitive variant** (Button/Card/Text yakın variant, `setProperties` override)
-3. **Token-bound frame** (`figma_create_frame` + her property `setBoundVariable`)
-4. **HAM SHAPE ASLA** — bu katmana inersen DUR, kullanıcıya gap raporu ver
+3. **Token-bound primitive** (`figma_create_frame` veya `createRectangle` + **tüm** fill/padding/radius/spacing SUI variable'larına `setBoundVariable` / `setBoundVariableForPaint` ile bağlı) — **meşru**, plugin DS violation olarak işaretlemez. Kullanıcıya bildir: "SUI'de X component'i bulunmadı, DS token'larına bağlı primitive ile inşa edildi."
+4. **Hardcoded değerli shape ASLA** — variable binding'siz `createFrame` / `createRectangle` → **gerçek ihlal**, plugin SEVERE `HARDCODED_COLOR`, `HARDCODED_SPACING` violation flag'i verir. Bu katmana inersen DUR, kullanıcıya gap raporu ver.
+
+**Önemli ayrım:** `createFrame` **kendisi** ihlal değil; variable binding'siz fill/padding/radius **ihlal**. Component bulunamadıysa primitive + token binding = doğru yol. Gerçek test (2026-04-15) bu karışıklık sebebiyle false positive DS violation warning üretmişti.
+
+### 🚨 Filesystem MCP Kullanım Direktifi (v1.9.3+)
+
+**Bu skill'i veya alt skill'leri Read ederken kullanılacak tool:**
+
+```
+mcp__fmcp-filesystem__read_text_file(path="/ABSOLUTE/PATH/TO/SKILL.md")
+```
+
+**Otomatik davranış YOK:** Claude Desktop chat'te prompt'ta explicit direktif olmazsa Claude kendi sandbox'ında (`/mnt/skills/`, `/mnt/user-data/`) arar ve başarısız olur. Test raporundan (2026-04-15) gerçek bulgu.
+
+**Path örnekleri:**
+- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/fmcp-screen-orchestrator/SKILL.md`
+- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/fmcp-screen-recipes/SKILL.md`
+- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/figma-canvas-ops/SKILL.md`
+
+**Fallback: Project Knowledge** — Kullanıcı filesystem MCP kurmamışsa, skill dosyalarını Claude Project knowledge'a yüklemiş olmalı. O durumda Claude Project'in arama/okuma mekanizmasını kullanır (otomatik değil, prompt'ta "Project knowledge'daki X'i referans al" denmesi gerekir).
 
 ### Self-Audit Gate (Teslim Öncesi Zorunlu)
 
