@@ -616,20 +616,22 @@ return Array.from(componentMap.values());
 - **Boş sonuç:** Yukarıdaki manuel discovery ile fallback
 - **Key biliniyor ama tool ile alınamıyor:** `await figma.importComponentByKeyAsync(key)` direkt çağır
 
-25. **`figma_validate_screen` Timeout Fallback (v1.9.4+, Gerçek Test #14).** Büyük dosyalarda (Sahifinans Playground gibi 2000+ instance'lı file'larda) `figma_validate_screen` 90 sn default timeout'a düşebilir. Plugin core speed limitation — plugin-side fix gerekir (Part 5 adayı). Bu skill tarafında **3 seviyeli fallback**:
+25. **`figma_validate_screen` Timeout Fallback (v1.9.5+, Gerçek Test #14).** Büyük dosyalarda (Sahifinans Playground gibi 2000+ instance'lı file'larda) `figma_validate_screen` 90 sn default timeout'a düşebilir. Plugin core speed limitation — plugin-side fix gerekir (Part 5 Kategori B adayı). Bu skill tarafında **3 seviyeli fallback, hızlı timeout politikası**:
 
-**Seviye 1 — Timeout artır:**
-```
-figma_validate_screen(nodeId, minScore=80, timeout=180000)  // 3 dakika
-```
-Default timeout yetmezse explicit `180000ms` (3 dk) ver.
+**Timeout politikası gerekçesi (FP-1-R-v2 revizyonu):** Önceki versiyon (v1.9.4) Seviye 1'de 180s, Seviye 2'de 120s kullanıyordu — ama gerçek test (FP-1-R-v2 2026-04-15) gösterdi ki büyük dosyada ne 90s ne de 180s yeter, ikisi de aynı şekilde timeout'a düşer. Uzun timeout sadece kullanıcıyı **sessiz 3+ dakika** bekletir. Yeni politika: her iki seviyede `60000ms` (1 dk) — fail olacaksa hızlıca fail et, Seviye 3 manuel checklist'e daha çabuk geç. Toplam bekleme ~3 dk yerine ~2 dk.
 
-**Seviye 2 — Scope daralt:**
+**Seviye 1 — Full frame, kısa timeout:**
+```
+figma_validate_screen(nodeId, minScore=80, timeout=60000)  // 1 dakika
+```
+Default 90s yetmiyor bilindiği için explicit `60000ms` ver. Başaracaksa zaten bu süre içinde döner; başaramayacaksa uzun beklemenin anlamı yok, hızlıca Seviye 2'ye düş.
+
+**Seviye 2 — Scope daralt, aynı kısa timeout:**
 Eğer Seviye 1 de timeout'a düşerse, wrapper frame yerine **sadece tek bir section'ı** validate et:
 ```
-figma_validate_screen(contentBodyWrapperId, minScore=70, timeout=120000)
+figma_validate_screen(contentBodyWrapperId, minScore=70, timeout=60000)
 ```
-Content Body wrapper (fmcp-screen-recipes Adım 5.5'teki iç frame) daha küçük node tree → hızlı validate. `minScore`'u 80'den 70'e düşür (daha az strict, timeout'a giden büyük dosyada %100 görünmeyen violation'lar olabilir).
+Content Body wrapper (fmcp-screen-recipes Adım 5.5'teki iç frame) daha küçük node tree → genelde hızlı validate. `minScore`'u 80'den 70'e düşür (daha az strict, timeout'a giden büyük dosyada %100 görünmeyen violation'lar olabilir). Timeout yine 1 dk — Content Body bile yetişmiyorsa dosya tarafında daha derin bir sorun var demektir, Seviye 3'e in.
 
 **Seviye 3 — Manuel QA Checklist Fallback:**
 Eğer Seviye 2 de timeout'a düşerse, `figma_validate_screen` skorunun **yerine** kullanıcıya manuel göz kontrolü için Türkçe checklist üret:

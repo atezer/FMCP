@@ -157,6 +157,137 @@ return { tokenMap, spacingCollKey: spacingColl.key };
 
 **Micro-report:** `✅ Token Resolution: <N> token resolved (spacing-none=0, spacing-100=16, ...)`
 
+### Adım 1.6 — Text Style Resolution Verification (YENİ v1.9.5+, Gerçek Test FP-1-R-v2 #10)
+
+**Amaç:** Recipe başlamadan önce dosyadaki **mevcut (çalışan) text style'ları** tara, unique style ID'leri topla, role mapping üret. Sonraki Adım 7 her text rolü için bu `roleMap`'i **referans alır** — `importStyleByKeyAsync` fail'ine düşmeden `setTextStyleIdAsync(id)` ile direkt bağlar.
+
+**Neden:** Gerçek test FP-1-R-v2 (2026-04-15) — `importStyleByKeyAsync("774cf1886...")` "Failed to import style by key" hatası verdi, ama dosyadaki SUI instance'larının (NavigationTopBar, Button vs.) içindeki text node'lar zaten `getStyleByIdAsync` ile erişilebilir çalışan style'lara sahipti (5 style: `section-title`, `body-semibold`, `body-small`, `body-small-semibold`, `body-bold`). Claude canlı keşif yaptı ama **sistemik kullanmadı** — her text node için ayrı discovery + rebind turu → **7 ek figma_execute** harcandı (27 vs hedef 20). Bu adım sistemik yapar, keşfi Adım 1.5 `tokenMap` gibi tek execute'ta tamamlar.
+
+```js
+// figma_execute (tek call, 5-8 op — Rule 5a CHUNKING'e uyumlu)
+
+// 1. Tüm text node'ları tara, unique style ID'leri topla
+const allTexts = figma.currentPage.findAll(n => n.type === "TEXT");
+const uniqueStyleIds = new Set();
+for (const t of allTexts) {
+  if (t.textStyleId && typeof t.textStyleId === 'string') {
+    uniqueStyleIds.add(t.textStyleId);
+  }
+}
+
+// 2. Her unique style için metadata oku
+const styleMap = {};
+for (const id of uniqueStyleIds) {
+  try {
+    const style = await figma.getStyleByIdAsync(id);
+    if (style) {
+      styleMap[style.id] = {
+        id: style.id,
+        name: style.name,         // örn. "global/surface/body-semibold"
+        fontSize: style.fontSize || null,
+        fontName: style.fontName || null
+      };
+    }
+  } catch(e) {
+    // Silent skip — bozuk style ID varsa atla
+  }
+}
+
+// 3. Role mapping — recipe text rolleri için en yakın style'ı seç
+// Keyword match: role → style name substring (case-insensitive)
+const roleKeywords = {
+  display:   ["display", "hero", "amount", "title-xl"],
+  title:     ["section-title", "title", "heading", "h1", "h2"],
+  subtitle:  ["subtitle", "body-semibold", "body-bold"],
+  body:      ["body-medium", "body-regular", "body"],
+  caption:   ["small", "caption", "footnote"],
+  button:    ["button"]
+};
+
+function findStyleByKeywords(kws) {
+  // Öncelik: ilk isim substring eşleşmesi (sıraya göre)
+  for (const kw of kws) {
+    const match = Object.values(styleMap).find(s => {
+      const n = (s.name || "").toLowerCase();
+      return n.includes(kw.toLowerCase());
+    });
+    if (match) return match;
+  }
+  return null;
+}
+
+const roleMap = {};
+for (const [role, kws] of Object.entries(roleKeywords)) {
+  const match = findStyleByKeywords(kws);
+  if (match) {
+    roleMap[role] = { id: match.id, name: match.name, fontSize: match.fontSize };
+  }
+}
+
+// Display için özel fallback — bulunamazsa en büyük fontSize'lı style'ı kullan
+if (!roleMap.display) {
+  const sorted = Object.values(styleMap)
+    .filter(s => s.fontSize)
+    .sort((a, b) => b.fontSize - a.fontSize);
+  if (sorted.length > 0) {
+    roleMap.display = {
+      id: sorted[0].id,
+      name: sorted[0].name,
+      fontSize: sorted[0].fontSize,
+      note: "display yok, en büyük mevcut style fallback"
+    };
+  }
+}
+
+return {
+  totalStyles: Object.keys(styleMap).length,
+  styleMap,
+  roleMap
+};
+```
+
+**Beklenen çıktı (FP-1-R-v2 keşfinden):**
+```json
+{
+  "totalStyles": 5,
+  "styleMap": {
+    "S:xxx1": { "name": "global/surface/section-title", "fontSize": 18 },
+    "S:xxx2": { "name": "global/surface/body-semibold", "fontSize": 14 },
+    "S:xxx3": { "name": "global/surface/body-small", "fontSize": 12 },
+    "S:xxx4": { "name": "global/surface/body-small-semibold", "fontSize": 12 },
+    "S:xxx5": { "name": "global/surface/body-bold", "fontSize": 14 }
+  },
+  "roleMap": {
+    "display":  { "name": "global/surface/section-title", "fontSize": 18, "note": "display yok, en büyük mevcut style fallback" },
+    "title":    { "name": "global/surface/section-title", "fontSize": 18 },
+    "subtitle": { "name": "global/surface/body-semibold", "fontSize": 14 },
+    "body":     { "name": "global/surface/body-small", "fontSize": 12 },
+    "caption":  { "name": "global/surface/body-small", "fontSize": 12 }
+  }
+}
+```
+
+**Adım 7 placement bu map'i kullanır — kritik kural:**
+
+- `importStyleByKeyAsync(key)` **ÇAĞIRMA** — FP-1-R-v2'de fail etti, zaman kaybı.
+- Yerine: `await textNode.setTextStyleIdAsync(roleMap[role].id)` → direkt bağla.
+- Style ID **tam form** (`S:xxx...`) olmalı, kısa form değil — `getStyleByIdAsync` return'ü zaten full ID verir.
+- Display rolü için `roleMap.display` mevcutsa o style ile bağla, **fontSize override ETME** (Rule 19 yasak). Büyüklük için `characters` field'ında büyük metin yaz ("₺2.450,00"). Okunurluk stil seçimiyle gelir, hardcoded fontSize ile DEĞİL.
+
+**Known Limitation #7 Workaround Revizesi (v1.9.5):**
+- Eski (v1.9.4 Part 4): "display fail → `body-semibold + hardcoded fontSize=36` kabul, minimum violation"
+- Yeni (v1.9.5 Part 5): "display fail → `roleMap.display` (en büyük mevcut style fallback) + `characters` ile büyük metin → HARDCODED_FONT_SIZE **sıfır**, Rule 19 ihlali yok"
+
+**Dosyada hiç text instance yoksa (boş file):**
+- `findAll(TEXT)` boş döner → `styleMap` boş
+- `roleMap` tüm roller için `null`
+- Fallback: `figma_search_assets({query: "text style"})` VEYA `generate-figma-screen` full workflow'u
+- Bu nadiren Fast Path tetiklendiğinde olur çünkü DS GATE zaten `active-ds.md ✅ Aktif` gerektiriyor ve DS instance'lar dosyada bekleniyor.
+
+**Atomic operations:** 1 (findAll) + 1 (Set dedup) + N (`getStyleByIdAsync` × unique count, genelde 3-6 style) + role mapping (CPU-only) = ~5-8 op. Rule 5a sınırında — `getStyleByIdAsync` çağrıları her style için 1 async round-trip, 8'den fazla unique style beklenirse execute'u ikiye böl (tarama + metadata ayrı).
+
+**Micro-report:** `✅ Text Style Resolution: <N> style resolved, <M> role eşleştirildi (display→<name>, title→<name>, body→<name>, caption→<name>)`
+
 ### Adım 2 — Wrapper Frame + Background (Edge-to-Edge, v1.9.4+)
 
 **Amaç:** Ana frame'i Figma native device preset boyutunda oluştur, background'u DS variable'a bağla, **edge-to-edge yapı için padding=0 + gap=0** kuruluşu hemen burada yap.
@@ -473,11 +604,36 @@ for (let i = 0; i < recipe.components.length; i++) {
   //   4. parent = await figma.getNodeByIdAsync(parentId)
   //   5. parent.appendChild(child)  ← ÖNCE (Rule 11)
   //   6. child.layoutSizingHorizontal = "FILL"  ← SONRA
+  //   7. Text node'lar varsa: setTextStyleIdAsync(roleMap[role].id)
+  //      — Adım 1.6'da hazırlanan roleMap'ten direkt bağla,
+  //        importStyleByKeyAsync ASLA çağırma.
 
   // Micro-report: "✅ <spec.name> eklendi (parent: <Ana Frame|Content Body>)"
   //            or "⚠️ <spec.name> eksik, primitive fallback"
 }
 ```
+
+**🚨 Text Style Binding Kuralı (v1.9.5+, Fix J zorunlu):**
+
+Component içindeki her text node için:
+1. Recipe spec'indeki text role'üne göre `roleMap[role].id` oku (Adım 1.6'dan geldi)
+2. `await textNode.setTextStyleIdAsync(roleMap[role].id)` — DİREKT bağla
+3. `importStyleByKeyAsync(key)` **ASLA** çağırma — FP-1-R-v2'de fail etti, zaman kaybı
+4. `textNode.fontSize = X` **ASLA** set etme (Rule 19 yasak, HARDCODED_FONT_SIZE violation)
+5. Büyük metin gerekiyorsa (örn. Amount Display): `characters` field'ında büyük string ("₺2.450,00"), style değişmez
+
+**Text rolü → recipe mapping (öneri):**
+- Amount Display / Hero text → `roleMap.display`
+- Section Header → `roleMap.title`
+- Card Title → `roleMap.subtitle`
+- Card Subtitle / Body → `roleMap.body`
+- Small / Caption / Security Info → `roleMap.caption`
+- Button label → `roleMap.button` (yoksa subtitle'a düş)
+
+**Text rolü `roleMap`'te yoksa:**
+- En yakın fontSize'lı style'ı kullan (fallback: `roleMap.body` veya `roleMap.caption`)
+- Kullanıcıya bildir: `⚠️ Text style '<role>' bulunamadı, <fallback> kullanıldı`
+- HARDCODED_FONT_SIZE hâlâ sıfır olmalı.
 
 **Atomic operations:** 3-5 per component (importComponent, createInstance, setProperties, appendChild, layoutSizing).
 

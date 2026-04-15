@@ -254,6 +254,32 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 
 **SUI-side roadmap:** SUI library'sine `display` / `heading-large` text style yayınlanması (DS team işi, FCM scope dışı). FCM rapor kanalı üzerinden SUI ekibine iletilecek.
 
+**v1.9.5 Fix J revizesi:** `skills/fmcp-screen-recipes/SKILL.md` Adım 1.6 Text Style Resolution Verification eklendi. Recipe başında dosyadaki çalışan text style'lar taranıyor, `roleMap` üretiliyor, display rolü için en büyük mevcut style fallback'i kullanılıyor. Amount Display artık `section-title` (18px) + `characters` field'ında büyük metin ile render ediliyor — **HARDCODED_FONT_SIZE sıfır**, Rule 19 ihlali yok. SUI'nin display style publish'i gelene kadar bu workaround yeterli.
+
+### 8. `figma_capture_screenshot` Empty Object on Large Files
+
+**Durum:** Plugin veya MCP transport-side, YENİ bulgu (FP-1-R-v2 2026-04-15). Part 5 Kategori B adayı. Henüz root cause kesin değil.
+
+**Açıklama:** Sahifinans Playground (2000+ instance'lı file) üzerinde `figma_capture_screenshot` çağrıları ara ara `{}` empty object dönüyor — hata yok, image content yok, sadece boş obje. FP-1-R-v2 gözlemleri:
+
+1. **Referans node screenshot'ı (benchmark için)** → empty object
+2. **Node-id format çevirisi** (`135-6499` → `135:6499`) Claude tarafında manuel yapıldı, tool internal çevirisi belki eksik
+3. Test final QA aşamasında (üretilen Light/Dark frame screenshot'ı) → empty object
+4. Claude workaround: `figma_get_file_data` + `figma_get_component_for_development` ile yapı/metadata üzerinden ilerledi → recipe akışı kesilmedi ama **görsel QA manuel oldu**
+
+**Olası root cause'lar (Part 5 teşhis adayları):**
+- Plugin `exportAsync` büyük dosyada boş/truncated buffer dönüyor olabilir
+- MCP transport image content payload'unu Claude Desktop'a düzgün iletmiyor olabilir (sürüm bağımlı)
+- `scanOtherPorts` WebSocket flood'u (Known Limitation #5) screenshot request'ini düşürüyor olabilir (race condition)
+- Node-id format mismatch: plugin `:` bekliyor, tool'a `-` gelmiş olabilir (Claude manuel çevirdi ama tool internal çevirmemiş olabilir)
+
+**Skill-side mitigation:** Yok — transport/plugin sorunu. Şimdilik görsel QA için şu sırayı dene:
+1. `figma_capture_screenshot` çağır
+2. `{}` dönerse → `figma_get_component_for_development(nodeId)` dene (bu da screenshot + metadata döndüren alternatif)
+3. O da empty ise → `figma_get_file_data(depth=2, verbosity="summary")` ile yapı üzerinden ilerle, kullanıcıya "Figma Desktop'ta manuel göz kontrolü" öner
+
+**Çözüm roadmap (Part 5 Kategori B):** Plugin kodu `figma_capture_screenshot` implementation'ı read-only incelensin, empty return path'leri bulunsun. Başka file'larda test edilsin (Sahifinans spesifik mi, genel mi). Plugin fix veya transport fix uygulansın.
+
 ---
 
 Bu limitations listesi ileride Part 3 milestone planlanırken kaynak olarak kullanılır.
