@@ -47,6 +47,14 @@ Kullanıcı talebini oku. Anahtar kelimeleri tara:
 | "accessibility", "a11y", "WCAG", "contrast check" | `figma-a11y-audit` |
 | "drift", "kod/tasarım sapması", "out of sync" | `design-drift-detector` |
 | "UX copy", "microcopy", "buton metni", "empty state" | `ux-copy-guidance` |
+| "bu görselden ilham al", "şu resim gibi", "link'teki tasarımdan", "dribbble/behance", "benchmark'tan varyasyon" | `inspiration-intake` → `generate-figma-screen` |
+
+**Not (v1.8.3+):** `inspiration-intake` bir **ön-işleme** skill'idir. Kullanıcı bir Figma benchmark linki, internet görsel linki veya sohbete yüklenmiş görsel ile gelirse önce bu skill çalıştırılır (structural_intent JSON üretir, DEĞER çıkarmaz), sonra çıktısı `generate-figma-screen`'in `reference_benchmark` parametresine beslenir. v1.8.2 build-from-scratch kuralı ile tam uyumludur — clone değil, inspiration.
+
+Mode tespiti:
+- Figma URL pattern (`figma.com/file/...?node-id=`) → `inspiration-intake` (source_type: figma_url)
+- Dribbble/Behance/genel HTTP URL → `inspiration-intake` (source_type: image_url, WebFetch fallback'li)
+- Kullanıcı mesajında görsel attachment → `inspiration-intake` (source_type: image_uploaded)
 
 ### Adım 2 — State Files Check
 
