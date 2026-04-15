@@ -687,7 +687,18 @@ export async function main() {
 		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale, jpegQuality }: { figmaUrl?: string; fileKey?: string; nodeId?: string; format: string; scale: number; jpegQuality: number }) => {
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const result = await conn.captureScreenshot(nodeId ?? null, { format, scale, jpegQuality });
-			return toolResult(result, "figma_capture_screenshot");
+			// v1.9.6 Fix M1 — skipGuard: true → truncatePluginResponse'u bypass et.
+			// Gerekçe: screenshot response {success, image: {base64, ...}} şeklinde.
+			// pruneNodeTree screenshot payload'una (node tree değil) uymadığı için
+			// final fallback truncateResponse({maxStringLength: 200}) devreye girip
+			// base64 string'i 200 karaktere kırpıyordu → Claude Desktop `{}` empty
+			// object görüyordu (FP-1-R-v2 Known Limitation #8 root cause).
+			// skipGuard: true ile payload olduğu gibi JSON.stringify edilir, base64
+			// intact kalır. Claude image render etmez (text content block) ama
+			// base64 string'i görür, kullanabilir, böylece empty object problemi
+			// çözülür. Image content block upgrade'i (MCP image type) Part 5
+			// sonraki adımı — safeToolHandler generic refactor'u gerektirir.
+			return toolResult(result, "figma_capture_screenshot", { skipGuard: true });
 		})
 	);
 

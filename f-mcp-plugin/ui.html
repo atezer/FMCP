@@ -1487,10 +1487,26 @@
                 status: 'ready'
               });
               mcpActivePort = mcpConnectedPort;
-              // Adım 4: Ana bağlantı hazır — diğer portları da tara (ilk + periyodik)
+              // Adım 4: Ana bağlantı hazır — diğer portları da tara (ilk + sınırlı periyodik)
+              // v1.9.6: Flood azaltma — interval 10s → 60s, maksimum 5 tarama sonrası dur.
+              // Gerekçe: Önceki davranış her 10s'de 15 başarısız WebSocket denemesi yapıyordu
+              // (dakikada ~90 console error). 137 dk'lık oturumda 12000+ teorik error birikimi.
+              // Yeni davranış: ilk 500ms + sonraki 5 dk'da dakikada 1 scan → toplam 6 scan,
+              // sonra otomatik dur. Yeni client sonradan bağlanırsa onConnect event'i ile yeniden
+              // tetiklenir (connectToExtraPort başarılı olursa mcpConnections güncellenir).
               setTimeout(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 500);
               if (!extraPortScanTimer) {
-                extraPortScanTimer = setInterval(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 10000);
+                var scanCount = 0;
+                var MAX_SCANS = 5;  // 5 × 60s = 5 dk boyunca periyodik tarama, sonra dur
+                extraPortScanTimer = setInterval(function() {
+                  scanCount++;
+                  if (scanCount > MAX_SCANS) {
+                    clearInterval(extraPortScanTimer);
+                    extraPortScanTimer = null;
+                    return;
+                  }
+                  if (typeof scanOtherPorts === 'function') scanOtherPorts();
+                }, 60000);  // v1.9.6: 10000 → 60000 (dakikada 1 scan)
               }
               return;
             }
