@@ -665,6 +665,56 @@ Estetik yön belirlendiyse (Step 2.5), bölüm inşa sırasında şu detaylar ek
 
 > **NOT:** Bu öneriler DS bileşen kütüphanesi varsa DS'nin izin verdiği ölçüde uygulanır. DS token'ları dışında hardcoded değer eklenmez.
 
+### Step 5.6: Dark Mode / Theme Variants Workflow (ZORUNLU — v1.9.0+)
+
+Intent router `variants` input'unda "Light + Dark mode" seçildiyse (veya kullanıcı açıkça dark+light istiyorsa), Step 6'ya geçmeden önce bu alt adımı uygula.
+
+**Ön koşul:** DS'de theme modlar tanımlı bir variable collection var. SUI için tipik: `Colors` collection + `Light` mode + `Dark` mode.
+
+**Akış (4 adım):**
+
+1. **Light ekranı doğrula (Step 5 sonu):** Wrapper frame ID'sini al. Tüm fill/stroke/background'lar `setBoundVariableForPaint` ile bağlı olmalı (Step 5.17 Quality Gate zaten sağladı). Eğer hardcoded değer varsa Step 5'e dön, düzelt.
+
+2. **Klon oluştur:**
+```javascript
+// figma_execute
+const lightFrame = await figma.getNodeByIdAsync("<wrapper_id>");
+const darkFrame = lightFrame.clone();
+figma.currentPage.appendChild(darkFrame);
+darkFrame.x = lightFrame.x + lightFrame.width + 80;  // sağda, 80px boşluk
+darkFrame.name = lightFrame.name + " — Dark";
+return { darkFrameId: darkFrame.id };
+```
+
+3. **Dark mode'u klon frame'e uygula:**
+```javascript
+// figma_execute (ayrı çağrı)
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const colorCol = collections.find(c => c.name === "Colors" || c.name.toLowerCase().includes("color"));
+if (!colorCol) throw new Error("Theme collection bulunamadı — DS'de mode tanımlı değil");
+const darkMode = colorCol.modes.find(m => m.name.toLowerCase().includes("dark"));
+if (!darkMode) throw new Error("Dark mode bulunamadı — DS tek modlu");
+
+const darkFrame = await figma.getNodeByIdAsync("<darkFrameId>");
+darkFrame.setExplicitVariableModeForCollection(colorCol, darkMode.modeId);
+return { status: "dark mode applied", mode: darkMode.name };
+```
+
+   **Sihir burada:** `setExplicitVariableModeForCollection` ile tüm bound variable'lar otomatik olarak dark mode değerleri kullanır. Manuel swap gerekmez — tek bir API çağrısı tüm renkleri günceller. **Bu yüzden Step 5.17'de her fill/stroke mutlaka variable'a bağlı olmalı** — hardcoded kalanlar dark mode'da güncellenmez, light rengini taşır.
+
+4. **Her iki frame'i ayrı validate et:**
+```javascript
+figma_validate_screen(nodeId: <lightFrameId>, minScore: 80)
+figma_validate_screen(nodeId: <darkFrameId>, minScore: 80)
+```
+   İkisi de ≥80 olmalı. Biri fail ederse hardcoded değerler kaldı demektir — Step 5.17 Quality Gate'e dön.
+
+**Edge case:** DS'de dark mode yoksa (sadece light), `variants: "Light + Dark"` seçimi kullanıcıya hata raporla: "Aktif DS'de dark mode tanımlı değil, sadece light üretildi. Dark mode için DS'nin `Colors` collection'ında `Dark` modu eklenmelidir."
+
+**Responsive + theme kombinasyonu:** `variants: ["Light + Dark", "Mobile + Web"]` seçilirse matris oluşur (Light+Mobile / Light+Web / Dark+Mobile / Dark+Web = 4 frame). Her biri için ayrı wrapper, ayrı mode/device binding, ayrı validate. Turn budget'e dikkat — 4 frame için 4 turn harca (inter-screen checkpoint gate Step 6.6).
+
+**Known limitation:** `figma_validate_screen` skorlama algoritması **dark mode variable binding coverage'ını ayrıca ölçmez** (plugin-side: f-mcp-plugin/code.js). Dark frame'de hardcoded renk kalmış olsa bile skor ≥80 alabilir. Bu yüzden Step 5.17 Quality Gate ve Step 5.6 adım 4'teki manuel binding kontrolü zorunludur — scora tek başına güvenme.
+
 ### Step 6: Görsel Doğrulama
 
 ```

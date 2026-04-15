@@ -122,6 +122,47 @@ figma_validate_screen(nodeId=<wrapper_id>, minScore=80)
 
 Common case'de bu bölüm OKUNMAZ. Claude Essentials'ta kararı verdikten sonra doğrudan sub-skill'e geçer.
 
+### Detay 1.0 — Inspiration Handoff Contract (KRİTİK — v1.9.0+)
+
+`inspiration-intake` skill'inin çıktısı `structural_intent_json` formatındadır:
+```json
+{
+  "layout_direction": "vertical|horizontal|grid",
+  "sections": [
+    { "role": "hero|nav|list|cta|...", "child_type_hints": [...] }
+  ],
+  "hierarchy_notes": "...",
+  "spacing_intent": "dense|airy|standard"
+}
+```
+
+`generate-figma-screen` skill'inin `required_inputs.reference_benchmark` parametresi ise `node_id_or_none` tipinde — yani **bir Figma nodeId bekler, JSON değil**. Doğrudan handoff yapılamaz (tip uyuşmazlığı).
+
+**Doğru handoff protokolü:**
+
+1. `inspiration-intake` çalıştıktan sonra `structural_intent_json`'u orchestrator context'inde tut
+2. `generate-figma-screen`'i çağırırken required_inputs'a şöyle yedir:
+   - `reference_benchmark`: `"none"` (literal string, Figma nodeId yok — görsel veya benchmark link'inden geldik)
+   - `variants`: kullanıcının istediği varyantlar
+   - `device`: kullanıcının belirttiği veya router'dan gelen cihaz
+   - `design_direction`: aşağıda nasıl oluşturulacağı
+3. **Structural hints'i prompt-level context olarak ekle** (ayrı bir required_input değil, Claude'un ana prompt bağlamına ilave):
+   ```
+   Structural intent (layout ipuçları, DEĞER ASLA):
+   - Layout direction: <layout_direction>
+   - Sections (sırayla): <sections summary>
+   - Hierarchy: <hierarchy_notes>
+   - Spacing intent: <spacing_intent>
+   
+   Bu ipuçları yalnızca layout/hiyerarşi içindir. Tüm renk/font/spacing DEĞERLERİ
+   active-ds'ten gelir — structural_intent'ten ASLA pixel/color/font alınmaz.
+   ```
+4. `generate-figma-screen` Step 2 "screen understanding" bu hint bloğunu okur, section listesini ve hierarchy_notes'u layout kararlarına katar. Step 2.5 aesthetic direction `design_direction` parametresinden + active-ds'ten gelir.
+
+**Önemli:** `design_direction` parametresini orchestrator kendisi **doldurmaz** — ya kullanıcıdan açıkça alır ya da brand profile'dan / DS default'tan üretir. Structural intent'ten "airy" gibi bir ipucu varsa design_direction'a **yorum olarak** eklenebilir ama değer olarak değil (örn. `design_direction: "minimal, bolca boşluk (structural intent: airy)"`).
+
+**Özet:** Handoff script-level'da değil, prompt-level'da yapılır. `reference_benchmark` parametresi nodeId için ayrılmış, JSON handoff ayrı kanaldan (context injection) geçer.
+
 ### Detay 1 — Intake Mode Router (Genişletilmiş)
 
 ```

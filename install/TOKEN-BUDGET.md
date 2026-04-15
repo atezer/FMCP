@@ -160,3 +160,58 @@ Project knowledge referans akışı. Desktop'ta detaylı telemetri yok, kaba gö
 Cross-platform kapsama Part 2'nin asıl değeridir. %29 token azalması ek bonus, ama ana motivasyon 4 platformun desteklenmesi. Verification manuel testler tamamlandıkça bu dosya güncel rakamlarla zenginleşir.
 
 Gelecekte %75+ hedefi için sub-skill compaction (Part 3) düşünülebilir, ama **gerekli olduğu kanıtlanana kadar** scope'a alınmadı.
+
+---
+
+## Known Limitations (Bilinen Kısıtlamalar)
+
+Aşağıdaki kısıtlamalar Part 2 kapsamında kabul edildi — ya scope dışıydı, ya plugin-side refactor gerektiriyordu, ya da ileriye taşındı.
+
+### 1. `figma_validate_screen` Dark Mode Variable Binding Coverage'ı Ölçmüyor
+
+**Durum:** Plugin-side limitation (`f-mcp-plugin/code.js`).
+
+**Açıklama:** `figma_validate_screen` tool'u 3 boyutlu score üretiyor:
+- Instance coverage %40 (library component kullanımı)
+- Token binding coverage %30 (bound variables sayısı)
+- Auto-layout coverage %30 (layoutMode != NONE)
+
+Bu üç boyut **sadece mevcut mod** için ölçülüyor. Yani:
+- Light ekran: tüm fill'ler variable'a bağlı → token binding %100
+- Dark ekran (klon): bazı fill'ler hardcoded kalmış olsa bile → token binding hâlâ yüksek görünebilir (çünkü klon kaynak ekran olan light'tan kalıtır, "binding oldu" bilgisi kopyalanır ama **değer** dark mode'da çözülür)
+
+**Pratik sonuç:** Step 5.17 Quality Gate her fill'i binding'e zorlar. Eğer bu gate geçiliyorsa dark mode otomatik çalışır (çünkü `setExplicitVariableModeForCollection` tüm bound fill'leri dark değerleriyle değiştirir). Ama Quality Gate aşılmışsa veya manuel bir hardcoded fill kalmışsa validate_screen bunu yakalamaz.
+
+**Mitigation:** `skills/generate-figma-screen/SKILL.md:Step 5.6` adım 4'te dark frame için ayrı `figma_validate_screen(minScore=80)` çağrısı zorunlu + manuel göz kontrolü. Scora tek başına güvenme.
+
+**Çözüm roadmap'i (Part 3+ adayı):** `f-mcp-plugin/code.js` içindeki `validateScreen` fonksiyonuna 4. scoring boyutu (dark mode binding coverage) eklenebilir. Algoritma: dark mode'u explicit olarak uygula → tüm fill/stroke değerlerini resolve et → hardcoded (non-bound) sayısını say → oranı hesapla. Ama bu v1.8.x plugin kodunu değiştirir, regression riski yüksek. Şu an scope dışı.
+
+### 2. figma-mcp-bridge Cloud Hosting (Claude Web)
+
+**Durum:** Ertelendi, Part 2 scope dışı.
+
+**Açıklama:** Bridge şu an local `localhost:5454` WebSocket. Claude Web browser'dan erişilemez. Claude Web'de `figma_*` tool'ları çalışmıyor — plan-only mod.
+
+**Çözüm roadmap'i:** `install/claude-web/DEFERRED-BRIDGE.md` içinde 3 seçenek detaylandırılmış (ngrok tunnel / Cloudflare Workers / dedicated VPS). Part 3+ adayı.
+
+### 3. %75 Token Optimization Hedefi Ulaşılmadı
+
+**Durum:** Gerçekçi hedef %29 kabul edildi.
+
+**Açıklama:** Part 2 planı başlangıçta %65-75 azalma öngörüyordu ama post-implementation ölçümde %29 olduğu anlaşıldı. Baseline 61K → 43.5K. Kalan ağır yük `generate-figma-screen` (~25K) + `figma-canvas-ops` (~12K) — common case'de ikisi de zorunlu.
+
+**Mitigation:** %29 hâlâ değerli (cross-platform kapsama ana kazanım, token bonus). Kullanıcı kararıyla Faz B (orchestrator split) atlandı.
+
+**Çözüm roadmap'i (Part 3+ adayı):** `generate-figma-screen` ve `figma-canvas-ops` skill'lerinin kendilerinin Essentials/Advanced formatına refactor'u. Lazy-load sub-sections. Regression riski orta.
+
+### 4. Validate Score Responsive Mode Coverage'ı Ölçmüyor
+
+**Durum:** Plugin-side, benzer Known Limitation #1.
+
+**Açıklama:** Responsive frame'ler (mobile / tablet / web) için ayrı `figma_validate_screen` çağrıları yapılır. Her biri kendi modunda değerlendirilir. Ama "aynı bound variable farklı device mode'unda doğru resolve oluyor mu" kontrolü yok — manuel göz bakışı gerekir.
+
+**Mitigation:** Step 5.6'daki "her frame için ayrı validate" kuralı + Step 6'daki "her frame için screenshot + kullanıcı onayı".
+
+---
+
+Bu limitations listesi ileride Part 3 milestone planlanırken kaynak olarak kullanılır.
