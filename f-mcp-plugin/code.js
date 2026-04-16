@@ -1095,19 +1095,22 @@ figma.ui.onmessage = async (msg) => {
           height: node.height
         };
 
-        // Get property definitions for non-variant components
+        // Get property definitions for non-variant components (capped at MAX_PROPERTIES)
         if (!isPartOfSet && node.componentPropertyDefinitions) {
           data.properties = [];
           var propDefs = node.componentPropertyDefinitions;
-          for (var propName in propDefs) {
-            if (propDefs.hasOwnProperty(propName)) {
-              var propDef = propDefs[propName];
-              data.properties.push({
-                name: propName,
-                type: propDef.type,
-                defaultValue: propDef.defaultValue
-              });
-            }
+          var propDefKeys = Object.keys(propDefs);
+          if (propDefKeys.length > MAX_PROPERTIES) {
+            propDefKeys = propDefKeys.slice(0, MAX_PROPERTIES);
+          }
+          for (var pi = 0; pi < propDefKeys.length; pi++) {
+            var propName = propDefKeys[pi];
+            var propDef = propDefs[propName];
+            data.properties.push({
+              name: propName,
+              type: propDef.type,
+              defaultValue: propDef.defaultValue
+            });
           }
         }
 
@@ -1115,13 +1118,16 @@ figma.ui.onmessage = async (msg) => {
       }
 
       // Helper to extract component set data with all variants
+      var MAX_VARIANTS = 50;
       function extractComponentSetData(node) {
         var variantAxes = {};
         var variants = [];
+        var totalChildCount = node.children ? node.children.length : 0;
 
-        // Parse variant properties from children names
-        if (node.children) {
-          node.children.forEach(function(child) {
+        // Parse variant properties from children names (capped at MAX_VARIANTS to prevent bridge timeout)
+        var processChildren = (totalChildCount <= MAX_VARIANTS) ? node.children : (node.children ? node.children.slice(0, MAX_VARIANTS) : []);
+        if (processChildren) {
+          processChildren.forEach(function(child) {
             if (child.type === 'COMPONENT') {
               // Parse variant name (e.g., "Size=md, State=default")
               var variantProps = {};
@@ -1167,6 +1173,21 @@ figma.ui.onmessage = async (msg) => {
           }
         }
 
+        var MAX_PROPERTIES = 100;
+        var propList = [];
+        if (node.componentPropertyDefinitions) {
+          var allPropKeys = Object.keys(node.componentPropertyDefinitions);
+          var propKeys = allPropKeys.length <= MAX_PROPERTIES ? allPropKeys : allPropKeys.slice(0, MAX_PROPERTIES);
+          propList = propKeys.map(function(propName) {
+            var propDef = node.componentPropertyDefinitions[propName];
+            return {
+              name: propName,
+              type: propDef.type,
+              defaultValue: propDef.defaultValue
+            };
+          });
+        }
+
         return {
           key: node.key,
           nodeId: node.id,
@@ -1176,14 +1197,9 @@ figma.ui.onmessage = async (msg) => {
           variantAxes: axes,
           variants: variants,
           defaultVariant: variants.length > 0 ? variants[0] : null,
-          properties: node.componentPropertyDefinitions ? Object.keys(node.componentPropertyDefinitions).map(function(propName) {
-            var propDef = node.componentPropertyDefinitions[propName];
-            return {
-              name: propName,
-              type: propDef.type,
-              defaultValue: propDef.defaultValue
-            };
-          }) : []
+          properties: propList,
+          _totalVariantCount: totalChildCount,
+          _truncated: totalChildCount > MAX_VARIANTS
         };
       }
 

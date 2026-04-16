@@ -460,7 +460,7 @@ export async function main() {
 					isError: true,
 				};
 			}
-			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 120000));
+			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 30000));
 			invalidateCache();
 			// v1.8.1: Structured warnings with SEVERE vs ADVISORY severity
 			const codeWarnings: CodeWarning[] = analyzeCodeForWarnings(code);
