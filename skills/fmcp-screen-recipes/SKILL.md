@@ -75,14 +75,22 @@ MEGA-ADIM 5: Validate + Final Report                     (1-2 validate çağrıs
 
 ### 🚨 3 MUTLAK KURAL (v2.0 — her mega-adımda geçerli)
 
-**KURAL 1 — Fill Bind MUTLAK Zorunluluk:**
-Her `createFrame` / `createRectangle` sonrası fill'i DS renk token'a bağla:
+**KURAL 1 — Fill Bind MUTLAK Zorunluluk (frame + text dahil):**
+Her `createFrame` / `createRectangle` / `createText` sonrası fill'i DS renk token'a bağla:
 ```js
+// Frame/rectangle background fill:
 const paint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } }; // initial, override edilecek
 const bound = figma.variables.setBoundVariableForPaint(paint, 'color', dsColorVar);
 node.fills = [bound];
+
+// TEXT NODE fill (font rengi) — aynı pattern, farklı variable:
+const textPaint = { type: 'SOLID', color: { r: 0, g: 0, b: 0 } };
+const boundText = figma.variables.setBoundVariableForPaint(textPaint, 'color', textColorVar);
+textNode.fills = [boundText];
 ```
-Fill panel'de **variable icon 🎨 GÖRÜNMELI**. Hardcoded hex (000000, ffffff) **YASAK**. Bu kural primitive fallback dahil TÜM node'lar için geçerlidir.
+Fill panel'de **variable icon 🎨 GÖRÜNMELI**. Hardcoded hex (000000, ffffff) **YASAK**.
+Bu kural: frame fill + text fill + primitive fallback dahil **TÜM** node'lar için geçerlidir.
+Text node oluşturup `characters` set ettikten sonra **fill'ini de DS text color token'a bağla** (`Text/primary`, `Text/secondary` vb.).
 
 **KURAL 2 — Variant Seçim: DEFAULT Koru:**
 Component instance oluşturduktan sonra:
@@ -492,33 +500,13 @@ return { frameId: frame.id, width: <width>, height: <height> };
 
 **Micro-report:** `✅ Frame oluşturuldu: <device_preset> (<w>×<h>), edge-to-edge (padding=0, gap=0), background: <DS>/Surface/background level-0`
 
-### Adım 3 — Breakpoint Variable Binding
+### Adım 3 — Breakpoint Variable Binding: ⏭️ DEVRE DIŞI (v2.0.1+)
 
-**Amaç:** `frame.width`'i DS'in Breakpoints/Screen variable'ına bağla (responsive davranış için).
+**DEVRE DIŞI BIRAKILDI.** SUI Breakpoints/Screen token = 375px, iPhone 17 device preset = 402px. Bind yapılınca frame 402→375'e çekiliyor — device preset boyutu bozuluyor. Gerçek test (FP-1-R-v4, 2026-04-16) bu sorunu gözlemledi.
 
-```js
-// figma_execute (tek call, 2-3 op)
-// breakpointKey: Adım 1.5 Execute 1'den gelir (eski breakpointsColKey tanımsız sorunu v1.9.7'de çözüldü)
-const frame = await figma.getNodeByIdAsync(frameId);
+**Kural:** Frame boyutu device preset'ten gelir (`frame.resize(width, height)`), breakpoint variable'a **bind ETME**. Responsive davranış gerekirse kullanıcı explicit istesin.
 
-let screenVar = null;
-try {
-  if (breakpointKey) {
-    screenVar = await figma.variables.importVariableByKeyAsync(breakpointKey);
-  }
-} catch(e) {}
-
-if (screenVar) {
-  frame.setBoundVariable("width", screenVar);
-  return { boundBreakpoint: true };
-} else {
-  return { boundBreakpoint: false, note: "Breakpoint variable bulunamadı, frame fixed width" };
-}
-```
-
-**Atomic operations:** 2-3 (getNodeByIdAsync, importVariableByKeyAsync (breakpointKey — Adım 1.5'ten), setBoundVariable). **Not:** Eski `getVariablesInLibraryCollectionAsync(breakpointsColKey)` kaldırıldı — breakpoint key Adım 1.5'te keşfedildi, burada direkt import + bind.
-
-**Micro-report:** `✅ Breakpoint: <DS>/Breakpoints/Screen bound` VEYA `⚠️ Breakpoint bulunamadı, fixed width devam`
+**Micro-report:** `⏭️ Adım 3: breakpoint bind devre dışı — device preset boyutu korunuyor`
 
 ### Adım 4 — Theme + Size Mode Setup (v1.9.7+ Unified)
 
@@ -878,7 +866,9 @@ Her recipe = component listesi + yerleşim sırası + her component için search
 **Trigger:** ödeme, payment, checkout, satın al
 
 **Components:**
-1. **AppBar** ("Ödeme", back arrow) — `["navigation top", "appbar"]`
+1. **NavigationTopBar** ("Ödeme") — `["navigation top", "appbar"]`
+   **setProperties:** `{ "Title Text": "Ödeme", "Right Controls": false, "Subtitle": false, "Product": "main" }`
+   ⚠️ Right Controls (yıldızlar/X ikonu) KAPALI, Product=main (backend DEĞİL), Subtitle KAPALI
 2. **Amount Display** (büyük, merkez) — `["display large", "hero text", "amount"]`
 3. **Currency Label** — `["body small", "caption"]`
 4. **Payment Method Section Header** — `["section header", "subtitle"]`
@@ -886,6 +876,7 @@ Her recipe = component listesi + yerleşim sırası + her component için search
 6. **Add New Method Button** — `["button secondary", "button outlined"]`
 7. **Divider** — `["divider"]`
 8. **CTA Button** ("Ödemeyi Tamamla") — `["button primary large"]`
+   **setProperties:** `{ "Value": "Ödemeyi Tamamla" }`
 9. **Security Info Text** (lock icon + text) — `["text small", "caption secure"]`
 
 ### Recipe 3: Profile
