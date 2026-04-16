@@ -3,7 +3,7 @@ name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için linear 9-adımlı recipe. Figma native frame presets, SUI native variable modes, chunking built-in (max 8 op/execute), her adımda Türkçe micro-report. Common case'de generate-figma-screen ağır workflow'unu atlayıp %40-50 daha hızlı üretim sağlar.
 metadata:
   mcp-server: user-figma-mcp-bridge
-  version: 1.9.7
+  version: 2.0.0
   priority: 96
   phase: fast-path
   personas:
@@ -59,27 +59,56 @@ Bu koşullarda mevcut `generate-figma-screen` 7-adımlı workflow devreye girer 
 
 ---
 
-## 9-Adımlı Fast Path Akışı (Linear, Chunked)
+## 5 Mega-Adımlı Fast Path Akışı (v2.0 — Hız Odaklı)
 
-**Her adım 1 `figma_execute` çağrısı** — Rule 5a CHUNKING'e tam uyum (max 8 op/execute). Her adım sonrası **tek satır Türkçe micro-report** yazılır.
+**Eski 12-adım yapısı 5 mega-adıma sıkıştırıldı.** Rule 5a v2.0: max **15 op/execute** (gerçek test: 7 op = 88ms, 15 op güvenli). Her mega-adım sonrası **tek satır Türkçe micro-report**.
 
 ```
-ADIM 1:   Pre-Flight Check                (0 figma_execute, sadece validation)
-ADIM 1.5: Unified Pre-Flight Discovery    (2 execute — collection/mode/token keşfi)
-ADIM 1.6: Text Style Resolution           (1 execute — findAll + styleMap + roleMap)
-ADIM 2:   Wrapper Frame + Background      (1 execute, 4-5 op)
-ADIM 3:   Breakpoint Variable Binding     (1 execute, 2-3 op)
-ADIM 4a:  Collection/Mode Enum            (NO-OP — Adım 1.5'te tamamlandı)
-ADIM 4b:  Mode Apply                      (1 execute, 3-5 op)
-ADIM 5:   Auto-Layout Finalization        (no-op veya 1 execute)
-ADIM 5.5: Content Body Wrapper            (1 execute, 5-8 op)
-ADIM 6:   Component Discovery             (1 execute, 1-2 op)
-ADIM 7:   Recipe Component Placement      (HER COMPONENT AYRI EXECUTE — 6-8 execute)
-ADIM 8:   Dark Variant (isteğe bağlı)     (1 execute, 3-4 op)
-ADIM 9:   Validation + Final Report       (2 figma_validate_screen çağrısı)
+MEGA-ADIM 1: Pre-Flight Discovery + Token + Text Style  (1 execute, ~15 op)
+MEGA-ADIM 2: Frame + Structure + Modes                   (1 execute, ~12-14 op)
+MEGA-ADIM 3: Component Placement (toplu, 3-4/execute)    (2-3 execute, ~12-15 op each)
+MEGA-ADIM 4: Dark Variant                                (1 execute, ~4 op)
+MEGA-ADIM 5: Validate + Final Report                     (1-2 validate çağrısı)
 ```
 
-**Toplam execute sayısı:** ~18-20 (component sayısına göre). Her biri hızlı (<150ms plugin-side, alias resolve YOK).
+**Toplam execute sayısı:** ~6-8. **Hedef süre:** ~10-12 dk (eski 30+ dk yerine).
+
+### 🚨 3 MUTLAK KURAL (v2.0 — her mega-adımda geçerli)
+
+**KURAL 1 — Fill Bind MUTLAK Zorunluluk:**
+Her `createFrame` / `createRectangle` sonrası fill'i DS renk token'a bağla:
+```js
+const paint = { type: 'SOLID', color: { r: 1, g: 1, b: 1 } }; // initial, override edilecek
+const bound = figma.variables.setBoundVariableForPaint(paint, 'color', dsColorVar);
+node.fills = [bound];
+```
+Fill panel'de **variable icon 🎨 GÖRÜNMELI**. Hardcoded hex (000000, ffffff) **YASAK**. Bu kural primitive fallback dahil TÜM node'lar için geçerlidir.
+
+**KURAL 2 — Variant Seçim: DEFAULT Koru:**
+Component instance oluşturduktan sonra:
+- `setProperties` ile SADECE recipe'de explicit belirtilen property'leri set et (örn. `Title Text = "Ödeme"`)
+- Diğer TÜM property'leri **DEFAULT** değerinde bırak (`componentPropertyDefinitions.defaultValue`)
+- `Product` → **main** (default, değiştirme)
+- Boolean kontroller (Right Controls, Left Logo vb.) → recipe'de explicit "true/false" yoksa **DEFAULT bırak**
+- NavigationTopBar için ödeme sayfası: `{ "Title Text": "Ödeme" }` — başka override YOK
+
+**KURAL 3 — Token Bind, Alias Resolve ETME:**
+`setBoundVariable(property, importedVariable)` ile bind et. Figma runtime alias chain'i otomatik çözer. `valuesByMode` okuma, `getVariableByIdAsync` traversal **YASAK** (plugin timeout riski).
+
+### ⚠️ MEGA-ADIM UYGULAMA UYARISI (v2.0 — ZORUNLU OKU)
+
+Aşağıdaki eski adımlar (1, 1.5, 1.6, 2, 3, 4, 5, 5.5, 6, 7, 8, 9) **REFERANS ve DETAY** amaçlıdır.
+
+**AYRI AYRI execute ETME.** Yukarıdaki 5 MEGA-ADIM tablosunu takip et:
+- **M1:** Adım 1 (validation, execute dışı) + 1.5 (discovery+import) + 1.6 (text style) → **TEK execute**
+- **M2:** Adım 2 (frame) + 3 (breakpoint) + 4b (mode) + 5.5 (content body) → **TEK execute**
+- **M3:** Adım 6 (discovery) + 7 (placement) → **2-3 execute** (3-4 component per execute)
+- **M4:** Adım 8 (dark) → **TEK execute**
+- **M5:** Adım 9 (validate) → **1-2 validate call**
+
+Her mega-adımın alt detayları aşağıdaki eski adımlarda açıklanır, ama execute birleşik yapılır.
+
+---
 
 ### Adım 1 — Pre-Flight Check (Validation)
 
@@ -626,7 +655,7 @@ return { contentBodyId: contentBody.id };
 
 ### Adım 7 — Recipe Component Placement
 
-**Amaç:** Recipe'teki her component'i sırayla doğru parent'a yerleştir. **HER COMPONENT AYRI `figma_execute` ÇAĞRISI** — chunking mandate gereği.
+**Amaç:** Recipe'teki component'leri toplu olarak doğru parent'a yerleştir. **v2.0: 3-4 COMPONENT TEK execute'ta** (eski: her component ayrı → 6-8 execute harcıyordu). Rule 5a v2.0 max 15 op sınırı bunu mümkün kılıyor.
 
 **🚨 Parent Routing Kuralı (v1.9.4+, Fix B Edge-to-Edge):**
 
@@ -985,30 +1014,30 @@ return { cardId: card.id };
 
 ---
 
-## Tool Chunking Kuralları (Recipe-Specific)
+## Tool Chunking Kuralları (v2.0 — Recipe-Specific)
 
-Her recipe çalıştırırken **Rule 5a CHUNKING MANDATE** zorunlu:
+Her recipe çalıştırırken **Rule 5a v2.0 CHUNKING** zorunlu:
 
-- **Max 8 atomic op / figma_execute**
-- **Her recipe component'i için AYRI figma_execute** (tek execute'ta 3+ component yerleştirme YASAK)
-- Execute'ler arası state: `return { nodeIds }` → sonraki execute `getNodeByIdAsync(id)` ile al
+- **Max 15 atomic op / figma_execute** (eski 8 → 15, gerçek test verisiyle revize)
+- **3-4 component TEK execute'ta** yerleştir (eski: her component ayrı → çok yavaş)
+- Execute'ler arası state: `return { nodeIds }` → sonraki execute `getNodeByIdAsync(id)` veya tekrar `importVariableByKeyAsync(key)` ile al
 
-**Timeout konfigürasyonu:** Her execute için `timeout: 15000` (15 sn) yeterli. Eğer 15 sn aşıyorsa op sayısı 8'den fazla demektir, küçült.
+**Timeout konfigürasyonu:** Her execute için `timeout: 15000` (15 sn) yeterli. 15 op = ~200-300ms beklenen (gerçek test: 7 op = 88ms).
 
 **Anti-pattern (YASAK):**
 ```js
-// ❌ Tek execute'ta 10 component yerleştirme
-for (const spec of recipe.components) {
-  // 10+ component × 3-5 op each = 30-50 op, timeout garantili
-}
-```
-
-**Doğru pattern:**
-```
+// ❌ Her component için AYRI execute (v1.x eski yaklaşım — 6-8 execute harcıyordu)
 // figma_execute #1: 1 component
 // figma_execute #2: 1 component
 // ...
-// figma_execute #10: 1 component
+// figma_execute #8: 1 component
+```
+
+**Doğru pattern (v2.0):**
+```
+// figma_execute #1: NavigationTopBar + Amount Display + Section Header (3 component, ~12 op)
+// figma_execute #2: Payment Card ×3 + Divider (4 component, ~14 op)
+// figma_execute #3: CTA Button + Security Info (2 component, ~8 op)
 ```
 
 ---

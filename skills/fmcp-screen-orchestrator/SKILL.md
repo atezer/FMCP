@@ -3,7 +3,7 @@ name: fmcp-screen-orchestrator
 description: DS-compliant Figma ekran üretimi için platform-agnostic orkestratör skill. Text / image_uploaded / image_url / figma_benchmark / no_idea girdilerinden yola çıkıp DS component + token binding + auto-layout ile ekran üretir. Her platformda çalışır (Claude Code agent / Cursor / Claude Desktop / Claude Web). Condensed-first: Essentials bölümü %80 case'i kapsar, Advanced yalnızca edge case'lerde okunur.
 metadata:
   mcp-server: user-figma-mcp-bridge
-  version: 1.9.7
+  version: 2.0.0
   priority: 95
   phase: orchestrator
   personas:

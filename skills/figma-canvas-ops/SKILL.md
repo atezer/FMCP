@@ -107,9 +107,11 @@ Kullanıcı yanıtladıktan sonra:
    ```
    Kılavuz: 1-5 node → 5000ms | 6-12 node → 10000ms | 13+ node → işlemi böl veya 15000-30000ms
 
-   ### 🚨 5a. CHUNKING MANDATE (v1.9.3+ ZORUNLU — Gerçek Test Bulgusu)
+   ### 🚨 5a. CHUNKING MANDATE (v2.0 REVİZE — Gerçek Test Verisi ile Güncellendi)
 
-   Her `figma_execute` çağrısı **maksimum 8 "atomic operation"** içermeli. Aşağıdakilerin her biri 1 atomic operation sayılır:
+   Her `figma_execute` çağrısı **maksimum 15 "atomic operation"** içermeli. Aşağıdakilerin her biri 1 atomic operation sayılır:
+
+   **v2.0 sınır revizyonu gerekçesi:** v1.9.3'te 8 op sınırı konuldu (teorik koruma). 4 gerçek test (FP-1-R serisi, 2026-04-15/16) şunu kanıtladı: 7 op = 88ms, 4 execute = 143ms toplam. Plugin internal timeout 60s, bridge timeout 4dk — **15 op güvenle sığar** (~200-300ms beklenen). Eski 8 op sınırı execute sayısını 19'a çıkardı → Claude inter-execute düşünme süresi (30-60s × 19 = ~15 dk saf overhead) → toplam 30+ dk. 15 op sınırı execute sayısını 6-8'e düşürür → süre ~10-12 dk.
 
    - Node oluşturma (`createFrame`, `createText`, `createRectangle`, `clone`)
    - Instance oluşturma (`createInstance`, `importComponentByKeyAsync`)
@@ -120,12 +122,12 @@ Kullanıcı yanıtladıktan sonra:
    - `getMainComponentAsync` (her instance için)
    - `getNodeByIdAsync`
 
-   **Neden bu kadar katı:** Plugin timeout **60 saniye** (internal), bridge timeout **4 dakika**. Bir execute çağrısında 20+ async round-trip (örn: 20 variable import + 6 style import + 15 node) → bridge kesin timeout'a düşer. **Gerçek test raporu (2026-04-15):** Tek execute'ta 20 var + 6 style + 15 node = **4 dakika timeout**. Aynı iş 10 execute'a bölününce her biri 18-66ms.
+   **Sınır gerekçesi:** Plugin timeout **60 saniye** (internal), bridge timeout **4 dakika**. Bir execute çağrısında 30+ async round-trip → bridge timeout riski. **Gerçek test verileri (2026-04-15/16):** 7 op = 88ms, 15 op = ~200ms (güvenli). 30+ op → 4 dk timeout (kanıtlanmış). 15 op sınırı güvenlik ile hız arasında optimal denge.
 
    **Chunking patterns:**
 
-   - 1 execute = 1 atomic goal (örneğin: "wrapper frame + bg binding", "status bar instance + position", "title text + style bind")
-   - Büyük iş (20+ op) → 5-10 execute'a böl
+   - 1 execute = 1 mega-goal (örneğin: "tüm pre-flight discovery + token import", "frame + structure + mode apply", "3-4 component placement toplu")
+   - Büyük iş (25+ op) → 2-3 execute'a böl
    - Execute'ler arası state aktar: nodeId'leri `return` et, sonraki execute `getNodeByIdAsync(returnedId)` ile al
    - Her execute'tan sonra **1 satır Türkçe micro-report** yaz (progress streaming için)
 
