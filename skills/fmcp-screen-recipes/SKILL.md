@@ -3,7 +3,7 @@ name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için linear 9-adımlı recipe. Figma native frame presets, SUI native variable modes, chunking built-in (max 8 op/execute), her adımda Türkçe micro-report. Common case'de generate-figma-screen ağır workflow'unu atlayıp %40-50 daha hızlı üretim sağlar.
 metadata:
   mcp-server: user-figma-mcp-bridge
-  version: 1.9.3
+  version: 1.9.7
   priority: 96
   phase: fast-path
   personas:
@@ -64,18 +64,22 @@ Bu koşullarda mevcut `generate-figma-screen` 7-adımlı workflow devreye girer 
 **Her adım 1 `figma_execute` çağrısı** — Rule 5a CHUNKING'e tam uyum (max 8 op/execute). Her adım sonrası **tek satır Türkçe micro-report** yazılır.
 
 ```
-ADIM 1: Pre-Flight Check           (0 figma_execute, sadece validation)
-ADIM 2: Wrapper Frame + Background  (3-5 op)
-ADIM 3: Breakpoint Variable Binding (2-3 op)
-ADIM 4: Theme + Size Mode Setup     (4-6 op)
-ADIM 5: Auto-Layout Structure       (5-8 op)
-ADIM 6: Component Discovery         (1-2 op, tek arama)
-ADIM 7: Recipe Component Placement  (HER COMPONENT AYRI EXECUTE — 6-10 execute)
-ADIM 8: Dark Variant (isteğe bağlı) (2-3 op)
-ADIM 9: Validation + Final Report   (2 figma_validate_screen çağrısı)
+ADIM 1:   Pre-Flight Check                (0 figma_execute, sadece validation)
+ADIM 1.5: Unified Pre-Flight Discovery    (2 execute — collection/mode/token keşfi)
+ADIM 1.6: Text Style Resolution           (1 execute — findAll + styleMap + roleMap)
+ADIM 2:   Wrapper Frame + Background      (1 execute, 4-5 op)
+ADIM 3:   Breakpoint Variable Binding     (1 execute, 2-3 op)
+ADIM 4a:  Collection/Mode Enum            (NO-OP — Adım 1.5'te tamamlandı)
+ADIM 4b:  Mode Apply                      (1 execute, 3-5 op)
+ADIM 5:   Auto-Layout Finalization        (no-op veya 1 execute)
+ADIM 5.5: Content Body Wrapper            (1 execute, 5-8 op)
+ADIM 6:   Component Discovery             (1 execute, 1-2 op)
+ADIM 7:   Recipe Component Placement      (HER COMPONENT AYRI EXECUTE — 6-8 execute)
+ADIM 8:   Dark Variant (isteğe bağlı)     (1 execute, 3-4 op)
+ADIM 9:   Validation + Final Report       (2 figma_validate_screen çağrısı)
 ```
 
-**Toplam execute sayısı:** ~12-18 (component sayısına göre). Her biri hızlı (<100ms plugin-side).
+**Toplam execute sayısı:** ~18-20 (component sayısına göre). Her biri hızlı (<150ms plugin-side, alias resolve YOK).
 
 ### Adım 1 — Pre-Flight Check (Validation)
 
@@ -92,70 +96,165 @@ Herhangi biri FAIL → Fast Path iptal, orchestrator Karar Akışı'na dön.
 
 **Micro-report:** `✅ Pre-flight: screen_type=<X>, platform=<Y>, device=<Z>, variants=<V>`
 
-### Adım 1.5 — Token Resolution Verification (YENİ v1.9.4+, Gerçek Test #4/5/12/13)
+### Adım 1.5 — Unified Pre-Flight Discovery (v1.9.7+)
 
-**Amaç:** Recipe başlamadan önce kullanılacak **critical spacing/radius token'ların resolved px değerlerini** öğren. Tahmin YASAK — gerçek değerler orchestrator context'inde `tokenMap` olarak tutulur, sonraki adımlar bu map'i referans alır.
+**Amaç:** Recipe başlamadan önce **iki execute'ta** tüm keşif işlerini tamamla. Adım 2, 3, 4b, 5.5, 7 için gereken TÜM key'ler ve collection bilgileri burada hazırlanır — sonraki adımlarda tanımsız değişken olmaz.
 
-**Neden:** Gerçek test (2026-04-15) `spacing-400` varsayıldı ~16px, gerçek 64px çıktı. Ekran kullanılamaz hale geldi (Payment Card'larda text dikey harflerle görüntülendi). 4-5 ek execute gerekti düzeltme için.
+**Bu adım şunları birleştirir:**
+1. Collection listesi + keyword match (eski Adım 4a tekrarını ortadan kaldırır)
+2. Critical spacing token import key'leri (bind için, alias resolve ETME)
+3. Semantic Colors + Size collection ID ve mode listesi (Adım 4b için)
+4. Surface background token key (Adım 2 için)
+5. Breakpoint Screen token key (Adım 3 için)
+
+**🚨 Alias resolve neden YOK (v1.9.7 kritik değişiklik):**
+`setBoundVariable(property, variable)` çağrıldığında Figma runtime alias chain'i (semantic → primitive → px) **otomatik çözer**. Recipe token'ı BIND eder, px değerini BİLMEK gereksiz ve TEHLİKELİ. FP-1-R-v3 (2026-04-16): `valuesByMode` VARIABLE_ALIAS döndü → alias traverse denemesi → plugin 4 dk timeout → bridge crash → recipe tamamen çöktü. **Alias resolve KALDIRILDI, px değeri OKUNMAZ.**
+
+**🚨 Token name matching (v1.9.7 kritik düzeltme):**
+SUI token'lar nested path formatı kullanır (`"Spacing/spacing-100"`, flat `"spacing-100"` DEĞİL). Exact match (`===`) sıfır sonuç verir. `endsWith` match kullanılır:
+```js
+vars.find(v => v.name.endsWith("/" + suffix) || v.name === suffix)
+```
+
+#### Execute 1 — Collection & Mode Discovery (7-8 op)
 
 ```js
-// figma_execute (tek call, 6-8 op — Rule 5a CHUNKING'e uyumlu)
+// figma_execute (tek call, 7-8 async op — Rule 5a sınırında)
 const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
 
-// Spacing collection bul (name keyword match, trailing space vb. toleranslı)
-const spacingColl = colls.find(c => {
-  const n = c.name.toLowerCase().trim();
-  return n.includes("spacing") || n.includes("size");
-});
-
-if (!spacingColl) {
-  return { error: "Spacing collection bulunamadı", fallback: "manual px values" };
+// Keyword match (case-insensitive, trim'li, multi-keyword fallback)
+function findColl(keywords) {
+  return colls.find(c => {
+    const n = c.name.toLowerCase().trim();
+    return keywords.some(kw => n.includes(kw));
+  });
 }
 
-// Critical token listesi (recipe'de kullanılan isimler)
-const criticalTokenNames = [
-  "spacing-none", "spacing-050", "spacing-075", "spacing-100",
-  "spacing-125", "spacing-150", "spacing-200"
-];
+const sizeColl = findColl(["semantic size", "semantic sizes", "size"]);
+const colorsColl = findColl(["semantic color", "s theme", "theme"]);
+const bpColl = findColl(["breakpoint"]);
 
-const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(spacingColl.key);
-const tokenMap = {};
+const result = {
+  availableColls: colls.map(c => ({name: c.name, key: c.key})),
+  spacingTokenKeys: {},
+  collectionInfo: { colors: null, size: null },
+  surfaceKey: null,
+  breakpointKey: null
+};
 
-for (const name of criticalTokenNames) {
-  const found = vars.find(v => v.name === name);
-  if (found) {
-    const localVar = await figma.variables.importVariableByKeyAsync(found.key);
-    // valuesByMode'den ilk mode'un değerini oku (genelde default/mobile)
-    const modeIds = Object.keys(localVar.valuesByMode);
-    if (modeIds.length > 0) {
-      tokenMap[name] = localVar.valuesByMode[modeIds[0]];
-    }
+// 1. Spacing token key'lerini listele (endsWith match, import Execute 2'de)
+if (sizeColl) {
+  const sizeVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(sizeColl.key);
+  const criticalSuffixes = [
+    "spacing-none", "spacing-050", "spacing-075", "spacing-100",
+    "spacing-125", "spacing-150", "spacing-200"
+  ];
+  for (const suffix of criticalSuffixes) {
+    const found = sizeVars.find(v =>
+      v.name.endsWith("/" + suffix) || v.name === suffix
+    );
+    if (found) result.spacingTokenKeys[suffix] = found.key;
+  }
+
+  // Size collection mode discovery (Adım 4b için)
+  if (sizeVars.length > 0) {
+    const first = await figma.variables.importVariableByKeyAsync(sizeVars[0].key);
+    const coll = await figma.variables.getVariableCollectionByIdAsync(first.variableCollectionId);
+    result.collectionInfo.size = {
+      collId: coll.id,
+      modes: coll.modes.map(m => ({name: m.name, modeId: m.modeId}))
+    };
   }
 }
 
-return { tokenMap, spacingCollKey: spacingColl.key };
+// 2. Colors collection mode discovery + surface background token
+if (colorsColl) {
+  const colorsVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(colorsColl.key);
+
+  // Surface background token (Adım 2 için)
+  const bgVar = colorsVars.find(v =>
+    v.name.toLowerCase().includes("background") &&
+    v.name.toLowerCase().includes("level-0")
+  );
+  if (bgVar) result.surfaceKey = bgVar.key;
+
+  // Colors mode discovery (Adım 4b için — light/dark mode ID'leri)
+  if (colorsVars.length > 0) {
+    const first = await figma.variables.importVariableByKeyAsync(colorsVars[0].key);
+    const coll = await figma.variables.getVariableCollectionByIdAsync(first.variableCollectionId);
+    result.collectionInfo.colors = {
+      collId: coll.id,
+      modes: coll.modes.map(m => ({name: m.name, modeId: m.modeId}))
+    };
+  }
+}
+
+// 3. Breakpoint token (Adım 3 için)
+if (bpColl) {
+  const bpVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(bpColl.key);
+  const screenVar = bpVars.find(v => v.name.toLowerCase().includes("screen"));
+  if (screenVar) result.breakpointKey = screenVar.key;
+}
+
+return result;
 ```
 
-**Beklenen çıktı (örnek):**
+**Atomic operations:** 1 (colls) + 1 (sizeVars) + 1 (import size first) + 1 (getCollection size) + 1 (colorsVars) + 1 (import colors first) + 1 (getCollection colors) + 1 (bpVars, opsiyonel) = **7-8 async op**. Rule 5a sınırında, bpColl yoksa 7.
+
+#### Execute 2 — Critical Token Import (7 op)
+
+```js
+// figma_execute (tek call, 7 async op — Rule 5a uyumlu)
+// Execute 1'den dönen spacingTokenKeys kullanılır
+
+const tokenKeyMap = {};
+const spacingKeys = { /* Execute 1 return'ünden gelen spacingTokenKeys */ };
+
+for (const [suffix, key] of Object.entries(spacingKeys)) {
+  try {
+    const imported = await figma.variables.importVariableByKeyAsync(key);
+    tokenKeyMap[suffix] = imported.id;  // Variable ID — setBoundVariable için yeterli
+  } catch(e) {
+    // Token import fail → Adım 5.5/7'de fallback (hardcoded 0 veya skip)
+  }
+}
+
+return { tokenKeyMap };
+```
+
+**Atomic operations:** 7 (importVariableByKeyAsync × critical token count). Rule 5a uyumlu.
+
+**🚨 Plugin restart notu:** Plugin restart sonrası import cache sıfırlanır. Eğer token import fail olursa recipe'i en baştan çalıştır — Adım 1.5 Execute 1+2'yi tekrarla.
+
+**Beklenen çıktı (Execute 1+2 birleşik):**
 ```json
 {
-  "tokenMap": {
-    "spacing-none": 0,
-    "spacing-050": 8,
-    "spacing-075": 12,
-    "spacing-100": 16,
-    "spacing-125": 20,
-    "spacing-150": 24,
-    "spacing-200": 32
+  "spacingTokenKeys": {
+    "spacing-none": "key_abc",
+    "spacing-050": "key_def",
+    "spacing-100": "key_ghi"
+  },
+  "collectionInfo": {
+    "colors": { "collId": "...", "modes": [{"name":"Light","modeId":"..."}, {"name":"Dark","modeId":"..."}] },
+    "size": { "collId": "...", "modes": [{"name":"Mobil & Web Mobil","modeId":"..."}, ...] }
+  },
+  "surfaceKey": "key_surface",
+  "breakpointKey": "key_bp",
+  "tokenKeyMap": {
+    "spacing-none": "varId_1",
+    "spacing-100": "varId_2"
   }
 }
 ```
 
-**Kullanım:** Adım 2-5 bu map'i referans alır: "padding = spacing-100 (16px, tokenMap'ten)" diyerek bind eder, **varsayım yapmaz**. Token adı map'te yoksa o adımda fallback uygular ve kullanıcıya bildirir.
+**Sonraki adımlar bu çıktıyı kullanır:**
+- Adım 2: `surfaceKey` → `importVariableByKeyAsync(surfaceKey)` → background bind
+- Adım 3: `breakpointKey` → `importVariableByKeyAsync(breakpointKey)` → width bind
+- Adım 4b: `collectionInfo.colors/size` → `setExplicitVariableModeForCollection`
+- Adım 5.5: `tokenKeyMap["spacing-100"]` → `setBoundVariable("paddingLeft", ...)`
+- Adım 7: `tokenKeyMap` → component padding/gap bind
 
-**Atomic operations:** 1 (collections) + 1 (vars fetch) + 7 (import × critical token count) = ~9 op. Rule 5a sınırında — 7 token üst sınır; 8. eklenirse execute'u ikiye böl.
-
-**Micro-report:** `✅ Token Resolution: <N> token resolved (spacing-none=0, spacing-100=16, ...)`
+**Micro-report:** `✅ Pre-Flight Discovery: <N> collection, <M> spacing token imported, colors=<modes>, size=<modes>, surface=<found/missing>, breakpoint=<found/missing>`
 
 ### Adım 1.6 — Text Style Resolution Verification (YENİ v1.9.5+, Gerçek Test FP-1-R-v2 #10)
 
@@ -342,12 +441,13 @@ frame.itemSpacing = 0;
 // frame.setBoundVariable("paddingLeft", noneVar);
 // ... aynısı paddingRight/Top/Bottom + itemSpacing için
 
-// Background variable bind (try-catch with fallback)
+// Background variable bind — surfaceKey Adım 1.5 Execute 1'den gelir
+// (eski surfaceColKey tanımsız sorunu v1.9.7'de çözüldü)
 let bgVar = null;
 try {
-  const bgVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(surfaceColKey);
-  const bgMatch = bgVars.find(v => v.name.includes("background level-0"));
-  if (bgMatch) bgVar = await figma.variables.importVariableByKeyAsync(bgMatch.key);
+  if (surfaceKey) {
+    bgVar = await figma.variables.importVariableByKeyAsync(surfaceKey);
+  }
 } catch(e) {}
 
 if (bgVar) {
@@ -359,7 +459,7 @@ if (bgVar) {
 return { frameId: frame.id, width: <width>, height: <height> };
 ```
 
-**Atomic operations (5-7):** createFrame, resize, layoutMode/sizing/padding setters (grouped), getVariables, importVariableByKeyAsync, setBoundVariableForPaint.
+**Atomic operations (4-5):** createFrame, resize, layoutMode/sizing/padding setters (grouped), importVariableByKeyAsync (surfaceKey — Adım 1.5'ten), setBoundVariableForPaint. **Not:** Eski `getVariablesInLibraryCollectionAsync(surfaceColKey)` kaldırıldı — collection search artık Adım 1.5'te yapıldı, burada sadece import + bind.
 
 **Micro-report:** `✅ Frame oluşturuldu: <device_preset> (<w>×<h>), edge-to-edge (padding=0, gap=0), background: <DS>/Surface/background level-0`
 
@@ -369,13 +469,14 @@ return { frameId: frame.id, width: <width>, height: <height> };
 
 ```js
 // figma_execute (tek call, 2-3 op)
+// breakpointKey: Adım 1.5 Execute 1'den gelir (eski breakpointsColKey tanımsız sorunu v1.9.7'de çözüldü)
 const frame = await figma.getNodeByIdAsync(frameId);
 
 let screenVar = null;
 try {
-  const bpVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(breakpointsColKey);
-  const screenMatch = bpVars.find(v => v.name === "Screen" || v.name.includes("screen"));
-  if (screenMatch) screenVar = await figma.variables.importVariableByKeyAsync(screenMatch.key);
+  if (breakpointKey) {
+    screenVar = await figma.variables.importVariableByKeyAsync(breakpointKey);
+  }
 } catch(e) {}
 
 if (screenVar) {
@@ -386,121 +487,74 @@ if (screenVar) {
 }
 ```
 
-**Atomic operations:** 3 (getNodeByIdAsync, getVariables, importVariable, setBoundVariable — optional).
+**Atomic operations:** 2-3 (getNodeByIdAsync, importVariableByKeyAsync (breakpointKey — Adım 1.5'ten), setBoundVariable). **Not:** Eski `getVariablesInLibraryCollectionAsync(breakpointsColKey)` kaldırıldı — breakpoint key Adım 1.5'te keşfedildi, burada direkt import + bind.
 
 **Micro-report:** `✅ Breakpoint: <DS>/Breakpoints/Screen bound` VEYA `⚠️ Breakpoint bulunamadı, fixed width devam`
 
-### Adım 4 — Theme + Size Mode Setup (Enumeration First, v1.9.4+)
+### Adım 4 — Theme + Size Mode Setup (v1.9.7+ Unified)
 
-**Amaç:** Collection ve mode isimlerini **ASLA varsayma**. Önce `getAvailableLibraryVariableCollectionsAsync()` ile tam listeyi al, keyword match ile doğru collection'ı bul. Mode listesini de tam oku, keyword match ile doğru mode'u seç. Sonuç: trailing space, karışık isimler (`"Semantic Sizes (Web/Mobil) "`), çoklu-kelime mode isimleri (`"Mobil & Web Mobil"`) gibi tüm varyasyonlara dayanıklı.
+**Adım 4a — Collection & Mode Enumeration: ⏭️ NO-OP (v1.9.7+)**
 
-**Neden:** Gerçek test (2026-04-15) `"Semantic Size"` varsayıldı, gerçek `"Semantic Sizes (Web/Mobil) "` (trailing space); `"Mobil"` varsayıldı, gerçek `"Mobil & Web Mobil"`. Enumeration-first yaklaşımı iki sorunu da önler.
+Collection discovery ve mode enumeration artık **Adım 1.5 Unified Pre-Flight Discovery** Execute 1'de tamamlanır. Bu adım ayrı execute **HARCAMAZ**.
 
-**Adım 4a — Collection & mode enumeration (ayrı execute):**
-
-```js
-// figma_execute #1 — Enumeration (tek call, 6-8 op)
-const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-
-// Collection bul — keyword match (case-insensitive, trim'li, multi-keyword fallback)
-function findCollByKeywords(keywords) {
-  return colls.find(c => {
-    const name = c.name.toLowerCase().trim();
-    return keywords.some(kw => name.includes(kw.toLowerCase()));
-  });
+Adım 1.5'ten gelen `collectionInfo` kullanılır:
+```json
+{
+  "colors": { "collId": "...", "modes": [{"name":"Light","modeId":"..."}, {"name":"Dark","modeId":"..."}] },
+  "size": { "collId": "...", "modes": [{"name":"Mobil & Web Mobil","modeId":"..."}, ...] }
 }
-
-const semColorsColl = findCollByKeywords(["semantic color", "s theme", "theme"]);
-const semSizeColl = findCollByKeywords(["semantic size", "semantic sizes", "size"]);
-
-const result = {
-  semColors: null,
-  semSize: null,
-  availableColls: colls.map(c => c.name)  // debug için
-};
-
-// Semantic Colors mode discovery
-if (semColorsColl) {
-  const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semColorsColl.key);
-  if (vars.length > 0) {
-    const firstVar = await figma.variables.importVariableByKeyAsync(vars[0].key);
-    const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
-    // Mode'ları keyword match ile bul (Turkish + English toleranslı)
-    const lightMode = localColl.modes.find(m => {
-      const mn = m.name.toLowerCase();
-      return mn === "light" || mn === "açık" || mn.includes("light") || mn.includes("açık");
-    });
-    const darkMode = localColl.modes.find(m => {
-      const mn = m.name.toLowerCase();
-      return mn === "dark" || mn === "koyu" || mn.includes("dark") || mn.includes("koyu");
-    });
-    result.semColors = {
-      collId: localColl.id,
-      lightModeId: lightMode && lightMode.modeId,
-      darkModeId: darkMode && darkMode.modeId,
-      availableModes: localColl.modes.map(m => m.name)
-    };
-  }
-}
-
-// Semantic Size mode discovery
-if (semSizeColl) {
-  const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(semSizeColl.key);
-  if (vars.length > 0) {
-    const firstVar = await figma.variables.importVariableByKeyAsync(vars[0].key);
-    const localColl = await figma.variables.getVariableCollectionByIdAsync(firstVar.variableCollectionId);
-    // Platform → mode keyword eşleme (karmaşık isimlere dayanıklı)
-    const platformKeywords = {
-      "mobile": ["mobil", "mobile"],
-      "tablet": ["tablet"],
-      "desktop": ["web", "desktop"],
-      "web": ["web", "desktop"]
-    };
-    const targetKws = platformKeywords[platform] || ["mobil"];
-    const sizeMode = localColl.modes.find(m => {
-      const mn = m.name.toLowerCase();
-      return targetKws.some(kw => mn.includes(kw));
-    });
-    result.semSize = {
-      collId: localColl.id,
-      modeId: sizeMode && sizeMode.modeId,
-      modeName: sizeMode && sizeMode.name,
-      availableModes: localColl.modes.map(m => m.name)
-    };
-  }
-}
-
-return result;
 ```
 
-**Atomic operations:** ~7 (collections, 2× vars fetch, 2× import, 2× getCollection).
+**Eski davranış (v1.9.4-v1.9.6):** Ayrı execute'ta `getAvailableLibraryVariableCollectionsAsync` çağırıp collection + mode listesi alıyordu. Adım 1.5 ile aynı API'yi tekrarlıyordu → gereksiz execute. v1.9.7'de kaldırıldı.
 
-**Micro-report:** `✅ Collection/Mode enum: Semantic Colors=<light+dark modes>, Semantic Size=<matched mode>`
+**Micro-report:** `⏭️ Adım 4a no-op — collection/mode bilgisi Adım 1.5'ten mevcut`
 
 **Adım 4b — Mode apply to frame (ayrı execute):**
 
-Enumeration sonucunu kullanarak frame'e mode'ları uygula:
+Adım 1.5'ten gelen `collectionInfo` kullanarak frame'e mode'ları uygula. Mode seçimi keyword match ile (Turkish + English toleranslı, karışık isimlere dayanıklı):
 
 ```js
-// figma_execute #2 — Apply (tek call, 3-4 op)
+// figma_execute (tek call, 3-5 op)
 const frame = await figma.getNodeByIdAsync(frameId);
 
-if (semColorsCollId && lightModeId) {
-  const semColorsColl = await figma.variables.getVariableCollectionByIdAsync(semColorsCollId);
-  frame.setExplicitVariableModeForCollection(semColorsColl, lightModeId);
+// collectionInfo: Adım 1.5 Execute 1'den gelir
+// Light mode (Semantic Colors)
+if (collectionInfo.colors) {
+  const coll = await figma.variables.getVariableCollectionByIdAsync(collectionInfo.colors.collId);
+  const lightMode = collectionInfo.colors.modes.find(m => {
+    const mn = m.name.toLowerCase();
+    return mn === "light" || mn === "açık" || mn.includes("light");
+  });
+  if (lightMode) {
+    frame.setExplicitVariableModeForCollection(coll, lightMode.modeId);
+  }
 }
 
-if (semSizeCollId && sizeModeId) {
-  const semSizeColl = await figma.variables.getVariableCollectionByIdAsync(semSizeCollId);
-  frame.setExplicitVariableModeForCollection(semSizeColl, sizeModeId);
+// Platform mode (Semantic Size)
+if (collectionInfo.size) {
+  const coll = await figma.variables.getVariableCollectionByIdAsync(collectionInfo.size.collId);
+  const platformKeywords = {
+    "mobile": ["mobil", "mobile"],
+    "tablet": ["tablet"],
+    "desktop": ["web", "desktop"],
+    "web": ["web", "desktop"]
+  };
+  const targetKws = platformKeywords[platform] || ["mobil"];
+  const sizeMode = collectionInfo.size.modes.find(m => {
+    const mn = m.name.toLowerCase();
+    return targetKws.some(kw => mn.includes(kw));
+  });
+  if (sizeMode) {
+    frame.setExplicitVariableModeForCollection(coll, sizeMode.modeId);
+  }
 }
 
 return { modesApplied: true };
 ```
 
-**Atomic operations:** 3-4 (getNodeByIdAsync, 2× getCollectionByIdAsync, 2× setExplicitMode).
+**Atomic operations:** 3-5 (getNodeByIdAsync, 2× getCollectionByIdAsync, 2× setExplicitMode).
 
-**Micro-report:** `✅ Theme: Light (<semColors collName>), Size: <semSize modeName> (<semSize collName>)`
+**Micro-report:** `✅ Theme: Light (<colors collName>), Size: <size modeName> (<size collName>)`
 
 ### Adım 5 — Auto-Layout Finalization (v1.9.4+)
 
@@ -588,7 +642,7 @@ Component sırası korunur (yukarıdan aşağı), ama parent ID'leri farklı ola
 
 ```
 recipe = getRecipe(screen_type)  // 9 recipe'ten biri
-const edgeNames = /^(navigation|nav|top|bottom|status|tab)/i;
+const edgeNames = /^(navigation|nav|top|bottom|status|tabbar|tab_bar)/i;
 
 for (let i = 0; i < recipe.components.length; i++) {
   const spec = recipe.components[i]
@@ -899,11 +953,14 @@ Component bulunamadığı durumda (örn. SUI'de "Payment Method Card" yok), reci
 // figma_execute (tek call, 5-7 op)
 const card = figma.createFrame();
 card.name = "Payment Method Card (primitive fallback)";
+// resize sadece initial boyut — appendChild sonrası layoutSizingHorizontal='FILL' ile override
 card.resize(340, 80);
 card.layoutMode = "HORIZONTAL";
 card.primaryAxisSizingMode = "FIXED";
-card.counterAxisSizingMode = "FIXED";
-card.itemSpacing = 12;
+card.counterAxisSizingMode = "AUTO";  // v1.9.7: FIXED → AUTO (içeriğe göre)
+// itemSpacing: tokenKeyMap["spacing-075"] ile bind edilecek (Adım 1.5'ten)
+// fallback: tokenKeyMap yoksa 12px hardcoded, ama tokenKeyMap her zaman hazır olmalı
+card.itemSpacing = 12;  // geçici — aşağıda setBoundVariable ile override
 
 // All visual properties → token bind (NO hardcoded values)
 card.setBoundVariable("cornerRadius", radiusSmVar);

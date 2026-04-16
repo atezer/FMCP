@@ -532,6 +532,8 @@ frame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
 
 23. **Style Import Sessiz Fail Pattern + Font Load Sequence (v1.9.3+, Gerçek Test Bulgusu).** Team library style'ları (text, paint, effect) `importStyleByKeyAsync` ile çağrıldığında **silent fail** olabilir — null döner veya throws, key unpublished/expired ise:
 
+**⚡ Fast Path İstisnası (fmcp-screen-recipes, v1.9.7+):** Fast Path kullanılıyorsa ve Adım 1.6 Text Style Resolution ile `roleMap` hazırsa, `importStyleByKeyAsync` yerine **direkt `setTextStyleIdAsync(roleMap[role].id)`** tercih edilir — import adımı atlanır. Bu istisnayı sadece fmcp-screen-recipes Adım 7 uygular. Tam workflow'da (generate-figma-screen) bu kural aynen geçerli: import + try-catch + fallback.
+
 **Gerçek hata örneği:** `fb3591835c86d00580e1f0cea2343d033107dc67` (display text style) → `"Failed to import style by key"`, ardından `"Cannot write to node with unloaded font 'SHBGrotesk Semi Bold'"` (font load edilmemiş çünkü style fail olmuş).
 
 **Zorunlu try-catch + font load sequence:**
@@ -775,7 +777,7 @@ veya
    - `Resource links are not currently supported` → Yanlış MCP server (resmi Figma MCP) kullanıldı. F-MCP plugin bağlıysa `figma_search_assets` veya `figma_get_library_variables` kullan, `search_design_system` (resmi) DEĞİL.
 4. Scripti düzelt ve yeni çağrı yap
 
-## 7. Doğrulama Adımları
+## 8. Doğrulama Adımları
 
 Her yazma işleminden sonra:
 
@@ -786,7 +788,9 @@ Her yazma işleminden sonra:
 ## F-MCP skill koordinasyonu
 
 Bu skill şu skill'lerle birlikte kullanılır:
-- **generate-figma-screen** — Ekran oluşturma iş akışı
+- **fmcp-screen-orchestrator** — Orkestratör, DS GATE, Fast Path routing (v1.9.7+)
+- **fmcp-screen-recipes** — Fast Path recipe akışı (Rule 25 validate fallback, Rule 26 component discovery bu skill'den referans alınır) (v1.9.7+)
+- **generate-figma-screen** — Ekran oluşturma iş akışı (tam workflow)
 - **generate-figma-library** — DS kütüphanesi inşa
 - **apply-figma-design-system** — DS hizalama
 - **fix-figma-design-system-finding** — Tek bulgu düzeltme

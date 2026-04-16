@@ -3,7 +3,7 @@ name: fmcp-screen-orchestrator
 description: DS-compliant Figma ekran üretimi için platform-agnostic orkestratör skill. Text / image_uploaded / image_url / figma_benchmark / no_idea girdilerinden yola çıkıp DS component + token binding + auto-layout ile ekran üretir. Her platformda çalışır (Claude Code agent / Cursor / Claude Desktop / Claude Web). Condensed-first: Essentials bölümü %80 case'i kapsar, Advanced yalnızca edge case'lerde okunur.
 metadata:
   mcp-server: user-figma-mcp-bridge
-  version: 1.9.0
+  version: 1.9.7
   priority: 95
   phase: orchestrator
   personas:
@@ -45,6 +45,7 @@ required_inputs:
 | `inspiration-intake` | `skills/inspiration-intake/SKILL.md` | image_uploaded / image_url / figma_benchmark | Sadece bu 3 modda |
 | `generate-figma-screen` | `skills/generate-figma-screen/SKILL.md` | Net screen creation | **HER ZAMAN** (ana motor) |
 | `figma-canvas-ops` | `skills/figma-canvas-ops/SKILL.md` | Her `figma_execute` öncesi | **HER ZAMAN** (pre-flight) |
+| `fmcp-screen-recipes` | `skills/fmcp-screen-recipes/SKILL.md` | Fast Path (Adım 0.5 match) | Sadece Fast Path'te |
 | `apply-figma-design-system` | `skills/apply-figma-design-system/SKILL.md` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 | `figma-screen-analyzer` | `skills/figma-screen-analyzer/SKILL.md` | Üretim sonrası PO rapor | Sadece açıkça istenirse |
 
@@ -170,7 +171,7 @@ Her UI öğesi için sırayla dene. **Adım 3 LEGITIMATE bir fallback'tir** — 
 
 1. **DS component instance** (`figma_search_assets` → `figma_instantiate_component`) — en çok tercih edilen
 2. **DS primitive variant** (Button/Card/Text yakın variant, `setProperties` override)
-3. **Token-bound primitive** (`figma_create_frame` veya `createRectangle` + **tüm** fill/padding/radius/spacing SUI variable'larına `setBoundVariable` / `setBoundVariableForPaint` ile bağlı) — **meşru**, plugin DS violation olarak işaretlemez. Kullanıcıya bildir: "SUI'de X component'i bulunmadı, DS token'larına bağlı primitive ile inşa edildi."
+3. **Token-bound primitive** (`figma_create_frame` veya `createRectangle` + **tüm** fill/padding/radius/spacing aktif DS variable'larına `setBoundVariable` / `setBoundVariableForPaint` ile bağlı) — **meşru**, plugin DS violation olarak işaretlemez. Kullanıcıya bildir: "Aktif DS'de X component'i bulunmadı, DS token'larına bağlı primitive ile inşa edildi."
 4. **Hardcoded değerli shape ASLA** — variable binding'siz `createFrame` / `createRectangle` → **gerçek ihlal**, plugin SEVERE `HARDCODED_COLOR`, `HARDCODED_SPACING` violation flag'i verir. Bu katmana inersen DUR, kullanıcıya gap raporu ver.
 
 **Önemli ayrım:** `createFrame` **kendisi** ihlal değil; variable binding'siz fill/padding/radius **ihlal**. Component bulunamadıysa primitive + token binding = doğru yol. Gerçek test (2026-04-15) bu karışıklık sebebiyle false positive DS violation warning üretmişti.
@@ -189,7 +190,7 @@ FCM projesinde **sadece `figma-mcp-bridge`** (local plugin) MCP server kullanıl
 **Doğru fallback:**
 - `figma_search_assets` boş → `figma-canvas-ops` Rule 24 Component Discovery Fallback (manuel `findAll(INSTANCE)` + `getMainComponentAsync`)
 - Design system search → `figma_get_design_system_summary` veya `figma_search_assets` (her ikisi de `figma-mcp-bridge`'ten)
-- Library variable discovery → `figma_get_library_variables({libraryName: "❖ SUI"})` veya `figma_execute` içinde `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()`
+- Library variable discovery → `figma_get_library_variables({libraryName: "<aktif DS>"})` veya `figma_execute` içinde `figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()` (aktif DS ismi `active-ds.md` Library Name alanından gelir, hardcoded `"❖ SUI"` YASAK)
 
 **Kural (tek cümle):** Tool adı `figma_` (snake_case, lowercase) → `figma-mcp-bridge` → ✅ kullan. Tool adı `Figma:` (PascalCase, kolon) → resmi MCP → ❌ ASLA kullanma.
 
@@ -203,10 +204,12 @@ mcp__fmcp-filesystem__read_text_file(path="/ABSOLUTE/PATH/TO/SKILL.md")
 
 **Otomatik davranış YOK:** Claude Desktop chat'te prompt'ta explicit direktif olmazsa Claude kendi sandbox'ında (`/mnt/skills/`, `/mnt/user-data/`) arar ve başarısız olur. Test raporundan (2026-04-15) gerçek bulgu.
 
-**Path örnekleri:**
-- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/fmcp-screen-orchestrator/SKILL.md`
-- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/fmcp-screen-recipes/SKILL.md`
-- `/Users/abdussamed.tezer/FCM/.claude/worktrees/thirsty-bouman/skills/figma-canvas-ops/SKILL.md`
+**Path örnekleri (proje kök dizinine göre ayarla):**
+- `<proje_kök>/skills/fmcp-screen-orchestrator/SKILL.md`
+- `<proje_kök>/skills/fmcp-screen-recipes/SKILL.md`
+- `<proje_kök>/skills/figma-canvas-ops/SKILL.md`
+
+`<proje_kök>` örneği: `/Users/abdussamed.tezer/FCM` (main) veya `/Users/abdussamed.tezer/FCM/.claude/worktrees/<worktree-adı>` (worktree). Test prompt'unda explicit absolute path belirtilmeli.
 
 **Fallback: Project Knowledge** — Kullanıcı filesystem MCP kurmamışsa, skill dosyalarını Claude Project knowledge'a yüklemiş olmalı. O durumda Claude Project'in arama/okuma mekanizmasını kullanır (otomatik değil, prompt'ta "Project knowledge'daki X'i referans al" denmesi gerekir).
 
