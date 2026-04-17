@@ -226,6 +226,15 @@ FOR each input in required_inputs:
 
 Missing list'teki tüm soruları **TEK** `AskUserQuestion` çağrısında toplayıp sor. Max 4 soru/çağrı (AskUserQuestion limiti). 5+ soru gerekiyorsa 2 ayrı çağrı yap, ama ÖNCE kritik 4'ü sor, sonra kalanları.
 
+### v1.9.5 Elicitation Kuralı (SERT)
+
+- **Maks 1 `AskUserQuestion` çağrısı** tüm oturum boyunca. Tekrar soru sormak yasak — state'ten veya context'ten çıkar.
+- **"devam et" / "tamam" / "ok" / "yap" sonrası soru YASAK.** Kullanıcı onay verdi → üretime geç.
+- User prompt'u anlamlıysa (spesifik ekran adı, boyut, DS veriliyorsa) **hiç sorma**, direkt planla ve göster.
+- **"Sen seç"** cevabı alırsan: mantıklı default kullan (iPhone 17, mobile, single variant, active DS).
+- Sorulan her soru ≤30 kelime — uzun elicitation yasak.
+- Soruyu sormanın context maliyeti ≥ yanıtın değeri mi? Değilse sorma.
+
 **Örnek — generate-figma-screen:**
 
 ```

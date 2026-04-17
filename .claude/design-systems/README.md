@@ -41,8 +41,24 @@ FCM v2+ itibarıyla DS referansları **iki katmanda** tutulur:
     ├── tokens.md                  ← GERÇEK variableKey'ler (spacing, color, radius)
     ├── components.md              ← GERÇEK componentKey'ler
     ├── icons.md                   ← varsa
-    └── mobile.md                  ← varsa
+    ├── mobile.md                  ← varsa
+    └── file-map.md                ← v1.9.5: dosyanın site map'i (sayfalar, key frame'ler)
 ```
+
+### v1.9.5 — file-map.md (Discovery Cache)
+
+**Amaç:** Chat'ler arası bilgi biriktirme. Her oturumda sıfırdan dosya yapısı keşfi engellenir.
+
+**İçerik:**
+- Dosyanın sayfaları (ad, ID, frame sayısı, açıklama)
+- Key frame'ler tablosu (ad, ID, size, page, rol)
+- Common pattern'ler (örn. "Anasayfa için bottom nav 5 tab")
+
+**Update tetikleyici:** Claude `figma_get_file_data(depth>=2)` çağırdığında veya kullanıcı "dosya haritasını güncelle" dediğinde otomatik yazılır.
+
+**TTL:** 7 gün. Daha eski ise yeniden keşif önerilir (Figma'da dosya değişmiş olabilir).
+
+**Okuma sırası:** Skill, yeni oturumda istek geldiğinde önce `file-map.md`'yi okur. Kullanıcının istediği ekran zaten varsa referans verir, keşif 1-2 call'la sınırlı kalır.
 
 **Neden iki katman?**
 1. **Gizlilik:** Figma library key'leri kurumsal IP'dir; repo'ya girmemeli.

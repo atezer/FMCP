@@ -144,6 +144,35 @@ Benchmark/görselden DEĞER alma YASAK. Sadece NİYET: layout yönü, hiyerarşi
 2. **Content** — DS instance yerleşimi → screenshot → onay
 3. **Polish** — spacing, states, edge cases → son screenshot → audit
 
+### v1.9.5 Discovery Budget Rule (SERT)
+
+- **Maks 3 discovery çağrısı** (figma_get_*, figma_search_*, figma_execute read-only) sonra plan sun.
+- Plan kullanıcıya 1-2 cümle + varsa özet: "Şu ekran/section'ları oluşturacağım: [liste]. Onay veriyor musun?"
+- Kullanıcı onay verdikten sonra **mutation** aşamasına geç (figma_execute createFrame/setFills/setBoundVariable) — discovery counter reset olur.
+- Plugin 8 çağrıdan sonra `_warnings: ["DISCOVERY_BUDGET_WARNING..."]` döner — görünce üretime geçmek zorundasın.
+- 12 çağrıdan sonra `_DISCOVERY_BUDGET_EXCEEDED_BLOCKING: true` döner — **skip edilemez**, plan sun veya dur.
+
+### v1.9.5 Screenshot Method Selection (KARAR AĞACI)
+
+Ekran yakalama isteği olduğunda şu ağacı takip et:
+
+```
+İhtiyaç ne?
+├── "Planlama yapacağım, layout anlamak istiyorum" → returnMode: "summary" (metadata, screenshotsuz)
+├── "Kullanıcıya son halini göstereyim" → returnMode: "file" (1 screenshot dosyaya)
+├── "Büyük/scroll'lu ekran, bölümleri görmek istiyorum" → returnMode: "regions", regionStrategy: "children"
+├── "Üretim sonrası hızlı validation" → returnMode: "file"
+├── "Spesifik region (örn Hero)" → single-node file veya regions children maxRegions=3
+└── "Base64 context'te gerekli (nadiren)" → returnMode: "base64" (explicit, _warning ile)
+```
+
+**Budget farkındalığı:**
+- Bir oturumda >3 farklı nodeId için screenshot → 4. için zorunlu `summary` veya `regions`
+- Response'da `_warnings: ["CONTEXT_NEAR_LIMIT"]` veya `"DISCOVERY_BUDGET_..."` görürsen → sonraki screenshot zorunlu `summary`
+- Pixel-perfect değil, **region-perfect** düşün: "Hero'yu göreyim, gerekirse Actions'ı da" — hepsi birden değil
+
+**Kritik:** Screenshot YASAK değil. "Yasak" yerine **doğru yöntem** kullan. Her mode'un kullanım amacı var.
+
 ### Error Recovery
 
 | Hata | Aksiyon |

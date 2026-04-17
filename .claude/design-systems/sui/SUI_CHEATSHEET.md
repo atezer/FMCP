@@ -133,19 +133,24 @@ child.layoutSizingHorizontal = "FILL";
 
 ---
 
-## 7. Anti-Pattern Listesi
+## 7. Anti-Pattern Listesi (Yöntem odaklı — yasak değil, doğru yöntem)
 
-| ❌ Yapma | ✅ Doğrusu |
+| ❌ Kötü pattern | ✅ İyi pattern / yöntem |
 |---------|-----------|
-| Screenshot ile ilham toplama | Metadata + layer tree (`findAll`) |
-| Her execute'ta bir frame (parent/body/nav ayrı) | Tek execute'ta hiyerarşi |
-| Sıralı tool zinciri | **Paralel** tool çağrıları (tek mesajda 3-4) |
-| `figma_search_components` her seferinde | Cache-first (user-local) |
-| `get_library_variables` filtresiz (96K char!) | `query:` veya `collectionName:` ile filtrele |
+| Screenshot default `base64` mode | `returnMode: "file"` veya `"summary"` (v1.9.5) — base64 sadece kullanıcı explicit isterse |
+| Büyük ekran (2000px+) tek screenshot | `returnMode: "regions"`, `regionStrategy: "children"` — parçalı export |
+| Ekran planlaması için screenshot | `returnMode: "summary"` — metadata, screenshotsuz (~0.5K token) |
+| 3+ ardışık screenshot karşılaştırma | Önce 3× `summary`, sonra gerekirse 1 `file` detay |
+| Her execute'ta bir frame (parent/body/nav ayrı) | Tek execute mega-batch (1 execute = tüm hiyerarşi) |
+| Boyut sorgusu 20-30 satır JS | `await figma.getNodeByIdAsync(id).then(n => ({w:n.width,h:n.height}))` — tek satır |
+| Sıralı tool zinciri (get_status → get_file_data → get_summary) | **Paralel** — tek mesajda 3-4 tool çağrısı |
+| `figma_search_components` her seferinde | Cache-first (user-local components.md) |
+| `get_library_variables` filtresiz | `query:` veya `collectionName:` ile filtrele |
 | 127 component full tarama | Top 30'a cache, eksik için on-demand |
 | `valuesByMode` alias traversal | `setBoundVariable` yeterli |
+| `ask_user_input_v0` 3+ soru üst üste | Tek soru — "devam et" sonrası soru yasak (v1.9.5) |
+| Sıfırdan keşif her oturumda | `file-map.md` varsa oku, sonra sadece delta keşif (v1.9.5) |
 | 20+ op tek `batch_design` | Max 15 op/execute |
-| Her adımda narrate | Mega-adım sonu tek satır micro-report |
 | Gerçek `componentKey` / `variableKey` repo'ya yazma | User-local cache + runtime resolve |
 
 ---

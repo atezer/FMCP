@@ -241,7 +241,19 @@ export class PluginBridgeConnector {
 		return this.bridge.request("createChildNode", { parentId, nodeType, properties }, this.fileKey);
 	}
 
-	async captureScreenshot(nodeId: string | null, options?: { format?: string; scale?: number; jpegQuality?: number }): Promise<PluginScreenshotPayload> {
+	async captureScreenshot(
+		nodeId: string | null,
+		options?: {
+			format?: string;
+			scale?: number;
+			jpegQuality?: number;
+			returnMode?: "file" | "base64" | "summary" | "regions";
+			regionStrategy?: "children" | "slices";
+			maxRegions?: number;
+			sliceHeight?: number;
+			requestedSlices?: number[];
+		},
+	): Promise<PluginScreenshotPayload> {
 		return this.bridge.request("captureScreenshot", { nodeId, options }, this.fileKey);
 	}
 
