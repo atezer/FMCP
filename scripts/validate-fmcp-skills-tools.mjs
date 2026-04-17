@@ -28,9 +28,13 @@ const REGISTER_RE = /registerTool\(\s*["'](figma_[a-z0-9_]+)["']/g;
 /** Skill/markdown içindeki araç adları: `figma_foo` veya figma_foo( */
 const SKILL_TOOL_RE = /\b(figma_[a-z][a-z0-9_]*)\b/g;
 
-/** Skill adları / yanlış pozitifler (figma_ ile başlamaz ama eşleşmeyi bozmasın) */
+/** Skill adları / yanlış pozitifler — bunlar araç DEĞİL (enum değerleri, field isimleri) */
 const IGNORE_TOOLS = new Set([
-	// yok — tüm figma_* eşleşmeleri araç sayılır
+	"figma_benchmark",      // orchestrator intake_mode enum değeri
+	"figma_node",           // inspiration-intake source_type enum değeri
+	"figma_url",            // inspiration-intake source_type enum değeri / URL pattern
+	"figma_component_id",   // code-design-mapper YAML frontmatter field adı
+	"figma_source",         // visual-qa-compare YAML frontmatter field adı
 ]);
 
 function collectRegisteredTools() {
