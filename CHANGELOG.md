@@ -12,6 +12,62 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.0] - 2026-04-17
+
+### Kural Enflasyonu Temizliği + Bridge Crash Koruması + SUI Cache
+
+5 ardışık testten (FP-1-R serisi) elde edilen bulgularla yapılan kapsamlı temizlik. Skill dosyaları %57 küçültüldü, plugin tarafında büyük component set'lerin bridge'i kilitlemesi engellendi, SUI cache altyapısı eklendi.
+
+**Skill Compaction — 2298 → 979 satır (%57 azalma, ~10K token tasarruf):**
+
+- `skills/fmcp-screen-recipes/SKILL.md` — 1090 → 528 satır
+  - Devre dışı bırakılmış Adım 3 (breakpoint bind) ve Adım 4a (collection enum NO-OP) uzun açıklamaları 1 satıra indirildi
+  - v1.9.x tarihçe anlatıları, FP-1-R test narratifleri, "neden" blokları kaldırıldı
+  - Execute 1 kod bloğu Türkçe comment'leri temizlenip sıkıştırıldı
+  - 8 recipe'ye (Login, Profile, List, Detail, Form, Onboarding, Dashboard, Settings) explicit `setProperties` override listesi eklendi — Payment v2.0.1'de yapılan düzeltme diğer recipe'lere de yayıldı
+  - Known Limitations, Tool Chunking Rules, Evolution Triggers bölümleri kompaktlandı
+
+- `skills/figma-canvas-ops/SKILL.md` — 805 → 285 satır
+  - Rule 22 async API tablosu Rule 2'ye taşındı, wrapper prose silindi
+  - Rule 23 (style import fail) 38 satırlık kod bloğu 15 satırlık try-catch iskeletine indirildi
+  - Rule 25 (validate timeout) 3 seviyeli fallback 10 satıra kısaltıldı, timeout gerekçesi tarihçesi silindi
+  - Rule 26 (component discovery) NavigationTopBar örnek çıktısı silindi, Text Style Discovery recipes Adım 1.6'ya cross-reference ile değiştirildi
+  - Rule 5a'daki timeout değeri "5000ms" → "15000ms" (gerçek koda uyumlu)
+  - Auto-layout, Component, Variable pattern'leri kompaktlandı
+
+- `skills/fmcp-screen-orchestrator/SKILL.md` — 403 → 166 satır
+  - Advanced section %60 kısaltıldı — Detay 1.0 Inspiration Handoff JSON schema örneği, Detay 6 Claude Web satırı, Detay 7 Verification Checklist Self-Audit Gate'e taşındı
+  - Filesystem MCP direktifi 17 → 5 satır, Resmi Figma MCP yasağı 17 → 8 satır
+
+**Bridge Crash Koruması:**
+
+- `f-mcp-plugin/code.js:extractComponentSetData` — `MAX_VARIANTS = 50` guard eklendi. SUI Button (336 variant) gibi büyük component set'lerin children iterasyonu ilk 50 ile sınırlandırıldı. Response'a `_totalVariantCount` ve `_truncated` metadata alanları eklendi. 4+ dakika bridge timeout ve plugin crash riski ortadan kaldırıldı.
+- `f-mcp-plugin/code.js:extractComponentData` + componentSetData properties bloğu — `MAX_PROPERTIES = 100` guard eklendi. `componentPropertyDefinitions` iterasyonu property sayısıyla sınırlandırıldı.
+- `src/local-plugin-only.ts:figma_execute` — Timeout clamp 120s → 30s'ye indirildi. 15 op = ~200ms gerçek test verisi; 30s hâlâ çok bol. Yüksek timeout'lar artık bridge hang'lerini maskeleyemez.
+
+**Collection Keyword Match Düzeltmesi:**
+
+- `skills/fmcp-screen-recipes/SKILL.md:Adım 1.5 Execute 1` — `findColl(["semantic color", "s theme", "theme"])` içindeki jenerik `"theme"` fallback keyword'ü kaldırıldı. SUI dışı DS collection'larının yanlışlıkla match edip her testte 1 ek düzeltme execute'u harcamasına neden oluyordu. `"s theme"` SUI'nin "S Theme Colors" collection'ını zaten tam olarak yakalar.
+
+**SUI Component Key Cache Altyapısı (yeni):**
+
+- `.claude/design-systems/sui/components.md` (yeni) — component key cache şablonu. NavigationTopBar, Button, Divider_H, TextField, Card, Avatar, ListItem, SearchBar, Chip, BottomNavBar için slot'lar. Recipes Adım 6 bu dosyayı önce okur; cache varsa (< 7 gün) `figma_search_assets` çağrısını atlar, direkt `importComponentByKeyAsync(key)` kullanır.
+- `.claude/design-systems/sui/tokens.md` (yeni) — spacing token'ları, collection info (S Theme Colors, Semantic Sizes), surface background için cache şablonu. Recipes Adım 1.5 bu cache'i önce okur, fresh ise token discovery'yi komple atlar.
+
+**Beklenen Etkiler:**
+
+- Claude Desktop'ta her recipe çağrısı için okunacak skill yükü ~25K → ~12K token (%52 azalma, ~10K token/oturum)
+- SUI gibi büyük library'lerle çalışırken bridge crash riski sıfıra yakın (variant/property guard)
+- Fast Path recipe süresi hedefi: 30+ dk → 10-12 dk (cache-first + skill compaction etkisi bir arada)
+- Collection/component discovery için harcanan execute sayısı: -2 ile -3 arası (cache hit durumunda)
+
+**Dokunulmayanlar (kasıtlı):**
+
+- `skills/generate-figma-screen/SKILL.md` (v1.8.x full workflow korundu)
+- `skills/inspiration-intake/SKILL.md`, `skills/fmcp-intent-router/SKILL.md`
+- `agents/*.md` delegator'lar
+- `f-mcp-plugin/ui.html` port scanning mantığı (v1.9.6 throttle'ı zaten yeterli)
+
 ## [1.8.2] - 2026-04-14
 
 ### DS Discipline Hotfix — Clone Tool Narrow Use + Build-from-Scratch Enforcement
