@@ -129,8 +129,9 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 - **Ne yapar** — Claude veya Cursor'dan Figma'ya ekran tasarlar, tasarım sistemini denetler, renk/yazı/boşluk token'larını yönetir, tasarımı koda hazırlar
 - **Nerelerde çalışır** — Claude Code, Cursor, Claude Desktop, Claude Web ([kurulum rehberleri](install/))
-- **Figma** — Masaüstü uygulaması ve tarayıcı, her ikisinde de çalışır
-- **Birden fazla AI aynı anda** — Claude, Cursor ve Claude Code aynı Figma dosyasına birlikte bağlanabilir
+- **Nasıl çalışır** — Her görev için kendi **skill**'i var (kural seti + örnek). Claude Code'da **agent + sub-agent** yapısı var: ana ajan görevi alır, alt-ajanlar izole çalışır — ana sohbet bağlamı yorulmaz. Cursor ve Claude Desktop'ta aynı skill'ler doğrudan yüklenir (sub-agent yok, tek kaynak 4 platformda)
+- **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
+- **Figma** — Masaüstü ve tarayıcı, birden fazla AI aynı dosyaya aynı anda bağlanabilir
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
 - **Detay** — [46 araç](docs/TOOLS_FULL_LIST.md) · [24 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
