@@ -117,9 +117,10 @@ Detay: [UPDATE.md](docs/UPDATE.md)
 
 | Sorun | Çözüm |
 |-------|-------|
-| Plugin "no server" diyor | AI aracınızı yeniden başlatın |
+| Plugin "no server" diyor | Önce AI aracını (Claude Desktop / Cursor / Claude Code) açın, sonra Figma'da plugin'i çalıştırın |
 | Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
 | Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
+| DevTools console'da WebSocket hataları | v1.9.1+ ile server-side probe ile giderildi. Plugin hâlâ eski kodu cache'liyorsa: Figma → Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest |
 
 Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
