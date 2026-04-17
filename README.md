@@ -127,20 +127,18 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## Teknik detaylar
 
-- **46 araç** — tasarım okuma, bileşen oluşturma, variable yönetimi, export ([tam liste](docs/TOOLS_FULL_LIST.md))
-- **24 skill** — token pipeline, ekran üretimi, erişilebilirlik denetimi, kod üretimi, DS denetim, cross-platform orkestrasyon ([skill dizini](skills/SKILL_INDEX.md))
-- **3 cross-platform orkestratör** — DS denetim, token senkronizasyon, ekran oluşturma. Claude Code'da agent + sub-agent isolation; Cursor / Claude Desktop'ta doğrudan skill. Tek kaynak, dört yüz.
-- **Çoklu dosya + çoklu AI aracı** — Claude, Cursor ve Claude Code aynı anda çalışır
-- **Cross-platform kurulum rehberleri** — [install/](install/) dizininde Claude Code, Cursor, Claude Desktop ve Claude Web için adım adım kurulum kitleri + token bütçe analizi
-- **Figma Desktop + Tarayıcı** — Her ikisinde de çalışır
-- **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internetsiz (air-gap) ortamlarda çalışır
-- [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
+- **Ne yapar** — Claude veya Cursor'dan Figma'ya ekran tasarlar, tasarım sistemini denetler, renk/yazı/boşluk token'larını yönetir, tasarımı koda hazırlar
+- **Nerelerde çalışır** — Claude Code, Cursor, Claude Desktop, Claude Web ([kurulum rehberleri](install/))
+- **Figma** — Masaüstü uygulaması ve tarayıcı, her ikisinde de çalışır
+- **Birden fazla AI aynı anda** — Claude, Cursor ve Claude Code aynı Figma dosyasına birlikte bağlanabilir
+- **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
+- **Detay** — [46 araç](docs/TOOLS_FULL_LIST.md) · [24 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
 ---
 
 | | |
 |---|---|
-| Güncel sürüm | **1.7.30** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
+| Güncel sürüm | **1.9.0** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 
