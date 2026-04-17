@@ -6,7 +6,97 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.4';
+var FMCP_PLUGIN_VERSION = '1.9.5';
+
+// v1.9.5: Metadata summary builder for returnMode='summary' (screenshotsuz)
+async function buildNodeSummary(node, maxDepth) {
+  var colorUsage = {}; // role → count
+  var textRoleCount = {}; // styleId → { count, samples }
+  var unboundHexCount = 0;
+  var totalNodes = 0;
+
+  function walk(n, depth) {
+    totalNodes++;
+    // Fill bound token tracking
+    if (Array.isArray(n.fills)) {
+      for (var fi = 0; fi < n.fills.length; fi++) {
+        var fl = n.fills[fi];
+        if (fl && fl.visible !== false && fl.type === 'SOLID') {
+          var fbv = n.boundVariables && n.boundVariables.fills;
+          var bound = fbv && (Array.isArray(fbv) ? fbv[fi] : true);
+          if (bound) {
+            var role = (Array.isArray(fbv) ? fbv[fi] : fbv).id || 'unknown';
+            colorUsage[role] = (colorUsage[role] || 0) + 1;
+          } else {
+            unboundHexCount++;
+          }
+        }
+      }
+    }
+    if (n.type === 'TEXT') {
+      var styleId = n.textStyleId || 'inline';
+      if (!textRoleCount[styleId]) textRoleCount[styleId] = { count: 0, samples: [] };
+      textRoleCount[styleId].count++;
+      if (textRoleCount[styleId].samples.length < 3) {
+        textRoleCount[styleId].samples.push(String(n.characters || '').slice(0, 30));
+      }
+    }
+    if (n.children && depth < 3) { // deep walk but capped
+      for (var ci = 0; ci < n.children.length; ci++) walk(n.children[ci], depth + 1);
+    }
+  }
+
+  walk(node, 0);
+
+  function collectSections(n, depth) {
+    if (depth > maxDepth) return null;
+    var s = {
+      name: n.name,
+      type: n.type,
+      size: n.width && n.height ? Math.round(n.width) + 'x' + Math.round(n.height) : null,
+      childrenCount: n.children ? n.children.length : 0,
+    };
+    if (n.children && n.children.length > 0 && depth < maxDepth) {
+      var items = [];
+      for (var i = 0; i < n.children.length && i < 20; i++) {
+        items.push(collectSections(n.children[i], depth + 1));
+      }
+      s.children = items;
+    }
+    return s;
+  }
+
+  // Resolve variable names (best-effort)
+  var dominantColors = [];
+  var colorEntries = Object.keys(colorUsage).map(function (k) { return { role: k, usage: colorUsage[k] }; });
+  colorEntries.sort(function (a, b) { return b.usage - a.usage; });
+  for (var ci2 = 0; ci2 < Math.min(colorEntries.length, 5); ci2++) {
+    dominantColors.push({ variableId: colorEntries[ci2].role, usageCount: colorEntries[ci2].usage, bound: true });
+  }
+  if (unboundHexCount > 0) {
+    dominantColors.push({ variableId: '<hardcoded>', usageCount: unboundHexCount, bound: false });
+  }
+
+  var textRoles = [];
+  var trKeys = Object.keys(textRoleCount);
+  for (var tk = 0; tk < trKeys.length; tk++) {
+    textRoles.push({ styleId: trKeys[tk], count: textRoleCount[trKeys[tk]].count, samples: textRoleCount[trKeys[tk]].samples });
+  }
+
+  return {
+    nodeId: node.id,
+    name: node.name,
+    type: node.type,
+    dimensions: { width: Math.round(node.width || 0), height: Math.round(node.height || 0) },
+    layoutMode: node.layoutMode || 'NONE',
+    childrenCount: node.children ? node.children.length : 0,
+    totalNodes: totalNodes,
+    sections: collectSections(node, 0),
+    dominantColors: dominantColors,
+    textRoles: textRoles.slice(0, 10),
+    hint: "v1.9.5 summary: Metadata ozeti, gorsel yok. Layout karari icin yeter. Pixel dogrulama gerekirse returnMode='file' veya 'regions'.",
+  };
+}
 
 // Console log buffer for figma_get_console_logs (no CDP)
 var __consoleLogBuffer = [];
@@ -2985,64 +3075,140 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'CAPTURE_SCREENSHOT') {
     try {
-      console.log('🌉 [F-MCP ATezer Bridge] Capturing screenshot for node:', msg.nodeId);
+      console.log('🌉 [F-MCP ATezer Bridge v1.9.5] Capturing screenshot for node:', msg.nodeId, 'returnMode:', msg.returnMode);
 
       var node = msg.nodeId ? await figma.getNodeByIdAsync(msg.nodeId) : figma.currentPage;
       if (!node) {
         throw new Error('Node not found: ' + msg.nodeId);
       }
 
-      // Verify node supports export
+      // v1.8.0: Default JPG@1x q70 for context safety.
+      var format = (msg.format || 'JPG').toUpperCase();
+      var scale = msg.scale != null ? msg.scale : 1;
+      var jpegQuality = msg.jpegQuality != null ? msg.jpegQuality : 70;
+      // v1.9.5: returnMode (default 'file' which server translates to base64 + save)
+      var returnMode = msg.returnMode || 'base64';  // plugin default stays base64; server wraps to file
+      var regionStrategy = msg.regionStrategy || 'children';
+      var maxRegions = msg.maxRegions != null ? msg.maxRegions : 8;
+
+      function buildExportSettings() {
+        var s = { format: format, constraint: { type: 'SCALE', value: scale } };
+        if (format === 'JPG') s.quality = jpegQuality;
+        return s;
+      }
+
+      // ---------- v1.9.5 MODE: summary ----------
+      // No export. Just metadata.
+      if (returnMode === 'summary') {
+        var rootSummary = await buildNodeSummary(node, /*depth*/ 2);
+        figma.ui.postMessage({
+          type: 'CAPTURE_SCREENSHOT_RESULT',
+          requestId: msg.requestId,
+          success: true,
+          mode: 'summary',
+          summary: rootSummary,
+        });
+        return;
+      }
+
+      // ---------- v1.9.5 MODE: regions (children strategy) ----------
+      if (returnMode === 'regions' && regionStrategy === 'children') {
+        if (!node.children || node.children.length === 0) {
+          figma.ui.postMessage({
+            type: 'CAPTURE_SCREENSHOT_RESULT',
+            requestId: msg.requestId,
+            success: false,
+            error: "Node has no children for regions mode. Use 'file' or 'summary' instead.",
+          });
+          return;
+        }
+        var regions = [];
+        var children = node.children.slice(0, maxRegions);
+        for (var ri = 0; ri < children.length; ri++) {
+          var child = children[ri];
+          if (!('exportAsync' in child)) continue;
+          try {
+            var cbytes = await child.exportAsync(buildExportSettings());
+            var cbase64 = figma.base64Encode(cbytes);
+            regions.push({
+              name: child.name,
+              nodeId: child.id,
+              type: child.type,
+              image: {
+                base64: cbase64,
+                format: format,
+                scale: scale,
+                byteLength: cbytes.length,
+                width: child.width,
+                height: child.height,
+              },
+            });
+          } catch (childErr) {
+            regions.push({
+              name: child.name,
+              nodeId: child.id,
+              error: childErr && childErr.message ? childErr.message : String(childErr),
+            });
+          }
+        }
+        figma.ui.postMessage({
+          type: 'CAPTURE_SCREENSHOT_RESULT',
+          requestId: msg.requestId,
+          success: true,
+          mode: 'regions',
+          regionStrategy: 'children',
+          regions: regions,
+          totalRegions: regions.length,
+          rootSummary: {
+            nodeId: node.id,
+            name: node.name,
+            dimensions: { width: node.width, height: node.height },
+            childrenCount: node.children.length,
+            capped: node.children.length > maxRegions,
+          },
+        });
+        return;
+      }
+
+      // ---------- v1.9.5 MODE: regions (slices strategy) — NOT SUPPORTED YET ----------
+      if (returnMode === 'regions' && regionStrategy === 'slices') {
+        // Figma exportAsync does not support crop regions natively.
+        // Fallback: return a warning + single full image export.
+        figma.ui.postMessage({
+          type: 'CAPTURE_SCREENSHOT_RESULT',
+          requestId: msg.requestId,
+          success: false,
+          error: "regionStrategy='slices' not supported in v1.9.5. Use regionStrategy='children' or returnMode='summary'.",
+        });
+        return;
+      }
+
+      // ---------- DEFAULT: full single export (base64 or file — server post-processes) ----------
       if (!('exportAsync' in node)) {
         throw new Error('Node type ' + node.type + ' does not support export');
       }
 
-      // v1.8.0: Default JPG@1x q70 for context safety. Plugin reads msg.format,
-      // msg.scale, msg.jpegQuality from the request payload (passed through
-      // captureScreenshot connector → bridge → here).
-      var format = (msg.format || 'JPG').toUpperCase();
-      var scale = msg.scale != null ? msg.scale : 1;
-      var jpegQuality = msg.jpegQuality != null ? msg.jpegQuality : 70;
-
-      var exportSettings = {
-        format: format,
-        constraint: { type: 'SCALE', value: scale }
-      };
-      // JPG quality (Figma Plugin API supports 'quality' for ExportSettingsImage)
-      if (format === 'JPG') {
-        exportSettings.quality = jpegQuality;
-      }
-
-      // Export the node
-      var bytes = await node.exportAsync(exportSettings);
-
-      // Convert to base64
+      var bytes = await node.exportAsync(buildExportSettings());
       var base64 = figma.base64Encode(bytes);
+      var bounds = ('absoluteBoundingBox' in node) ? node.absoluteBoundingBox : null;
 
-      // Get node bounds for context
-      var bounds = null;
-      if ('absoluteBoundingBox' in node) {
-        bounds = node.absoluteBoundingBox;
-      }
-
-      console.log('🌉 [F-MCP ATezer Bridge] Screenshot captured:', bytes.length, 'bytes (' + format + ' @' + scale + 'x)');
+      console.log('🌉 [F-MCP ATezer Bridge v1.9.5] Screenshot captured:', bytes.length, 'bytes (' + format + ' @' + scale + 'x)');
 
       figma.ui.postMessage({
         type: 'CAPTURE_SCREENSHOT_RESULT',
         requestId: msg.requestId,
         success: true,
+        mode: returnMode,  // 'file' or 'base64' (server post-processes 'file' mode)
         image: {
           base64: base64,
           format: format,
           scale: scale,
           jpegQuality: format === 'JPG' ? jpegQuality : null,
           byteLength: bytes.length,
-          node: {
-            id: node.id,
-            name: node.name,
-            type: node.type
-          },
-          bounds: bounds
+          width: node.width,
+          height: node.height,
+          node: { id: node.id, name: node.name, type: node.type },
+          bounds: bounds,
         }
       });
 

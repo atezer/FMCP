@@ -184,6 +184,26 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
 
 16. **Her Promise'i `await` et.**
 
+17. **v1.9.5 Concise Query Rule — tek satır boyut/metadata sorguları.**
+
+    Boyut, renk, layout sorgulamak için **20+ satır JS YAZMA**. Tek satır yeter:
+
+    ```js
+    // İYİ — tek satır, minimal context
+    return await figma.getNodeByIdAsync(id).then(n => ({ w: n.width, h: n.height, children: n.children?.length }));
+
+    // İYİ — toplu (birden fazla node)
+    return Promise.all(ids.map(async id => {
+      const n = await figma.getNodeByIdAsync(id);
+      return { id, name: n?.name, size: n ? [n.width, n.height] : null };
+    }));
+
+    // KÖTÜ — 30 satır "defensive" kod boyut sorgusu için
+    // await figma.loadAllPagesAsync(); for (var pg of ...) { if (...) ... }
+    ```
+
+    **Kural:** Tek nodeId için size → 1 satır. Multi-node metadata → 1 Promise.all. Complex traversal sadece üretim mantığında gerekli — keşifte değil.
+
 ## 2. Sayfa Kuralları
 
 ```js

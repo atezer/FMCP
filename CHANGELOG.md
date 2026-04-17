@@ -12,6 +12,62 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.5] - 2026-04-17
+
+### Chat Context Korumaları — Screenshot Method Selection + Discovery Budget
+
+Claude Desktop'ta test edilen gerçek oturumda context bütçesi patlaması (188K/200K = %94 dolu, 3 base64 screenshot %45 context yedi, üretim fazına bile gelinmedi) gözlemlenince bu sürüm acil hazırlandı. v1.9.4 üretim enforcement'ı doğruydu ama **keşif aşamasını korumuyordu**. v1.9.5 bu eksikliği kapatır.
+
+**Felsefe:** "Screenshot yasak" yanlış — bazen gerekli. Çözüm **yasak** değil, **doğru yöntem seçimi**. Claude bağlama göre 4 mode'dan seçer.
+
+**Değişiklikler:**
+
+- **`figma_capture_screenshot` 4 returnMode** (src/local-plugin-only.ts + f-mcp-plugin/code.js):
+  - `"file"` (yeni default): Screenshot `~/.fmcp/screenshots/<timestamp>-<nodeId>.jpg` altına yazılır, response'ta sadece `filePath` döner. Context maliyeti 30K → 0.3K token (100× tasarruf). Claude Desktop `open <filePath>` ile açabilir.
+  - `"summary"`: Screenshot çekilmez; yerine metadata özeti (sections, dominantColors, textRoles, layoutMode, dimensions) plugin API ile çıkarılır. Planlama aşaması için. ~0.5-1K token.
+  - `"regions"`: `regionStrategy: "children"` ile node'un top-level child'ları ayrı ayrı export edilir, her biri dosyaya. Büyük/scroll'lu ekranlarda parçalı inceleme için. `regionStrategy: "slices"` v1.9.5'te henüz desteklenmiyor (Figma exportAsync crop API'si yok).
+  - `"base64"`: Eski davranış, opt-in. Response'a `_warning: "BASE64_MODE..."` eklenir.
+  - Tüm mode'lar backwards compatible; default değişti ama eski `"base64"` explicit çağrılırsa çalışır.
+
+- **`src/core/discovery-counter.ts` (YENİ)**: Session-level keşif budget counter. `figma_get_*`, `figma_search_*`, `figma_list_*`, `figma_capture_screenshot` çağrıları sayılır. `figma_execute` için kod pattern analizi: read-only (`findAll`, `getNodeByIdAsync`) → discovery; mutation (`createFrame`, `setBoundVariable`) → build, counter reset. 8 çağrıda `_warnings: ["DISCOVERY_BUDGET_WARNING..."]`, 12'de `_DISCOVERY_BUDGET_EXCEEDED_BLOCKING: true`.
+
+- **`scripts/cleanup-ports.sh` (YENİ)**: 5454-5470 aralığındaki zombie FMCP process temizleyici. Sadece `figma-mcp-bridge` / `local-plugin-only` / `@atezer` ile eşleşenleri öldürür, diğer node process'lerine dokunmaz. "Plugin bağlanmıyor" sorununa karşı.
+
+- **Skill güncellemeleri:**
+  - `skills/fmcp-intent-router/SKILL.md`: v1.9.5 Elicitation Kuralı — maks 1 `AskUserQuestion`, "devam et" sonrası soru yasak.
+  - `skills/fmcp-screen-orchestrator/SKILL.md`: v1.9.5 Discovery Budget Rule (maks 3 keşif → plan sun) + Screenshot Method Selection (karar ağacı: summary → file → regions → base64).
+  - `skills/figma-canvas-ops/SKILL.md`: v1.9.5 Concise Query Rule — boyut sorgusu tek satır (`n.width/height`), 20+ satır defansif kod yasak.
+
+- **Doc güncellemeleri:**
+  - `install/claude-desktop/HOW-TO-ENFORCE.md`: v1.9.5 sertleştirilmiş başlangıç prompt'u — discovery budget + screenshot method selection + elicitation kuralları. cleanup-ports.sh rehberi eklendi.
+  - `README.md`: Claude Desktop sınırlamaları güncellendi (dört katmanlı enforcement), cleanup-ports.sh notu.
+  - `.claude/design-systems/README.md`: user-local `file-map.md` bölümü eklendi.
+  - `.claude/design-systems/sui/SUI_CHEATSHEET.md`: Anti-pattern tablosu yöntem-odaklı güncellendi (yasak yerine doğru yöntem örnekleri).
+
+- **Plugin version sync**: `code.js`, `ui.html`, `package.json` → `1.9.5`. Plugin'de `buildNodeSummary()` helper metadata çıkarımı için eklendi.
+
+**Kullanıcı için ne değişir:**
+
+1. **Screenshot default `file` mode**: Artık Claude screenshot aldığında base64 context'e girmez — dosyaya yazılır, sadece filePath görünür. Context maliyeti 100× düşer.
+2. **Büyük ekran → regions mode önerisi**: 2000px+ ekranda Claude `returnMode: "regions"` kullanır, parçalı exports.
+3. **Discovery budget**: Claude 12. keşif çağrısında BLOCKING alır, plan sunmaya zorlanır.
+4. **Plugin bağlantı sorunu**: `bash scripts/cleanup-ports.sh` ile zombie temizle.
+5. **Elicitation**: Claude artık "devam et" dedikten sonra soru sormaz.
+
+**Regresyon:** Sıfır. Backwards compatible:
+- Eski `figma_capture_screenshot` çağrıları (`returnMode` belirtilmeyen) yeni `"file"` default kullanır — response format farklı (base64 yok, filePath var). Bu explicit bir upgrade. Eski `"base64"` davranışı için `returnMode: "base64"` explicit geçin.
+- Plugin VALIDATE_SCREEN handler (v1.9.4) aynen çalışır.
+- figma_execute BLOCKING signal (v1.9.4) aynen çalışır.
+
+**Test matrisi:**
+- TypeScript type-check: PASS
+- Build: PASS
+- `discovery-counter.ts`: kod pattern analizi read-only vs mutation ayrımı
+- Plugin handler'lar: summary, regions (children), file (default), base64 (legacy) dört mode mevcut
+- `cleanup-ports.sh`: chmod +x, process-name filter
+
+**Not:** Plugin yeniden yüklenmeli. `@latest` npm tag v1.9.5'i işaret eder. Claude Desktop'ı tamamen kapat-aç, Figma plugin'i reload et.
+
 ## [1.9.4] - 2026-04-17
 
 ### Claude Desktop Enforcement Gap Kapatma — Runtime DS Compliance Scan + BLOCKING signal

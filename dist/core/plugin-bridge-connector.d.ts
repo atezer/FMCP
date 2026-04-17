@@ -102,6 +102,11 @@ export declare class PluginBridgeConnector {
         format?: string;
         scale?: number;
         jpegQuality?: number;
+        returnMode?: "file" | "base64" | "summary" | "regions";
+        regionStrategy?: "children" | "slices";
+        maxRegions?: number;
+        sliceHeight?: number;
+        requestedSlices?: number[];
     }): Promise<PluginScreenshotPayload>;
     /**
      * v1.8.1+: Clone a source screen and adapt it to a target device dimension.

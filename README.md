@@ -54,7 +54,7 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 | **Cursor** | ✅ | Kod editörü — geliştiriciler için |
 | **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
 
-### Claude Desktop sınırlamaları (v1.9.4 notu)
+### Claude Desktop sınırlamaları (v1.9.5 güncellemesi)
 
 Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Desktop'ta yoktur**:
 
@@ -64,7 +64,24 @@ Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Deskt
 - `plugin.json` auto-discovery — yüklenmez
 - `.claude/CLAUDE.md` auto-inject yok
 
-Desktop'ta enforcement **üç katmandan** gelir: plugin response BLOCKING signal'i (v1.9.4+ `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING`), `figma_scan_ds_compliance` runtime scan tool'u, Project Knowledge'a yüklenmiş skill dosyaları. Detaylı rehber ve ilk-prompt örneği: **[install/claude-desktop/HOW-TO-ENFORCE.md](install/claude-desktop/HOW-TO-ENFORCE.md)**.
+Desktop'ta enforcement **dört katmandan** gelir:
+1. Plugin response BLOCKING signal'i (v1.9.4+ `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING`)
+2. Runtime audit tool'u `figma_scan_ds_compliance`
+3. **v1.9.5 Screenshot method selection** — file/summary/regions/base64 (context koruma)
+4. **v1.9.5 Discovery budget** — keşif çağrıları sayılır, 12'den sonra BLOCKING
+5. Project Knowledge'a yüklenmiş skill dosyaları
+
+Detaylı rehber ve ilk-prompt örneği: **[install/claude-desktop/HOW-TO-ENFORCE.md](install/claude-desktop/HOW-TO-ENFORCE.md)**.
+
+### Yeni chat öncesi (v1.9.5 önerisi)
+
+Plugin bağlantı sorunları veya zombie process temizliği için:
+
+```bash
+bash scripts/cleanup-ports.sh
+```
+
+5454-5470 aralığındaki eski FMCP process'lerini güvenle öldürür (sadece FMCP adıyla eşleşenler).
 
 ---
 

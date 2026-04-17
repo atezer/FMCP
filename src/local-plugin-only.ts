@@ -21,6 +21,10 @@ import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, truncatePluginResponse, calculateSizeKB } from "./core/response-guard.js";
 import { analyzeCodeForWarnings, type CodeWarning } from "./core/code-warnings.js";
+import { discoveryCounter } from "./core/discovery-counter.js";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { resolveDevice, DEVICE_PRESETS } from "./core/device-presets.js";
 import { closeAuditLog } from "./core/audit-log.js";
 import { FMCP_VERSION } from "./core/version.js";
@@ -44,6 +48,113 @@ const logger = createChildLogger({ component: "plugin-only-mcp" });
 const LEGACY_DEFAULTS = process.env.FMCP_LEGACY_DEFAULTS === "1";
 
 /** Resolve fileKey from figmaUrl (parse) or explicit fileKey. Returns undefined if neither yields a key. */
+/**
+ * v1.9.5: Screenshot dosya kayıt konumu.
+ * ~/.fmcp/screenshots/ altında timestamp-nodeId.ext formatı.
+ */
+const SCREENSHOT_DIR = join(homedir(), ".fmcp", "screenshots");
+
+function ensureScreenshotDir(): string {
+	try { mkdirSync(SCREENSHOT_DIR, { recursive: true }); } catch { /* ignore EEXIST */ }
+	return SCREENSHOT_DIR;
+}
+
+/**
+ * v1.9.5: Base64 image payload'u disk'e yaz, filePath döndür.
+ * Base64 decode edilir, dosyaya binary olarak yazılır.
+ */
+function saveBase64ToFile(base64: string, format: string, nodeIdHint?: string): {
+	filePath: string;
+	fileSize: number;
+} {
+	ensureScreenshotDir();
+	const ts = Date.now();
+	const safeNodeId = (nodeIdHint ?? "node").replace(/[^a-zA-Z0-9_-]/g, "_");
+	const ext = format.toLowerCase() === "png" ? "png" : "jpg";
+	const fileName = `${ts}-${safeNodeId}.${ext}`;
+	const filePath = join(SCREENSHOT_DIR, fileName);
+	const buffer = Buffer.from(base64, "base64");
+	writeFileSync(filePath, buffer);
+	return { filePath, fileSize: buffer.length };
+}
+
+/**
+ * v1.9.5: Screenshot result'ı returnMode'a göre post-process.
+ * - file: base64'u disk'e yaz, image.base64 yerine filePath döndür
+ * - regions: regions[].image.base64'u tek tek disk'e yaz, regions[].filePath döndür
+ * - summary: plugin zaten metadata döndürdü, dokunma
+ * - base64: eski davranış, dokunma (ama _warning ekle)
+ */
+async function postProcessScreenshotResult(
+	result: any,
+	returnMode: "file" | "base64" | "summary" | "regions",
+	format: string,
+	nodeId?: string,
+): Promise<any> {
+	if (!result || typeof result !== "object" || !result.success) return result;
+
+	if (returnMode === "file") {
+		// Plugin single-image response: { success, image: { base64, format, width, height } }
+		if (result.image && typeof result.image === "object" && typeof result.image.base64 === "string") {
+			try {
+				const { filePath, fileSize } = saveBase64ToFile(result.image.base64, format, nodeId);
+				const { base64, ...imageMetaRest } = result.image;
+				return {
+					success: true,
+					filePath,
+					fileSize,
+					dimensions: { width: result.image.width, height: result.image.height },
+					format: result.image.format ?? format,
+					nodeId: nodeId ?? null,
+					imageMeta: imageMetaRest,
+					hint: "v1.9.5 file mode: Screenshot diske yazildi. Claude Desktop 'open <filePath>' ile acabilir. Base64 context'te YOK (~30K token tasarrufu). Onceki davranis icin returnMode: 'base64'.",
+				};
+			} catch (err) {
+				return { ...result, _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}. Falling back to base64 mode.` };
+			}
+		}
+	}
+
+	if (returnMode === "regions" && Array.isArray(result.regions)) {
+		const processedRegions = result.regions.map((region: any, idx: number) => {
+			if (region.image && typeof region.image.base64 === "string") {
+				try {
+					const regionNodeId = region.nodeId ?? `${nodeId}-region-${idx}`;
+					const { filePath, fileSize } = saveBase64ToFile(region.image.base64, format, regionNodeId);
+					const { base64, ...imageMetaRest } = region.image;
+					return {
+						name: region.name,
+						nodeId: region.nodeId,
+						filePath,
+						fileSize,
+						dimensions: { width: region.image.width, height: region.image.height },
+						imageMeta: imageMetaRest,
+					};
+				} catch (err) {
+					return { ...region, _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}` };
+				}
+			}
+			return region;
+		});
+		return {
+			...result,
+			regions: processedRegions,
+			hint: "v1.9.5 regions mode: Her region ayri dosyada. Ilgili olanlari 'open <filePath>' ile ac. Tumune bakmana gerek yok. Base64 context'te YOK.",
+		};
+	}
+
+	if (returnMode === "base64") {
+		// Legacy — add warning
+		return {
+			...result,
+			_warning: "BASE64_MODE: Context'e ~30K token eklendi. Bir sonraki call'da 'file' veya 'regions' tercih et.",
+		};
+	}
+
+	// summary mode — plugin already returned metadata-only, no post-processing needed
+	return result;
+}
+
 function resolveFileKey(figmaUrl?: string, explicitFileKey?: string): string | undefined {
 	if (explicitFileKey && explicitFileKey.trim()) return explicitFileKey.trim();
 	if (figmaUrl) {
@@ -462,6 +573,8 @@ export async function main() {
 			}
 			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 30000));
 			invalidateCache();
+			// v1.9.5: Discovery budget tracking — code pattern analysis (read-only vs mutation)
+			const budget = discoveryCounter.track("figma_execute", code);
 			// v1.8.1: Structured warnings with SEVERE vs ADVISORY severity
 			const codeWarnings: CodeWarning[] = analyzeCodeForWarnings(code);
 			const severeWarnings = codeWarnings.filter((w) => w.severity === "SEVERE");
@@ -481,8 +594,16 @@ export async function main() {
 					},
 				}
 				: {};
-			const warningsField = advisoryWarnings.length > 0
-				? { _warnings: advisoryWarnings.map((w) => w.message) }
+			// v1.9.5: Discovery budget warnings merge with advisory warnings
+			const combinedWarnings: string[] = [
+				...advisoryWarnings.map((w) => w.message),
+				...(budget.warnings ?? []),
+			];
+			const warningsField = combinedWarnings.length > 0
+				? { _warnings: combinedWarnings }
+				: {};
+			const budgetBlockingField = budget._DISCOVERY_BUDGET_EXCEEDED_BLOCKING
+				? { _DISCOVERY_BUDGET_EXCEEDED_BLOCKING: true }
 				: {};
 			const startTime = Date.now();
 			try {
@@ -497,6 +618,7 @@ export async function main() {
 					try { category = categorizeExecuteError(pluginError, durationMs, clampedTimeout); hint = getErrorHint(category); } catch { /* safe fallback */ }
 					return {
 						content: [{ type: "text" as const, text: JSON.stringify({
+							...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
 							...dsViolations,  // v1.8.1: SEVERE warnings FIRST, before anything else
 							...(result as Record<string, unknown>),
 							errorCategory: category,
@@ -511,13 +633,14 @@ export async function main() {
 				try {
 					enriched = typeof result === "object" && result !== null
 						? {
+							...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
 							...dsViolations,  // v1.8.1: SEVERE warnings at top level
 							...(result as Record<string, unknown>),
 							_metrics: { durationMs, timeoutMs: clampedTimeout },
 							...warningsField,
 						}
-						: severeWarnings.length > 0 || advisoryWarnings.length > 0
-							? { ...dsViolations, result, ...warningsField }
+						: severeWarnings.length > 0 || advisoryWarnings.length > 0 || combinedWarnings.length > 0
+							? { ...budgetBlockingField, ...dsViolations, result, ...warningsField }
 							: result;
 				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
@@ -723,12 +846,21 @@ export async function main() {
 		),
 	);
 
-	// ---- figma_capture_screenshot ----
-	// v1.8.0: Default JPG@1x (~80% smaller base64 vs PNG@2x). Override via params.
+	// ---- figma_capture_screenshot (v1.9.5: method selection) ----
+	// v1.8.0: Default JPG@1x (~80% smaller base64 vs PNG@2x).
+	// v1.9.5: returnMode param — Claude bağlama göre file/summary/regions/base64 seçer.
+	//         Default "file": screenshot ~/.fmcp/screenshots/ altına yazılır, filePath döner,
+	//         base64 context'e girmez (30K → 0.3K token tasarrufu).
 	server.registerTool(
 		"figma_capture_screenshot",
 		{
-			description: "Capture screenshot of a node or current view from the plugin. No REST API. Defaults to JPG@1x (q70) for context safety. Use scale/format/jpegQuality to override.",
+			description:
+				"v1.9.5: 4 returnMode ile screenshot. Default 'file' (dosyaya yazar, base64 context'te YOK). " +
+				"'summary' screenshot çekmeden metadata özeti (planlama için), " +
+				"'regions' büyük ekranları children/slices olarak parçalar, " +
+				"'base64' eski davranış (opt-in, ~30K token maliyetli). " +
+				"Context-aware fallback: >%80 context kullanımında base64/file → summary'ye otomatik düşer. " +
+				"Karar ağacı: planlama→summary, teslimat→file, scroll'lu ekran→regions, son çare→base64.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -736,24 +868,83 @@ export async function main() {
 				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
 				scale: z.number().optional().default(LEGACY_DEFAULTS ? 2 : 1),
 				jpegQuality: z.number().min(30).max(100).optional().default(70).describe("JPEG quality 30-100. Ignored when format=PNG."),
+				returnMode: z
+					.enum(["file", "base64", "summary", "regions"])
+					.optional()
+					.default("file")
+					.describe(
+						"v1.9.5 method: 'file' (default, disk + filePath), 'base64' (legacy, context'e dahil), " +
+						"'summary' (metadata-only, screenshotsuz), 'regions' (parçalı — children veya slices).",
+					),
+				regionStrategy: z
+					.enum(["children", "slices"])
+					.optional()
+					.default("children")
+					.describe("returnMode='regions' için: 'children' = node'un top-level child'ları ayrı ayrı, 'slices' = dikey slice'lar."),
+				maxRegions: z.number().min(1).max(20).optional().default(8).describe("returnMode='regions' için: maks region sayısı."),
+				sliceHeight: z.number().min(200).max(2000).optional().default(600).describe("regionStrategy='slices' için slice yüksekliği (px)."),
+				requestedSlices: z.array(z.number()).optional().describe("regionStrategy='slices' için spesifik slice index'leri (örn: [0,2] → sadece 1. ve 3. slice)."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale, jpegQuality }: { figmaUrl?: string; fileKey?: string; nodeId?: string; format: string; scale: number; jpegQuality: number }) => {
+		safeToolHandler(async ({
+			figmaUrl,
+			fileKey,
+			nodeId,
+			format,
+			scale,
+			jpegQuality,
+			returnMode,
+			regionStrategy,
+			maxRegions,
+			sliceHeight,
+			requestedSlices,
+		}: {
+			figmaUrl?: string;
+			fileKey?: string;
+			nodeId?: string;
+			format: string;
+			scale: number;
+			jpegQuality: number;
+			returnMode: "file" | "base64" | "summary" | "regions";
+			regionStrategy: "children" | "slices";
+			maxRegions: number;
+			sliceHeight: number;
+			requestedSlices?: number[];
+		}) => {
+			// v1.9.5: Track discovery budget
+			const budget = discoveryCounter.track("figma_capture_screenshot");
+
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-			const result = await conn.captureScreenshot(nodeId ?? null, { format, scale, jpegQuality });
-			// v1.9.6 Fix M1 — skipGuard: true → truncatePluginResponse'u bypass et.
-			// Gerekçe: screenshot response {success, image: {base64, ...}} şeklinde.
-			// pruneNodeTree screenshot payload'una (node tree değil) uymadığı için
-			// final fallback truncateResponse({maxStringLength: 200}) devreye girip
-			// base64 string'i 200 karaktere kırpıyordu → Claude Desktop `{}` empty
-			// object görüyordu (FP-1-R-v2 Known Limitation #8 root cause).
-			// skipGuard: true ile payload olduğu gibi JSON.stringify edilir, base64
-			// intact kalır. Claude image render etmez (text content block) ama
-			// base64 string'i görür, kullanabilir, böylece empty object problemi
-			// çözülür. Image content block upgrade'i (MCP image type) Part 5
-			// sonraki adımı — safeToolHandler generic refactor'u gerektirir.
-			return toolResult(result, "figma_capture_screenshot", { skipGuard: true });
+			const result: any = await conn.captureScreenshot(nodeId ?? null, {
+				format,
+				scale,
+				jpegQuality,
+				returnMode,
+				regionStrategy,
+				maxRegions,
+				sliceHeight,
+				requestedSlices,
+			});
+
+			// v1.9.5 post-processing: base64 payload'ları file'a yaz (mode='file' veya 'regions')
+			const processed = await postProcessScreenshotResult(result, returnMode, format, nodeId);
+
+			// Budget warning injection
+			const budgetFields: Record<string, unknown> = {};
+			if (budget.warnings && budget.warnings.length > 0) {
+				budgetFields._warnings = [...(processed._warnings ?? []), ...budget.warnings];
+			}
+			if (budget._DISCOVERY_BUDGET_EXCEEDED_BLOCKING) {
+				budgetFields._DISCOVERY_BUDGET_EXCEEDED_BLOCKING = true;
+			}
+
+			const enriched = typeof processed === "object" && processed !== null
+				? { ...processed, ...budgetFields }
+				: processed;
+
+			// skipGuard: true — base64 intact kalır (legacy mode için gerekli)
+			return toolResult(enriched, "figma_capture_screenshot", { skipGuard: true });
 		})
 	);
 
