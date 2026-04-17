@@ -235,6 +235,39 @@ Missing list'teki tüm soruları **TEK** `AskUserQuestion` çağrısında toplay
 - Sorulan her soru ≤30 kelime — uzun elicitation yasak.
 - Soruyu sormanın context maliyeti ≥ yanıtın değeri mi? Değilse sorma.
 
+### v1.9.6 Negative Intent Detection (KRITIK)
+
+Kullanıcı şu paternlerle **negatif/dışlayıcı** talimat verebilir — bunları ZORUNLU parse et:
+
+| Kullanıcı paterni | Anlam | Nasıl handle et |
+|---|---|---|
+| "X'i atla" / "X'i kullanma" / "X'ten bahsetme" | X referansını DIŞLA | `exclude_references: ["X"]` state'e yaz, o node/page/frame'e referans verme |
+| "X'e bakma" / "X yok say" / "X'i unut" | X sıfır-referans | Aynı |
+| "Y benzetme" / "Y gibi olmasın" | Y anti-pattern | `anti_pattern_refs: ["Y"]` — Y'ye ters tasarım yap |
+| "X dışında" / "X hariç" | Whitelist exclusion | `exclude_references: ["X"]` |
+| "Sıfırdan" / "baştan" / "yeni tasarım" | Mevcut iterasyonları atla | `start_fresh: true`, ideation/iterasyon referansları atla |
+
+**Örnek:**
+
+```
+Kullanıcı: "SUI Alt 3'e bakma, sıfırdan yeni bir Anasayfa tasarla"
+
+PARSE:
+  - exclude_references: ["SUI Alt 3", "241:11896"]  (SUI Alt 3 frame ID'si de dahil)
+  - start_fresh: true
+  - target_screen: "Anasayfa"
+  - DS: active-ds.md'den çek
+
+SONUÇ:
+  - SUI Alt 3 sayfası referans alınmaz
+  - Mevcut "SUI Alt 3 — Anasayfa" frame'i açılmaz, screenshot alınmaz
+  - ideation sayfası (ilham) kullanılabilir ama SUI Alt 3 bölümü atlanır
+```
+
+**Anti-pattern:** Kullanıcı "SUI Alt 3 atla" dedikten sonra onu screenshot alıp referans göstermek. v1.9.6'da bu explicit yasak — pre-flight'ta `exclude_references` kontrolü yapılır.
+
+**State persist:** `exclude_references` last-intent.md'ye yazılır; aynı oturum boyunca geçerli.
+
 **Örnek — generate-figma-screen:**
 
 ```

@@ -6,7 +6,95 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.5';
+var FMCP_PLUGIN_VERSION = '1.9.6';
+
+/**
+ * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları
+ * otomatik tarayıp unbound fill/padding/radius/text-style tespit eder.
+ * Skill direktifi "return { createdNodeIds: [...] }" diyor — plugin bunu okuyup
+ * subtree'yi tarar. Violations varsa response'a _postExecuteScan field'ı eklenir,
+ * server bunu _DESIGN_SYSTEM_VIOLATIONS_BLOCKING'e dönüştürür.
+ */
+async function postExecuteScan(result) {
+  var nodeIds = [];
+  if (result && typeof result === 'object') {
+    if (Array.isArray(result.createdNodeIds)) nodeIds = result.createdNodeIds;
+    else if (Array.isArray(result.nodeIds)) nodeIds = result.nodeIds;
+    else if (Array.isArray(result.ids)) nodeIds = result.ids;
+    else if (typeof result.frameId === 'string') nodeIds = [result.frameId];
+    else if (typeof result.rootId === 'string') nodeIds = [result.rootId];
+    else if (typeof result.nodeId === 'string') nodeIds = [result.nodeId];
+  }
+  if (nodeIds.length === 0) return null;
+
+  var violations = [];
+  var maxViolations = 10;
+  var maxNodes = 500; // safety cap per subtree
+  var totalChecked = 0;
+
+  for (var i = 0; i < nodeIds.length && violations.length < maxViolations; i++) {
+    var root;
+    try { root = await figma.getNodeByIdAsync(nodeIds[i]); } catch (e) { continue; }
+    if (!root) continue;
+    var stack = [root];
+    var visited = 0;
+    while (stack.length > 0 && visited < maxNodes) {
+      var n = stack.pop(); visited++; totalChecked++;
+      if (!n) continue;
+
+      // Fill check (skip instances — their bindings come from main component)
+      if (Array.isArray(n.fills) && n.type !== 'INSTANCE') {
+        for (var fi = 0; fi < n.fills.length; fi++) {
+          var fl = n.fills[fi];
+          if (fl && fl.visible !== false && fl.type === 'SOLID') {
+            var fbv = n.boundVariables && n.boundVariables.fills;
+            if (!(fbv && (Array.isArray(fbv) ? fbv[fi] : true)) && violations.length < maxViolations) {
+              violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_FILL', hint: 'setBoundVariableForPaint cagrisi eksik' });
+            }
+          }
+        }
+      }
+
+      if ((n.type === 'FRAME' || n.type === 'COMPONENT') && n.boundVariables !== undefined) {
+        var padProps = ['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'];
+        for (var j = 0; j < padProps.length && violations.length < maxViolations; j++) {
+          if (typeof n[padProps[j]] === 'number' && n[padProps[j]] > 0 && !(n.boundVariables && n.boundVariables[padProps[j]])) {
+            violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_PADDING', prop: padProps[j], value: n[padProps[j]] });
+          }
+        }
+        var radProps = ['cornerRadius', 'topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'];
+        for (var k = 0; k < radProps.length && violations.length < maxViolations; k++) {
+          if (typeof n[radProps[k]] === 'number' && n[radProps[k]] > 0 && !(n.boundVariables && n.boundVariables[radProps[k]])) {
+            violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_RADIUS', prop: radProps[k], value: n[radProps[k]] });
+          }
+        }
+        if (typeof n.itemSpacing === 'number' && n.itemSpacing > 0 && !(n.boundVariables && n.boundVariables.itemSpacing) && violations.length < maxViolations) {
+          violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_ITEMSPACING', value: n.itemSpacing });
+        }
+      }
+
+      if (n.type === 'TEXT' && !(n.textStyleId && typeof n.textStyleId === 'string' && n.textStyleId !== '') && violations.length < maxViolations) {
+        violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_TEXTSTYLE', sample: String(n.characters || '').slice(0, 30) });
+      }
+
+      if (n.children) {
+        for (var ci = 0; ci < n.children.length; ci++) stack.push(n.children[ci]);
+      }
+    }
+  }
+
+  return {
+    scanned: true,
+    rootsScanned: nodeIds.length,
+    totalChecked: totalChecked,
+    violationCount: violations.length,
+    violations: violations,
+    passed: violations.length === 0,
+    hint: violations.length > 0
+      ? '❌ v1.9.6 post-execute scan: ' + violations.length + ' unbound node tespit edildi. Kodu duzelt — her node icin setBoundVariable/setTextStyleIdAsync cagrisi eksik.'
+      : '✅ v1.9.6 post-execute scan: Tum node\'lar bound.',
+  };
+}
 
 // v1.9.5: Metadata summary builder for returnMode='summary' (screenshotsuz)
 async function buildNodeSummary(node, maxDepth) {
@@ -642,6 +730,17 @@ figma.ui.onmessage = async (msg) => {
         safeResult = { __serializationError: true, message: 'Result could not be serialized: ' + (serErr.message || String(serErr)), resultType: typeof result };
       }
 
+      // v1.9.6: Post-execute scan — oluşturulan node'larda unbound tespit
+      var postScan = null;
+      try {
+        postScan = await postExecuteScan(result);
+        if (postScan && postScan.violationCount > 0) {
+          console.warn('🌉 [F-MCP v1.9.6] Post-execute scan: ' + postScan.violationCount + ' unbound node detected');
+        }
+      } catch (psErr) {
+        console.warn('🌉 [F-MCP v1.9.6] Post-execute scan failed:', psErr && psErr.message ? psErr.message : String(psErr));
+      }
+
       figma.ui.postMessage({
         type: 'EXECUTE_CODE_RESULT',
         requestId: msg.requestId,
@@ -652,7 +751,8 @@ figma.ui.onmessage = async (msg) => {
         fileContext: {
           fileName: figma.root.name,
           fileKey: figma.fileKey || null
-        }
+        },
+        _postExecuteScan: postScan // v1.9.6: BLOCKING signal source for server
       });
 
     } catch (error) {
