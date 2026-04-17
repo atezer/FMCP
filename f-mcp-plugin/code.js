@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.2';
+var FMCP_PLUGIN_VERSION = '1.9.4';
 
 // Console log buffer for figma_get_console_logs (no CDP)
 var __consoleLogBuffer = [];
@@ -2391,6 +2391,9 @@ figma.ui.onmessage = async (msg) => {
       // Pass 2: Promise.all on getMainComponentAsync for all instances in parallel
       // This cuts 100+ node validation from ~60s to ~5s.
 
+      // v1.9.4: detailed param — if true, collect hardcoded samples + overflow + primitive fallbacks.
+      var detailed = msg.detailed === true;
+
       // Iterative tree walk (stack-safe for deep trees up to 10,000+ nodes)
       var metrics = {
         totalNodes: 0,
@@ -2400,10 +2403,32 @@ figma.ui.onmessage = async (msg) => {
         libraryInstanceNodes: 0,
         stylableNodes: 0,
         nodesWithBindings: 0,
+        // v1.9.4: extra coverage metrics
+        boundFills: 0,
+        unboundSolidFills: 0,
+        paddingsTotal: 0,
+        paddingsBound: 0,
+        itemSpacingTotal: 0,
+        itemSpacingBound: 0,
+        radiusTotal: 0,
+        radiusBound: 0,
+        textsTotal: 0,
+        textsWithStyle: 0,
+        textsHardcodedFontSize: 0,
+        textColorsTotal: 0,
+        textColorsBound: 0,
+        strokesTotal: 0,
+        strokesBound: 0,
       };
       var violations = [];
       var maxViolations = 20; // cap to keep response small
       var instanceNodesList = []; // v1.8.2: collect for batch resolve
+
+      // v1.9.4: detailed mode samples (capped small)
+      var hardcodedHexSamples = [];
+      var hardcodedFontSizeSamples = [];
+      var primitiveFallbacks = [];
+      var maxSamples = 8;
 
       var walkStack = [rootNode];
       var visited = 0;
@@ -2479,6 +2504,95 @@ figma.ui.onmessage = async (msg) => {
           }
         }
 
+        // v1.9.4: Granular bind coverage — fills/strokes/paddings/radius/itemSpacing/text
+        // Separate from stylableNodes/nodesWithBindings (which is coarse grained).
+        try {
+          if (Array.isArray(node.fills) && node.type !== 'INSTANCE') {
+            for (var fi = 0; fi < node.fills.length; fi++) {
+              var fl = node.fills[fi];
+              if (fl && fl.visible !== false && fl.type === 'SOLID') {
+                var fbv = node.boundVariables && node.boundVariables.fills;
+                var fillBound = !!(fbv && (Array.isArray(fbv) ? fbv[fi] : true));
+                if (fillBound) metrics.boundFills++;
+                else {
+                  metrics.unboundSolidFills++;
+                  if (detailed && hardcodedHexSamples.length < maxSamples) {
+                    var c = fl.color;
+                    var hex = '#' + [c.r, c.g, c.b].map(function (v) { return Math.round(v * 255).toString(16).padStart(2, '0'); }).join('');
+                    hardcodedHexSamples.push({ node: node.name, type: node.type, hex: hex });
+                  }
+                }
+              }
+            }
+          }
+          if (Array.isArray(node.strokes) && node.type !== 'INSTANCE') {
+            for (var si = 0; si < node.strokes.length; si++) {
+              var st = node.strokes[si];
+              if (st && st.type === 'SOLID') {
+                metrics.strokesTotal++;
+                var sbv = node.boundVariables && node.boundVariables.strokes;
+                if (sbv && (Array.isArray(sbv) ? sbv[si] : true)) metrics.strokesBound++;
+              }
+            }
+          }
+        } catch (e) { /* skip */ }
+
+        if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+          try {
+            var padProps = ['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'];
+            for (var pi = 0; pi < padProps.length; pi++) {
+              var pp = padProps[pi];
+              if (typeof node[pp] === 'number' && node[pp] > 0) {
+                metrics.paddingsTotal++;
+                if (node.boundVariables && node.boundVariables[pp]) metrics.paddingsBound++;
+              }
+            }
+            if (typeof node.itemSpacing === 'number' && node.itemSpacing > 0) {
+              metrics.itemSpacingTotal++;
+              if (node.boundVariables && node.boundVariables.itemSpacing) metrics.itemSpacingBound++;
+            }
+            var radProps = ['cornerRadius', 'topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'];
+            for (var ri = 0; ri < radProps.length; ri++) {
+              var rp = radProps[ri];
+              if (typeof node[rp] === 'number' && node[rp] > 0) {
+                metrics.radiusTotal++;
+                if (node.boundVariables && node.boundVariables[rp]) metrics.radiusBound++;
+              }
+            }
+            // v1.9.4 detailed: flag primitive frames that *should* have been components
+            if (detailed && node.type === 'FRAME' && node !== rootNode && primitiveFallbacks.length < maxSamples && node.children && node.children.length >= 2) {
+              var onlyPrimitives = true;
+              for (var cpi = 0; cpi < node.children.length; cpi++) {
+                if (node.children[cpi].type === 'INSTANCE') { onlyPrimitives = false; break; }
+              }
+              if (onlyPrimitives) primitiveFallbacks.push({ name: node.name, childCount: node.children.length });
+            }
+          } catch (e) { /* skip */ }
+        }
+
+        if (node.type === 'TEXT') {
+          try {
+            metrics.textsTotal++;
+            if (node.textStyleId && typeof node.textStyleId === 'string' && node.textStyleId !== '') {
+              metrics.textsWithStyle++;
+            } else {
+              metrics.textsHardcodedFontSize++;
+              if (detailed && hardcodedFontSizeSamples.length < maxSamples) {
+                hardcodedFontSizeSamples.push({
+                  text: String(node.characters || '').slice(0, 40),
+                  fontSize: node.fontSize,
+                  fontName: node.fontName,
+                });
+              }
+            }
+            if (Array.isArray(node.fills) && node.fills.length > 0) {
+              metrics.textColorsTotal++;
+              var tbv = node.boundVariables && node.boundVariables.fills;
+              if (tbv && (Array.isArray(tbv) ? tbv[0] : true)) metrics.textColorsBound++;
+            }
+          } catch (e) { /* skip */ }
+        }
+
         // Push children
         if (node.children) {
           for (var ci = 0; ci < node.children.length; ci++) {
@@ -2543,7 +2657,50 @@ figma.ui.onmessage = async (msg) => {
         : 'Score ' + score + '/100 is below minimum ' + minScore + '. Consider deleting this screen and rebuilding using ' +
           'DS components (figma_instantiate_component) and token bindings (figma_bind_variable).';
 
-      figma.ui.postMessage({
+      // v1.9.4: granular bind coverage percentages
+      function pct(b, t) { return t > 0 ? Math.round((b / t) * 100) : 100; }
+      var fillsTotal = metrics.boundFills + metrics.unboundSolidFills;
+      var coverage = {
+        fills: { bound: metrics.boundFills, total: fillsTotal, pct: pct(metrics.boundFills, fillsTotal) },
+        paddings: { bound: metrics.paddingsBound, total: metrics.paddingsTotal, pct: pct(metrics.paddingsBound, metrics.paddingsTotal) },
+        itemSpacing: { bound: metrics.itemSpacingBound, total: metrics.itemSpacingTotal, pct: pct(metrics.itemSpacingBound, metrics.itemSpacingTotal) },
+        radius: { bound: metrics.radiusBound, total: metrics.radiusTotal, pct: pct(metrics.radiusBound, metrics.radiusTotal) },
+        textStyle: { withStyle: metrics.textsWithStyle, hardcoded: metrics.textsHardcodedFontSize, total: metrics.textsTotal, pct: pct(metrics.textsWithStyle, metrics.textsTotal) },
+        textColor: { bound: metrics.textColorsBound, total: metrics.textColorsTotal, pct: pct(metrics.textColorsBound, metrics.textColorsTotal) },
+        strokes: { bound: metrics.strokesBound, total: metrics.strokesTotal, pct: pct(metrics.strokesBound, metrics.strokesTotal) },
+      };
+
+      // v1.9.4: overflow check (root level auto-layout containers)
+      var overflow = null;
+      try {
+        if (rootNode.layoutMode === 'VERTICAL' && rootNode.children) {
+          var contentH = 0;
+          for (var chi = 0; chi < rootNode.children.length; chi++) contentH += (rootNode.children[chi].height || 0);
+          if (rootNode.itemSpacing) contentH += rootNode.itemSpacing * Math.max(0, rootNode.children.length - 1);
+          contentH += (rootNode.paddingTop || 0) + (rootNode.paddingBottom || 0);
+          overflow = {
+            axis: 'VERTICAL',
+            frameSize: Math.round(rootNode.height || 0),
+            contentSize: Math.round(contentH),
+            overflowPx: Math.round(contentH - (rootNode.height || 0)),
+            clipsContent: !!rootNode.clipsContent,
+          };
+        } else if (rootNode.layoutMode === 'HORIZONTAL' && rootNode.children) {
+          var contentW = 0;
+          for (var cwi = 0; cwi < rootNode.children.length; cwi++) contentW += (rootNode.children[cwi].width || 0);
+          if (rootNode.itemSpacing) contentW += rootNode.itemSpacing * Math.max(0, rootNode.children.length - 1);
+          contentW += (rootNode.paddingLeft || 0) + (rootNode.paddingRight || 0);
+          overflow = {
+            axis: 'HORIZONTAL',
+            frameSize: Math.round(rootNode.width || 0),
+            contentSize: Math.round(contentW),
+            overflowPx: Math.round(contentW - (rootNode.width || 0)),
+            clipsContent: !!rootNode.clipsContent,
+          };
+        }
+      } catch (e) { overflow = null; }
+
+      var response = {
         type: 'VALIDATE_SCREEN_RESULT',
         requestId: msg.requestId,
         success: true,
@@ -2561,12 +2718,25 @@ figma.ui.onmessage = async (msg) => {
           nodesWithBindings: metrics.nodesWithBindings,
           totalStylable: metrics.stylableNodes,
         },
+        coverage: coverage, // v1.9.4: granular coverage
+        overflow: overflow, // v1.9.4: root auto-layout overflow
         violations: violations,
         violationCount: violations.length,
         violationCapped: violations.length >= maxViolations,
         totalNodesWalked: visited,
         recommendation: recommendation,
-      });
+      };
+
+      // v1.9.4: detailed mode — hardcoded samples + primitive fallbacks
+      if (detailed) {
+        response.samples = {
+          hardcodedHex: hardcodedHexSamples,
+          hardcodedFontSize: hardcodedFontSizeSamples,
+          primitiveFrames: primitiveFallbacks,
+        };
+      }
+
+      figma.ui.postMessage(response);
     } catch (error) {
       var errorMsg = error && error.message ? error.message : String(error);
       console.error('🌉 [F-MCP] Validate screen error:', errorMsg);

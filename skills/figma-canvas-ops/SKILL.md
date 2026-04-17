@@ -119,6 +119,54 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
 
     Hardcoded `node.fills = [{ type: "SOLID", color: {...} }]` YASAK.
 
+10a. **Inline Bind Verification (v1.9.4, ZORUNLU).** Her execute sonunda oluşturulan node'ları tara. Bind eksikse `throw` atılır — execute başarısız sayılır, Claude retry eder. Şablon:
+
+    ```js
+    // Execute'un sonunda, createdNodes listesini tarayıp bind kontrolü yap:
+    function assertBound(node) {
+      // Fill bind
+      if (Array.isArray(node.fills)) {
+        for (var i = 0; i < node.fills.length; i++) {
+          var f = node.fills[i];
+          if (f && f.visible !== false && f.type === "SOLID") {
+            var fbv = node.boundVariables && node.boundVariables.fills;
+            var bound = fbv && (Array.isArray(fbv) ? fbv[i] : true);
+            if (!bound) throw new Error("UNBOUND_FILL: " + node.name + " — setBoundVariableForPaint cagrisi eksik");
+          }
+        }
+      }
+      // Padding/itemSpacing/radius bind (auto-layout frame)
+      if (node.type === "FRAME" || node.type === "COMPONENT") {
+        var padProps = ["paddingTop","paddingBottom","paddingLeft","paddingRight"];
+        for (var j = 0; j < padProps.length; j++) {
+          var p = padProps[j];
+          if (typeof node[p] === "number" && node[p] > 0 && !(node.boundVariables && node.boundVariables[p])) {
+            throw new Error("UNBOUND_PADDING: " + node.name + "." + p + "=" + node[p] + " — setBoundVariable cagrisi eksik");
+          }
+        }
+        if (typeof node.itemSpacing === "number" && node.itemSpacing > 0 && !(node.boundVariables && node.boundVariables.itemSpacing)) {
+          throw new Error("UNBOUND_ITEMSPACING: " + node.name + " — setBoundVariable('itemSpacing', v) cagrisi eksik");
+        }
+        var radProps = ["cornerRadius","topLeftRadius","topRightRadius","bottomLeftRadius","bottomRightRadius"];
+        for (var k = 0; k < radProps.length; k++) {
+          var r = radProps[k];
+          if (typeof node[r] === "number" && node[r] > 0 && !(node.boundVariables && node.boundVariables[r])) {
+            throw new Error("UNBOUND_RADIUS: " + node.name + "." + r + "=" + node[r]);
+          }
+        }
+      }
+      // Text style
+      if (node.type === "TEXT" && !(node.textStyleId && typeof node.textStyleId === "string" && node.textStyleId !== "")) {
+        throw new Error("UNBOUND_TEXTSTYLE: '" + (node.characters||"").slice(0,30) + "' — setTextStyleIdAsync(style.id) cagrisi eksik");
+      }
+    }
+
+    // Tüm oluşturulan node'ları doğrula:
+    for (var n = 0; n < createdNodes.length; n++) assertBound(createdNodes[n]);
+    ```
+
+    Bu kontrol atlanırsa `figma_scan_ds_compliance` final gate'te sonuç zaten BLOCKING olur — ama inline check erkendedir ve context'i az yer. **v1.9.4 önerisi:** Her mega-step sonunda bu assertion bloğunu execute'un sonuna koy.
+
 11. **appendChild sıralaması kritik.** ÖNCE `parent.appendChild(child)`, SONRA `child.layoutSizingHorizontal = "FILL"` / `layoutPositioning = "ABSOLUTE"`:
     ```js
     parent.appendChild(child);              // ÖNCE

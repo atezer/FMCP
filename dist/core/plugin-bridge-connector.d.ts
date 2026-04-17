@@ -122,11 +122,22 @@ export declare class PluginBridgeConnector {
     /**
      * v1.8.1+: Validate a screen against design-system discipline criteria.
      * Returns a DS compliance score + violation list.
+     * v1.9.4: `detailed: true` adds hardcoded samples, overflow analysis, and primitive fallback list.
      */
     validateScreen(params: {
         nodeId: string;
         expectedDs?: string;
         minScore?: number;
+        detailed?: boolean;
+    }): Promise<unknown>;
+    /**
+     * v1.9.4: Full DS compliance scan — detailed coverage breakdown with hardcoded samples,
+     * overflow detection, and primitive fallback list. Calls validateScreen with detailed=true.
+     */
+    scanDsCompliance(params: {
+        nodeId: string;
+        threshold?: number;
+        expectedDs?: string;
     }): Promise<unknown>;
     setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {

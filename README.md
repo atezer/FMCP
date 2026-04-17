@@ -54,6 +54,18 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 | **Cursor** | ✅ | Kod editörü — geliştiriciler için |
 | **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
 
+### Claude Desktop sınırlamaları (v1.9.4 notu)
+
+Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Desktop'ta yoktur**:
+
+- Hook'lar (PreToolUse, SessionStart) — çalışmaz
+- Sub-agent spawn — Task tool mevcut değil
+- Slash command'lar (`/ds-sync` vb.) — desteklenmez
+- `plugin.json` auto-discovery — yüklenmez
+- `.claude/CLAUDE.md` auto-inject yok
+
+Desktop'ta enforcement **üç katmandan** gelir: plugin response BLOCKING signal'i (v1.9.4+ `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING`), `figma_scan_ds_compliance` runtime scan tool'u, Project Knowledge'a yüklenmiş skill dosyaları. Detaylı rehber ve ilk-prompt örneği: **[install/claude-desktop/HOW-TO-ENFORCE.md](install/claude-desktop/HOW-TO-ENFORCE.md)**.
+
 ---
 
 ## Neler yapabilirsiniz?

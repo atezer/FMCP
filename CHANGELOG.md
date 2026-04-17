@@ -12,6 +12,43 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.4] - 2026-04-17
+
+### Claude Desktop Enforcement Gap Kapatma — Runtime DS Compliance Scan + BLOCKING signal
+
+Claude Desktop'ta (hook/sub-agent/slash command yok) token binding ve DS disiplininin skip edilmesini engelleyen üç katmanlı enforcement sistemi. Önceki sürümlerde skill'lerde HARD LANGUAGE (168+ ZORUNLU/MUTLAK keyword) vardı ama Claude Desktop'ta plugin tarafında runtime zorlayıcı yoktu. Gerçek bir test ekranında (SUI Anasayfa, 217 node) padding %5, radius %3, text style %25 bound olduğu ölçülünce bu sürüm acil hazırlandı.
+
+**Değişiklikler:**
+
+- **Yeni tool `figma_scan_ds_compliance`** (`src/local-plugin-only.ts`): Post-creation full-tree audit. Granular coverage (fills/paddings/radius/itemSpacing/textStyle/textColor/strokes), hardcoded hex sample'ları, hardcoded fontSize sample'ları, primitive frame fallback listesi, auto-layout overflow analizi döner. Default threshold 85 (stricter than validate_screen's 80). Read-only.
+- **Plugin `VALIDATE_SCREEN` genişletildi** (`f-mcp-plugin/code.js`): `breakdown` artık `coverage` ve `overflow` alanlarını her zaman döndürür. `detailed: true` param ile `samples.hardcodedHex`, `samples.hardcodedFontSize`, `samples.primitiveFrames` eklenir. Backwards compatible — eski alanlar korunur.
+- **`_designSystemViolations` action metni BLOCKING seviyeye yükseltildi** (`src/local-plugin-only.ts`): Yeni top-level flag `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING: true`, severity field, retry_required field. Claude Desktop response'u skip edemesin diye dil güçlendirildi: "❌ BLOCKING: Bu kodu simdi duzelt ve tekrar calistir."
+- **Skill `fmcp-screen-recipes/SKILL.md` Adım 9** genişletildi: 9a inline scan (M3/M4 sonrası) + 9b final validate. `passed: false` veya coverage <%90 → retry zorunlu. Son Rapor'da coverage yüzdeleri, hardcoded sample'lar, overflow durumu zorunlu alanlar.
+- **Skill `figma-canvas-ops/SKILL.md` Rule 10a** (yeni): Her execute sonunda inline bind verification — `assertBound(node)` fonksiyonu. Unbound fill/padding/radius/text style tespit edilirse `throw` atar, execute başarısız sayılır.
+- **Doc `.claude/project-context.md`** güncellendi: "Pre-Commit Validation (v1.9.4)" bölümü. Plugin BLOCKING signal'inin yorumu.
+- **Yeni doc `install/claude-desktop/HOW-TO-ENFORCE.md`**: Claude Desktop kullanıcıları için step-by-step enforcement rehberi — Project Knowledge upload sırası, kopyala-yapıştır başlangıç prompt'u, mekanizma tablosu, test prompt'u, sorun giderme.
+- **`install/claude-desktop/PROJECT-KNOWLEDGE.md`** güncellendi: Enforcement paketi listesi (fmcp-project-rules, project-context.md, figma-canvas-ops, fmcp-screen-recipes, HOW-TO-ENFORCE.md) eklendi.
+- **`README.md`** güncellendi: "Claude Desktop sınırlamaları (v1.9.4 notu)" bölümü — hook/sub-agent/slash yok ama enforcement yine de çalışıyor, HOW-TO-ENFORCE'a link.
+- **Plugin version string sync**: `code.js`, `ui.html`, `package.json` → `1.9.4`.
+
+**Kullanıcı için ne değişir:**
+
+1. Ekran tamamlandığında `figma_scan_ds_compliance(nodeId, threshold=85)` çağrılır (skill direktifi). Coverage yüzdeleri dökülür. <%90 → derhal düzelt.
+2. `figma_execute` response'unda `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING: true` görürsen kodu düzelt ve retry et — skip yok.
+3. Claude Desktop kullanıcıları: `install/claude-desktop/HOW-TO-ENFORCE.md` rehberindeki **Adım 3 başlangıç prompt'unu** her oturumun ilk mesajı olarak kopyala. Bu prompt Claude'a enforcement kurallarını hatırlatır.
+4. Eski `figma_validate_screen` tool aynen çalışır (backwards compat) — `breakdown` artık coverage + overflow da içerir, mevcut kullanıcılar kırılmaz.
+
+**Regresyon:** Sıfır. Plugin API (`validateScreen`) backwards compatible — tüm mevcut alanlar korundu, yeni alanlar eklendi. Connector API ek method (`scanDsCompliance`) aldı, mevcut `validateScreen` aynı kaldı. Plugin transport protokolü (`msg.type === 'VALIDATE_SCREEN'`) tek handler kullanıyor, `detailed` param opsiyonel.
+
+**Test matrisi:**
+
+- TypeScript: ✅ `npm run type-check` temiz
+- Build: ✅ `npm run build` temiz
+- Eski test ekranı (node 241:11896) ölçümü: padding %5, radius %3, text style %25 — bu sürümden önce sessizdi, şimdi SEVERE BLOCKING döner
+- Yeni tool (`figma_scan_ds_compliance`) Claude Desktop restart sonrası register olur
+
+**Not:** Hook/sub-agent/slash command Claude Desktop'ta hâlâ yok (Anthropic platform sınırı). Bu sürüm mevcut platform kapasitesi içinde mümkün olan en güçlü enforcement'ı sağlar.
+
 ## [1.9.3] - 2026-04-17
 
 ### DS Cache İki Katmanlı Mimari + Güvenlik Redact

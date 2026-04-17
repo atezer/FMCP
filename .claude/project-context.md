@@ -142,6 +142,23 @@ Figma'da oluşturulan hiçbir node'da **bağlanmamış (unbound) tasarım değer
 
 Detaylı API kullanımı: `figma-canvas-ops` skill'inin **madde 10** bölümüne bak.
 
+### Pre-Commit Validation (v1.9.4, ZORUNLU)
+
+Her ekran/bileşen üretimi tamamlandıktan sonra **final gate** çalıştırılır. Atlama YASAK:
+
+1. **`figma_scan_ds_compliance(nodeId, threshold=85)`** — granular coverage ölçümü (fills/paddings/radius/itemSpacing/textStyle) + hardcoded samples + overflow analizi.
+2. `passed: false` veya herhangi bir coverage <%90 ise:
+   - `samples.hardcodedHex` → listelenen node'ların fill'ini `setBoundVariableForPaint` ile bağla
+   - `samples.hardcodedFontSize` → listelenen text'lerin style'ını `setTextStyleIdAsync` ile bağla
+   - `samples.primitiveFrames` → listelenen frame'ler için SUI component araması yap (`figma_search_assets`)
+   - `overflow.overflowPx > 0` → içerik kesiliyor, kullanıcıya sor
+3. Düzeltme sonrası tekrar scan. 3× fail → kullanıcıya `generate-figma-screen` fallback öner.
+4. Son olarak **`figma_validate_screen(frameId, minScore=80)`** (3-eksen score, backwards compat).
+
+**Unbound node kabul edilmez. "Bilinçli skip" yoktur** — token yoksa kullanıcıya sor, token varsa bağla.
+
+**v1.9.4+ plugin BLOCKING signal:** `figma_execute` response'unda `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING: true` veya `_designSystemViolations.severity: "BLOCKING"` görürsen execute sonucu geçersizdir, retry zorunludur.
+
 ### Mevcut kütüphaneler
 
 Kayıtlı kütüphaneleri görmek için `.claude/libraries/` dizinini kontrol et. Her `.md` dosyası bir kütüphanedir. Kütüphane eklemek için `/add-library` komutunu kullan.
