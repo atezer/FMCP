@@ -171,9 +171,22 @@ export class PluginBridgeConnector {
     /**
      * v1.8.1+: Validate a screen against design-system discipline criteria.
      * Returns a DS compliance score + violation list.
+     * v1.9.4: `detailed: true` adds hardcoded samples, overflow analysis, and primitive fallback list.
      */
     async validateScreen(params) {
         return this.bridge.request("validateScreen", params, this.fileKey);
+    }
+    /**
+     * v1.9.4: Full DS compliance scan — detailed coverage breakdown with hardcoded samples,
+     * overflow detection, and primitive fallback list. Calls validateScreen with detailed=true.
+     */
+    async scanDsCompliance(params) {
+        return this.bridge.request("validateScreen", {
+            nodeId: params.nodeId,
+            minScore: params.threshold,
+            expectedDs: params.expectedDs,
+            detailed: true,
+        }, this.fileKey);
     }
     async setInstanceProperties(nodeId, properties) {
         return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);

@@ -2,6 +2,8 @@
 
 Bu rehber Claude Desktop "FCM Orchestration" Project'ine hangi dosyaların nasıl yüklenmesi gerektiğini adım adım gösterir.
 
+> **v1.9.4+:** Enforcement (token binding / hardcoded yasak / pre-commit validation) için **[HOW-TO-ENFORCE.md](HOW-TO-ENFORCE.md)** rehberini takip edin. Aşağıdaki dosyalar upload edilse bile **ilk prompt'ta explicit direktif vermeden Claude skip edebilir** — HOW-TO-ENFORCE "Adım 3" prompt'unu kopyala-yapıştır.
+
 ## Neden Project Knowledge?
 
 Claude Desktop'ın native **skill store** sistemi yoktur — Claude Code'daki gibi `agents/` veya `skills/` dizinini otomatik taramaz. Desktop'ta skill içeriği **Project knowledge** olarak yüklenir: PDF / Markdown / TXT dosyaları Project'e eklenir, Claude chat'te bu dosyalara referans verilebilir.
@@ -19,6 +21,18 @@ Claude Desktop'ın native **skill store** sistemi yoktur — Claude Code'daki gi
 | 3 | `skills/fmcp-token-sync-orchestrator/SKILL.md` | Token sync orchestrator'ı | ~200 satır |
 
 Bu 3 dosya tüm ana iş akışlarını kapsar. Her dosya self-contained (Essentials + Advanced), ortak protokol embedded.
+
+### Enforcement paketi (v1.9.4+, ekran üretimi yapıyorsan zorunlu)
+
+| # | Dosya | Rol |
+|---|---|---|
+| E1 | `skills/fmcp-project-rules/SKILL.md` | Global ZORUNLU kurallar (Design Token Kuralı, Bağlı Token Kuralı) |
+| E2 | `.claude/project-context.md` | Pre-Commit Validation direktifi (v1.9.4), BLOCKING signal yorumu |
+| E3 | `skills/figma-canvas-ops/SKILL.md` | Rule 10a — inline bind verification (execute sonunda throw) |
+| E4 | `skills/fmcp-screen-recipes/SKILL.md` | 9 recipe + Adım 9 final gate (figma_scan_ds_compliance + figma_validate_screen) |
+| E5 | `install/claude-desktop/HOW-TO-ENFORCE.md` | **Bu enforcement sisteminin kullanım rehberi — ilk okunacak dosya** |
+
+v1.9.4'te yeni tool: `figma_scan_ds_compliance(nodeId, threshold=85)` — ekran sonunda zorunlu final gate. MCP server yeniden yüklendiğinde otomatik aktif olur, ayrı upload gerekmez.
 
 ### Opsiyonel (ihtiyaca göre)
 

@@ -466,14 +466,18 @@ export async function main() {
 			const codeWarnings: CodeWarning[] = analyzeCodeForWarnings(code);
 			const severeWarnings = codeWarnings.filter((w) => w.severity === "SEVERE");
 			const advisoryWarnings = codeWarnings.filter((w) => w.severity === "ADVISORY");
-			// SEVERE warnings go to a prominent field that Claude cannot ignore
+			// SEVERE warnings go to a prominent field that Claude cannot ignore.
+			// v1.9.4: action text elevated to BLOCKING — Claude must retry, cannot proceed.
 			const dsViolations = severeWarnings.length > 0
 				? {
+					_DESIGN_SYSTEM_VIOLATIONS_BLOCKING: true, // v1.9.4: top-level flag Claude Desktop cannot scroll past
 					_designSystemViolations: {
 						count: severeWarnings.length,
-						message: "⚠️ DESIGN SYSTEM DISIPLIN IHLALI TESPIT EDILDI — kodu duzelt ve tekrar calistir. Bu ekran kabul edilmez.",
+						severity: "BLOCKING",
+						message: "❌ DESIGN SYSTEM DISIPLIN IHLALI — BLOCKING. Bu kod KABUL EDILMEZ. Execute sonucu gecersizdir.",
 						violations: severeWarnings.map((w) => ({ category: w.category, message: w.message })),
-						action: "Her ihlal icin uygun DS token binding veya component instance kullan. Detay: figma-canvas-ops SKILL Kural 10.",
+						action: "❌ BLOCKING: Bu kodu simdi duzelt ve tekrar calistir. Skip edemezsin. Her SOLID fill icin setBoundVariableForPaint zorunlu; her padding/itemSpacing/cornerRadius icin setBoundVariable zorunlu; her TEXT icin setTextStyleIdAsync zorunlu. Detay: figma-canvas-ops SKILL Kural 10, fmcp-screen-recipes SKILL Adim 9.",
+						retry_required: true,
 					},
 				}
 				: {};
@@ -637,6 +641,8 @@ export async function main() {
 				"across 3 dimensions: instance coverage (library usage), token binding coverage (bound variables), " +
 				"and auto-layout coverage. Use this AFTER creating a screen to verify DS compliance. " +
 				"If score < minScore, Claude should delete the screen and rebuild it using DS components + token bindings. " +
+				"v1.9.4: `breakdown` now always includes `coverage` (granular fills/paddings/radius/itemSpacing/textStyle bind ratios) + `overflow` (root auto-layout overflow). " +
+				"For hardcoded samples + primitive fallback list, use figma_scan_ds_compliance instead. " +
 				"Read-only — never mutates the file.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
@@ -664,6 +670,55 @@ export async function main() {
 				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 				const result = await conn.validateScreen({ nodeId, expectedDs, minScore });
 				return toolResult(result, "figma_validate_screen");
+			},
+		),
+	);
+
+	// ---- figma_scan_ds_compliance (v1.9.4) ----
+	// Full DS compliance audit — superset of figma_validate_screen with hardcoded samples,
+	// primitive fallback list, and overflow detection. Call this as the FINAL GATE before
+	// considering a screen complete. Threshold default is 85 (stricter than validate's 80)
+	// because detailed mode flags granular binding gaps that brief mode smooths over.
+	server.registerTool(
+		"figma_scan_ds_compliance",
+		{
+			description:
+				"v1.9.4: FINAL GATE — Full DS compliance scan for a completed screen. " +
+				"Returns the same score + breakdown as figma_validate_screen PLUS: " +
+				"(1) `coverage` = granular bind percentages (fills/paddings/radius/itemSpacing/textStyle/textColor/strokes), " +
+				"(2) `samples.hardcodedHex` = up to 8 nodes with hardcoded SOLID colors, " +
+				"(3) `samples.hardcodedFontSize` = up to 8 text nodes with hardcoded fontSize (no textStyleId), " +
+				"(4) `samples.primitiveFrames` = up to 8 frames that should have been DS component instances, " +
+				"(5) `overflow` = root auto-layout overflow analysis (frameSize vs contentSize). " +
+				"If `passed: false`, Claude MUST fix listed violations before presenting the screen as complete. " +
+				"Threshold 85 default (stricter than validate_screen's 80) because this flags granular gaps. " +
+				"Read-only — never mutates the file.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				nodeId: z.string().describe("Node ID of the completed screen to audit"),
+				threshold: z.number().min(0).max(100).optional().default(85).describe("Pass threshold (0-100). Default 85. Below this, screen is non-compliant and must be fixed."),
+				expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ SUI')"),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		safeToolHandler(
+			async ({
+				figmaUrl,
+				fileKey,
+				nodeId,
+				threshold,
+				expectedDs,
+			}: {
+				figmaUrl?: string;
+				fileKey?: string;
+				nodeId: string;
+				threshold: number;
+				expectedDs?: string;
+			}) => {
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+				const result = await conn.scanDsCompliance({ nodeId, threshold, expectedDs });
+				return toolResult(result, "figma_scan_ds_compliance");
 			},
 		),
 	);

@@ -53,11 +53,12 @@ Max **15 op/execute**. Her mega-adım sonrası tek satır Türkçe micro-report.
 M1: Pre-Flight Discovery + Token + Text Style  (1 execute, ~15 op)
 M2: Frame + Structure + Modes                   (1 execute, ~12-14 op)
 M3: Component Placement (toplu, 3-4/execute)    (2-3 execute, ~12-15 op each)
+     ↳ Her M3 execute sonrası: figma_scan_ds_compliance(threshold=85) inline gate
 M4: Dark Variant                                (1 execute, ~4 op)
-M5: Validate + Final Report                     (1-2 validate çağrısı)
+M5: Validate + Final Report                     (ZORUNLU: figma_scan_ds_compliance(detailed) + figma_validate_screen)
 ```
 
-**Toplam execute:** ~6-8. **Hedef süre:** ~10 dk.
+**Toplam execute:** ~6-8 + 2-3 scan call. **Hedef süre:** ~10 dk. **v1.9.4:** Scan call'ları hızlıdır (~150ms), execute bütçesini yemezler.
 
 ### 3 MUTLAK KURAL
 
@@ -306,11 +307,36 @@ darkFrame.setExplicitVariableModeForCollection(coll, darkModeId);
 return { darkFrameId: darkFrame.id };
 ```
 
-### Adım 9 — Validation + Final Report
+### Adım 9 — Validation + Final Report (v1.9.4 Güçlendirildi)
 
-`figma_validate_screen(frameId, minScore=80)` her frame için. 3 deneme fail → kullanıcıya sor.
+**ZORUNLU gate — atlama YASAK.** Her ekran için iki aşamalı doğrulama:
 
-**Son Rapor:** Screen type, DS, device, variants, frame ID'leri, validate skorları, kullanılan component listesi, primitive fallback listesi, token binding sayıları, toplam execute, süre.
+**9a. Inline scan (M3/M4 sonrası, isteğe bağlı retry):**
+```
+figma_scan_ds_compliance(nodeId=frameId, threshold=85)
+```
+- `passed: false` veya `coverage.paddings.pct < 90` veya `coverage.radius.pct < 90` veya `coverage.textStyle.pct < 90` → M3/M4 retry zorunlu.
+- `samples.hardcodedHex` döndüyse → o node'lardaki fill'ler için `setBoundVariableForPaint` çağrısı eksik, derhal düzelt.
+- `samples.hardcodedFontSize` döndüyse → o text'ler için `setTextStyleIdAsync(roleMap[role].id)` çağrısı eksik.
+- `samples.primitiveFrames` döndüyse → o frame'ler için SUI'de component var mı ara (`figma_search_assets`); varsa instance'a dönüştür.
+- `overflow.overflowPx > 0` ve `clipsContent: true` → içerik kesiliyor, kullanıcıya "scroll mu, body genişletme mi?" sor.
+
+**9b. Final validate (her frame için, ZORUNLU):**
+```
+figma_validate_screen(frameId, minScore=80)
+```
+- Skor <80 → 3 retry; 3× fail → kullanıcıya `generate-figma-screen` skill'ine fallback öner.
+
+**Son Rapor (ZORUNLU alanlar):**
+- Screen type, DS, device, variants
+- Frame ID'leri (light/dark)
+- **Score: validate + scan skorları birlikte** (örn. "validate: 87, scan: 89")
+- **Coverage yüzdeleri:** fills/paddings/radius/itemSpacing/textStyle/textColor (scan response'tan)
+- Kullanılan library instance listesi + **primitive fallback listesi** (varsa)
+- Token binding sayıları
+- **Overflow durumu** (body kesiliyor mu?)
+- Toplam execute sayısı, süre
+- **Hardcoded hex/fontSize sample'ları** (varsa — kullanıcıya gösterilir, "bilinçli skip" değil "acil düzeltilecek")
 
 ---
 
