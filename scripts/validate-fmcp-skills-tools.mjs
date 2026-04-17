@@ -35,6 +35,10 @@ const IGNORE_TOOLS = new Set([
 	"figma_url",            // inspiration-intake source_type enum değeri / URL pattern
 	"figma_component_id",   // code-design-mapper YAML frontmatter field adı
 	"figma_source",         // visual-qa-compare YAML frontmatter field adı
+	// v1.9.5 — wildcard prefix ifadeleri (figma_get_* kesinti ile eşleşir)
+	"figma_get_",           // wildcard prefix, gerçek tool değil
+	"figma_search_",        // wildcard prefix, gerçek tool değil
+	"figma_list_",          // wildcard prefix, gerçek tool değil
 ]);
 
 function collectRegisteredTools() {
