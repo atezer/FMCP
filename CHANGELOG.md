@@ -12,6 +12,37 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.3] - 2026-04-17
+
+### DS Cache İki Katmanlı Mimari + Güvenlik Redact
+
+Tasarım sistemi cache framework'ü **public template + user-local cache** olarak iki katmana ayrıldı. Kurumsal Figma library key'leri (componentKey, variableKey, file key) artık **repo'ya yazılmaz**; her kullanıcının makinesinde `~/.claude/data/fcm-ds/<file-key>/` altında tutulur.
+
+**Neden:**
+
+FCM açık kaynak MCP server/plugin dağıtımı — `@atezer/figma-mcp-bridge` npm paketi ve GitHub repo public. Önceki `tokens.md` / `components.md` stub'ları gerçek key ile doldurulduğunda kurumsal Figma IP'si (hash key'ler, file key'ler) repo'ya sızıyor ve kullanıcıya özel çözüm sunmuyordu. Ek olarak Figma'da variable/component rename olunca cache'lenmiş key invalid oluyordu.
+
+**Değişiklikler:**
+
+- `.claude/design-systems/README.md`: İki-katman mimari dokümante edildi (public template vs user-local cache), skill okuma sırası tanımlandı (user-local → repo template → runtime resolve)
+- `.claude/design-systems/active-ds.md`: Gerçek `file key` kaldırıldı, user-local pointer pattern'ine geçildi
+- `.claude/design-systems/sui/tokens.md`: Generic token isim paternleri (spacing/radius/surface/typography rol haritası) — variableKey yok
+- `.claude/design-systems/sui/components.md`: Generic component isim paternleri (Top usage-ranked) + eksik listesi + primitive fallback tablosu — componentKey yok
+- `.claude/design-systems/sui/SUI_CHEATSHEET.md` (yeni): 10 bölümlük workflow rehberi (karar ağacı, 9 recipe index, 5-tab IA, custom dashboard pattern, 3 mutlak kural, anti-pattern listesi, hedef metrikleri, sorun giderme)
+- `.gitignore`: DS cache güvenlik katmanı eklendi (`.claude/design-systems/*/_meta.md`, `*.cache.md`, `*.local.md`)
+- `CHANGELOG.md`: v1.7.30 entry'sinden `P31qJTP8XVupmZG4BlTtPG` file key redact
+- `install/TOKEN-BUDGET.md`: Text style import key redact (`fb3591835c86d00580e1f0cea2343d033107dc67`)
+
+**Kullanıcı için ne değişir:**
+
+- İlk kurulum: `/ds-sync sui` (veya "SUI cache oluştur") komutu ile kendi makinenizde user-local cache oluşur; repo'ya girmez
+- `fmcp-screen-recipes` cache-first mantığı değişmez ama artık önce user-local'e bakar, yoksa repo template'ine düşer, yoksa runtime resolve yapar
+- Mevcut cache'i olan kullanıcılar: `.claude/design-systems/<lib>/` altında gerçek key varsa manuel olarak `~/.claude/data/fcm-ds/<file-key>/` altına taşıyın
+
+**Regresyon:** Sıfır. Plugin / MCP server kodu değişmedi; yalnızca `.claude/` dokümantasyon + `.gitignore` + iki CHANGELOG redact.
+
+**Not:** `.claude/` klasörü npm paketinin `files` alanında değildir; bu release npm paket içeriğini değiştirmez. Release yalnızca CHANGELOG + version tutarlılığı içindir.
+
 ## [1.9.2] - 2026-04-17
 
 ### Plugin Version Sync + Diagnostic Startup Log (v1.9.1 Tamamlayıcı Hotfix)
@@ -474,7 +505,7 @@ F-MCP Bridge ile SUI gibi team library tabanli tasarim sistemleri kullanmak arti
 - `src/local-plugin-only.ts`: 1 bug fix + 1 enrichment + 3 yeni tool + description guncellemeleri
 - `skills/figma-canvas-ops/SKILL.md`, `skills/generate-figma-screen/SKILL.md`, `skills/fmcp-project-rules/SKILL.md`
 
-**Test Edildi:** Sahifinans Playground (`P31qJTP8XVupmZG4BlTtPG`) dosyasinda SUI kutuphanesi ile uctan uca dogrulandi: `figma_search_assets` 25 variable + 4 lib collection donduruyor, `figma_get_library_variables` 84-100 SUI variable key'iyle donuyor, frame olusturma → `figma_bind_variable` ile `Surface/background level-0` baglama → screenshot dogrulamasi basarili, `_warnings` static analiz hem success hem error path'lerinde calisiyor.
+**Test Edildi:** Ozel bir consumer Figma dosyasi uzerinde SUI kutuphanesi ile uctan uca dogrulandi: `figma_search_assets` 25 variable + 4 lib collection donduruyor, `figma_get_library_variables` 84-100 variable key'iyle donuyor, frame olusturma → `figma_bind_variable` ile `Surface/background level-0` baglama → screenshot dogrulamasi basarili, `_warnings` static analiz hem success hem error path'lerinde calisiyor.
 
 ---
 

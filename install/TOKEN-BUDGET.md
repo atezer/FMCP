@@ -248,7 +248,7 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 
 **Durum:** SUI library data issue — SUI'de "display" text style (büyük başlık) yayınlanmamış veya key expired. Recipe'de amount display gibi büyük metin komponentleri için workaround gerekli.
 
-**Gerçek hata (2026-04-15 FP-1-R):** Text style import key `fb3591835c86d00580e1f0cea2343d033107dc67` → `"Failed to import style by key"`. Recipe büyük başlıklar için `body-semibold + hardcoded fontSize=36` kullanmak zorunda kaldı → `HARDCODED_FONT_SIZE` SEVERE violation.
+**Gerçek hata (2026-04-15 FP-1-R):** Text style import key runtime'da expired → `"Failed to import style by key"`. Recipe büyük başlıklar için `body-semibold + hardcoded fontSize=36` kullanmak zorunda kaldı → `HARDCODED_FONT_SIZE` SEVERE violation.
 
 **Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 26 — text style discovery strategy: instance scan → library search → kabul et, en büyük mevcut style'ı kullan + recipe'de `characters` property ile büyük metin. `HARDCODED_FONT_SIZE` violation kabul edilir (minimum violation, üretim kullanılabilir, kullanıcıya açıkça raporlanır).
 
