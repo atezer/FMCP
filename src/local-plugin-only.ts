@@ -555,7 +555,10 @@ export async function main() {
 				"v1.8.1+: Static analysis detects design-system discipline violations (hardcoded colors, missing token bindings, no-instance usage, hardcoded typography). " +
 				"SEVERE warnings are promoted to the top of the response as _designSystemViolations — Claude must read and self-correct. " +
 				"Also detects gotchas: FILL/ABSOLUTE before appendChild, sync API usage, missing loadFontAsync, sync currentPage assignment. " +
-				"For component instances: use setProperties({...}), NOT findAll(TEXT).",
+				"For component instances: use setProperties({...}), NOT findAll(TEXT). " +
+				"v1.9.6+: Post-execute scan — eğer kod `return { createdNodeIds: [...] }` veya `nodeIds`/`ids`/`frameId`/`rootId`/`nodeId` döndürürse " +
+				"plugin oluşturulan node'ları otomatik tarar, unbound fill/padding/radius/text-style varsa response'a `_POST_EXECUTE_SCAN_BLOCKING: true` ve " +
+				"`_postExecuteViolations` alanı ekler. Bu flag varsa execute geçersiz sayılır — kodu düzelt (setBoundVariable/setTextStyleIdAsync ekle) ve tekrar çalıştır.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -629,10 +632,29 @@ export async function main() {
 						isError: true,
 					};
 				}
+				// v1.9.6: Post-execute scan result → BLOCKING signal injection
+				const postScan = typeof result === "object" && result !== null
+					? ((result as Record<string, unknown>)._postExecuteScan as { violationCount?: number; violations?: unknown[]; passed?: boolean; hint?: string; totalChecked?: number } | undefined)
+					: undefined;
+				const postScanBlocking: Record<string, unknown> = {};
+				if (postScan && typeof postScan.violationCount === "number" && postScan.violationCount > 0) {
+					postScanBlocking._POST_EXECUTE_SCAN_BLOCKING = true;
+					postScanBlocking._postExecuteViolations = {
+						count: postScan.violationCount,
+						totalChecked: postScan.totalChecked ?? 0,
+						severity: "BLOCKING",
+						message: "❌ v1.9.6 POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " unbound tespit edildi. Kodu duzelt — her unbound icin setBoundVariable veya setTextStyleIdAsync cagrisi ekle.",
+						violations: postScan.violations ?? [],
+						action: "❌ BLOCKING: Execute sonucu KABUL EDILMEZ. Listelenen nodeId'lerdeki unbound node'lari bagla ve kodu tekrar calistir. Skip edemezsin.",
+						retry_required: true,
+					};
+				}
+
 				let enriched: unknown;
 				try {
 					enriched = typeof result === "object" && result !== null
 						? {
+							...postScanBlocking, // v1.9.6: post-execute BLOCKING top
 							...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
 							...dsViolations,  // v1.8.1: SEVERE warnings at top level
 							...(result as Record<string, unknown>),

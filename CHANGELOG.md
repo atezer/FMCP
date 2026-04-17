@@ -12,6 +12,53 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.6] - 2026-04-17
+
+### Post-Execute Scan + Negative Intent Detection
+
+Gerçek test raporunda (chat `eedf8ec8`, 14:39 Claude Desktop) gözlemlenen iki kritik regression'ı kapatır:
+
+1. **"SUI olmayan renkler kullandı, tasarım sistemi dışına çıktı"** — `figma_execute` statik kod analizi unbound fill'i yakalıyor ama sadece kod'da `.fills = [{type:"SOLID"}]` literal yazılınca. Değişkenle gelen unbound fill atlanıyordu. **v1.9.6 runtime post-execute scan** execute sonrası oluşturulan node'ları tarar.
+
+2. **"SUI Alt 3'ü atla dediği halde referans aldı"** — Skill'ler user intent parse etmiyordu, özellikle negative instruction'ları ("atla", "bakma", "dışında"). **v1.9.6 Negative Intent Detection** intent-router'da tanımlı pattern seti.
+
+**Plugin tarafı (f-mcp-plugin/code.js):**
+
+- **YENİ `postExecuteScan()` fonksiyonu**: `figma_execute` result'ı `createdNodeIds`, `nodeIds`, `ids`, `frameId`, `rootId` veya `nodeId` içeriyorsa subtree'yi tarar. Subtree başına 500 node limit, 10 violation cap. Kategori: `UNBOUND_FILL`, `UNBOUND_PADDING`, `UNBOUND_RADIUS`, `UNBOUND_ITEMSPACING`, `UNBOUND_TEXTSTYLE`. Instance node'lar fill check'ten muaf (binding main component'ten gelir).
+- **EXECUTE_CODE_RESULT response'a `_postExecuteScan` field**: `{ scanned, rootsScanned, totalChecked, violationCount, violations, passed, hint }`.
+- Plugin version sync: `code.js`, `ui.html` → `1.9.6`.
+
+**Server tarafı (src/local-plugin-only.ts):**
+
+- `figma_execute` response'u `_postExecuteScan`'i yakalayıp `violationCount > 0` olduğunda response'un üstüne **`_POST_EXECUTE_SCAN_BLOCKING: true`** top-level flag ekler.
+- `_postExecuteViolations` detaylı obje: severity="BLOCKING", action metni, retry_required: true, violation listesi.
+- `figma_execute` tool description v1.9.6 post-scan pattern açıklamasıyla güncellendi (skill'in `return { createdNodeIds: [...] }` yapması için hatırlatma).
+
+**Skill güncellemesi (skills/fmcp-intent-router/SKILL.md):**
+
+- **v1.9.6 Negative Intent Detection** bölümü — 5 patern: "atla", "bakma", "benzetme", "dışında/hariç", "sıfırdan/baştan".
+- Parse sonucu `exclude_references: [...]` ve `anti_pattern_refs: [...]` state field'ları.
+- Kullanıcı "X atla" dediyse Claude X'e referans vermez, screenshot almaz. Explicit anti-pattern.
+- `last-intent.md` persist — aynı oturum boyunca geçerli.
+
+**Kullanıcı için ne değişir:**
+
+1. **Runtime enforcement**: `figma_execute` ile kod çalışırsa ve oluşan node'larda unbound fill/padding/radius/text-style varsa response üstünde `_POST_EXECUTE_SCAN_BLOCKING: true` görürsün — Claude retry yapmak zorunda. Statik kod analizi eksik kalan runtime bugs artık yakalanır.
+2. **Intent parsing**: "SUI Alt 3 atla" gibi negative instruction Claude tarafından doğru parse edilir, referans alınmaz.
+3. Plugin reload gerekir: yeni `postExecuteScan` handler v1.9.6 plugin'de.
+
+**Regresyon:** Sıfır. Backwards compatible:
+- Eski kod `createdNodeIds` döndürmüyorsa post-scan skip edilir (null return) — eski davranış korunur.
+- `_POST_EXECUTE_SCAN_BLOCKING` flag sadece violation varsa eklenir; temiz kodlarda response aynen v1.9.5.
+- Negative intent parser skill direktifi; opt-in.
+
+**Test matrisi:**
+
+- TypeScript type-check: PASS
+- Build: PASS
+- postExecuteScan() subtree walk: stack-safe 500 node cap
+- Server injection priority: postScanBlocking → budgetBlocking → dsViolations → result
+
 ## [1.9.5] - 2026-04-17
 
 ### Chat Context Korumaları — Screenshot Method Selection + Discovery Budget
