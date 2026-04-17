@@ -563,3 +563,32 @@ Create `~/.config/figma-mcp-bridge/config.json`:
 ```
 
 **Note:** Custom configuration is optional. When using your own deployment, set `MCP_OAUTH_BASE_URL` to your worker URL so OAuth redirects work.
+
+---
+
+## DevTools Console'da WebSocket hataları görüyorum
+
+Plugin DevTools'u açtığınızda şu tarzda hatalar görebilirsiniz:
+
+```
+WebSocket connection to 'ws://localhost:5458/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
+```
+
+### v1.9.1+ ile çözüldü
+
+**v1.9.1 sürümünden itibaren bu hatalar tamamen giderildi.** Plugin artık 5454-5470 aralığını blind scan etmiyor — server kendi startup'ında probe yapıp aktif bridge'leri tespit ediyor ve welcome mesajında plugin'e bildiriyor. Plugin sadece bilinen aktif portlara bağlanıyor, kullanılmayan portlara WebSocket denemesi yapmıyor.
+
+Eğer hâlâ görüyorsanız:
+
+1. **Plugin sürümünü kontrol edin:** DevTools Console'da `console.log(FMCP_PLUGIN_VERSION)` → `"1.9.1"` veya daha yeni olmalı
+2. **MCP server sürümünü kontrol edin:** Plugin console log'larından "Handshake OK — bridge v?.?.?" mesajına bakın. Eski sürüm ise `npm install -g @atezer/figma-mcp-bridge@latest`
+3. **Figma'da plugin'i tamamen kapatın ve tekrar açın** (sayfa refresh yeterli değil — plugin iframe yeniden yüklenmeli)
+
+### v1.9.0 veya eski sürümleri kullanıyorsanız
+
+Yukarı upgrade edemiyorsanız, DevTools Console'da filtreleme ile bu hataları gizleyebilirsiniz:
+
+- **Chrome:** Console filtresine `-WebSocket` yazın (tire ile exclude filter)
+- **Firefox:** Console Filter kısmını sağ tıklayın → "Hide WebSocket messages"
+
+Bu hatalar plugin fonksiyonelliğini etkilemez, sadece DevTools'ta görseldir.

@@ -61,6 +61,9 @@ export declare class PluginBridgeServer {
     private heartbeatTimer;
     private auditLogPath;
     private clientIdCounter;
+    /** v1.9.1+ Sibling bridge discovery state — cached list of active fmcp ports. */
+    private knownSiblings;
+    private siblingProbeInterval;
     /** Figma REST API token (in-memory only, never written to disk). */
     private figmaRestToken;
     /** AI client name detected from parent process (Claude, Cursor, etc.) */
@@ -119,6 +122,17 @@ export declare class PluginBridgeServer {
      * (e.g. older bridge version without /status).
      */
     private probeStatus;
+    /**
+     * v1.9.1+ Probe all sibling bridges in range (5454-5470) and return active fmcp ports.
+     * Parallel probe, ~2-3s worst case. Errors are swallowed (silent — port inactive).
+     * Node.js network errors stay in server stdout, NEVER leak to plugin browser DevTools.
+     */
+    private probeSiblingBridges;
+    /**
+     * v1.9.1+ Broadcast activeBridges update to all connected plugin clients.
+     * Used when periodic probe detects a new sibling (or one disappears).
+     */
+    private broadcastSiblingUpdate;
     /**
      * Send a POST /shutdown to an old F-MCP bridge. Calls onAccepted if the bridge
      * responds with 200, or onRefused otherwise. On error/timeout, assumes the bridge

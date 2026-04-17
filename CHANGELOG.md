@@ -12,6 +12,48 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.1] - 2026-04-17
+
+### Plugin Multi-Bridge Discovery — Server-Side (Console Errors Tamamen Giderildi)
+
+Plugin DevTools console'unda görülen 22+ `WebSocket connection to ws://localhost:5458-5470/ failed: net::ERR_CONNECTION_REFUSED` hataları v1.9.1 ile **tamamen giderildi**. Plugin artık blind port scan yapmıyor; server'ın probe ettiği aktif bridge listesini kullanıyor.
+
+**Server tarafı (yeni — `src/core/plugin-bridge-server.ts`):**
+
+- `probeSiblingBridges()` metodu eklendi: 5454-5470 aralığını paralel probe eder, aktif fmcp bridge'leri tespit eder (mevcut `probePort` + `probeStatus` yeniden kullanılır)
+- Startup'ta initial probe (background, non-blocking) + 30 saniyede bir periyodik refresh
+- Welcome mesajına `activeBridges: number[]` field'ı eklendi (cache'ten, 0ms overhead)
+- Sibling değişikliklerinde `activeBridgesUpdate` push mesajı tüm bağlı plugin client'larına broadcast edilir
+- `stop()` içinde sibling probe interval temizlenir
+
+**Plugin tarafı (`f-mcp-plugin/ui.html`):**
+
+- Welcome handler: `msg.activeBridges` varsa sadece listed portlara `connectToExtraPort` çağırır, `scanOtherPorts` ve periyodik timer ÇAĞRILMAZ → console'da 0 `ERR_CONNECTION_REFUSED`. Field yoksa fallback olarak eski scan davranışı korunur (backward compat)
+- Yeni `activeBridgesUpdate` push handler: server yeni sibling keşfettiğinde otomatik ek port'lara bağlanır (30s içinde)
+- `switchActivePort()` bug fix: `mcpBridgeWs` ve `mcpConnectedPort` değişikliği kaldırıldı. Önceki kod main connection'ın response routing'ini bozuyordu (switch sonrası main'den gelen istekler yanlış porta cevap veriyordu). Artık switch sadece UI "aktif port" göstergesi için kullanılır; her connection kendi closure ws'inde (ui.html:1682, 1866) paralel çalışır
+
+**Backward Compatibility:**
+
+| Server | Plugin | Davranış |
+|--------|--------|----------|
+| v1.9.1 | v1.9.1 | Server `activeBridges` gönderir, plugin sadece listed'a bağlanır — **0 console error** |
+| v1.9.0 | v1.9.1 | Welcome'de field yok, plugin fallback scan — eski davranış (~22 error) |
+| v1.9.1 | v1.9.0 | Server field gönderir, plugin ignore eder, fallback scan — eski davranış |
+| v1.9.0 | v1.9.0 | Hiç değişmemiş |
+
+**Fonksiyonel Kazanımlar:**
+
+- Multi-client routing (Claude + Cursor + Windsurf aynı anda): aynen çalışır, her connection bağımsız closure ws
+- Port label + ◀▶ switch butonları: aynen çalışır (artık daha doğru, routing'i bozmadan)
+- `mcpConnections` Map: aktif kullanımda kalır (response routing için)
+- Yeni MCP process başlatıldığında plugin otomatik keşfeder (30s içinde, eskiden plugin restart gerekiyordu)
+- Welcome hızlı: cache'ten 0ms overhead (background probe startup'ta paralel yapılır)
+
+**Dokümanlar:**
+
+- `docs/TROUBLESHOOTING.md`: v1.9.1+ için "console hatası yok" notu, eski sürümler için `-WebSocket` filter talimatı
+- `docs/MULTI_INSTANCE.md`: yeni server-side discovery yaklaşımı belgelendi
+
 ## [1.9.0] - 2026-04-17
 
 ### Kural Enflasyonu Temizliği + Bridge Crash Koruması + SUI Cache

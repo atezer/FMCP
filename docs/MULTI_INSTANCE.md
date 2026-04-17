@@ -140,8 +140,22 @@ Veya elle:
 lsof -i :5454-5470 -sTCP:LISTEN
 ```
 
+## Multi-Bridge Discovery (v1.9.1+)
+
+v1.9.1 sürümünden itibaren plugin multi-bridge discovery'yi **server-side probe + push update** mekanizması ile yapar:
+
+1. **Startup probe:** Her MCP server başlatılırken 5454-5470 aralığını paralel probe eder (Node.js `http` katmanında), aktif fmcp bridge'lerini tespit eder
+2. **Welcome mesajı:** Plugin ilk bağlandığında server cache'ten `activeBridges` listesini (0ms overhead) welcome mesajında plugin'e gönderir
+3. **Push update:** Server her 30 saniyede bir background refresh yapar; yeni MCP process başlatıldığında veya kapatıldığında bağlı tüm plugin client'larına `activeBridgesUpdate` push mesajı gönderir
+4. **Plugin:** Sadece server'ın bildirdiği kesin port listesine bağlantı kurar — blind scan yok, DevTools'ta 0 `ERR_CONNECTION_REFUSED` hatası
+
+**Eski davranış (v1.9.0 ve öncesi):** Plugin 5454-5470 aralığını periyodik tarardı, kullanılmayan portlarda browser network katmanı console'a hata yazardı. v1.9.6 ile flood throttle eklendi (60s interval, max 5 scan). v1.9.1 ile kökten çözüldü.
+
+**Eski server + yeni plugin** veya **yeni server + eski plugin** kombinasyonlarında plugin otomatik fallback ile eski scan davranışına döner; crash olmaz, sadece eski console gürültüsü görülür. Detay: [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
+
 ## İlgili dokümanlar
 
 - [ONBOARDING](ONBOARDING.md) — Kurulum
 - [SETUP](SETUP.md) — Kurulum ve yapılandırma
 - [PORT-5454-KAPALI](PORT-5454-KAPALI.md) — Port kapalı sorun giderme
+- [TROUBLESHOOTING](TROUBLESHOOTING.md) — DevTools console hataları

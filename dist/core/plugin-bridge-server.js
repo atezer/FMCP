@@ -37,6 +37,9 @@ export class PluginBridgeServer {
         this.requestTimeoutMs = 120000;
         this.heartbeatTimer = null;
         this.clientIdCounter = 0;
+        /** v1.9.1+ Sibling bridge discovery state — cached list of active fmcp ports. */
+        this.knownSiblings = [];
+        this.siblingProbeInterval = null;
         /** Figma REST API token (in-memory only, never written to disk). */
         this.figmaRestToken = null;
         /** Last error message when bridge could not bind (port conflict, etc.) */
@@ -242,6 +245,48 @@ export class PluginBridgeServer {
         });
     }
     /**
+     * v1.9.1+ Probe all sibling bridges in range (5454-5470) and return active fmcp ports.
+     * Parallel probe, ~2-3s worst case. Errors are swallowed (silent — port inactive).
+     * Node.js network errors stay in server stdout, NEVER leak to plugin browser DevTools.
+     */
+    async probeSiblingBridges() {
+        const discovered = [];
+        const host = "127.0.0.1";
+        const probes = [];
+        for (let p = MIN_PORT; p <= MAX_PORT; p++) {
+            if (p === this.port)
+                continue;
+            probes.push((async () => {
+                try {
+                    const kind = await this.probePort(p, host);
+                    if (kind !== "fmcp")
+                        return;
+                    const status = await this.probeStatus(p, host);
+                    if (status.uptime >= 0)
+                        discovered.push(p);
+                }
+                catch { /* silent */ }
+            })());
+        }
+        await Promise.all(probes);
+        return discovered.sort((a, b) => a - b);
+    }
+    /**
+     * v1.9.1+ Broadcast activeBridges update to all connected plugin clients.
+     * Used when periodic probe detects a new sibling (or one disappears).
+     */
+    broadcastSiblingUpdate() {
+        const msg = JSON.stringify({ type: "activeBridgesUpdate", activeBridges: this.knownSiblings });
+        for (const client of this.clients.values()) {
+            if (client.ws.readyState === 1) {
+                try {
+                    client.ws.send(msg);
+                }
+                catch { /* ignore */ }
+            }
+        }
+    }
+    /**
      * Send a POST /shutdown to an old F-MCP bridge. Calls onAccepted if the bridge
      * responds with 200, or onRefused otherwise. On error/timeout, assumes the bridge
      * may have already exited and calls onAccepted.
@@ -408,6 +453,7 @@ export class PluginBridgeServer {
                             clientId,
                             multiClient: true,
                             clientName: this.clientName,
+                            activeBridges: this.knownSiblings, // v1.9.1+ — cache'ten, 0ms overhead
                         }));
                         return;
                     }
@@ -460,6 +506,34 @@ export class PluginBridgeServer {
         // Notify async restart() / tryListenAsync() that binding succeeded
         this._listenResolve?.(true);
         this._listenResolve = null;
+        // v1.9.1+ Sibling bridge discovery — initial probe (background, non-blocking)
+        void (async () => {
+            try {
+                this.knownSiblings = await this.probeSiblingBridges();
+                if (this.knownSiblings.length > 0) {
+                    logger.info({ siblings: this.knownSiblings }, "Plugin bridge: sibling fmcp bridges discovered");
+                    this.broadcastSiblingUpdate();
+                }
+            }
+            catch { /* silent */ }
+        })();
+        // v1.9.1+ Periodic re-probe (30s) — detect new/disappeared siblings
+        if (!this.siblingProbeInterval) {
+            this.siblingProbeInterval = setInterval(() => {
+                void (async () => {
+                    try {
+                        const fresh = await this.probeSiblingBridges();
+                        const changed = JSON.stringify(fresh) !== JSON.stringify(this.knownSiblings);
+                        if (changed) {
+                            this.knownSiblings = fresh;
+                            logger.info({ siblings: fresh }, "Plugin bridge: sibling list updated");
+                            this.broadcastSiblingUpdate();
+                        }
+                    }
+                    catch { /* silent */ }
+                })();
+            }, 30000);
+        }
         const heartbeat = () => {
             for (const [cId, info] of this.clients) {
                 if (info.ws.readyState !== 1) {
@@ -819,6 +893,10 @@ export class PluginBridgeServer {
         if (this.heartbeatTimer) {
             clearTimeout(this.heartbeatTimer);
             this.heartbeatTimer = null;
+        }
+        if (this.siblingProbeInterval) {
+            clearInterval(this.siblingProbeInterval);
+            this.siblingProbeInterval = null;
         }
         this.rejectAllPending("Plugin bridge server stopped");
         for (const client of this.clients.values()) {

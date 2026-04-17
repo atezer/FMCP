@@ -1487,27 +1487,48 @@
                 status: 'ready'
               });
               mcpActivePort = mcpConnectedPort;
-              // Adım 4: Ana bağlantı hazır — diğer portları da tara (ilk + sınırlı periyodik)
-              // v1.9.6: Flood azaltma — interval 10s → 60s, maksimum 5 tarama sonrası dur.
-              // Gerekçe: Önceki davranış her 10s'de 15 başarısız WebSocket denemesi yapıyordu
-              // (dakikada ~90 console error). 137 dk'lık oturumda 12000+ teorik error birikimi.
-              // Yeni davranış: ilk 500ms + sonraki 5 dk'da dakikada 1 scan → toplam 6 scan,
-              // sonra otomatik dur. Yeni client sonradan bağlanırsa onConnect event'i ile yeniden
-              // tetiklenir (connectToExtraPort başarılı olursa mcpConnections güncellenir).
-              setTimeout(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 500);
-              if (!extraPortScanTimer) {
-                var scanCount = 0;
-                var MAX_SCANS = 5;  // 5 × 60s = 5 dk boyunca periyodik tarama, sonra dur
-                extraPortScanTimer = setInterval(function() {
-                  scanCount++;
-                  if (scanCount > MAX_SCANS) {
-                    clearInterval(extraPortScanTimer);
-                    extraPortScanTimer = null;
-                    return;
+              // v1.9.1+: Server'dan gelen aktif bridge listesi varsa, SADECE listed'a bagla
+              // (blind scan elenir → DevTools console'da 0 error). Aksi halde fallback scan.
+              if (msg.activeBridges && Array.isArray(msg.activeBridges)) {
+                var _host = getMcpBridgeHost();
+                for (var _i = 0; _i < msg.activeBridges.length; _i++) {
+                  var _p = msg.activeBridges[_i];
+                  if (typeof _p === 'number' && _p !== mcpConnectedPort && !mcpConnections.has(_p)) {
+                    connectToExtraPort(_p, _host);
                   }
-                  if (typeof scanOtherPorts === 'function') scanOtherPorts();
-                }, 60000);  // v1.9.6: 10000 → 60000 (dakikada 1 scan)
+                }
+                // scanOtherPorts ve periyodik timer CAGRILMAZ — server bize dogru listeyi verdi.
+                // Yeni sibling baglanirsa server 'activeBridgesUpdate' push mesajiyla bildirir (30s icinde).
+              } else {
+                // FALLBACK (v1.9.0 server veya uyumsuz): eski scan davranisi korunur.
+                // v1.9.6: Flood azaltma — interval 60s, maksimum 5 tarama sonrası dur.
+                setTimeout(function() { if (typeof scanOtherPorts === 'function') scanOtherPorts(); }, 500);
+                if (!extraPortScanTimer) {
+                  var scanCount = 0;
+                  var MAX_SCANS = 5;
+                  extraPortScanTimer = setInterval(function() {
+                    scanCount++;
+                    if (scanCount > MAX_SCANS) {
+                      clearInterval(extraPortScanTimer);
+                      extraPortScanTimer = null;
+                      return;
+                    }
+                    if (typeof scanOtherPorts === 'function') scanOtherPorts();
+                  }, 60000);
+                }
               }
+              return;
+            }
+            // v1.9.1+: Server push update — yeni sibling kesfedilince gelir.
+            if (msg.type === 'activeBridgesUpdate' && Array.isArray(msg.activeBridges)) {
+              var _upHost = getMcpBridgeHost();
+              for (var _ui = 0; _ui < msg.activeBridges.length; _ui++) {
+                var _up = msg.activeBridges[_ui];
+                if (typeof _up === 'number' && _up !== mcpConnectedPort && !mcpConnections.has(_up)) {
+                  connectToExtraPort(_up, _upHost);
+                }
+              }
+              // Kapanmis port'larin baglantisi onclose ile otomatik mcpConnections'dan silinir.
               return;
             }
             if (msg.type === 'tokenStatus') {
@@ -1951,12 +1972,11 @@
       }
       var nextIdx = (currentIdx + direction + ports.length) % ports.length;
       mcpActivePort = ports[nextIdx].port;
-      // Geriye uyumluluk: mcpBridgeWs aktif bağlantıya çevir
-      var activeConn = mcpConnections.get(mcpActivePort);
-      if (activeConn && activeConn.ws) {
-        mcpBridgeWs = activeConn.ws;
-        mcpConnectedPort = mcpActivePort;
-      }
+      // v1.9.1+ FIX: mcpBridgeWs ve mcpConnectedPort DEGISTIRILMEZ.
+      // Her connection kendi closure ws'inde zaten paralel calisir (main: line 1682 wsRef=mcpBridgeWs,
+      // extra: line 1866 wsRef=ws). Onceki kod mcpBridgeWs'i degistirerek main handler'in response
+      // routing'ini bozuyordu (switch sonrasi main'den gelen istekler yanlis porta cevap veriyordu).
+      // Simdi switch sadece UI "aktif port" gostergesi (port label + buton vurgulamasi) icin kullanilir.
       updatePortLabel();
       updateStatus('Ready', true, false);
     }
