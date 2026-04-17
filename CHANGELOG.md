@@ -12,6 +12,27 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.2] - 2026-04-17
+
+### Plugin Version Sync + Diagnostic Startup Log (v1.9.1 Tamamlayıcı Hotfix)
+
+v1.9.1 release'inde plugin tarafındaki `FMCP_PLUGIN_VERSION` string'i (`ui.html` + `code.js`) `'1.8.2'`'de kalmıştı — server-side kod v1.9.1 olarak yayınlanmış olmasına rağmen. Bu hotfix plugin version'unu senkronize eder ve plugin yüklendiğinde belirgin bir startup log ekler.
+
+**Değişiklikler:**
+
+- `f-mcp-plugin/ui.html`: `FMCP_PLUGIN_VERSION = '1.8.2'` → `'1.9.2'`
+- `f-mcp-plugin/code.js`: aynı
+- `f-mcp-plugin/ui.html`: Plugin yüklendiğinde `console.log('[F-MCP v1.9.2] Plugin loaded — server-side sibling discovery active')` startup log'u eklendi
+
+**Neden önemli:**
+
+v1.9.1'de plugin tarafı kod düzeltildi (welcome handler'a `activeBridges` branch eklendi, `scanOtherPorts` artık sadece fallback olarak çalışıyor) ama Figma plugin iframe'i bazen eski cache'ini tutuyor. Bu hotfix'teki startup log sayesinde:
+
+- Plugin'i açıp DevTools → Console'da `[F-MCP v1.9.2]` log'u görüyorsan → **yeni kod yüklendi, blind scan devre dışı**
+- Log göremiyorsan → eski cache hâlâ aktif, `docs/TROUBLESHOOTING.md`'deki plugin remove + re-add talimatını uygula
+
+**Regresyon:** Sıfır. Sadece version string güncellemesi ve tek satır console.log — fonksiyonel davranış aynen kalır.
+
 ## [1.9.1] - 2026-04-17
 
 ### Plugin Multi-Bridge Discovery — Server-Side (Console Errors Tamamen Giderildi)
