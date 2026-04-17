@@ -8,12 +8,16 @@
 
 ## Aktif DS
 
-**Status:** ❌ Henüz seçilmedi
+**Status:** ✅ Aktif (kullanıcıya özel seçim — repo template)
 
-**Library Name:** —
-**File Key:** —
-**Source Path:** —
-**Selected At:** —
+**Library Name:** ❖ SUI
+**File Key:** → user-local cache'te (`~/.claude/data/fcm-ds/active.md`)
+**Source Path:** `.claude/design-systems/sui/` (public pattern) + `~/.claude/data/fcm-ds/<file-key>/` (user-local cache)
+**Selected At:** 2026-04-17
+
+> **Güvenlik:** Gerçek `file key`, `variableKey`, `componentKey` **bu dosyada tutulmaz**.
+> Hepsi user-local cache'tedir (gitignored) ve Figma library IP'si olarak korunur.
+> Bu repo template'i başka kullanıcıya dağıtıldığında "❌ Henüz seçilmedi" default'una dönmelidir.
 
 ---
 
@@ -28,18 +32,20 @@
 > - Kendi DS'iniz (Figma library URL verin)
 > - Hiçbiri (DS'siz, ham Figma)"
 
-Kullanıcı seçtiğinde Claude bu dosyayı **otomatik update eder**:
+Kullanıcı seçtiğinde Claude bu dosyayı **otomatik update eder** (gerçek file key repo'ya YAZILMAZ — user-local'e gider):
 
 ```markdown
 ## Aktif DS
 
 **Status:** ✅ Aktif
 
-**Library Name:** ❖ SUI
-**File Key:** P31qJTP8XVupmZG4BlTtPG
-**Source Path:** .claude/design-systems/sui/
-**Selected At:** 2026-04-14
+**Library Name:** ❖ <DS Name>
+**File Key:** → user-local (`~/.claude/data/fcm-ds/active.md`)
+**Source Path:** `.claude/design-systems/<lib>/` (public pattern)
+**Selected At:** YYYY-MM-DD
 ```
+
+**Gerçek file key kaydı** `~/.claude/data/fcm-ds/active.md`'e yazılır (gitignored).
 
 ---
 

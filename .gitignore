@@ -211,3 +211,11 @@ docs/analysis/
 # Local design system libraries (user-specific, not shared)
 .claude/libraries/
 .claude/worktrees/
+
+# FCM — Design System cache güvenliği
+# Gerçek componentKey / variableKey içeren DS cache'leri repo'ya GİRMEMELİ.
+# Framework user-local cache'i ~/.claude/data/fcm-ds/<file-key>/ altında tutar.
+# Yanlışlıkla repo'ya _meta.md veya cache.md sızarsa burada yakalanır.
+.claude/design-systems/*/_meta.md
+.claude/design-systems/*/*.cache.md
+.claude/design-systems/*/*.local.md

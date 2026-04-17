@@ -17,21 +17,39 @@ Bu klasör, Claude'un tasarım sistemi (DS) referanslarını tuttuğu merkezi ye
 
 ---
 
-## Dizin Yapısı
+## Dizin Yapısı (Split: Public Template + User-Local Cache)
 
+FCM v2+ itibarıyla DS referansları **iki katmanda** tutulur:
+
+### Katman 1 — Public Template (Repo)
 ```
 .claude/design-systems/
 ├── README.md                      ← Bu dosya (framework dokümanı)
-└── <library-id>/                  ← Her DS için bir klasör (kebab-case)
-    ├── _meta.md                   ← Kaynak-section eşleştirme + sync durumu + istatistikler
-    ├── tokens.md                  ← Renkler, spacing, tipografi, breakpoints, radius, shadow
-    ├── components.md              ← Bileşen kataloğu (varyant, boyut, durum, platform)
-    ├── icons.md                   ← İkon kataloğu (varsa)
-    ├── mobile.md                  ← Mobil özel bileşenler (varsa)
-    └── assets.md                  ← Logo, grafik, illüstrasyon (varsa)
+├── active-ds.md                   ← Aktif DS seçimi (template — gerçek file key YOK)
+└── <library-id>/                  ← Her DS için pattern rehberi
+    ├── tokens.md                  ← Token isim/pattern/rol (variableKey YOK)
+    ├── components.md              ← Component isim/pattern/rol (componentKey YOK)
+    └── <library-id>_CHEATSHEET.md ← Generic workflow cheatsheet
 ```
 
-**Kritik:** `_meta.md` her kütüphanenin kalbidir. Sync durumu, kaynakların section'lara nasıl eşleştiği ve son güncelleme tarihi burada tutulur.
+### Katman 2 — User-Local Cache (Git-ignored, kullanıcıya özel)
+```
+~/.claude/data/fcm-ds/
+├── active.md                      ← Aktif DS bilgisi (file key dahil)
+└── <file-key>/                    ← Her Figma dosyası için ayrı klasör
+    ├── _meta.md                   ← sync durumu + istatistikler
+    ├── tokens.md                  ← GERÇEK variableKey'ler (spacing, color, radius)
+    ├── components.md              ← GERÇEK componentKey'ler
+    ├── icons.md                   ← varsa
+    └── mobile.md                  ← varsa
+```
+
+**Neden iki katman?**
+1. **Gizlilik:** Figma library key'leri kurumsal IP'dir; repo'ya girmemeli.
+2. **Paylaşım:** FCM'i fork eden başka kullanıcı kendi DS'sinin key'lerini tutar.
+3. **Eskime:** Key rename olsa bile runtime resolve (isim-bazlı) sayesinde framework çalışmaya devam eder.
+
+**Kritik:** Key'ler **her zaman** user-local'de, **asla** repo'da.
 
 ---
 
@@ -82,6 +100,20 @@ veya
 → sui/ klasörü silinir
 → project-context.md'den kural kaldırılır
 ```
+
+---
+
+## Skill Okuma Sırası
+
+Tüm DS-farkında skill'ler (`fmcp-screen-recipes`, `fmcp-screen-orchestrator`, `apply-figma-design-system`, ...) cache'i şu sırayla arar:
+
+1. **User-local:** `~/.claude/data/fcm-ds/<file-key>/<section>.md` (gerçek key'ler)
+2. **Repo template:** `.claude/design-systems/<library>/<section>.md` (isim pattern'leri)
+3. **Runtime resolve:** `figma.teamLibrary` API + `name.endsWith(suffix)` eşleme
+
+### Aktif DS Tespiti
+
+Skill önce `~/.claude/data/fcm-ds/active.md`'ye bakar. Yoksa repo `.claude/design-systems/active-ds.md`'ye düşer. Yoksa kullanıcıya DS sorusu sorulur.
 
 ---
 
