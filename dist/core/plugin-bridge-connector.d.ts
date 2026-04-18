@@ -144,6 +144,16 @@ export declare class PluginBridgeConnector {
         threshold?: number;
         expectedDs?: string;
     }): Promise<unknown>;
+    /**
+     * v1.9.7: Create minimal Design System (variables + text styles + components).
+     * Plugin handler CREATE_MINI_DS — 2-phase batched (variables first, components second).
+     */
+    createMiniDs(params: {
+        primaryColor?: string;
+        fontFamily?: string;
+        name?: string;
+        includeComponents?: boolean;
+    }): Promise<unknown>;
     setInstanceProperties(nodeId: string, properties: Record<string, unknown>): Promise<PluginCrudResult>;
     getDocumentStructure(depth?: number, verbosity?: string, opts?: {
         excludeScreenshot?: boolean;

@@ -188,6 +188,13 @@ export class PluginBridgeConnector {
             detailed: true,
         }, this.fileKey);
     }
+    /**
+     * v1.9.7: Create minimal Design System (variables + text styles + components).
+     * Plugin handler CREATE_MINI_DS — 2-phase batched (variables first, components second).
+     */
+    async createMiniDs(params) {
+        return this.bridge.request("createMiniDs", params, this.fileKey);
+    }
     async setInstanceProperties(nodeId, properties) {
         return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
     }

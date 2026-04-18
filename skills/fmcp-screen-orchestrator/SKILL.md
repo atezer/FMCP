@@ -144,6 +144,32 @@ Benchmark/görselden DEĞER alma YASAK. Sadece NİYET: layout yönü, hiyerarşi
 2. **Content** — DS instance yerleşimi → screenshot → onay
 3. **Polish** — spacing, states, edge cases → son screenshot → audit
 
+### v1.9.7 Anti-Suppression Kuralı (MUTLAK — HARD enforcement)
+
+BLOCKING response gördüğünde YASAK ifadeler:
+- "bu projede geçerli değil"
+- "dosyada DS yok, bu uyarılar önemsiz"
+- "şimdilik skip edelim"
+- "sonra düzeltiriz"
+- "yine de devam ediyorum"
+
+**Server seviyesi enforcement (Katman 3):** Claude BLOCKING flag gördükten sonra **aynı nodeId** üzerinde ikinci `figma_execute` mutation yaparsa server **HARD_ERROR** döndürür — tool fail eder, response değil error. Claude bunu skip edemez.
+
+**Override escape hatch:** Sadece kullanıcı onayı ile `// FORCE_OVERRIDE` comment'i kod başına ekleyerek bypass edilebilir.
+
+**ZORUNLU davranış BLOCKING gördüğünde:**
+1. BLOCKING'i OKU — hangi nodeId, hangi kategori? (_postExecuteViolations.violations)
+2. Kök nedeni analiz et:
+   - UNBOUND_FILL → setBoundVariableForPaint eksik
+   - UNBOUND_PADDING → setBoundVariable eksik
+   - UNBOUND_TEXTSTYLE → setTextStyleIdAsync eksik
+   - NO_INSTANCE_USAGE → DS component yok, import edilmeli
+3. Kullanıcıya sor SADECE şu koşullarda:
+   - DS gerçekten yok → Adım 0 Blank File sub-check'e dön (4 option)
+   - Override gerekli → "BLOCKING'i geçici bypass etmek istiyor musun?"
+4. Kullanıcı override isterse `// FORCE_OVERRIDE` comment ile kod tekrar çalıştır
+5. Aksi takdirde kodu DÜZELT ve retry
+
 ### v1.9.5 Discovery Budget Rule (SERT)
 
 - **Maks 3 discovery çağrısı** (figma_get_*, figma_search_*, figma_execute read-only) sonra plan sun.
