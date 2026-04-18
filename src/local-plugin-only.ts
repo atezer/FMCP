@@ -22,6 +22,8 @@ import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, truncatePluginResponse, calculateSizeKB } from "./core/response-guard.js";
 import { analyzeCodeForWarnings, type CodeWarning } from "./core/code-warnings.js";
 import { discoveryCounter } from "./core/discovery-counter.js";
+import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
+import { bootstrapInjector } from "./core/bootstrap-injector.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -576,6 +578,23 @@ export async function main() {
 			}
 			const clampedTimeout = Math.max(3000, Math.min(timeout ?? 15000, 30000));
 			invalidateCache();
+
+			// v1.9.7 Katman 3: BLOCKING suppression prevention — check before executing
+			const suppression = blockingTracker.checkSuppression(code);
+			if (suppression.error) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({
+						success: false,
+						error: suppression.error,
+						errorCategory: "BLOCKING_SUPPRESSION",
+						_BLOCKING_SUPPRESSION_DETECTED: true,
+						matchedNodeIds: suppression.matchedNodeIds,
+						hint: "Kok nedeni cozdukten sonra tekrar dene. Veya kullanici onayi ile kod basina '// FORCE_OVERRIDE' comment ekle.",
+					}) }],
+					isError: true,
+				};
+			}
+
 			// v1.9.5: Discovery budget tracking — code pattern analysis (read-only vs mutation)
 			const budget = discoveryCounter.track("figma_execute", code);
 			// v1.8.1: Structured warnings with SEVERE vs ADVISORY severity
@@ -650,6 +669,29 @@ export async function main() {
 					};
 				}
 
+				// v1.9.7: Record blocking state for suppression tracker (any BLOCKING flag)
+				const hadBlocking =
+					Object.keys(postScanBlocking).length > 0 ||
+					severeWarnings.length > 0;
+				if (hadBlocking) {
+					const extracted = extractBlockingNodeIds({
+						_postExecuteScan: (result as Record<string, unknown> | undefined)?._postExecuteScan,
+						_postExecuteViolations: postScanBlocking._postExecuteViolations,
+						_designSystemViolations: dsViolations._designSystemViolations,
+					});
+					if (extracted.nodeIds.length > 0) {
+						blockingTracker.recordBlocking(extracted.nodeIds, extracted.categories);
+					}
+				}
+
+				// v1.9.7: _nextStep hint injection
+				const nextStep = bootstrapInjector.injectNextStep("figma_execute", {
+					...(result as Record<string, unknown>),
+					...postScanBlocking,
+					...budgetBlockingField,
+					...dsViolations,
+				});
+
 				let enriched: unknown;
 				try {
 					enriched = typeof result === "object" && result !== null
@@ -660,9 +702,10 @@ export async function main() {
 							...(result as Record<string, unknown>),
 							_metrics: { durationMs, timeoutMs: clampedTimeout },
 							...warningsField,
+							...(nextStep && { _nextStep: nextStep }),
 						}
 						: severeWarnings.length > 0 || advisoryWarnings.length > 0 || combinedWarnings.length > 0
-							? { ...budgetBlockingField, ...dsViolations, result, ...warningsField }
+							? { ...budgetBlockingField, ...dsViolations, result, ...warningsField, ...(nextStep && { _nextStep: nextStep }) }
 							: result;
 				} catch { enriched = result; }
 				return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
@@ -866,6 +909,46 @@ export async function main() {
 				return toolResult(result, "figma_scan_ds_compliance");
 			},
 		),
+	);
+
+	// ---- figma_create_mini_ds (v1.9.7) ----
+	// Boş Figma dosyasında tek tool ile minimal DS (Variable Collections + Text Styles + Components) kur.
+	// Katman 2 implementasyonu. Kullanıcı "(b) Mini DS" seçtiğinde Claude bu tool'u çağırır.
+	server.registerTool(
+		"figma_create_mini_ds",
+		{
+			description:
+				"v1.9.7: Boş Figma dosyası için minimal Design System oluştur. " +
+				"Tek tool çağrısı ile 12 color variable + 8 sizing variable (spacing + radius) + 3 text style + Button/Input/Card component'leri kurar. " +
+				"Kullanıcı 'Blank File 4-option dialog'da (b) Mini DS seçerse çağır. " +
+				"Parametreler opsiyonel: primaryColor (default '#1464FF'), fontFamily (default 'Inter'), name (default 'Mini DS'), includeComponents (default true). " +
+				"Sonuç: { success, dsName, variableCollectionIds, textStyleIds, componentIds, summary } — sonrasında figma_execute ile ekran kurulabilir.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				primaryColor: z.string().optional().default("#1464FF").describe("Primary brand color (hex). Default mavi."),
+				fontFamily: z.string().optional().default("Inter").describe("Font family for text styles. Default Inter."),
+				name: z.string().optional().default("Mini DS").describe("DS name prefix."),
+				includeComponents: z.boolean().optional().default(true).describe("Button/Input/Card component'lerini dahil et."),
+			},
+			annotations: { destructiveHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, primaryColor, fontFamily, name, includeComponents }: {
+			figmaUrl?: string;
+			fileKey?: string;
+			primaryColor: string;
+			fontFamily: string;
+			name: string;
+			includeComponents: boolean;
+		}) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const result = await conn.createMiniDs({ primaryColor, fontFamily, name, includeComponents });
+			const nextStep = bootstrapInjector.injectNextStep("figma_create_mini_ds", result);
+			const enriched = nextStep && typeof result === "object" && result !== null
+				? { ...(result as Record<string, unknown>), _nextStep: nextStep }
+				: result;
+			return toolResult(enriched, "figma_create_mini_ds");
+		})
 	);
 
 	// ---- figma_capture_screenshot (v1.9.5: method selection) ----
@@ -1133,7 +1216,10 @@ export async function main() {
 				components: compData?.totalComponents ?? 0,
 				componentSets: compData?.totalComponentSets ?? 0,
 			};
-			return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
+			// v1.9.7: _nextStep hint — blank file detection drives Claude to 4-option dialog
+			const nextStep = bootstrapInjector.injectNextStep("figma_get_design_system_summary", out);
+			const enriched = nextStep ? { ...out, _nextStep: nextStep } : out;
+			return { content: [{ type: "text" as const, text: JSON.stringify(enriched) }] };
 		})
 	);
 
@@ -1693,6 +1779,10 @@ export async function main() {
 						? `Bridge port: ${currentPort}. Configure Figma plugin to Port: ${currentPort} or use auto-scan.`
 						: undefined;
 
+			// v1.9.7: Bootstrap injection — zero-click enforcement
+			const bootstrap = bootstrapInjector.getBootstrap();
+			const nextStep = bootstrapInjector.injectNextStep("figma_get_status", { pluginConnected: connected });
+
 			return {
 				content: [{
 					type: "text" as const,
@@ -1708,6 +1798,9 @@ export async function main() {
 						...(startError && { startError }),
 						...(portHint && { portHint }),
 						...(versionWarning && { versionWarning }),
+						// v1.9.7 bootstrap
+						_bootstrap: bootstrap,
+						...(nextStep && { _nextStep: nextStep }),
 					}),
 				}],
 			};

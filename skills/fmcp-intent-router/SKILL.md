@@ -28,18 +28,32 @@ Bu SKILL bu üç soruyu **upstream** çözer. Claude intent'i netleştirmeden hi
 
 Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 9 adımı SIRAYLA uygular. Hiçbir adım atlanmaz.
 
-### 🚨 Adım 0 — DS GATE (v1.9.1+ MUTLAK İLK KAPI)
+### 🚨 Adım 0 — DS GATE + BLANK FILE CHECK (v1.9.7+ MUTLAK İLK KAPI)
 
 **Herhangi bir intent analysis veya figma_* tool çağrısından ÖNCE:**
 
-1. `.claude/design-systems/active-ds.md` dosyasını oku
-2. `Status:` alanını kontrol et:
-   - **`✅ Aktif`** → DS net, Adım 1'e (Intent Analysis) geç
-   - **`❌ Henüz seçilmedi`** VEYA dosya yok → **DUR**, hiçbir tool çağırma, kullanıcıya DS sorusu sor:
-     > "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz?
-     > (Mevcut seçenekler için library listesini vermenizi istiyorum, veya SUI gibi spesifik bir isim verin.)
-     > Bu sorunun cevabı gelmeden hiçbir keşif / tarama yapmayacağım."
-3. Kullanıcı cevabı gelince `active-ds.md`'yi güncelle (`Status: ✅ Aktif`, `Library Name: <isim>`), sonra Adım 1'e geç.
+1. `figma_get_status` çağır — plugin bağlı mı, response'ta `_bootstrap` varsa direktifleri OKU (v1.9.7)
+2. `.claude/design-systems/active-ds.md` dosyasını oku
+3. `Status:` alanını kontrol et:
+   - **`✅ Aktif`** → DS net, Blank File Sub-Check'e geç (madde 5)
+   - **`❌ Henüz seçilmedi`** VEYA dosya yok → kullanıcıya DS sorusu sor (madde 4)
+4. **DS Sorusu (klasik):** "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz? (SUI / Material / kendi library)"
+
+5. **BLANK FILE SUB-CHECK (v1.9.7, ZORUNLU):** `figma_get_design_system_summary` çağır.
+   - `components === 0 && componentSets === 0 && variableCollections.length === 0` ise **BOŞ DOSYA** tespit edildi.
+   - `_nextStep: "BLANK_FILE_DIALOG_REQUIRED"` response'ta görünüyorsa, **kullanıcıya 4 seçenek sun** (AskUserQuestion tek call, 4 option):
+     ```
+     Q: "Bu dosyada henüz Design System yok. Nasıl ilerleyelim?"
+     (a) Team library import — "Hangi library? SUI, Material 3, iOS HIG, veya kendi library'niz?"
+     (b) Mini DS kur otomatik — figma_create_mini_ds tool'u çağrılır (12 color + 8 sizing + 3 text style + Button/Input/Card)
+     (c) Referans DS kopyala — "Material 3 template / iOS HIG template"
+     (d) DS'siz ilerle — linter tolerant mode, hardcoded değerler kabul (explicit acceptance)
+     ```
+   - **Seçim yapılmadan `figma_execute createFrame` YASAK.** Claude ham createFrame denerse plugin `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING` flag'i döndürür, retry zorunlu olur.
+   - Kullanıcı "(b)" derse Claude `figma_create_mini_ds({ primaryColor, fontFamily, name })` tek tool çağrısı yapar, sonra ekran üretimine geçer.
+   - Kullanıcı "(a)" derse Claude `figma_get_library_variables(libraryName)` ile listeleme yapar, seçenek sunar.
+
+6. Seçim sonrası `active-ds.md`'yi güncelle (`Status: ✅ Aktif`, `Library Name: <isim>`), sonra Adım 1'e geç.
 
 **Neden bu kadar katı:**
 - DS belirsizken `figma_search_assets`, `figma_get_file_data`, `figma_get_library_variables` çağırmak = kullanıcının istemediği library'leri enumere etmek = **token israfı + UX bozulması**

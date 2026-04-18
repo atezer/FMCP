@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.6';
+var FMCP_PLUGIN_VERSION = '1.9.7';
 
 /**
  * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları
@@ -2932,6 +2932,211 @@ figma.ui.onmessage = async (msg) => {
       console.error('🌉 [F-MCP] Validate screen error:', errorMsg);
       figma.ui.postMessage({
         type: 'VALIDATE_SCREEN_RESULT',
+        requestId: msg.requestId,
+        success: false,
+        error: errorMsg,
+      });
+    }
+  }
+
+  // ============================================================================
+  // CREATE_MINI_DS (v1.9.7) — Boş dosyada minimal Design System kur.
+  // 2-phase batched: Phase 1 = Variable Collections + Variables + Text Styles
+  //                  Phase 2 = Components (Button/Input/Card)
+  // Her phase ayrı promise chain, timeout 30s içinde tamamlanır.
+  // ============================================================================
+  else if (msg.type === 'CREATE_MINI_DS') {
+    try {
+      console.log('🌉 [F-MCP v1.9.7] CREATE_MINI_DS starting...');
+
+      var primaryColor = msg.primaryColor || '#1464FF';
+      var fontFamily = msg.fontFamily || 'Inter';
+      var dsName = msg.name || 'Mini DS';
+      var includeComponents = msg.includeComponents !== false;
+
+      // ---------- Hex → RGB ----------
+      function hexToRgb(hex) {
+        var h = hex.replace('#', '');
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        var r = parseInt(h.slice(0,2), 16) / 255;
+        var g = parseInt(h.slice(2,4), 16) / 255;
+        var b = parseInt(h.slice(4,6), 16) / 255;
+        return { r: r, g: g, b: b };
+      }
+      function mix(a, b, t) { return { r: a.r*(1-t)+b.r*t, g: a.g*(1-t)+b.g*t, b: a.b*(1-t)+b.b*t }; }
+
+      var primaryRgb = hexToRgb(primaryColor);
+      var black = { r: 0, g: 0, b: 0 };
+      var white = { r: 1, g: 1, b: 1 };
+
+      // ---------- PHASE 1: Variable Collections + Variables + Text Styles ----------
+      var colorCollection = figma.variables.createVariableCollection(dsName + ' — Colors');
+      var modeId = colorCollection.defaultModeId;
+      var colorVars = {};
+
+      function addColorVar(name, rgb) {
+        var v = figma.variables.createVariable(name, colorCollection, 'COLOR');
+        v.setValueForMode(modeId, rgb);
+        colorVars[name] = v;
+      }
+
+      addColorVar('primary/default', primaryRgb);
+      addColorVar('primary/hover', mix(primaryRgb, black, 0.1));
+      addColorVar('primary/disabled', mix(primaryRgb, white, 0.5));
+      addColorVar('bg/level-0', white);
+      addColorVar('bg/level-1', { r: 0.97, g: 0.97, b: 0.98 });
+      addColorVar('bg/level-2', { r: 0.93, g: 0.94, b: 0.96 });
+      addColorVar('text/primary', { r: 0.1, g: 0.1, b: 0.1 });
+      addColorVar('text/secondary', { r: 0.4, g: 0.4, b: 0.45 });
+      addColorVar('text/on-primary', white);
+      addColorVar('success/default', { r: 0.18, g: 0.73, b: 0.39 });
+      addColorVar('error/default', { r: 0.91, g: 0.22, b: 0.27 });
+      addColorVar('warning/default', { r: 0.98, g: 0.69, b: 0.13 });
+
+      var sizingCollection = figma.variables.createVariableCollection(dsName + ' — Sizing');
+      var sizingMode = sizingCollection.defaultModeId;
+      var sizingVars = {};
+      function addSizingVar(name, value) {
+        var v = figma.variables.createVariable(name, sizingCollection, 'FLOAT');
+        v.setValueForMode(sizingMode, value);
+        sizingVars[name] = v;
+      }
+      addSizingVar('spacing/xs', 4);
+      addSizingVar('spacing/sm', 8);
+      addSizingVar('spacing/md', 16);
+      addSizingVar('spacing/lg', 24);
+      addSizingVar('spacing/xl', 32);
+      addSizingVar('radius/sm', 4);
+      addSizingVar('radius/md', 8);
+      addSizingVar('radius/lg', 16);
+
+      // Text Styles (font loading required)
+      await figma.loadFontAsync({ family: fontFamily, style: 'Semi Bold' }).catch(function() {});
+      await figma.loadFontAsync({ family: fontFamily, style: 'Regular' }).catch(function() {});
+
+      function createTextStyle(name, fontSize, lineHeight, fontStyle) {
+        var ts = figma.createTextStyle();
+        ts.name = name;
+        try {
+          ts.fontName = { family: fontFamily, style: fontStyle };
+          ts.fontSize = fontSize;
+          ts.lineHeight = { unit: 'PIXELS', value: lineHeight };
+        } catch (e) {
+          console.warn('TextStyle ' + name + ' font set failed:', e.message);
+        }
+        return ts;
+      }
+
+      var titleStyle = createTextStyle(dsName + '/Title/Large', 24, 32, 'Semi Bold');
+      var bodyStyle = createTextStyle(dsName + '/Body/Default', 14, 20, 'Regular');
+      var captionStyle = createTextStyle(dsName + '/Caption/Small', 12, 16, 'Regular');
+
+      console.log('🌉 [F-MCP v1.9.7] Phase 1 done — variables + text styles created');
+
+      // ---------- PHASE 2: Components ----------
+      var componentIds = {};
+      if (includeComponents) {
+        // Button component
+        var buttonFrame = figma.createFrame();
+        buttonFrame.name = dsName + '/Button/Primary';
+        buttonFrame.layoutMode = 'HORIZONTAL';
+        buttonFrame.primaryAxisSizingMode = 'AUTO';
+        buttonFrame.counterAxisSizingMode = 'AUTO';
+        buttonFrame.primaryAxisAlignItems = 'CENTER';
+        buttonFrame.counterAxisAlignItems = 'CENTER';
+        buttonFrame.setBoundVariable('paddingLeft', sizingVars['spacing/md']);
+        buttonFrame.setBoundVariable('paddingRight', sizingVars['spacing/md']);
+        buttonFrame.setBoundVariable('paddingTop', sizingVars['spacing/sm']);
+        buttonFrame.setBoundVariable('paddingBottom', sizingVars['spacing/sm']);
+        buttonFrame.setBoundVariable('cornerRadius', sizingVars['radius/md']);
+        buttonFrame.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: primaryRgb }, 'color', colorVars['primary/default'])];
+
+        var buttonText = figma.createText();
+        try {
+          buttonText.fontName = { family: fontFamily, style: 'Semi Bold' };
+          buttonText.characters = 'Button';
+          await buttonText.setTextStyleIdAsync(bodyStyle.id).catch(function() {});
+          buttonText.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }, 'color', colorVars['text/on-primary'])];
+        } catch (e) { console.warn('Button text fail:', e.message); }
+        buttonFrame.appendChild(buttonText);
+        var buttonComp = figma.createComponentFromNode(buttonFrame);
+        componentIds.button = buttonComp.id;
+
+        // Input component
+        var inputFrame = figma.createFrame();
+        inputFrame.name = dsName + '/Input/Default';
+        inputFrame.resize(240, 40);
+        inputFrame.layoutMode = 'HORIZONTAL';
+        inputFrame.primaryAxisAlignItems = 'CENTER';
+        inputFrame.setBoundVariable('paddingLeft', sizingVars['spacing/md']);
+        inputFrame.setBoundVariable('paddingRight', sizingVars['spacing/md']);
+        inputFrame.setBoundVariable('cornerRadius', sizingVars['radius/md']);
+        inputFrame.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 0.97, g: 0.97, b: 0.98 } }, 'color', colorVars['bg/level-1'])];
+        inputFrame.strokes = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.92 } }, 'color', colorVars['bg/level-2'])];
+        inputFrame.strokeWeight = 1;
+
+        var placeholder = figma.createText();
+        try {
+          placeholder.fontName = { family: fontFamily, style: 'Regular' };
+          placeholder.characters = 'Placeholder';
+          await placeholder.setTextStyleIdAsync(bodyStyle.id).catch(function() {});
+          placeholder.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.45 } }, 'color', colorVars['text/secondary'])];
+        } catch (e) {}
+        inputFrame.appendChild(placeholder);
+        var inputComp = figma.createComponentFromNode(inputFrame);
+        componentIds.input = inputComp.id;
+
+        // Card component
+        var cardFrame = figma.createFrame();
+        cardFrame.name = dsName + '/Card/Default';
+        cardFrame.layoutMode = 'VERTICAL';
+        cardFrame.primaryAxisSizingMode = 'AUTO';
+        cardFrame.counterAxisSizingMode = 'AUTO';
+        cardFrame.setBoundVariable('paddingLeft', sizingVars['spacing/lg']);
+        cardFrame.setBoundVariable('paddingRight', sizingVars['spacing/lg']);
+        cardFrame.setBoundVariable('paddingTop', sizingVars['spacing/lg']);
+        cardFrame.setBoundVariable('paddingBottom', sizingVars['spacing/lg']);
+        cardFrame.setBoundVariable('itemSpacing', sizingVars['spacing/sm']);
+        cardFrame.setBoundVariable('cornerRadius', sizingVars['radius/lg']);
+        cardFrame.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }, 'color', colorVars['bg/level-0'])];
+        cardFrame.strokes = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 0.93, g: 0.94, b: 0.96 } }, 'color', colorVars['bg/level-2'])];
+        cardFrame.strokeWeight = 1;
+
+        var cardTitle = figma.createText();
+        try {
+          cardTitle.fontName = { family: fontFamily, style: 'Semi Bold' };
+          cardTitle.characters = 'Card title';
+          await cardTitle.setTextStyleIdAsync(titleStyle.id).catch(function() {});
+          cardTitle.fills = [figma.variables.setBoundVariableForPaint({ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.1 } }, 'color', colorVars['text/primary'])];
+        } catch (e) {}
+        cardFrame.appendChild(cardTitle);
+        var cardComp = figma.createComponentFromNode(cardFrame);
+        componentIds.card = cardComp.id;
+
+        console.log('🌉 [F-MCP v1.9.7] Phase 2 done — 3 components created');
+      }
+
+      figma.ui.postMessage({
+        type: 'CREATE_MINI_DS_RESULT',
+        requestId: msg.requestId,
+        success: true,
+        dsName: dsName,
+        variableCollectionIds: { colors: colorCollection.id, sizing: sizingCollection.id },
+        textStyleIds: { title: titleStyle.id, body: bodyStyle.id, caption: captionStyle.id },
+        componentIds: componentIds,
+        summary: {
+          colorVariableCount: Object.keys(colorVars).length,
+          sizingVariableCount: Object.keys(sizingVars).length,
+          textStyleCount: 3,
+          componentCount: Object.keys(componentIds).length,
+        },
+        hint: "v1.9.7 Mini DS hazir. Ekran kurmak icin figma_execute kullan: importVariableByKeyAsync + importComponentByKeyAsync ile key'leri al, instance + setBoundVariable yaparak olustur.",
+      });
+    } catch (error) {
+      var errorMsg = error && error.message ? error.message : String(error);
+      console.error('🌉 [F-MCP v1.9.7] CREATE_MINI_DS error:', errorMsg);
+      figma.ui.postMessage({
+        type: 'CREATE_MINI_DS_RESULT',
         requestId: msg.requestId,
         success: false,
         error: errorMsg,

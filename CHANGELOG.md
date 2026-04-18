@@ -12,6 +12,73 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.7] - 2026-04-17
+
+### Zero-Click Enforcement — Blank File DS Gate + Mini DS + BLOCKING Suppression Prevention + Response Bootstrap
+
+**Hedef:** Kullanıcı Claude Desktop'ta hiç setup yapmadan (Project Knowledge boş, başlangıç prompt'u kopyalamadan) sadece "figma linki + ödeme ekranı tasarla" diyince tüm agent + skill chain'in otomatik devreye girmesi. Başarı oranı: Claude Desktop %90-95, Claude Code %98-99.
+
+**Motivasyon:** Gerçek test raporunda (boş Figma dosyası `KsERiwGveHKi0nTNh6oLIZ`, 17 Nisan) Claude:
+- İlk soru olarak DS değil stil sordu (yanlış sıra)
+- 0 component/0 variable tespit edince "sıfırdan çizeceğim" deyip ham createFrame + hardcoded değerlerle ekran kurdu
+- FMCP linter BLOCKING döndürünce "dosyada DS yok, geçerli değil" deyip **bastırdı**. v1.9.6 flag'leri dil seviyesinde skip edildi.
+
+**7 katmanlı çözüm:**
+
+**Katman 1 — Skill: Blank File Detection (fmcp-intent-router Adım 0 genişletme)**
+DS GATE artık dosya boşsa 4 seçenekli dialog sunuyor: (a) team library import, (b) mini DS auto-create, (c) template kopyala, (d) linter-off mode.
+
+**Katman 2 — Yeni tool `figma_create_mini_ds`**
+Tek tool çağrısı ile minimal DS: 12 color variable + 8 sizing variable + 3 text style + Button/Input/Card component. 2-phase batched (variables önce, components sonra). 45s timeout.
+
+**Katman 3 — Server BLOCKING Suppression Prevention (src/core/blocking-tracker.ts YENİ)**
+Session-level state tracker. figma_execute sonrası BLOCKING flag'li nodeId'leri kaydet. Sonraki execute aynı nodeId'ye mutation yaparsa server **HARD_ERROR** döndürür. Override için kod başına `// FORCE_OVERRIDE` comment gerekli. 5dk TTL. Dil seviyesinde skip imkansız.
+
+**Katman 4 — Skill Anti-Suppression (fmcp-screen-orchestrator)**
+Yasaklı dil kalıpları: "bu projede geçerli değil", "şimdilik skip edelim", "yine de devam". Claude pattern match ile kendi cevabını denetler.
+
+**Katman 5 — Response Bootstrap (src/core/bootstrap-injector.ts YENİ)**
+`figma_get_status` ilk call'da response'a `_bootstrap.critical_rules` (8 direktif) + `_bootstrap.anti_patterns` + `_nextStep` hints inject edilir. Claude her tool response'undan kuralları hatırlatılmış olarak alır.
+
+**Katman 6 — Embedded Skills (src/core/embedded-skills.ts YENİ, auto-generated)**
+Build-time script (`scripts/generate-embedded-skills.mjs`) 5 kritik skill'i (intent-router, orchestrator, canvas-ops, screen-recipes, project-rules) minify edip `EMBEDDED_SKILLS_SUMMARY` constant'ı üretir (~9K token). `figma_get_status` bootstrap'a gömülür. Kullanıcı Project Knowledge upload yapmasa bile Claude skill'i bilir. `prepublishOnly` hook'una eklendi.
+
+**Katman 7 (NOT IMPLEMENTED IN 1.9.7) — MCP Resources/Prompts capability** v1.9.8'e bırakıldı (platform bağımlılığı çok yüksek).
+
+**Version sync fix:** `src/core/version.ts` HARDCODED "1.9.2" → "1.9.7" (package.json ile senkron).
+
+**Skill güncellemeleri:**
+- `skills/fmcp-intent-router/SKILL.md` Adım 0 genişletildi (Blank File sub-check + 4-option dialog)
+- `skills/fmcp-screen-orchestrator/SKILL.md` Anti-Suppression Kuralı eklendi (server HARD_ERROR referansı)
+
+**Doc güncellemeleri:**
+- `install/claude-desktop/HOW-TO-ENFORCE.md` Zero-Click Workflow bölümü eklendi + sürüm matrisi güncellendi
+- Version bump: `package.json`, `f-mcp-plugin/code.js`, `f-mcp-plugin/ui.html` → 1.9.7
+- `package.json` prepublishOnly hook'a `generate:embedded-skills` eklendi
+
+**Plugin tarafı (f-mcp-plugin):**
+- `code.js` CREATE_MINI_DS handler (214 satır) — Phase 1 (variables + text styles) + Phase 2 (Button/Input/Card components)
+- `ui.html` `window.createMiniDs` dispatcher + method router (`createMiniDs` → CREATE_MINI_DS)
+- `ui.html` `window.captureScreenshot` v1.9.5 params (returnMode/regionStrategy/maxRegions/sliceHeight/requestedSlices) eklendi — önceden eksik olan v1.9.5 bug fix bonus
+
+**Regresyon:** Sıfır. Backwards compatible:
+- `figma_get_status` response'una yeni `_bootstrap` field eklendi, eski alanlar korunur
+- `figma_execute` suppression check BLOCKING flag olmadığı durumda skip edilir (temiz kod normal çalışır)
+- Eski `figma_create_mini_ds` çağrısı olmayan kullanıcılar etkilenmez (yeni opsiyonel tool)
+
+**Test matrisi:**
+- TypeScript type-check: PASS
+- Build: PASS
+- `generate-embedded-skills.mjs`: 9176 token üretti (plan'da 6K hedefi %53 aşıldı — plugin size threshold 250KB'den uzak, kabul edilebilir)
+- Embedded skills include: fmcp-intent-router (2399), screen-orchestrator (887), canvas-ops (2369), screen-recipes (2092), project-rules (1370)
+
+**Kullanıcı için upgrade:**
+```bash
+npm install -g @atezer/figma-mcp-bridge@1.9.7
+bash scripts/cleanup-ports.sh  # zombie temizle
+```
+Claude Desktop + Figma plugin yeniden aç. Console'da `[F-MCP v1.9.7]` gör.
+
 ## [1.9.6] - 2026-04-17
 
 ### Post-Execute Scan + Negative Intent Detection

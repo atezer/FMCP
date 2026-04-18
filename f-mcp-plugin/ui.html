@@ -424,7 +424,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.9.6';
+    var FMCP_PLUGIN_VERSION = '1.9.7';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -778,8 +778,25 @@
         if (options.format) params.format = options.format;            // PNG, JPG
         if (options.scale != null) params.scale = options.scale;       // 1, 2, 4, etc.
         if (options.jpegQuality != null) params.jpegQuality = options.jpegQuality;  // 30-100 (v1.8.0)
+        // v1.9.5 method selection params
+        if (options.returnMode) params.returnMode = options.returnMode;
+        if (options.regionStrategy) params.regionStrategy = options.regionStrategy;
+        if (options.maxRegions != null) params.maxRegions = options.maxRegions;
+        if (options.sliceHeight != null) params.sliceHeight = options.sliceHeight;
+        if (options.requestedSlices) params.requestedSlices = options.requestedSlices;
       }
       return window.sendPluginCommand('CAPTURE_SCREENSHOT', params, 30000)
+        .catch(function(err) { return { success: false, error: err.message || String(err) }; });
+    };
+
+    // v1.9.7: Create Mini DS — variables + text styles + components in one call
+    window.createMiniDs = (params) => {
+      return window.sendPluginCommand('CREATE_MINI_DS', {
+        primaryColor: params.primaryColor || '#1464FF',
+        fontFamily: params.fontFamily || 'Inter',
+        name: params.name || 'Mini DS',
+        includeComponents: params.includeComponents !== false,
+      }, 45000) // 45s — font loading + 3 component creation takes time
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
 
@@ -1881,6 +1898,7 @@
               if (method === 'setNodeCornerRadius') return window.setNodeCornerRadius(params.nodeId, params.radius);
               if (method === 'cloneScreenToDevice') return window.cloneScreenToDevice(params);
               if (method === 'validateScreen') return window.validateScreen(params);
+              if (method === 'createMiniDs') return window.createMiniDs(params);
               if (method === 'cloneNode') return window.cloneNode(params.nodeId);
               if (method === 'deleteNode') return window.deleteNode(params.nodeId);
               if (method === 'renameNode') return window.renameNode(params.nodeId, params.newName);
