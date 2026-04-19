@@ -163,7 +163,12 @@
       "mcp__figma-mcp-bridge__figma_plugin_diagnostics",
       "mcp__figma-mcp-bridge__figma_get_component",
       "mcp__figma-mcp-bridge__figma_check_design_parity",
-      "Bash(node -e \"console.log\\('version.js:', require\\('./dist/core/version.js'\\).FMCP_VERSION\\); const p = require\\('./package.json'\\); console.log\\('package.json:', p.version\\);\")"
+      "Bash(node -e \"console.log\\('version.js:', require\\('./dist/core/version.js'\\).FMCP_VERSION\\); const p = require\\('./package.json'\\); console.log\\('package.json:', p.version\\);\")",
+      "Bash(awk 'NR>=2758 && NR<=2763 {gsub\\(/\\\\t/,\"<T>\"\\); print NR\": \"$0}' src/local-plugin-only.ts)",
+      "WebFetch(domain:help.figma.com)",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(awk 'NR>=2760 && NR<=2763 {printf\\(\"%d [%s]\\\\n\", NR, $0\\)}' src/local-plugin-only.ts)",
+      "Bash(grep -cE '^\\\\s*\"figma_[a-z_]+\",$' src/local-plugin-only.ts)"
     ],
     "deny": [],
     "ask": []

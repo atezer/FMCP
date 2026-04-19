@@ -362,6 +362,32 @@ Odak Sırası:
 
 **Kural:** Mantıksal akış yukarıdan aşağıya olmalı. Görsel olarak yan yana olan elemanlar (ör. iş ilanı + favori ikonu) için sıra açıkça belirtilmeli.
 
+#### 7d.1. Prototip Odak Sırası Çapraz Kontrolü (v1.9.9+)
+
+Ekranda prototip bağlantıları varsa, `figma_get_prototype_connections` ile tüm ON_CLICK reaction source'larını listele ve 7d'deki focus sırası ile karşılaştır:
+
+```js
+const proto = await figma_get_prototype_connections({ nodeId: <screen> });
+const clickableSources = proto.connections
+  .filter(c => c.reactions.some(r => r.trigger?.type === "ON_CLICK"))
+  .map(c => ({ id: c.nodeId, name: c.name }));
+```
+
+**Kontrol kuralı:**
+- 7d'deki focus sırası listesi (ör. `[email, password, loginBtn, forgotLink, signupLink]`)
+- `clickableSources` listesi (ör. `[loginBtn, signupLink, forgotLink]`)
+
+Prototype'ta clickable olan ama a11y focus sırasında yer almayan veya sıralaması farklı olan elementler varsa **UYARI** ver:
+
+```
+⚠️ A11y focus sırası ile prototip etkileşim sırası uyuşmuyor.
+   - Focus sırasında: forgotLink #4, signupLink #5
+   - Prototype'ta tıklanabilir: signupLink (#5 ama prototipte önce geliyor)
+   - Öneri: tabindex gözden geçir veya DOM sırasını değiştir.
+```
+
+Bu kontrol klavye-only kullanıcılar için kritik: prototype'ta "Giriş Yap" → "Kayıt Ol" beklenirken tabindex bunu sağlamıyorsa erişilebilirlik bozulur.
+
 #### 7e. Görsel Alternatif Metin Notları
 
 Her görsel için alt text veya dekoratif işaretleme:

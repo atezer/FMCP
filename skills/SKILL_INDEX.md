@@ -19,7 +19,7 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 
 **Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
 
-## Skill Listesi (25 skill)
+## Skill Listesi (26 skill)
 
 ### Temel Kurallar
 
@@ -43,6 +43,7 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 | `generate-figma-library` | [generate-figma-library/SKILL.md](generate-figma-library/SKILL.md) | designops, designer | Koddan DS kütüphanesi inşa (5 fazlı) |
 | `figjam-diagram-builder` | [figjam-diagram-builder/SKILL.md](figjam-diagram-builder/SKILL.md) | designer, designops, po | FigJam diyagram/süreç şeması |
 | `inspiration-intake` | [inspiration-intake/SKILL.md](inspiration-intake/SKILL.md) | designer, uidev | Image / Figma benchmark / URL'den structural_intent çıkarma ("inspiration only" disiplinle, değer çıkarmaz — ön-işleme katmanı) |
+| `figma-prototype-flow` | [figma-prototype-flow/SKILL.md](figma-prototype-flow/SKILL.md) | designer, uidev | Üretilen ekranlar arası prototip bağlantıları + animasyonlar + flow starting point + scroll behavior (Figma Prototype panel'inin tüm yeteneklerini uç uca otomasyon, otonom mod default) |
 
 ### Cross-Platform Orkestratörler
 

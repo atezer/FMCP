@@ -85,6 +85,7 @@ Kullanıcı talebini oku. Anahtar kelimeleri tara:
 | "drift", "kod/tasarım sapması", "out of sync" | `design-drift-detector` |
 | "UX copy", "microcopy", "buton metni", "empty state" | `ux-copy-guidance` |
 | "bu görselden ilham al", "şu resim gibi", "link'teki tasarımdan", "dribbble/behance", "benchmark'tan varyasyon" | `inspiration-intake` → `generate-figma-screen` |
+| "prototip bağla", "ekranları bağla", "prototype connections", "flow oluştur", "navigasyon kur", "animasyon ekle", "interaction ekle", "geçiş animasyonu", "scroll behavior" | `figma-prototype-flow` |
 
 **Not (v1.8.3+):** `inspiration-intake` bir **ön-işleme** skill'idir. Kullanıcı bir Figma benchmark linki, internet görsel linki veya sohbete yüklenmiş görsel ile gelirse önce bu skill çalıştırılır (structural_intent JSON üretir, DEĞER çıkarmaz), sonra çıktısı `generate-figma-screen`'in `reference_benchmark` parametresine beslenir. v1.8.2 build-from-scratch kuralı ile tam uyumludur — clone değil, inspiration.
 

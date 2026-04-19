@@ -2323,6 +2323,344 @@ export async function main() {
             isError: true,
         };
     });
+    // ---- v1.9.9: Figma Prototype Connections + Animations (FUTURE.md:176-254) ----
+    server.registerTool("figma_create_prototype_connection", {
+        description: "Create a prototype reaction between two nodes (source -> destination). " +
+            "Maps Figma Prototype panel: trigger (On click/hover/press/drag, After delay, Mouse events, Key/gamepad) + " +
+            "action (Navigate/Overlay/Swap/Back/Close/Change to/Scroll to/Open link) + " +
+            "transition type (Dissolve/Smart animate/Scroll animate/Move in-out/Push/Slide in-out) with direction (LEFT/RIGHT/TOP/BOTTOM) + " +
+            "easing + duration (ms, converted to seconds internally) + matchLayers (Smart Animate). " +
+            "Uses Figma Plugin API setReactionsAsync (reactions property is readonly in 2024+ API). " +
+            "v1 scope: SET_VARIABLE, SET_VARIABLE_MODE, UPDATE_MEDIA_RUNTIME, CONDITIONAL actions are NOT included (future release).",
+        inputSchema: {
+            sourceNodeId: z.string().describe("Source node id (FRAME/INSTANCE/COMPONENT/GROUP etc.) that will receive the reaction."),
+            destinationNodeId: z.string().optional().describe("Destination FRAME id. Required for NAVIGATE/OVERLAY/SWAP/SCROLL_TO/CHANGE_TO; omitted for BACK/CLOSE/URL."),
+            trigger: z.enum(["ON_CLICK", "ON_HOVER", "ON_PRESS", "ON_DRAG", "AFTER_TIMEOUT", "MOUSE_ENTER", "MOUSE_LEAVE", "MOUSE_UP", "MOUSE_DOWN", "ON_KEY_DOWN"]).optional().default("ON_CLICK"),
+            timeout: z.number().optional().describe("Milliseconds — required when trigger=AFTER_TIMEOUT (default 1000)."),
+            mouseDelay: z.number().optional().describe("Seconds — optional hold-delay for MOUSE_* triggers (e.g. 0.3 = 300ms hover before firing)."),
+            keyCodes: z.array(z.number()).optional().describe("Required when trigger=ON_KEY_DOWN (e.g. [13]=Enter, [27]=Escape, [32]=Space)."),
+            device: z.enum(["KEYBOARD", "XBOX_ONE", "PS4", "SWITCH_PRO", "UNKNOWN_CONTROLLER"]).optional().default("KEYBOARD").describe("Input device for ON_KEY_DOWN."),
+            action: z.enum(["NAVIGATE", "OVERLAY", "SWAP", "BACK", "CLOSE", "SCROLL_TO", "CHANGE_TO", "URL"]).optional().default("NAVIGATE"),
+            url: z.string().optional().describe("Required when action=URL."),
+            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE", "SCROLL_ANIMATE", "MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"]).optional().default("INSTANT").describe("INSTANT -> transition: null (no Figma INSTANT type). Directional types (MOVE_IN/OUT, PUSH, SLIDE_IN/OUT) require 'direction'."),
+            direction: z.enum(["LEFT", "RIGHT", "TOP", "BOTTOM"]).optional().describe("Required for MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT transitions."),
+            matchLayers: z.boolean().optional().default(false).describe("SMART_ANIMATE only — enables layer matching morph."),
+            duration: z.number().optional().default(300).describe("Transition duration in ms; converted to seconds for Plugin API."),
+            easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW", "EASE_IN_BACK", "EASE_OUT_BACK", "EASE_IN_AND_OUT_BACK"]).optional().default("EASE_OUT"),
+            preserveScrollPosition: z.boolean().optional().default(false),
+            overlayRelativePosition: z.object({ x: z.number(), y: z.number() }).optional().describe("OVERLAY action only — free overlay position."),
+            overlayCloseOnClickOutside: z.boolean().optional().describe("OVERLAY only — close overlay when clicking outside."),
+            overlayBackgroundColor: z.string().optional().describe("OVERLAY only — hex color for overlay background dimming, e.g. '#000000'."),
+            overlayBackgroundOpacity: z.number().optional().default(0.5).describe("OVERLAY only — background opacity 0-1 when overlayBackgroundColor is set."),
+            replace: z.boolean().optional().default(false).describe("true: replace reactions array; false (default): append."),
+        },
+    }, async ({ sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, overlayCloseOnClickOutside, overlayBackgroundColor, overlayBackgroundOpacity, replace }) => {
+        try {
+            invalidateCache();
+            // TS-side param validation (fail fast, before hitting the plugin)
+            if (trigger === "ON_KEY_DOWN" && (!keyCodes || keyCodes.length === 0)) {
+                throw new Error("KEYCODES_REQUIRED: trigger=ON_KEY_DOWN için keyCodes (en az 1 tuş kodu) gerekli");
+            }
+            const directionalTypes = ["MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"];
+            if (directionalTypes.includes(transitionType) && !direction) {
+                throw new Error(`DIRECTION_REQUIRED: transitionType=${transitionType} için direction (LEFT/RIGHT/TOP/BOTTOM) gerekli`);
+            }
+            const conn = getConnector(bridge);
+            // Trigger extras (inject into the generated JS as an object literal fragment)
+            let triggerExtras = "";
+            if (trigger === "AFTER_TIMEOUT") {
+                triggerExtras = `, timeout: ${timeout ?? 1000}`;
+            }
+            else if (trigger === "ON_KEY_DOWN") {
+                triggerExtras = `, device: ${JSON.stringify(device)}, keyCodes: ${JSON.stringify(keyCodes ?? [])}`;
+            }
+            else if (["MOUSE_UP", "MOUSE_DOWN", "MOUSE_ENTER", "MOUSE_LEAVE"].includes(trigger) && mouseDelay !== undefined) {
+                triggerExtras = `, delay: ${mouseDelay}`;
+            }
+            const code = `
+					const src = await figma.getNodeByIdAsync(${JSON.stringify(sourceNodeId)});
+					if (!src) throw new Error("SOURCE_NOT_FOUND: " + ${JSON.stringify(sourceNodeId)});
+					if (typeof src.setReactionsAsync !== "function") throw new Error("UNSUPPORTED_NODE_TYPE: " + src.type);
+
+					const NO_DEST = ["BACK","CLOSE","URL"].indexOf(${JSON.stringify(action)}) !== -1;
+					let destId = null;
+					if (!NO_DEST) {
+						if (!${JSON.stringify(destinationNodeId || "")}) throw new Error("DESTINATION_REQUIRED: action=" + ${JSON.stringify(action)});
+						const dst = await figma.getNodeByIdAsync(${JSON.stringify(destinationNodeId || "")});
+						if (!dst) throw new Error("DESTINATION_NOT_FOUND: " + ${JSON.stringify(destinationNodeId || "")});
+						if (${JSON.stringify(action)} === "NAVIGATE" && dst.type !== "FRAME")
+							throw new Error("NAVIGATE_REQUIRES_FRAME: dst=" + dst.type);
+						destId = dst.id;
+					}
+
+					const triggerObj = { type: ${JSON.stringify(trigger)}${triggerExtras} };
+
+					let actionObj;
+					if (${JSON.stringify(action)} === "BACK") actionObj = { type: "BACK" };
+					else if (${JSON.stringify(action)} === "CLOSE") actionObj = { type: "CLOSE" };
+					else if (${JSON.stringify(action)} === "URL") actionObj = { type: "URL", url: ${JSON.stringify(url || "")} };
+					else {
+						const navMap = { NAVIGATE: "NAVIGATE", OVERLAY: "OVERLAY", SWAP: "SWAP", SCROLL_TO: "SCROLL_TO", CHANGE_TO: "CHANGE_TO" };
+						const tranType = ${JSON.stringify(transitionType)};
+						const isInstant = tranType === "INSTANT";
+						const isDirectional = ["MOVE_IN","MOVE_OUT","PUSH","SLIDE_IN","SLIDE_OUT"].indexOf(tranType) !== -1;
+						const isSmart = tranType === "SMART_ANIMATE";
+						let transitionObj = null;
+						if (!isInstant) {
+							transitionObj = { type: tranType, easing: { type: ${JSON.stringify(easing)} }, duration: ${duration} / 1000 };
+							if (isDirectional) transitionObj.direction = ${JSON.stringify(direction || "RIGHT")};
+							if (isSmart) transitionObj.matchLayers = ${matchLayers};
+						}
+						actionObj = {
+							type: "NODE",
+							destinationId: destId,
+							navigation: navMap[${JSON.stringify(action)}],
+							transition: transitionObj,
+							preserveScrollPosition: ${preserveScrollPosition}
+						};
+						${overlayRelativePosition ? `if (${JSON.stringify(action)} === "OVERLAY") actionObj.overlayRelativePosition = ${JSON.stringify(overlayRelativePosition)};` : ""}
+						${overlayCloseOnClickOutside !== undefined ? `if (${JSON.stringify(action)} === "OVERLAY") actionObj.overlayBackgroundInteraction = ${JSON.stringify(overlayCloseOnClickOutside ? "CLOSE_ON_CLICK_OUTSIDE" : "NONE")};` : ""}
+						${overlayBackgroundColor ? `
+						if (${JSON.stringify(action)} === "OVERLAY") {
+							const hex = ${JSON.stringify(overlayBackgroundColor)};
+							actionObj.overlayBackground = { type: "SOLID_COLOR", color: { r: parseInt(hex.slice(1,3),16)/255, g: parseInt(hex.slice(3,5),16)/255, b: parseInt(hex.slice(5,7),16)/255, a: ${overlayBackgroundOpacity ?? 0.5} } };
+						}
+						` : ""}
+					}
+
+					const reaction = { trigger: triggerObj, actions: [actionObj] };
+					const current = ${replace} ? [] : ((src.reactions) || []).slice();
+					current.push(reaction);
+					await src.setReactionsAsync(current);
+					const after = (src.reactions) || [];
+					return { id: src.id, reactionsCount: after.length, trigger: triggerObj.type, action: actionObj.type, destinationId: destId, transitionType: ${JSON.stringify(transitionType)}, direction: ${JSON.stringify(direction || null)} };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+        }
+    });
+    server.registerTool("figma_get_prototype_connections", {
+        description: "Read prototype reactions on a node subtree or the whole current page. " +
+            "Read-only audit — returns trigger, action, navigation, destinationId, transition, flowStartingPoints. " +
+            "Uses getReactionsAsync if available, falls back to node.reactions getter. " +
+            "At least one of nodeId or pageScope=true must be provided.",
+        inputSchema: {
+            nodeId: z.string().optional().describe("Scans this node and its descendants."),
+            pageScope: z.boolean().optional().default(false).describe("true: scan the entire current page. Either nodeId or pageScope is required."),
+            includeFlowStartingPoints: z.boolean().optional().default(true),
+        },
+        annotations: { readOnlyHint: true },
+    }, async ({ nodeId, pageScope, includeFlowStartingPoints }) => {
+        try {
+            const conn = getConnector(bridge);
+            const code = `
+					if (!${JSON.stringify(nodeId || "")} && !${pageScope}) throw new Error("MISSING_SCOPE: nodeId veya pageScope=true gerekli");
+
+					const getR = async (n) => {
+						if (typeof n.getReactionsAsync === "function") return await n.getReactionsAsync();
+						return n.reactions || [];
+					};
+
+					const summarize = (n, reactions) => ({
+						nodeId: n.id, name: n.name, type: n.type,
+						reactions: (reactions || []).map(r => ({
+							trigger: r.trigger,
+							actions: (r.actions || []).map(a => ({
+								type: a.type,
+								navigation: a.navigation || null,
+								destinationId: a.destinationId || null,
+								transition: a.transition ? { type: a.transition.type, direction: a.transition.direction || null, matchLayers: a.transition.matchLayers || false, easing: a.transition.easing && a.transition.easing.type, duration: a.transition.duration } : null,
+								url: a.url || null,
+								preserveScrollPosition: a.preserveScrollPosition || false,
+								overlayRelativePosition: a.overlayRelativePosition || null
+							}))
+						}))
+					});
+
+					const results = [];
+					const hasReactions = (n) => typeof n.setReactionsAsync === "function" || "reactions" in n;
+
+					if (${JSON.stringify(nodeId || "")}) {
+						const root = await figma.getNodeByIdAsync(${JSON.stringify(nodeId || "")});
+						if (!root) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId || "")});
+						if (hasReactions(root)) {
+							const r = await getR(root);
+							if (r.length) results.push(summarize(root, r));
+						}
+						if ("findAll" in root) {
+							const descendants = root.findAll(n => hasReactions(n));
+							for (const n of descendants) {
+								const r = await getR(n);
+								if (r.length) results.push(summarize(n, r));
+							}
+						}
+					} else if (${pageScope}) {
+						const all = figma.currentPage.findAll(n => hasReactions(n));
+						for (const n of all) {
+							const r = await getR(n);
+							if (r.length) results.push(summarize(n, r));
+						}
+					}
+					const fsps = ${includeFlowStartingPoints} ? (figma.currentPage.flowStartingPoints || []) : [];
+					return { connections: results, totalReactions: results.reduce((s, r) => s + r.reactions.length, 0), flowStartingPoints: fsps };
+				`;
+            const result = await conn.executeCodeViaUI(code, 15000);
+            return toolResult(result, "figma_get_prototype_connections");
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+        }
+    });
+    server.registerTool("figma_set_flow_starting_point", {
+        description: "Mark a FRAME as a prototype flow starting point (shown in Figma Prototype panel). " +
+            "Uses page.setFlowStartingPointsAsync if available (future API), falls back to direct assignment. " +
+            "Description is stored via pluginData (Figma FlowStartingPoint shape is { nodeId, name } only).",
+        inputSchema: {
+            nodeId: z.string().describe("FRAME node id to mark as a starting point."),
+            name: z.string().describe("Flow name shown in Prototype panel (e.g. 'Login Akışı')."),
+            description: z.string().optional().default(""),
+            replace: z.boolean().optional().default(false).describe("true: replace entire array; false (default): append or update same nodeId."),
+        },
+    }, async ({ nodeId, name, description, replace }) => {
+        try {
+            invalidateCache();
+            const conn = getConnector(bridge);
+            const code = `
+					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
+					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
+					if (node.type !== "FRAME") throw new Error("FLOW_REQUIRES_FRAME: " + node.type);
+					const page = node.parent && node.parent.type === "PAGE" ? node.parent : figma.currentPage;
+					const existing = (page.flowStartingPoints || []).slice();
+					const entry = { nodeId: node.id, name: ${JSON.stringify(name)} };
+					const idx = existing.findIndex(fsp => fsp.nodeId === node.id);
+					let nextArr;
+					if (${replace}) nextArr = [entry];
+					else if (idx === -1) { existing.push(entry); nextArr = existing; }
+					else { existing[idx] = entry; nextArr = existing; }
+
+					if (typeof page.setFlowStartingPointsAsync === "function") {
+						await page.setFlowStartingPointsAsync(nextArr);
+					} else {
+						page.flowStartingPoints = nextArr;
+					}
+					if (${JSON.stringify(description)}) node.setPluginData("flow.description", ${JSON.stringify(description)});
+					return { id: node.id, name: ${JSON.stringify(name)}, total: (page.flowStartingPoints || []).length };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+        }
+    });
+    server.registerTool("figma_create_interaction", {
+        description: "Create a variant state-change interaction on an INSTANCE/variant node (hover/press/focus -> variant). " +
+            "Uses reactions API with navigation: CHANGE_TO. Target variant resolved by id or name within the same COMPONENT_SET. " +
+            "Uses getMainComponentAsync for deprecation-safe main component access. " +
+            "v1 supports INSTANT/DISSOLVE/SMART_ANIMATE transitions (DirectionalTransition not applicable to variants).",
+        inputSchema: {
+            nodeId: z.string().describe("INSTANCE or variant node id."),
+            trigger: z.enum(["ON_HOVER", "ON_PRESS", "MOUSE_ENTER", "MOUSE_LEAVE", "MOUSE_DOWN", "MOUSE_UP", "ON_CLICK"]).optional().default("ON_HOVER"),
+            targetVariantId: z.string().optional(),
+            targetVariantName: z.string().optional().describe("Variant name (e.g. 'State=Hover') — resolved within the source's COMPONENT_SET."),
+            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE"]).optional().default("SMART_ANIMATE"),
+            matchLayers: z.boolean().optional().default(true).describe("SMART_ANIMATE layer matching (true by default for variant transitions)."),
+            duration: z.number().optional().default(150),
+            easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW"]).optional().default("EASE_IN"),
+        },
+    }, async ({ nodeId, trigger, targetVariantId, targetVariantName, transitionType, matchLayers, duration, easing }) => {
+        try {
+            invalidateCache();
+            const conn = getConnector(bridge);
+            const code = `
+					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
+					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
+					if (typeof node.setReactionsAsync !== "function") throw new Error("UNSUPPORTED_NODE_TYPE: " + node.type);
+
+					let targetId = ${JSON.stringify(targetVariantId || "")};
+					if (!targetId) {
+						const mc = node.type === "INSTANCE" ? await node.getMainComponentAsync() : node;
+						const set = mc && mc.parent && mc.parent.type === "COMPONENT_SET" ? mc.parent : null;
+						if (!set) throw new Error("NO_COMPONENT_SET");
+						const match = set.children.find(c => c.name === ${JSON.stringify(targetVariantName || "")});
+						if (!match) throw new Error("VARIANT_NOT_FOUND: " + ${JSON.stringify(targetVariantName || "")});
+						targetId = match.id;
+					}
+
+					const tranType = ${JSON.stringify(transitionType)};
+					let transitionObj = null;
+					if (tranType !== "INSTANT") {
+						transitionObj = { type: tranType, easing: { type: ${JSON.stringify(easing)} }, duration: ${duration} / 1000 };
+						if (tranType === "SMART_ANIMATE") transitionObj.matchLayers = ${matchLayers};
+					}
+					const reaction = {
+						trigger: { type: ${JSON.stringify(trigger)} },
+						actions: [{
+							type: "NODE",
+							destinationId: targetId,
+							navigation: "CHANGE_TO",
+							transition: transitionObj,
+							preserveScrollPosition: false
+						}]
+					};
+					const current = (node.reactions || []).slice();
+					current.push(reaction);
+					await node.setReactionsAsync(current);
+					const after = (node.reactions) || [];
+					return { id: node.id, targetVariantId: targetId, reactionsCount: after.length };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+        }
+    });
+    server.registerTool("figma_set_scroll_behavior", {
+        description: "Set a node's scroll behavior (Figma Prototype panel > Scroll behavior). " +
+            "overflowDirection (FrameNode): NONE/HORIZONTAL/VERTICAL/BOTH — defines prototype scroll axis. " +
+            "scrollBehavior (SceneNode): SCROLLS/FIXED/STICKY_SCROLLS — FIXED = sticky header, STICKY_SCROLLS = becomes sticky after scrolling past. " +
+            "At least one of overflowDirection or scrollBehavior must be provided.",
+        inputSchema: {
+            nodeId: z.string().describe("Target node id (FRAME/COMPONENT/COMPONENT_SET/INSTANCE for overflowDirection; any SceneNode for scrollBehavior)."),
+            overflowDirection: z.enum(["NONE", "HORIZONTAL", "VERTICAL", "BOTH"]).optional(),
+            scrollBehavior: z.enum(["SCROLLS", "FIXED", "STICKY_SCROLLS"]).optional(),
+        },
+    }, async ({ nodeId, overflowDirection, scrollBehavior }) => {
+        try {
+            if (!overflowDirection && !scrollBehavior) {
+                throw new Error("MISSING_PARAM: overflowDirection veya scrollBehavior'dan en az biri verilmeli");
+            }
+            invalidateCache();
+            const conn = getConnector(bridge);
+            const code = `
+					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
+					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
+					const results = {};
+					${overflowDirection ? `
+					if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "COMPONENT_SET" && node.type !== "INSTANCE") {
+						throw new Error("OVERFLOW_REQUIRES_FRAME_LIKE: " + node.type);
+					}
+					node.overflowDirection = ${JSON.stringify(overflowDirection)};
+					results.overflowDirection = node.overflowDirection;
+					` : ""}
+					${scrollBehavior ? `
+					if (!("scrollBehavior" in node)) throw new Error("SCROLL_BEHAVIOR_UNSUPPORTED: " + node.type);
+					node.scrollBehavior = ${JSON.stringify(scrollBehavior)};
+					results.scrollBehavior = node.scrollBehavior;
+					` : ""}
+					return { id: node.id, ...results };
+				`;
+            const result = await conn.executeCodeViaUI(code, 10000);
+            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+        }
+    });
     server.registerTool("figma_get_rest_token_status", {
         description: "Check if a Figma REST API token is set and view rate limit usage.",
         inputSchema: {},

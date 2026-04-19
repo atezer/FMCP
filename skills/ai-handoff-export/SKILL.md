@@ -52,6 +52,37 @@ Bu skill, dağınık Figma çıktılarını tek bir teslimat formatında toplar:
 - `figma_search_components`
 - gerekiyorsa `figma_get_component_for_development`
 
+### Step 4.5: Prototip Akış Diyagramı (v1.9.9+)
+
+Ekran prototip bağlantıları içeriyorsa handoff'a "Prototip Akışı" bölümü ekle:
+
+```js
+const proto = await figma_get_prototype_connections({ pageScope: true });
+```
+
+Manifest'e `prototypeFlow` anahtarı olarak yaz:
+```json
+{
+  "prototypeFlow": {
+    "startingPoints": [{ "nodeId": "...", "name": "Login Akışı" }],
+    "connections": [
+      { "source": "Login/LoginBtn", "destination": "Home", "trigger": "ON_CLICK", "action": "NAVIGATE", "transition": { "type": "SLIDE_IN", "direction": "RIGHT", "duration": 0.3 } }
+    ],
+    "totalReactions": 12
+  }
+}
+```
+
+HANDOFF_TEMPLATE'e "## Prototip Akışı" bölümü ekle (Mermaid `graph TD`):
+```mermaid
+graph TD
+  Login -->|Giriş Yap - SLIDE_IN/RIGHT 300ms| Home
+  Login -->|Kayıt Ol - SLIDE_IN/RIGHT 300ms| Register
+  Login -->|Şifremi Unuttum - SLIDE_IN/RIGHT 300ms| ForgotPassword
+```
+
+Geliştirici için kritik: her connection'ın `trigger + transition + duration` bilgisi React Native Navigation veya SwiftUI navigation animasyon süreleri ile eşleştirilebilir.
+
 ### Step 5: Code-Only Props Çıkar
 
 "Code only props" katmanı olan bileşenlerde, gizli property'leri spec data olarak çıkar:
