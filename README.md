@@ -4,6 +4,16 @@
 
 # F-MCP (Figma MCP Bridge)
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
+  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.11"><img src="https://img.shields.io/badge/sürüm-v1.9.11-success" alt="version"></a>
+  <img src="https://img.shields.io/badge/araç-54-blue" alt="54 tools">
+  <img src="https://img.shields.io/badge/skill-26-blue" alt="26 skills">
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
+</p>
+
+> **Son sürüm — v1.9.11 (19 Nisan 2026):** Figma Prototype Connections + Animations. 5 yeni araç (`figma_create_prototype_connection`, `figma_get_prototype_connections`, `figma_set_flow_starting_point`, `figma_create_interaction`, `figma_set_scroll_behavior`) + `figma-prototype-flow` skill. AI artık ekranlarınız arasında otomatik navigasyon, animasyon ve flow starting point oluşturabiliyor. Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.11) · [Skill](skills/figma-prototype-flow/SKILL.md)
+
 Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
 Her şey **bilgisayarınızda** kalır. Tasarım verileriniz internete gönderilmez.
@@ -54,7 +64,7 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 | **Cursor** | ✅ | Kod editörü — geliştiriciler için |
 | **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
 
-### Claude Desktop sınırlamaları (v1.9.5 güncellemesi)
+### Claude Desktop sınırlamaları
 
 Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Desktop'ta yoktur**:
 
@@ -64,16 +74,16 @@ Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Deskt
 - `plugin.json` auto-discovery — yüklenmez
 - `.claude/CLAUDE.md` auto-inject yok
 
-Desktop'ta enforcement **dört katmandan** gelir:
-1. Plugin response BLOCKING signal'i (v1.9.4+ `_DESIGN_SYSTEM_VIOLATIONS_BLOCKING`)
+Desktop'ta enforcement **beş katmandan** gelir:
+1. Plugin response BLOCKING signal'i (`_DESIGN_SYSTEM_VIOLATIONS_BLOCKING`)
 2. Runtime audit tool'u `figma_scan_ds_compliance`
-3. **v1.9.5 Screenshot method selection** — file/summary/regions/base64 (context koruma)
-4. **v1.9.5 Discovery budget** — keşif çağrıları sayılır, 12'den sonra BLOCKING
+3. Screenshot method selection — file/summary/regions/base64 (context koruma)
+4. Discovery budget — keşif çağrıları sayılır, 12'den sonra BLOCKING
 5. Project Knowledge'a yüklenmiş skill dosyaları
 
 Detaylı rehber ve ilk-prompt örneği: **[install/claude-desktop/HOW-TO-ENFORCE.md](install/claude-desktop/HOW-TO-ENFORCE.md)**.
 
-### Yeni chat öncesi (v1.9.5 önerisi)
+### Yeni chat öncesi öneri
 
 Plugin bağlantı sorunları veya zombie process temizliği için:
 
@@ -169,7 +179,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## Teknik detaylar
 
-- **Ne yapar** — Claude veya Cursor'dan Figma'ya ekran tasarlar, tasarım sistemini denetler, renk/yazı/boşluk token'larını yönetir, tasarımı koda hazırlar
+- **Ne yapar** — Claude veya Cursor'dan Figma'ya ekran tasarlar, tasarım sistemini denetler, renk/yazı/boşluk token'larını yönetir, ekranlar arası **prototip bağlantıları ve animasyonlar** kurar (v1.9.9+), tasarımı koda hazırlar
 - **Nerelerde çalışır** — Claude Code, Cursor, Claude Desktop, Claude Web ([kurulum rehberleri](install/))
 - **Nasıl çalışır** — Her görev için kendi **skill**'i var (kural seti + örnek). Claude Code'da **agent + sub-agent** yapısı var: ana ajan görevi alır, alt-ajanlar izole çalışır — ana sohbet bağlamı yorulmaz. Cursor ve Claude Desktop'ta aynı skill'ler doğrudan yüklenir (sub-agent yok, tek kaynak 4 platformda)
 - **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
@@ -181,7 +191,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | | |
 |---|---|
-| Güncel sürüm | **1.9.8** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases)) |
+| Güncel sürüm | **1.9.11** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.11)) — Figma Prototype Connections + Animations |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 
