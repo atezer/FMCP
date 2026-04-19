@@ -12,6 +12,32 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.11] - 2026-04-19
+
+### Fixed — matchLayers DirectionalTransition için ZORUNLU (canlı test bulgusu)
+
+v1.9.10 düzeltmesinden sonra 2. canlı test (KsERiwGveHKi0nTNh6oLIZ dosyasında 8 bağlantılı İlan Detayı akışı) yeni bir bug tespit etti:
+
+**BUG:** Figma schema'sı DirectionalTransition (SLIDE_IN/MOVE_IN/PUSH/SLIDE_OUT/MOVE_OUT) için `matchLayers` key'ini **zorunlu** istiyor. Değer `true` veya `false` olabilir ama key'in mutlaka olması gerekiyor.
+
+**v1.9.10'daki hatalı davranış:** `matchLayers` default `false` iken key HİÇ enjekte edilmiyordu (`${matchLayers ? ... : ""}` guard). Sonuç: `SLIDE_IN` ile her ilk call `Unrecognized key(s) in object` hatası verdi, kullanıcı manuel `matchLayers: true` göndermek zorunda kaldı.
+
+**v1.9.11 düzeltme:** DirectionalTransition için `matchLayers` her zaman enjekte ediliyor — değeri user param'dan geliyor (default false). SMART_ANIMATE ve diğer SimpleTransition'larda hâlâ enjekte EDİLMİYOR (Figma schema onlara reddediyor).
+
+```diff
+- ${matchLayers ? `transitionObj.matchLayers = true;` : ""}
++ transitionObj.matchLayers = ${matchLayers};   // always inject for DirectionalTransition
+```
+
+### Documented
+- `action=BACK` parametresi: Figma `transition` param'ını IGNORE eder — önceki NAVIGATE'in yönünü otomatik ters uygular. Audit raporunda `transition: null` görünmesi normal davranış. Description'a not eklendi.
+
+### Canlı test sonucu (v1.9.10 → v1.9.11)
+- ✅ 8/8 bağlantı + 1 flow starting point — İlan Detayı Akışı tam kuruldu
+- ✅ OVERLAY preflight hatasız geçti (Action Sheet zaten overlay olarak işaretli)
+- ✅ BACK geçişleri Present modda doğru animasyonla çalışıyor
+- ⚠️ Tek pürüz: ilk SLIDE_IN'de schema hatası (v1.9.11 ile çözüldü)
+
 ## [1.9.10] - 2026-04-19
 
 ### Fixed — Canlı test bulguları (v1.9.9 prototype tools bug fix)

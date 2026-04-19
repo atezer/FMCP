@@ -2341,11 +2341,11 @@ export async function main() {
             mouseDelay: z.number().optional().describe("Seconds — optional hold-delay for MOUSE_* triggers (e.g. 0.3 = 300ms hover before firing)."),
             keyCodes: z.array(z.number()).optional().describe("Required when trigger=ON_KEY_DOWN (e.g. [13]=Enter, [27]=Escape, [32]=Space)."),
             device: z.enum(["KEYBOARD", "XBOX_ONE", "PS4", "SWITCH_PRO", "UNKNOWN_CONTROLLER"]).optional().default("KEYBOARD").describe("Input device for ON_KEY_DOWN."),
-            action: z.enum(["NAVIGATE", "OVERLAY", "SWAP", "BACK", "CLOSE", "SCROLL_TO", "CHANGE_TO", "URL"]).optional().default("NAVIGATE"),
+            action: z.enum(["NAVIGATE", "OVERLAY", "SWAP", "BACK", "CLOSE", "SCROLL_TO", "CHANGE_TO", "URL"]).optional().default("NAVIGATE").describe("BACK action: Figma transition param'ını IGNORE eder ve önceki NAVIGATE'in yönünü otomatik ters uygular (audit'te transition: null görünür, Present modda doğru animasyon oynar)."),
             url: z.string().optional().describe("Required when action=URL."),
             transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE", "SCROLL_ANIMATE", "MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"]).optional().default("INSTANT").describe("INSTANT -> transition: null (no Figma INSTANT type). Directional types (MOVE_IN/OUT, PUSH, SLIDE_IN/OUT) require 'direction'."),
             direction: z.enum(["LEFT", "RIGHT", "TOP", "BOTTOM"]).optional().describe("Required for MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT transitions."),
-            matchLayers: z.boolean().optional().default(false).describe("DirectionalTransition only (SLIDE_IN/MOVE_IN/PUSH/...) — enables smart layer morph on top of directional transition. INVALID for SMART_ANIMATE (Figma schema rejects it). SMART_ANIMATE inherently matches layers."),
+            matchLayers: z.boolean().optional().default(false).describe("DirectionalTransition only (SLIDE_IN/MOVE_IN/PUSH/...) — key is REQUIRED by Figma schema (always injected, value from this param). true = smart layer morph on top of directional transition. INVALID for SMART_ANIMATE (SimpleTransition rejects it)."),
             duration: z.number().optional().default(300).describe("Transition duration in ms; converted to seconds for Plugin API."),
             easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW", "EASE_IN_BACK", "EASE_OUT_BACK", "EASE_IN_AND_OUT_BACK"]).optional().default("EASE_OUT"),
             preserveScrollPosition: z.boolean().optional().default(false),
@@ -2412,9 +2412,10 @@ export async function main() {
 							transitionObj = { type: tranType, easing: { type: ${JSON.stringify(easing)} }, duration: ${duration} / 1000 };
 							if (isDirectional) {
 								transitionObj.direction = ${JSON.stringify(direction || "RIGHT")};
-								// v1.9.10 fix: matchLayers is only valid on DirectionalTransition (schema validation),
-								// NOT on SMART_ANIMATE (SimpleTransition inherently matches layers). Only inject when true + directional.
-								${matchLayers ? `transitionObj.matchLayers = true;` : ""}
+								// v1.9.11 fix: matchLayers key REQUIRED on DirectionalTransition (Figma schema).
+								// Value can be true OR false, but the key must be present (canlı test bulgusu).
+								// SMART_ANIMATE and other SimpleTransition: matchLayers NOT allowed.
+								transitionObj.matchLayers = ${matchLayers};
 							}
 							// SMART_ANIMATE and other SimpleTransition types: do NOT inject matchLayers.
 						}
