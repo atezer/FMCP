@@ -424,7 +424,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.9.7';
+    var FMCP_PLUGIN_VERSION = '1.9.8';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -1873,6 +1873,7 @@
               if (method === 'refreshVariables') return window.refreshVariables();
               if (method === 'getLocalComponents') return window.getLocalComponents(params.currentPageOnly, params.limit);
               if (method === 'searchLibraryAssets') return window.searchLibraryAssets(params.query, params.assetTypes, params.limit, params.currentPageOnly);
+              if (method === 'getCodeConnectHints') return window.getCodeConnectHints(params.nodeIds, params.scanCurrentPage, params.maxNodes);
               if (method === 'instantiateComponent') return window.instantiateComponent(params.componentKey, params.options);
               if (method === 'setNodeDescription') return window.setNodeDescription(params.nodeId, params.description, params.descriptionMarkdown);
               if (method === 'captureScreenshot') return window.captureScreenshot(params.nodeId, params.options);

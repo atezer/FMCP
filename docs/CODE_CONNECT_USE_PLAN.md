@@ -1,7 +1,8 @@
 # figma_get_code_connect + figma_use — Dogrulanmis Plan
 
-> Durum: BEKLEMEDE — 3 tur dogrulama tamamlandi, sifir risk. Ayri branch'te yapilacak.
+> Durum: **TAMAMLANDI (v1.9.8)** — 2 tool kayitli, connector metodu ve ui.html extra-port route eklendi.
 > Ilgili: [FUTURE.md](../FUTURE.md) P0 — Asset Search ve Code Connect
+> Sapma notu: Plan'da "extra port handler 1 satir" tespiti dogruydu; kod taramasi sonrasi v1.9.8'de uygulandi.
 
 ## Context
 

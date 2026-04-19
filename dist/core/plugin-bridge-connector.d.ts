@@ -44,6 +44,11 @@ export declare class PluginBridgeConnector {
         limit?: number;
         currentPageOnly?: boolean;
     }): Promise<unknown>;
+    getCodeConnectHints(opts?: {
+        nodeIds?: string[];
+        scanCurrentPage?: boolean;
+        maxNodes?: number;
+    }): Promise<unknown>;
     batchExportNodes(params: {
         nodeIds: string[];
         format?: "PNG" | "SVG" | "JPG" | "PDF";

@@ -2157,6 +2157,96 @@ export async function main() {
 		})
 	);
 
+	// ---- figma_get_code_connect (Code Connect hints: documentationLinks + componentKey) ----
+
+	server.registerTool(
+		"figma_get_code_connect",
+		{
+			description:
+				"Get Code Connect hints for components/instances: documentationLinks, componentKey, name, description. " +
+				"Pass nodeIds for specific nodes, or scanCurrentPage=true to scan the current page for COMPONENT/COMPONENT_SET/INSTANCE nodes. " +
+				"Note: Full Code Connect source map lives in figma.config / Figma CLI; this tool returns plugin-accessible hints only. " +
+				"Use Figma's official MCP get_code_connect_map for native repo paths.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				nodeIds: z.array(z.string()).optional().describe("Explicit node IDs to inspect."),
+				scanCurrentPage: z.boolean().optional().describe("Scan COMPONENT/COMPONENT_SET/INSTANCE on current page."),
+				maxNodes: z.number().min(1).max(120).optional().describe("Cap for current-page scan (default 40, max 120)."),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeIds, scanCurrentPage, maxNodes }: {
+			figmaUrl?: string; fileKey?: string; nodeIds?: string[]; scanCurrentPage?: boolean; maxNodes?: number;
+		}) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const result = await conn.getCodeConnectHints({ nodeIds, scanCurrentPage, maxNodes });
+			const data = result as Record<string, unknown>;
+			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...data }) }] };
+		})
+	);
+
+	// ---- figma_use (high-level orchestrator: component + token + design_context) ----
+
+	server.registerTool(
+		"figma_use",
+		{
+			description:
+				"High-level orchestrator that bundles component, token and design-context lookups in one call. " +
+				"intent='component' -> node detail + Code Connect hint. " +
+				"intent='token' -> team library variable search. " +
+				"intent='design_context' -> full bundle (component + hints + tokens). " +
+				"Prefer this before implementing a design to collect all references in a single round-trip.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				intent: z.enum(["component", "token", "design_context"]).describe("Lookup mode."),
+				nodeId: z.string().optional().describe("Required for 'component' and 'design_context'."),
+				query: z.string().optional().describe("Token name filter for 'token' / 'design_context'."),
+				limit: z.number().min(1).max(80).optional().describe("Max variable results (default 25)."),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, intent, nodeId, query, limit }: {
+			figmaUrl?: string; fileKey?: string;
+			intent: "component" | "token" | "design_context";
+			nodeId?: string; query?: string; limit?: number;
+		}) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const needsNode = intent === "component" || intent === "design_context";
+			if (needsNode && !nodeId) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: `intent='${intent}' requires nodeId` }) }],
+					isError: true,
+				};
+			}
+
+			type SafeResult = { key: string; ok: true; value: unknown } | { key: string; ok: false; error: string };
+			const safe = async (key: string, p: Promise<unknown>): Promise<SafeResult> =>
+				p.then((value) => ({ key, ok: true as const, value }))
+					.catch((e) => ({ key, ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+
+			const tasks: Array<Promise<SafeResult>> = [];
+			if (intent === "component" || intent === "design_context") {
+				tasks.push(safe("component", conn.getComponentByNodeId(nodeId!)));
+				tasks.push(safe("codeConnect", conn.getCodeConnectHints({ nodeIds: [nodeId!] })));
+			}
+			if (intent === "token" || intent === "design_context") {
+				tasks.push(safe("tokens", conn.searchLibraryAssets({
+					assetTypes: ["variables"],
+					query: query || undefined,
+					limit: limit ?? undefined,
+				})));
+			}
+
+			const results = await Promise.all(tasks);
+			const partial = results.some((r) => r.ok === false);
+			return {
+				content: [{ type: "text" as const, text: JSON.stringify({ success: true, intent, partial, results }) }],
+			};
+		})
+	);
+
 	// ---- figma_get_library_variables (team library variable discovery with import keys) ----
 
 	server.registerTool(

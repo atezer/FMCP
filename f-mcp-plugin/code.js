@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.7';
+var FMCP_PLUGIN_VERSION = '1.9.8';
 
 /**
  * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları

@@ -12,6 +12,17 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.8] - 2026-04-19
+
+### Added — figma_get_code_connect + figma_use (Design-to-Code köprüsü)
+
+- **`figma_get_code_connect`** — Component/Instance node'ları için Code Connect hint'lerini getirir: `documentationLinks`, `componentKey`, `description`. `nodeIds` veya `scanCurrentPage=true` ile çalışır; `maxNodes` cap (varsayılan 40, max 120).
+- **`figma_use`** — Yüksek seviyeli orchestrator. Tek çağrıda `intent='component' | 'token' | 'design_context'` ile ilgili connector metodlarını `Promise.all` ile paralel çağırır; kısmi başarıyı `partial: true` ile raporlar.
+- Plugin tarafı: `GET_CODE_CONNECT_HINTS` handler (code.js) ve `window.getCodeConnectHints` (ui.html) zaten v1.6+ itibarıyla canlıdı; bu sürümde **extra port (5455+) handler'ına** 1 satır route eklendi (ana port ile simetri).
+- Connector: `PluginBridgeConnector.getCodeConnectHints()` metodu (searchLibraryAssets pattern'i).
+- Sınırlamalar: Tam Code Connect dosya yolları plugin API'den erişilemez — Figma'nın resmi MCP `get_code_connect_map` veya Figma CLI önerilir. `figma_use` içinde alt çağrılar `safe()` wrapper ile korunur (fail-fast YOK).
+- Doküman: [docs/TOOLS.md](docs/TOOLS.md), [docs/TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md) (48 araç), [docs/CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md) güncellendi; [FUTURE.md](FUTURE.md) P0 maddesi kapatıldı.
+
 ## [1.9.7] - 2026-04-17
 
 ### Zero-Click Enforcement — Blank File DS Gate + Mini DS + BLOCKING Suppression Prevention + Response Bootstrap

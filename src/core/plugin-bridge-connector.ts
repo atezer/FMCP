@@ -142,6 +142,18 @@ export class PluginBridgeConnector {
 		return this.bridge.request("searchLibraryAssets", params, this.fileKey);
 	}
 
+	async getCodeConnectHints(opts?: {
+		nodeIds?: string[];
+		scanCurrentPage?: boolean;
+		maxNodes?: number;
+	}): Promise<unknown> {
+		const params: Record<string, unknown> = {};
+		if (opts?.nodeIds?.length) params.nodeIds = opts.nodeIds;
+		if (opts?.scanCurrentPage) params.scanCurrentPage = true;
+		if (typeof opts?.maxNodes === "number") params.maxNodes = opts.maxNodes;
+		return this.bridge.request("getCodeConnectHints", params, this.fileKey);
+	}
+
 	async batchExportNodes(params: {
 		nodeIds: string[];
 		format?: "PNG" | "SVG" | "JPG" | "PDF";
