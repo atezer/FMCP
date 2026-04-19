@@ -253,6 +253,98 @@ Forgot Password:
 
 **Öncelik:** P0 — Prototipsiz tasarım eksik bir tasarımdır. Stakeholder review, kullanıcı testi ve geliştirici handoff için prototip zorunlu.
 
+**Durum (v1.9.10):** ✅ TAMAMLANDI — 5 tool + 1 skill + 5 skill güncellemesi. İlk canlı test (KsERiwGveHKi0nTNh6oLIZ) 5/6 bağlantı başarılı. v1.9.10 patch ile matchLayers + overlay readonly bug'ları düzeltildi. Bkz: CHANGELOG [1.9.9], [1.9.10].
+
+---
+
+### P0 — Prototip İyileştirmeleri v2 (Canlı Test Bulguları → v1.9.11)
+
+> **Kaynak:** v1.9.9/v1.9.10 canlı testinde (19 Nisan 2026) kullanıcı 3 sorun raporladı. v1.9.10 patch'i 3 kritik bug'ı düzeltti (matchLayers, overlay readonly, preflight). Bu kalan 3 madde bir sonraki acil işlem.
+
+**Öncelik:** P0 — Bu üçü FMCP bridge'in "her tool her zaman doğru çalışır" ilkesine aykırı. Prototype feature'ı kararlı, ama yan tool'lar ve UX eksikleri kullanıcı deneyimini kırıyor.
+
+#### Madde A — `__figmaNode` Serialization Eksiği (bridge-wide)
+
+**Şimdi:** `figma_execute` içinde yapılan `findAll` veya `frame.children` traverse işleminde, plugin-bridge otomatik olarak `{__figmaNode: true}` işaretli objeleri `{id, type, name}`'e indirgiyor. Kritik alanlar (`characters`, `children`, `fills`, `layoutMode`) kayboluyor.
+
+**Etki:** Canlı testte kullanıcı button text heuristic'ini çalıştıramadı — `findAll` sonuçlarından `characters` alanı eksik dönünce "Satıcı Profili" text'ini bulamadı. Workaround olarak `JSON.stringify(result)` ile düz string döndürdü (~5k token context kaybı).
+
+**Etkilenen tool'lar:** `figma_execute`, `figma_get_design_context`, `figma_get_file_data` (verbosity=full), `figma_search_assets` — genel bridge serialization davranışı.
+
+**Gerekli değişiklik:**
+- [ ] `src/core/plugin-bridge-connector.ts` veya serialization katmanı — `__figmaNode` obje reduction'ını **opt-in** yap
+- [ ] `figma_execute` Zod schema'sına yeni param: `preserveNodeFields: z.array(z.string()).optional()` — kullanıcı hangi alanların raw kalacağını seçer (`["characters","children","layoutMode"]`)
+- [ ] Default davranış: sadece `id`, `type`, `name` — mevcut optimizasyon korunur
+- [ ] Doküman: `skills/figma-canvas-ops/SKILL.md`'ye serialization davranışı ekle — "gerek duyduğun alanlar `preserveNodeFields` ile opt-in"
+
+**Teknik notlar:**
+- Plugin tarafı: `f-mcp-plugin/code.js` eval result'ı serialize ederken `__figmaNode` işaretini zaten koyuyor
+- Bridge tarafı: `src/core/response-guard.ts` veya `plugin-bridge-server.ts` reduction'ı uyguluyor
+- Test: `findAll(n => n.type === "TEXT")` çağrısı ile `characters` alanının dönüp dönmediği
+
+#### Madde B — Plugin İlk Bağlantı `fileKey` Null Sorunu
+
+**Şimdi:** Plugin açıldığında ve MCP ile bağlantı kurulduğunda, `figma_list_connected_files` çağrısı `{ fileKey: null, fileName: null }` dönüyor. Bu state'te `figma_use({ fileKey: "abc" })` çağrılırsa "No plugin connected for fileKey abc" hatası çıkıyor. Kullanıcı `fileKey` parametresini atmak zorunda kalıyor.
+
+**Etki:** Canlı testte kullanıcı ilk tool çağrısını "boşa verdi" — Claude `fileKey`'i bilemez, plugin zaten dosyayla eşleşmiş olmalı ama bridge bunu MCP tarafına bildirmiyor.
+
+**Kök neden:** Plugin dosya context'ini WebSocket welcome mesajında gönderiyor ama bridge bu bilgiyi `figma_list_connected_files` response'unda promote etmiyor veya plugin gönderimi tamamlanmadan tool call gelirse race condition oluyor.
+
+**Gerekli değişiklik:**
+- [ ] `f-mcp-plugin/code.js` welcome mesajına `fileKey` + `fileName` ekle (v1.7.0'da kısmen vardı, doğrula)
+- [ ] `src/core/plugin-bridge-server.ts` — client handshake'de file info'yu saklayıp `figma_list_connected_files` response'una ekle
+- [ ] `figma_list_connected_files` handler'ı — eğer `fileKey === null` ve client 2+ saniyedir bağlıysa plugin'den `figma_get_metadata` pull et
+- [ ] Retry patter: bağlantı kurulduktan sonra 500ms grace period — tool call geldiğinde file info hazır olsun
+- [ ] Test: plugin aç → Claude'da tool call yap → response'ta fileKey dolu gelsin
+
+**Teknik notlar:**
+- Plugin API: `figma.fileKey`, `figma.root.name` — bunlar plugin context'inde her zaman erişilebilir
+- Current `figma_get_status` response'u connected flag döndürüyor ama fileKey yok — bu response genişletilebilir
+
+#### Madde C — Önceden Var Olan Flow Starting Point Çakışması
+
+**Şimdi:** `figma_set_flow_starting_point` çağrıldığında sayfada zaten başka bir flow starting point varsa (örn. "Flow 1"), kullanıcıya sorulmadan ikinci bir tane ekleniyor. Canlı testte kullanıcı Action Sheet'in `8:701` için önceden "Flow 1" varmış, yeni skill "İlan Detayı Akışı" ekledi → Figma'da 2 başlangıç noktası görünüyor, Present modda hangisinden başlayacağı belirsiz.
+
+**Etki:** Kullanıcı deneyimi kırık. Otonom mod bile bu durumda sormalı veya mevcut flow'u bilgilendirmeli.
+
+**Gerekli değişiklik:**
+- [ ] `figma_set_flow_starting_point` Zod schema'sına yeni param:
+  ```ts
+  existingFlowStrategy: z.enum(["append", "replace", "update_if_same_node", "abort_if_conflict"]).optional().default("update_if_same_node")
+  ```
+  - `append`: mevcut flow'lara ekle (şu anki default davranış)
+  - `replace`: tüm `flowStartingPoints`'i yenisi ile değiştir
+  - `update_if_same_node`: aynı nodeId varsa güncelle, yoksa ekle (**yeni default**)
+  - `abort_if_conflict`: mevcut flow varsa `FLOW_CONFLICT` hatası
+- [ ] Preflight: tool çağrıldığında önce mevcut `flowStartingPoints`'i oku, response'a `existingFlows: [...]` ekle (read-back)
+- [ ] `skills/figma-prototype-flow/SKILL.md` Step 4 güncelle: `figma_get_prototype_connections({pageScope: true, includeFlowStartingPoints: true})` çağır → mevcut flow varsa kullanıcıya sor (otonom modda bile)
+- [ ] Return shape: `{ id, name, total, previousFlows: [...], action: "added"|"updated"|"replaced" }`
+
+**Teknik notlar:**
+- Figma Plugin API: `page.flowStartingPoints` reads as `[{nodeId, name}]` array
+- Aynı nodeId'ye 2 flow olamaz (Figma kendisi reject eder) ama farklı nodeId'lerde çoklu flow OK
+- UX kuralı: 1 sayfada genellikle 1 ana flow olmalı — 2+ flow = muhtemelen hata
+
+---
+
+**Değişecek dosyalar (özet):**
+| Madde | Dosya | Değişiklik |
+|---|---|---|
+| A | `src/core/plugin-bridge-connector.ts` + `f-mcp-plugin/code.js` | Serialization opt-in |
+| A | `skills/figma-canvas-ops/SKILL.md` | `preserveNodeFields` dokümantasyonu |
+| B | `f-mcp-plugin/code.js` | Welcome mesajına fileKey/fileName |
+| B | `src/core/plugin-bridge-server.ts` | Client handshake file info |
+| B | `src/local-plugin-only.ts` (`figma_list_connected_files`, `figma_get_status`) | Retry + file info promote |
+| C | `src/local-plugin-only.ts` (`figma_set_flow_starting_point`) | `existingFlowStrategy` param |
+| C | `skills/figma-prototype-flow/SKILL.md` | Step 4 preflight |
+
+**Hedef sürüm:** v1.9.11 patch — 3 madde bir sürümde çözülebilir (bridge-level A, plugin-level B, tool-level C ayrı ayrı).
+
+**Doğrulama:**
+- Madde A: `figma_execute('return figma.currentPage.findAll(n => n.type === "TEXT").map(n => ({id: n.id, characters: n.characters}))', { preserveNodeFields: ["characters"] })` → characters dolu dönsün.
+- Madde B: plugin aç → Claude'da hiçbir tool çağırma → 3sn bekle → `figma_list_connected_files` → fileKey + fileName dolu dönmeli.
+- Madde C: sayfada zaten flow var → `figma_set_flow_starting_point({nodeId, name})` çağır → response `previousFlows: [{...}]`, `action: "added"` OR error `FLOW_CONFLICT` (strategy'ye göre).
+
 ### P1 — Figma Dev Mode Entegrasyonu
 
 Şimdi: Üretilen ekranların geliştirici notları sadece HANDOFF.md dosyasında.
