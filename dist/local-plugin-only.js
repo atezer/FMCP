@@ -2329,9 +2329,10 @@ export async function main() {
             "Maps Figma Prototype panel: trigger (On click/hover/press/drag, After delay, Mouse events, Key/gamepad) + " +
             "action (Navigate/Overlay/Swap/Back/Close/Change to/Scroll to/Open link) + " +
             "transition type (Dissolve/Smart animate/Scroll animate/Move in-out/Push/Slide in-out) with direction (LEFT/RIGHT/TOP/BOTTOM) + " +
-            "easing + duration (ms, converted to seconds internally) + matchLayers (Smart Animate). " +
+            "easing + duration (ms, converted to seconds internally) + matchLayers (only on DirectionalTransition per Figma schema). " +
             "Uses Figma Plugin API setReactionsAsync (reactions property is readonly in 2024+ API). " +
-            "v1 scope: SET_VARIABLE, SET_VARIABLE_MODE, UPDATE_MEDIA_RUNTIME, CONDITIONAL actions are NOT included (future release).",
+            "v1 scope: SET_VARIABLE, SET_VARIABLE_MODE, UPDATE_MEDIA_RUNTIME, CONDITIONAL actions are NOT included (future release). " +
+            "Overlay background/close-on-outside are readonly in Plugin API — configure in Figma UI (Prototype tab -> Advanced -> Overlay).",
         inputSchema: {
             sourceNodeId: z.string().describe("Source node id (FRAME/INSTANCE/COMPONENT/GROUP etc.) that will receive the reaction."),
             destinationNodeId: z.string().optional().describe("Destination FRAME id. Required for NAVIGATE/OVERLAY/SWAP/SCROLL_TO/CHANGE_TO; omitted for BACK/CLOSE/URL."),
@@ -2344,17 +2345,14 @@ export async function main() {
             url: z.string().optional().describe("Required when action=URL."),
             transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE", "SCROLL_ANIMATE", "MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"]).optional().default("INSTANT").describe("INSTANT -> transition: null (no Figma INSTANT type). Directional types (MOVE_IN/OUT, PUSH, SLIDE_IN/OUT) require 'direction'."),
             direction: z.enum(["LEFT", "RIGHT", "TOP", "BOTTOM"]).optional().describe("Required for MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT transitions."),
-            matchLayers: z.boolean().optional().default(false).describe("SMART_ANIMATE only — enables layer matching morph."),
+            matchLayers: z.boolean().optional().default(false).describe("DirectionalTransition only (SLIDE_IN/MOVE_IN/PUSH/...) — enables smart layer morph on top of directional transition. INVALID for SMART_ANIMATE (Figma schema rejects it). SMART_ANIMATE inherently matches layers."),
             duration: z.number().optional().default(300).describe("Transition duration in ms; converted to seconds for Plugin API."),
             easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW", "EASE_IN_BACK", "EASE_OUT_BACK", "EASE_IN_AND_OUT_BACK"]).optional().default("EASE_OUT"),
             preserveScrollPosition: z.boolean().optional().default(false),
-            overlayRelativePosition: z.object({ x: z.number(), y: z.number() }).optional().describe("OVERLAY action only — free overlay position."),
-            overlayCloseOnClickOutside: z.boolean().optional().describe("OVERLAY only — close overlay when clicking outside."),
-            overlayBackgroundColor: z.string().optional().describe("OVERLAY only — hex color for overlay background dimming, e.g. '#000000'."),
-            overlayBackgroundOpacity: z.number().optional().default(0.5).describe("OVERLAY only — background opacity 0-1 when overlayBackgroundColor is set."),
+            overlayRelativePosition: z.object({ x: z.number(), y: z.number() }).optional().describe("OVERLAY action only — free overlay position. Requires destination frame's overlayPositionType=MANUAL (set in Figma UI)."),
             replace: z.boolean().optional().default(false).describe("true: replace reactions array; false (default): append."),
         },
-    }, async ({ sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, overlayCloseOnClickOutside, overlayBackgroundColor, overlayBackgroundOpacity, replace }) => {
+    }, async ({ sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, replace }) => {
         try {
             invalidateCache();
             // TS-side param validation (fail fast, before hitting the plugin)
@@ -2390,6 +2388,11 @@ export async function main() {
 						if (!dst) throw new Error("DESTINATION_NOT_FOUND: " + ${JSON.stringify(destinationNodeId || "")});
 						if (${JSON.stringify(action)} === "NAVIGATE" && dst.type !== "FRAME")
 							throw new Error("NAVIGATE_REQUIRES_FRAME: dst=" + dst.type);
+						// v1.9.10 preflight: OVERLAY action destination frame needs overlayPositionType set in Figma UI
+						// Plugin API can't write overlayPositionType/overlayBackgroundInteraction/overlayBackground (readonly).
+						if (${JSON.stringify(action)} === "OVERLAY" && dst.type === "FRAME" && ("overlayPositionType" in dst) && dst.overlayPositionType === "NONE") {
+							throw new Error("OVERLAY_FRAME_NOT_CONFIGURED: destinationNodeId=" + ${JSON.stringify(destinationNodeId || "")} + " Figma'da overlay olarak isaretli degil. Cozum: frame'i sec -> Prototype tab -> Advanced -> 'Overlay' ac -> Position sec. Plugin API bu ayari yazamiyor (readonly).");
+						}
 						destId = dst.id;
 					}
 
@@ -2404,12 +2407,16 @@ export async function main() {
 						const tranType = ${JSON.stringify(transitionType)};
 						const isInstant = tranType === "INSTANT";
 						const isDirectional = ["MOVE_IN","MOVE_OUT","PUSH","SLIDE_IN","SLIDE_OUT"].indexOf(tranType) !== -1;
-						const isSmart = tranType === "SMART_ANIMATE";
 						let transitionObj = null;
 						if (!isInstant) {
 							transitionObj = { type: tranType, easing: { type: ${JSON.stringify(easing)} }, duration: ${duration} / 1000 };
-							if (isDirectional) transitionObj.direction = ${JSON.stringify(direction || "RIGHT")};
-							if (isSmart) transitionObj.matchLayers = ${matchLayers};
+							if (isDirectional) {
+								transitionObj.direction = ${JSON.stringify(direction || "RIGHT")};
+								// v1.9.10 fix: matchLayers is only valid on DirectionalTransition (schema validation),
+								// NOT on SMART_ANIMATE (SimpleTransition inherently matches layers). Only inject when true + directional.
+								${matchLayers ? `transitionObj.matchLayers = true;` : ""}
+							}
+							// SMART_ANIMATE and other SimpleTransition types: do NOT inject matchLayers.
 						}
 						actionObj = {
 							type: "NODE",
@@ -2419,13 +2426,9 @@ export async function main() {
 							preserveScrollPosition: ${preserveScrollPosition}
 						};
 						${overlayRelativePosition ? `if (${JSON.stringify(action)} === "OVERLAY") actionObj.overlayRelativePosition = ${JSON.stringify(overlayRelativePosition)};` : ""}
-						${overlayCloseOnClickOutside !== undefined ? `if (${JSON.stringify(action)} === "OVERLAY") actionObj.overlayBackgroundInteraction = ${JSON.stringify(overlayCloseOnClickOutside ? "CLOSE_ON_CLICK_OUTSIDE" : "NONE")};` : ""}
-						${overlayBackgroundColor ? `
-						if (${JSON.stringify(action)} === "OVERLAY") {
-							const hex = ${JSON.stringify(overlayBackgroundColor)};
-							actionObj.overlayBackground = { type: "SOLID_COLOR", color: { r: parseInt(hex.slice(1,3),16)/255, g: parseInt(hex.slice(3,5),16)/255, b: parseInt(hex.slice(5,7),16)/255, a: ${overlayBackgroundOpacity ?? 0.5} } };
-						}
-						` : ""}
+						// v1.9.10 NOT: overlayCloseOnClickOutside and overlayBackgroundColor params removed
+						// — FrameNode.overlayBackgroundInteraction and overlayBackground are readonly in Plugin API.
+						// User must configure these in Figma UI (Prototype tab -> Advanced -> Overlay).
 					}
 
 					const reaction = { trigger: triggerObj, actions: [actionObj] };
@@ -2566,12 +2569,11 @@ export async function main() {
             trigger: z.enum(["ON_HOVER", "ON_PRESS", "MOUSE_ENTER", "MOUSE_LEAVE", "MOUSE_DOWN", "MOUSE_UP", "ON_CLICK"]).optional().default("ON_HOVER"),
             targetVariantId: z.string().optional(),
             targetVariantName: z.string().optional().describe("Variant name (e.g. 'State=Hover') — resolved within the source's COMPONENT_SET."),
-            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE"]).optional().default("SMART_ANIMATE"),
-            matchLayers: z.boolean().optional().default(true).describe("SMART_ANIMATE layer matching (true by default for variant transitions)."),
+            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE"]).optional().default("SMART_ANIMATE").describe("SMART_ANIMATE inherently matches layers — no explicit matchLayers param needed (Figma schema rejects it)."),
             duration: z.number().optional().default(150),
             easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW"]).optional().default("EASE_IN"),
         },
-    }, async ({ nodeId, trigger, targetVariantId, targetVariantName, transitionType, matchLayers, duration, easing }) => {
+    }, async ({ nodeId, trigger, targetVariantId, targetVariantName, transitionType, duration, easing }) => {
         try {
             invalidateCache();
             const conn = getConnector(bridge);
@@ -2593,8 +2595,8 @@ export async function main() {
 					const tranType = ${JSON.stringify(transitionType)};
 					let transitionObj = null;
 					if (tranType !== "INSTANT") {
+						// v1.9.10 fix: NO matchLayers for SMART_ANIMATE / DISSOLVE — Figma schema rejects it on SimpleTransition.
 						transitionObj = { type: tranType, easing: { type: ${JSON.stringify(easing)} }, duration: ${duration} / 1000 };
-						if (tranType === "SMART_ANIMATE") transitionObj.matchLayers = ${matchLayers};
 					}
 					const reaction = {
 						trigger: { type: ${JSON.stringify(trigger)} },
