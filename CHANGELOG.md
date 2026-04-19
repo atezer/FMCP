@@ -12,6 +12,37 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.10] - 2026-04-19
+
+### Fixed — Canlı test bulguları (v1.9.9 prototype tools bug fix)
+
+Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/KsERiwGveHKi0nTNh6oLIZ). 3 bug tespit edildi ve düzeltildi:
+
+**BUG 1: `matchLayers` yanlış transition tipine enjekte ediliyordu**
+- Figma schema: `matchLayers` **DirectionalTransition**'a (SLIDE_IN/MOVE_IN/PUSH/...) kabul edilir; **SMART_ANIMATE**'e kabul EDİLMEZ (SimpleTransition).
+- Eski kod: `if (isSmart) transitionObj.matchLayers = ${matchLayers}` → Figma `Unrecognized key(s) in object: 'matchLayers' at [0].actions[0].transition` ile reddediyordu.
+- Yeni kod: matchLayers sadece DirectionalTransition + kullanıcı `true` verirse enjekte edilir. SMART_ANIMATE implicit olarak katmanları eşleştirir, explicit param gerekmez.
+- `figma_create_interaction`: `matchLayers` param'ı tamamen kaldırıldı (SMART_ANIMATE variant geçişleri zaten layer matching yapar).
+
+**BUG 2: Overlay ayarları Plugin API'de yazılamaz**
+- `FrameNode.overlayPositionType`, `overlayBackgroundInteraction`, `overlayBackground` — hepsi Plugin API'de **readonly** (`"no setter for property"` hatası).
+- `figma_create_prototype_connection` Zod schema'sından `overlayCloseOnClickOutside`, `overlayBackgroundColor`, `overlayBackgroundOpacity` param'ları KALDIRILDI (yazmaları imkansız — gerçek kullanımda yanılttırıyordu).
+- Kullanıcı bu ayarları Figma UI'ında manuel yapmalı: Prototype tab → Advanced → Overlay.
+
+**BUG 3: Preflight overlay check eksikti**
+- `action=OVERLAY` seçilip destination frame overlay olarak işaretlenmemişse Figma generic `"Reaction at index 0 was invalid"` veriyordu.
+- Yeni kod: Preflight kontrol — `dst.overlayPositionType === "NONE"` ise typed error:
+  ```
+  OVERLAY_FRAME_NOT_CONFIGURED: destinationNodeId=8:701 Figma'da overlay olarak isaretli degil.
+  Cozum: frame'i sec -> Prototype tab -> Advanced -> 'Overlay' ac -> Position sec.
+  Plugin API bu ayari yazamiyor (readonly).
+  ```
+
+### Canlı test sonuçları (v1.9.9 → v1.9.10 öncesi)
+- ✅ 5/6 bağlantı başarıyla kuruldu (Tab navigasyon, Smart Animate geçişleri, Back, Flow starting point)
+- ❌ 1/6 başarısız (overlay reaction — v1.9.10 ile düzeltildi)
+- İlk canlı kullanıcı testi (`KsERiwGveHKi0nTNh6oLIZ` dosyası): İlan Detayı akışı 5 reaction ile kuruldu, present modda çalıştı.
+
 ## [1.9.9] - 2026-04-19
 
 ### Added — Figma Prototype Connections + Animations (FUTURE.md P0 kapatıldı)
