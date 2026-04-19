@@ -12,6 +12,31 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.9] - 2026-04-19
+
+### Added — Figma Prototype Connections + Animations (FUTURE.md P0 kapatıldı)
+
+**5 yeni tool** (`src/local-plugin-only.ts`):
+
+- **`figma_create_prototype_connection`** — İki node arası reaction. Trigger (ON_CLICK/ON_HOVER/ON_PRESS/ON_DRAG/AFTER_TIMEOUT/MOUSE_UP/MOUSE_DOWN/MOUSE_ENTER/MOUSE_LEAVE/ON_KEY_DOWN — 10 tip), Action (NAVIGATE/OVERLAY/SWAP/BACK/CLOSE/SCROLL_TO/CHANGE_TO/URL — 8 tip), Transition type (DISSOLVE/SMART_ANIMATE/SCROLL_ANIMATE/MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT + INSTANT — 9 tip) + direction (LEFT/RIGHT/TOP/BOTTOM) + matchLayers + easing (11 tip) + duration + preserveScrollPosition + overlayRelativePosition + overlayCloseOnClickOutside + overlayBackgroundColor + overlayBackgroundOpacity. ON_KEY_DOWN için `keyCodes` + `device` (KEYBOARD/XBOX_ONE/PS4/SWITCH_PRO/UNKNOWN_CONTROLLER). MOUSE_* için `mouseDelay` (saniye). 2024+ API: `setReactionsAsync` kullanır (direct assignment readonly).
+- **`figma_get_prototype_connections`** — Read-only audit. Node subtree veya pageScope taraması. `getReactionsAsync` fallback + `node.reactions` getter. `toolResult` envelope ile response size guard (büyük sayfalarda truncation).
+- **`figma_set_flow_starting_point`** — `page.setFlowStartingPointsAsync` (varsa) veya direct assignment. FRAME-only validation. `description` pluginData'ya kaydedilir (Figma FlowStartingPoint shape `{nodeId,name}` only).
+- **`figma_create_interaction`** — Variant state-change (CHANGE_TO navigation). `getMainComponentAsync` ile deprecation-safe main component erişimi. COMPONENT_SET kapsamında variant resolve (id veya name ile). v1: INSTANT/DISSOLVE/SMART_ANIMATE.
+- **`figma_set_scroll_behavior`** — FrameNode.overflowDirection (NONE/HORIZONTAL/VERTICAL/BOTH) + SceneNode.scrollBehavior (SCROLLS/FIXED/STICKY_SCROLLS) ayarı.
+
+**Yeni skill:** [`skills/figma-prototype-flow/SKILL.md`](skills/figma-prototype-flow/SKILL.md) — screen envanteri → navigasyon haritası (TR+EN heuristic, 11 button text pattern) → reactions (FUTURE.md animasyon tablosu uygulaması) → flow starting point → validate → dokümantasyon. **Otonom-first**: kritik dallanmalarda sorar (50+ bağlantı, heuristic eşleşmeyen, orphan/circular), rutinde sessiz yürütür. Chunking kuralı: ≤20 tek seferde, 21-50 chunk'lı, >50 kullanıcı onayı, >100 hard stop.
+
+**Skill güncellemeleri:**
+- `generate-figma-screen` → Step 6.7: 2+ frame üretildiyse prototip bağlantı önerisi
+- `ai-handoff-export` → Step 4.5: Prototip akış diyagramı (Mermaid `graph TD`) + manifest.prototypeFlow
+- `figma-a11y-audit` → Section 7d.1: Prototip odak sırası vs a11y focus sırası çapraz kontrolü
+- `fmcp-intent-router` → Adım 1 intent tablosuna `figma-prototype-flow` satırı
+- `SKILL_INDEX.md` → 25 → 26 skill; "Tuval Yazma ve Oluşturma" bölümüne yeni satır
+
+**Kapsam dışı (gelecek sürüm):** SET_VARIABLE / SET_VARIABLE_MODE / UPDATE_MEDIA_RUNTIME / CONDITIONAL actions, ON_MEDIA_HIT / ON_MEDIA_END triggers, multi-action per reaction (tek click → 2+ aksiyon), CUSTOM_CUBIC_BEZIER / CUSTOM_SPRING easing, Dev Mode annotation, Send to Figma Make (FUTURE.md ayrı P0).
+
+**Figma Plugin API uyumluluğu:** Transition shape `{ type, direction?, matchLayers?, easing: {type}, duration (saniye) }` — birleşik `SLIDE_FROM_RIGHT` gibi tipler kullanılmadı (Figma API'de yok). `transition: null` = instant (UX'te `"INSTANT"` enum değeri plugin'de null'a çevrilir).
+
 ## [1.9.8] - 2026-04-19
 
 ### Added — figma_get_code_connect + figma_use (Design-to-Code köprüsü)

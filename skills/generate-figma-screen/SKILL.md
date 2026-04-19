@@ -852,6 +852,24 @@ Ne yapayım?
 ❌ **YANLIŞ:** Alternatif N başarısız, sessizce N+1'e geç
 ✅ **DOĞRU:** N başarısız olunca orphan cleanup + rapor + checkpoint
 
+### Step 6.7: Prototip Bağlantı Teklifi (Opsiyonel, v1.9.9+)
+
+Oturumda **2 veya daha fazla frame üretildiyse** kullanıcıya öner:
+
+```
+"Bu oturumda X ekran ürettim (Login, Home, Register). Bunları birbirine bağlamak için
+`figma-prototype-flow` skill'ini kullanabiliriz — otomatik navigasyon haritası çıkarır,
+animasyon + flow starting point oluşturur.
+
+Şimdi başlatayım mı? (Üretilen frame ID'leri hazır: 1:2, 1:3, 1:4)"
+```
+
+- **Skill-to-skill invoke YOK** — FMCP'de programatik skill tetikleme mekanizması yok. Kullanıcı onaylarsa Claude yeni bir intent olarak skill'i tetikler (`fmcp-intent-router` üzerinden).
+- Kullanıcı evet derse: `screen_scope=Node ID listesi` parametresiyle, üretilen frame ID'lerini listele.
+- Kullanıcı hayır veya sessiz kalırsa: önerme kaydedilir, Step 7'ye geç.
+
+**Önkoşul:** Üretilen frame'lerin içinde en az 1 Button/Link instance'ı olmalı (aksi halde heuristic işe yaramaz).
+
 ### Step 7: Güncelleme Senaryosu
 
 Mevcut bir ekranı güncellerken:
