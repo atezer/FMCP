@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "figma-mcp-bridge": {
-      "command": "npx",
-      "args": ["-y", "@atezer/figma-mcp-bridge@1.7.23", "figma-mcp-bridge-plugin"]
+      "command": "node",
+      "args": ["/Users/abdussamed.tezer/FCM/dist/local-plugin-only.js"]
     }
   }
 }
