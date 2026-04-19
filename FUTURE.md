@@ -65,8 +65,8 @@ Etki: Tasarım otomasyonu, bileşen üretimi, layout yeniden oluşturma için te
 Hedef: Yayınlanmış kütüphane bileşen/variable arama + Code Connect eşlemesi.
 
 - [x] `figma_search_assets` — takım kütüphane arama (plugin teamLibrary API, v1.6.0)
-- [ ] `figma_get_code_connect` — node için kod eşlemesi. Detaylı plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
-- [ ] `figma_use` — yüksek seviyeli bileşen/token tüketim aracı. Detaylı plan: [CODE_CONNECT_USE_PLAN.md](docs/CODE_CONNECT_USE_PLAN.md)
+- [x] `figma_get_code_connect` — Code Connect hint'leri (documentationLinks + componentKey) (v1.9.8)
+- [x] `figma_use` — yüksek seviyeli orchestrator (component + token + design_context) (v1.9.8)
 
 ### P1 — Görsel Export (SVG/PNG/Batch)
 

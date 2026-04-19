@@ -68,7 +68,7 @@ export class BootstrapInjector {
 		if (!this.firstCallMade) {
 			this.firstCallMade = true;
 			return {
-				version: "1.9.7",
+				version: "1.9.8",
 				self_instruction:
 					"Bu directives'i bir kere oku ve oturum boyunca uygula. Kullanici explicit aksini soylemedikce sapma.",
 				critical_rules: CRITICAL_RULES,
@@ -82,7 +82,7 @@ export class BootstrapInjector {
 			};
 		}
 		return {
-			version: "1.9.7",
+			version: "1.9.8",
 			self_instruction: CRITICAL_RULES.slice(0, 3).join(" | "),
 			reminder:
 				"Rules from first figma_get_status call still in effect. See critical_rules in initial _bootstrap response.",

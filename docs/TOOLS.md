@@ -28,7 +28,7 @@ Tam liste: [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md).
 ## Şeffaf sınırlar
 
 - **Published library bileşen envanteri:** Plugin API, etkin kütüphanelerdeki değişken koleksiyonlarını `figma.teamLibrary` ile listeler. Bileşen araması `figma_search_components` ile dosyadaki yerel / içe aktarılabilir bileşenler üzerinden yapılır.
-- **Code Connect:** Bridge’de ayrı bir `figma_get_code_connect` aracı yoktur. İpuçları için `figma_get_component`, `figma_get_component_for_development` veya `figma_execute` kullanılır.
+- **Code Connect:** `figma_get_code_connect` (v1.9.8+) plugin API'nin erişebildiği `documentationLinks`, `componentKey`, `description` hint'lerini döner. Tam Code Connect kaynak haritası (dosya yolları) için Figma'nın resmi MCP `get_code_connect_map` aracı veya Figma CLI kullanılır.
 
 ---
 
