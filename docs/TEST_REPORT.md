@@ -1,9 +1,9 @@
 # F-MCP ATezer Bridge — Kapsamlı Test Raporu
 
-**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27), 2026-04-13 (v1.7.29 port coexistence), 2026-04-19 (v1.9.8 Code Connect + Orchestrator)
+**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27), 2026-04-13 (v1.7.29 port coexistence), 2026-04-19 (v1.9.8 Code Connect + Orchestrator, v1.9.9-v1.9.11 Prototype Connections)
 **Test Ortamı:** macOS Darwin 25.3.0 (ARM64)
 **Node.js:** v22.14.0
-**FMCP Sürüm:** 1.9.8
+**FMCP Sürüm:** 1.9.11
 **Figma Planı:** Pro / Enterprise
 **AI Aracı:** Claude Code (Opus 4.6, 1M context) + Claude Desktop
 **Bağlantı:** Plugin Bridge, port 5454 (Claude Desktop) + port 5455 (Claude Code, auto-incremented)
@@ -605,3 +605,110 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 ### 12.4 Gerçek Hata
 
 - **0** (sıfır). Plan'da tespit edilen tek sapma (Explore ajanının "extra port handler'da route var" raporu), planlama aşamasında düzeltildi ve uygulamada doğru işlendi.
+
+---
+
+## 13. v1.9.9 → v1.9.11 Prototype Connections + Animations Canlı Testi (2026-04-19)
+
+**Scope:** 5 yeni MCP aracı + 1 yeni skill (`figma-prototype-flow`) + 4 skill güncellemesi. FUTURE.md P0 "Figma Prototip Bağlantıları + Animasyonlar" kapsamı kapatıldı. İki tur canlı test yapıldı; her turda yeni bir schema bug'ı bulundu ve patch ile çözüldü.
+
+### 13.1 Araç Kayıt Doğrulaması
+
+| # | Kontrol | Sonuç |
+|---|---------|-------|
+| 1 | `figma_create_prototype_connection` tool registered (src:2765) | PASS |
+| 2 | `figma_get_prototype_connections` tool registered (src:2886) | PASS |
+| 3 | `figma_set_flow_starting_point` tool registered (src:2963) | PASS |
+| 4 | `figma_create_interaction` tool registered (src:3010) | PASS |
+| 5 | `figma_set_scroll_behavior` tool registered (src:3078) | PASS |
+| 6 | TypeScript build | PASS — sıfır hata |
+| 7 | Jest suite | PASS — 83/83 test |
+| 8 | Validation: skill tool refs kaynakla uyumlu | PASS |
+| 9 | Version senkron (package.json + version.ts + embedded-skills) | PASS — 1.9.11 |
+| 10 | Tool count yükseldi (49 → 54) | PASS |
+
+### 13.2 Canlı Test Turu #1 — v1.9.9 → v1.9.10 Patch
+
+**Dosya:** https://www.figma.com/design/KsERiwGveHKi0nTNh6oLIZ (e-ticaret ilan detayı akışı)
+
+| # | Senaryo | Sonuç |
+|---|---------|-------|
+| T1-1 | Plugin bağlantısı (MCP Ready yeşil) | PASS |
+| T1-2 | `fmcp-intent-router` → `figma-prototype-flow` skill yönlendirmesi | PASS |
+| T1-3 | Screen envanteri (FRAME listesi + rol tahmini) | PASS |
+| T1-4 | Navigasyon haritası (button text heuristic, TR+EN) | PASS — 8 bağlantı çıkarıldı |
+| T1-5 | 5/6 bağlantı başarılı kuruldu | PARTIAL |
+| T1-6 | 1/6 bağlantı başarısız — OVERLAY action | FAIL — generic "Reaction at index 0 was invalid" |
+| T1-7 | `figma_set_flow_starting_point` "Ilan Detayı Akışı" | PASS |
+| T1-8 | `figma_get_prototype_connections({pageScope: true})` audit | PASS — toolResult envelope çalıştı |
+
+**Tespit edilen bug'lar (v1.9.10 ile çözüldü):**
+
+| Bug | Kök neden | Çözüm |
+|---|---|---|
+| `matchLayers` SMART_ANIMATE'e yanlış enjekte | Kod `if (isSmart)` branch'te matchLayers = user_value → Figma schema reddediyor | SMART_ANIMATE path'inden kaldırıldı; sadece DirectionalTransition'a opt-in |
+| `overlayCloseOnClickOutside`/`overlayBackgroundColor` yazılamıyor | `FrameNode.overlayBackgroundInteraction` ve `overlayBackground` Plugin API'de readonly | Zod schema'dan 3 param kaldırıldı; kullanıcı Figma UI'ında manuel yapıyor |
+| OVERLAY preflight yok — generic hata | Destination frame overlay değilse Figma "Reaction invalid" veriyor | `OVERLAY_FRAME_NOT_CONFIGURED` typed error + Türkçe çözüm yönergesi (Prototype tab → Advanced → Overlay) |
+
+### 13.3 Canlı Test Turu #2 — v1.9.10 → v1.9.11 Patch (aynı dosya)
+
+| # | Senaryo | Sonuç |
+|---|---------|-------|
+| T2-1 | Aynı dosyada 8 bağlantılı İlan Detayı akışı | PASS — 8/8 bağlantı kuruldu |
+| T2-2 | Flow starting point `12:1176` → "İlan Detay Akışı" | PASS |
+| T2-3 | Audit: 8 connection + 1 FSP doğrulandı | PASS |
+| T2-4 | OVERLAY preflight: Action Sheet önceden overlay işaretli → geçti | PASS |
+| T2-5 | SMART_ANIMATE variant geçişleri (hover, press) | PASS |
+| T2-6 | BACK action'ların Present modda ters yönlü animasyon oynaması | PASS |
+| T2-7 | ON_CLICK trigger → NAVIGATE / OVERLAY / BACK / CLOSE ayrımı | PASS |
+| T2-8 | Figma Present play modu — tam akış test | PASS |
+
+**Tespit edilen bug (v1.9.11 ile çözüldü):**
+
+| Bug | Kök neden | Çözüm |
+|---|---|---|
+| İlk `SLIDE_IN` bağlantısında schema hatası | Figma `matchLayers` key'ini DirectionalTransition'da ZORUNLU istiyor. v1.9.10'da default `false` olduğunda key enjekte edilmiyordu | `matchLayers` her zaman enjekte ediliyor (değer user param'dan); SMART_ANIMATE'e hâlâ eklenmiyor |
+
+**Bulgu (düzeltme değil — dokümantasyon):**
+- `action=BACK` için verilen `transition` Figma tarafından IGNORE ediliyor — önceki NAVIGATE'in yönü otomatik ters uygulanır. Audit raporunda `transition: null` görünmesi **normal davranış**, bug değil. Description'a not eklendi.
+
+### 13.4 Bağlantı Haritası Raporu (Test Turu #2, 8/8 başarılı)
+
+| # | Kaynak | Trigger | Action | Hedef | Transition |
+|---|---|---|---|---|---|
+| 1 | Satıcı Profili Section (12:1256) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
+| 2 | dots button (12:1141) | ON_CLICK | **OVERLAY** | Action Sheet | DISSOLVE 200ms |
+| 3 | S Tab bar - İlan Detay (12:1191) | ON_CLICK | NAVIGATE | Konum | INSTANT |
+| 4 | S Tab bar - Konum (12:1367) | ON_CLICK | NAVIGATE | İlan Detay | INSTANT |
+| 5 | arrow_left (12:1138) | ON_CLICK | BACK | — | Figma auto-reverse |
+| 6 | Header Konum (12:1361) | ON_CLICK | BACK | — | Figma auto-reverse |
+| 7 | "Satıcı Profili" text (12:1719) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
+| 8 | "Vazgeç" (12:1712) | ON_CLICK | CLOSE | — | DISSOLVE 150ms |
+
+### 13.5 Sonraki İş Kalemleri (v1.9.11 canlı test → v1.9.12 hedefi)
+
+Canlı test kullanıcı raporu 3 ek bulgu tespit etti — FUTURE.md "P0 — Prototip İyileştirmeleri v2" başlığı altına eklendi:
+
+| Madde | Konu | Durum |
+|---|---|---|
+| A | `__figmaNode` serialization — bridge children/characters kesiyor | v1.9.12 hedefi |
+| B | Plugin ilk bağlantıda `fileKey: null` | v1.9.12 hedefi |
+| C | Flow starting point çakışması (önceden "Flow 1" varsa) | v1.9.12 hedefi |
+
+### 13.6 Gerçek Hata
+
+- v1.9.9 → 1 gerçek bug (OVERLAY UX) + 2 schema bug'ı (matchLayers yanlış yer, overlay readonly varsayımı) → v1.9.10 ile kapatıldı
+- v1.9.10 → 1 schema bug (matchLayers zorunlu key) → v1.9.11 ile kapatıldı
+- v1.9.11 → **0 gerçek hata**. 8/8 bağlantı + Present modda animasyon doğrulandı.
+
+### 13.7 Araç-Skill-Plugin Uyumu
+
+| Katman | Uyum |
+|---|---|
+| MCP Tool Layer (5 yeni tool) | ✅ Zod schema validation + typed errors + toolResult envelope |
+| Plugin Bridge (`setReactionsAsync`, `getMainComponentAsync`, `getReactionsAsync`) | ✅ Async API 2024+ uyumlu; fallback pattern'ler mevcut |
+| Skill Layer (`figma-prototype-flow`) | ✅ Otonom-first + heuristic + chunking + 6 skill güncellemesi |
+| Intent Router (`fmcp-intent-router`) | ✅ "prototip bağla" vb. 7 keyword → yeni skill'e yönlendirme |
+| SKILL_INDEX | ✅ 25 → 26 skill |
+| Plugin Kodu (`f-mcp-plugin/code.js`) | ✅ Sıfır değişiklik — `eval(wrappedCode)` mevcut davranışla çalışıyor |
+| CHANGELOG + Version | ✅ [1.9.9], [1.9.10], [1.9.11] entry'leri; package.json + version.ts senkron |

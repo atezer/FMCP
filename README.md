@@ -106,7 +106,15 @@ AI ile Figma arasında **çift yönlü** çalışırsınız:
 - *"Koddaki token'larla Figma'daki token'ları karşılaştır"*
 - *"Responsive: Mobile, Tablet, Web versiyonlarını üret"*
 
-46 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
+**Prototip otomasyonu (v1.9.9+):**
+- *"Figma'daki ekranların prototip bağlantılarını yap"*
+- *"Login → Home → Register akışını SLIDE_IN animasyonla kur"*
+- *"Button hover state'i SMART_ANIMATE ile ayarla"*
+- *"Long content için vertical scroll + sticky header"*
+
+Otomatik navigasyon haritası (TR+EN button text heuristic), 9 trigger / 8 action / 9 transition tipi × 4 yön, ON_KEY_DOWN (keyCodes + device), overlay config, scroll behavior, flow starting point — Figma Prototype panel'inin tüm yetenekleri.
+
+54 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
 
 ---
 
@@ -163,7 +171,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
 - **Figma** — Masaüstü ve tarayıcı, birden fazla AI aynı dosyaya aynı anda bağlanabilir
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
-- **Detay** — [46 araç](docs/TOOLS_FULL_LIST.md) · [24 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
+- **Detay** — [54 araç](docs/TOOLS_FULL_LIST.md) · [26 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
 ---
 
