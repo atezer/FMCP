@@ -7,7 +7,7 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-19T18:55:50.235Z
+ * Generated: 2026-04-19T19:17:30.721Z
  * Total estimated tokens: 9399
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2622 tokens) -->
@@ -814,5 +814,5 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9399;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-19T18:55:50.235Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-19T19:17:30.721Z";
 //# sourceMappingURL=embedded-skills.js.map
