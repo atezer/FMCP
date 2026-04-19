@@ -1,11 +1,11 @@
 # F-MCP ATezer Bridge — Kapsamlı Test Raporu
 
-**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27 canli test), 2026-04-13 (v1.7.29 port coexistence canli test)
+**Tarih:** 2026-04-04 (ilk), 2026-04-11 (v1.7.27), 2026-04-13 (v1.7.29 port coexistence), 2026-04-19 (v1.9.8 Code Connect + Orchestrator)
 **Test Ortamı:** macOS Darwin 25.3.0 (ARM64)
 **Node.js:** v22.14.0
-**FMCP Sürüm:** 1.7.29
-**Figma Planı:** Free
-**AI Aracı:** Claude Code (Opus 4.6, 1M context)
+**FMCP Sürüm:** 1.9.8
+**Figma Planı:** Pro / Enterprise
+**AI Aracı:** Claude Code (Opus 4.6, 1M context) + Claude Desktop
 **Bağlantı:** Plugin Bridge, port 5454 (Claude Desktop) + port 5455 (Claude Code, auto-incremented)
 **Test Türü:** Uçtan uca entegrasyon testi (araç + skill + iş akışı)
 
@@ -16,7 +16,7 @@
 ### Test Kapsamı
 | Metrik | Değer |
 |--------|-------|
-| FMCP aracı | 47 (46 PASS, 3 EXPECTED FAIL, 2 SKIP) |
+| FMCP aracı | 48 (v1.9.8: +2 yeni — figma_get_code_connect, figma_use) |
 | FMCP skill | 18 (9 düzeltildi, 7 zenginleştirildi) |
 | Üretilen token | 120 (3 collection: Primitives 43, Primitives Dark 32, Semantic 45) |
 | Üretilen ekran | 6 (3 boyut x 2 tema) |
@@ -565,3 +565,43 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 - **resultAnalysis**: Bos/null/undefined sonuc uyarilari
 - **safeSerialize**: Figma node → `{id, type, name}`, function → `[function]`, circular ref korunakli
 - **Retry**: Transient WebSocket hatalari icin 1x otomatik tekrar deneme
+
+---
+
+## 12. v1.9.8 Code Connect + Orchestrator Canlı Testi (2026-04-19)
+
+**Scope:** İki yeni MCP aracı (`figma_get_code_connect`, `figma_use`) ve plugin extra-port route simetrisi Claude Desktop üzerinden uçtan uca doğrulandı.
+
+### 12.1 Araç Kayıt Doğrulaması
+
+| # | Kontrol | Sonuç |
+|---|---------|-------|
+| 1 | `grep figma_get_code_connect dist/local-plugin-only.js` | PASS — tool kayıtlı |
+| 2 | `grep figma_use\b dist/local-plugin-only.js` | PASS — tool kayıtlı |
+| 3 | TypeScript build | PASS — sıfır hata |
+| 4 | Jest suite | PASS — 83/83 test |
+| 5 | ui.html simetri (ana port + extra port) | PASS — her iki handler'da `getCodeConnectHints` route var |
+| 6 | Version senkronu (package.json + version.ts + bootstrap-injector + plugin code.js/ui.html) | PASS — 5/5 yer 1.9.8 |
+
+### 12.2 Canlı Test — Claude Desktop + Figma (Sahibinden DS dosyası)
+
+| # | Senaryo | Sonuç |
+|---|---------|-------|
+| L1 | `figma_get_status` sonrası plugin versiyonu | PASS — 1.9.8 raporlandı |
+| L2 | `figma_get_code_connect scanCurrentPage=true maxNodes=20` | PASS — 20 node tarandı, INSTANCE tree döndü |
+| L3 | INSTANCE node için componentKey davranışı | PASS — beklendiği gibi boş (plugin handler sadece COMPONENT/COMPONENT_SET için doldurur) |
+| L4 | `figma_use intent=design_context nodeId="1212:858" query="color"` | PASS — 3 alt sonuç (component + codeConnect + tokens), `partial=false` |
+| L5 | Orchestrator INSTANCE → main component resolve | PASS — NavigationTopBar detayları + alt node'lar geldi |
+| L6 | Token filtresi doğruluğu | PASS — 25 renk token'ı (13 semantic + 12 primitive), query uyumlu |
+| L7 | Validation hatası: intent=component ama nodeId yok | PASS — `isError: true`, anlamlı hata mesajı |
+| L8 | MCP server restart sonrası araç listesi | PASS — Claude Desktop iki yeni aracı keşfetti ve çağırdı |
+
+### 12.3 Bilinen Sınırlar (plan kapsam dışı)
+
+- Tam Code Connect kaynak dosya yolları plugin API'den erişilemez — Figma'nın resmi MCP `get_code_connect_map` aracı veya Figma CLI kullanılmalı.
+- INSTANCE node'lar kendi başlarına `documentationLinks` taşımaz; hint için main component'e gidilmeli (`figma_use` otomatik yapar).
+- Variable binding (hangi bileşen hangi token'i tüketiyor) otomatik tespit yok — `boundVariables` için `figma_get_design_context` kullanılmalı.
+
+### 12.4 Gerçek Hata
+
+- **0** (sıfır). Plan'da tespit edilen tek sapma (Explore ajanının "extra port handler'da route var" raporu), planlama aşamasında düzeltildi ve uygulamada doğru işlendi.
