@@ -1192,7 +1192,7 @@ export async function main() {
 	server.registerTool(
 		"figma_get_design_system_summary",
 		{
-			description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
+			description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file. PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read .claude/design-systems/active-ds.md + ~/.claude/data/fcm-ds/active.md first. If DS identity is already known from state, DO NOT call this tool on an empty target file just to 'check DS existence' — use the cache.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -2257,7 +2257,8 @@ export async function main() {
 				"List variables from team library collections with import keys. " +
 				"Uses figma.teamLibrary API — works in the TARGET file, no need to connect the DS source file. " +
 				"Returns variable name, key (for importVariableByKeyAsync), resolvedType, collection, and library name. " +
-				"Use the returned keys with figma_bind_variable or figma.variables.importVariableByKeyAsync() in figma_execute.",
+				"Use the returned keys with figma_bind_variable or figma.variables.importVariableByKeyAsync() in figma_execute. " +
+				"PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read ~/.claude/data/fcm-ds/<file-key>/tokens.md cache first. If cache exists and <7 days old (per _meta.md), use cache directly — only call this tool on cache miss or stale.",
 			inputSchema: {
 				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
