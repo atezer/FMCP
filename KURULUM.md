@@ -170,6 +170,30 @@ npm run build:local
 ---
 ---
 
+## 🗄️ DS Cache Erişimi (v3.1+)
+
+Design system cache'i (componentKey + variableKey listesi) `~/.claude/data/fcm-ds/` altında tutulur. **v3.1 sürümünden itibaren** Claude'un bu yola erişimi GEREKMİYOR — yeni server tool'ları (`figma_resolve_active_ds`, `figma_get_library_components`, `figma_get_library_tokens`) cache'i F-MCP server'ında okuyup key listelerini direkt döndürür.
+
+**Cache hit'te tipik akış (≤6 tool call):**
+
+```
+figma_get_status → figma_resolve_active_ds → figma_get_library_components
+→ figma_get_library_tokens → figma_execute (skeleton + content) → figma_validate_screen
+```
+
+**İsteğe bağlı: `fmcp-filesystem` MCP ekleyenler için.** Eğer Claude Desktop'ta `mcp__fmcp-filesystem` MCP'si tanımlıysa ve cache dosyalarını manuel okumak/incelemek istiyorsanız, `claude_desktop_config.json`'da `args`'a şu yolu ekleyin:
+
+```json
+"args": [
+  "...",
+  "--allowed", "/Users/<USER>/.claude/data/fcm-ds"
+]
+```
+
+Bunun olmaması ekran üretimini etkilemez — server tool'ları zaten cache'i okuyor.
+
+---
+
 ## 🔧 Otomatik kurulum
 
 Tüm adımları (build, config, plugin talimatı) tek komutla:

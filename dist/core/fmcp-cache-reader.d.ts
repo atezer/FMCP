@@ -1,0 +1,54 @@
+/**
+ * FMCP DS Cache Reader (v3.1+)
+ *
+ * Server-side reader for the user-local DS cache at
+ *   ~/.claude/data/fcm-ds/active.md
+ *   ~/.claude/data/fcm-ds/<file-key>/{tokens,components,_meta}.md
+ *
+ * Surfaces three async resolvers consumed by the new MCP tools:
+ *   - resolveActiveDs()
+ *   - getLibraryComponents(libraryName, filter?)
+ *   - getLibraryTokens(libraryName, filter?)
+ *
+ * Eliminates the round-trip through the Figma plugin / REST API for cache
+ * hits and bypasses the fmcp-filesystem MCP allowedDirectories restriction
+ * (Claude no longer needs FS access — the server reads on its behalf).
+ */
+export type CacheStatus = "fresh" | "stale" | "missing";
+export interface ActiveDsContext {
+    libraryName: string | null;
+    fileKey: string | null;
+    cacheRoot: string | null;
+    status: CacheStatus;
+    lastSync: string | null;
+    source: "fmcp_cache";
+    notes?: string;
+}
+export interface LibraryComponent {
+    name: string;
+    key: string;
+    role: string | null;
+    source: string | null;
+}
+export interface LibraryToken {
+    name: string;
+    key: string;
+    type: string;
+    collection: string | null;
+}
+export declare function resolveActiveDs(): Promise<ActiveDsContext>;
+/**
+ * Components.md is a hybrid: top-level UI components live under `### N. Name`
+ * headings followed by `- **componentKey:** \`<key>\`` bullets. Icons sit in a
+ * single `| Icon | componentKey | Props | Usage |` table. The "Eksik" table
+ * lists components that have no key yet — skipped.
+ */
+export declare function getLibraryComponents(libraryName: string, filter?: string): Promise<LibraryComponent[]>;
+/**
+ * Tokens.md hosts multiple `## <Type> Tokens` tables, each with a 2- or 3-column
+ * shape ending in `variableKey`. The section heading carries the type
+ * (Spacing, Radius, Surface Backgrounds, Component Backgrounds...).
+ * The "Collection Info" table is metadata, not bindable tokens — skipped.
+ */
+export declare function getLibraryTokens(libraryName: string, filter?: string): Promise<LibraryToken[]>;
+//# sourceMappingURL=fmcp-cache-reader.d.ts.map

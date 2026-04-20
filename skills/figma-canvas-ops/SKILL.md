@@ -24,12 +24,26 @@ metadata:
 - F-MCP Bridge plugin bağlı olmalı (`figma_get_status()`)
 - Aktif DS context: `.claude/design-systems/active-ds.md` → `Status: ✅`
 
+> **🔒 FMCP Cache Resolve (v3.1+ — İLK YOL):**
+> Cache okuma için Claude'un filesystem'a bakması GEREKMEZ. Server tool'ları kullan:
+> - `figma_resolve_active_ds()` — active library + cache status (`fresh`/`stale`/`missing`)
+> - `figma_get_library_components(libraryName)` — componentKey listesi
+> - `figma_get_library_tokens(libraryName)` — variableKey listesi
+>
+> Cache hit'te **0 Plugin API call**, cross-file çalışır. Cache miss'te `_restFallbackHint` döner → Rule 24.1+ fallback chain'e düş.
+> **Token hedefi:** ödeme/login ekranı ≤6 tool call total.
+
 ## 0. Design System Context (ZORUNLU)
 
 ### 0a — Active DS check
 ```
-1. Read .claude/design-systems/active-ds.md
-2. ✅ Aktif → Library Name not al, 0b'ye geç
+1. ÖNCE figma_resolve_active_ds() — server cache (v3.1+)
+   ✅ "fresh" → Library Name + cache status not al, 0b'ye geç
+   ⚠️ "stale" → Library Name not al ama klasik fallback'e hazır ol
+   ❌ "missing" → Aşağıdaki klasik akışa düş
+
+2. Klasik akış (cache miss): Read .claude/design-systems/active-ds.md
+3. ✅ Aktif → Library Name not al, 0b'ye geç
    ❌ Seçilmedi → 0c'ye geç
    "DS bypass mode" → DS'siz devam
 ```

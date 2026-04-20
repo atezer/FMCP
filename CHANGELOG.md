@@ -12,6 +12,43 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [Unreleased] — v3.1 Server Cache Resolver
+
+### Added
+
+3 yeni MCP tool — DS cache okuma artık server tarafında. Claude'un filesystem'a (özellikle `~/.claude/data/fcm-ds/`) erişimi GEREKMİYOR; cache key'leri tek call'da hazır geliyor.
+
+- `figma_resolve_active_ds()` — active library + cache freshness (`fresh`/`stale`/`missing`)
+- `figma_get_library_components(libraryName, filter?)` — componentKey listesi (cache hit'te 0 keşif)
+- `figma_get_library_tokens(libraryName, filter?)` — variableKey listesi (`spacing`/`radius`/`color`/`typography` type)
+- `audit-log`: `cache_hit`, `cache_miss`, `cache_stale` event tipleri
+
+### Changed (skill cache-first refactor)
+
+- **fmcp-screen-orchestrator:** Yeni Adım -1 — Cache Pre-Flight (BLOCKING). Cache hit'te tüm discovery / sayfa scan / kullanıcı sorusu YASAK.
+- **generate-figma-screen Step 3a:** "Mevcut ekranları incele + `findAll(INSTANCE)`" anti-pattern'i silindi. Yeni primer: `figma_get_library_components`. Cache miss'te Rule 24.1+ fallback chain.
+- **generate-figma-screen Step 3.1 / 3d:** Cache hit'te tamamen skip notları.
+- **fmcp-intent-router:** Discovery öncelik listesinin başına Rule 24.0 (server cache) eklendi.
+- **fmcp-screen-recipes:** Rule 24 zincirine üstten 24.0 eklendi (mevcut 24.1-24.4 semantiği korundu — 11 dosyadaki referanslar bozulmasın diye).
+- **figma-canvas-ops:** Section 0 başına FMCP Cache Resolve bloğu — server tools tek doğru yol.
+
+### Token Budget — Hedef Metrik
+
+Cache hit + ödeme/login ekranı: **≤6 tool call**, 0 timeout, 0 sayfa scan, 0 manuel URL sorusu.
+
+| # | Tool | Amaç |
+|---|---|---|
+| 1 | `figma_get_status` | Plugin bağlantısı |
+| 2 | `figma_resolve_active_ds` | Library + cache status |
+| 3 | `figma_get_library_components` | componentKey listesi |
+| 4 | `figma_get_library_tokens` | variableKey listesi |
+| 5 | `figma_execute` | Skeleton + sections (1-2 call) |
+| 6 | `figma_validate_screen` | Skor ≥80 |
+
+### Fixed
+
+- "fmcp-filesystem MCP `~/.claude/data/fcm-ds/` izni yok → Claude cache'i göremez → Plugin/REST discovery → timeout + sayfa scan" kısır döngüsü kırıldı. Server tarafı okuma yapıyor; filesystem izni gerekmiyor.
+
 ## [1.9.11] - 2026-04-19
 
 ### Fixed — matchLayers DirectionalTransition için ZORUNLU (canlı test bulgusu)

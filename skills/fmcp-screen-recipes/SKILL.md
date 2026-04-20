@@ -558,9 +558,17 @@ card.layoutSizingHorizontal = "FILL";  // SONRA (Rule 11)
 | Style import fail | Rule 23 try-catch, roleMap fallback |
 | 3× validate fail | Kullanıcıya generate-figma-screen öner |
 
-## Rule 24 — Component Fallback Chain (v1.9.9+)
+## Rule 24 — Component Fallback Chain (v1.9.9+ / v3.1+)
 
 `figma_search_assets` library components boş dönerse (variables var ama component instance yok) sırayla şu yolu takip et:
+
+**24.0 — FMCP Server Cache (v3.1+ — İLK SIRA):**
+- `figma_resolve_active_ds()` → `status: "fresh"` dönüyorsa:
+  - `figma_get_library_components(libraryName, filter?)` → componentKey listesi
+  - `figma_get_library_tokens(libraryName, filter?)` → variableKey listesi
+- Server-side okuma; **0 Plugin/REST API call**, cross-file çalışır.
+- Cache hit'te 24.1-24.4 atlanır → direkt `importComponentByKeyAsync(key)`.
+- Status `"missing"` veya `"stale"` ise 24.1'e düş.
 
 **24.1 — REST API enumerate:**
 - Response'ta `_restFallbackHint` varsa oku.

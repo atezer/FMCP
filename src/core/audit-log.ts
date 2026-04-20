@@ -11,11 +11,13 @@ const noop = () => {};
 
 export interface AuditEntry {
 	ts: string; // ISO timestamp
-	event: "tool" | "plugin_connect" | "plugin_disconnect" | "error";
+	event: "tool" | "plugin_connect" | "plugin_disconnect" | "error" | "cache_hit" | "cache_miss" | "cache_stale";
 	method?: string;
 	success?: boolean;
 	error?: string;
 	durationMs?: number;
+	libraryName?: string;
+	cacheRoot?: string;
 }
 
 let stream: WriteStream | null = null;
@@ -77,6 +79,19 @@ export function auditTool(
  */
 export function auditPlugin(path: string | undefined, event: "plugin_connect" | "plugin_disconnect"): void {
 	auditLog(path, { event });
+}
+
+/**
+ * Log a DS cache hit/miss/stale event from the cache reader.
+ */
+export function auditCache(
+	path: string | undefined,
+	event: "cache_hit" | "cache_miss" | "cache_stale",
+	method: string,
+	libraryName?: string,
+	cacheRoot?: string,
+): void {
+	auditLog(path, { event, method, libraryName, cacheRoot });
 }
 
 /**
