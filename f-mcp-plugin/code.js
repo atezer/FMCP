@@ -1634,7 +1634,15 @@ figma.ui.onmessage = async (msg) => {
         if (libraryComponents.length > 0) {
           out.notes.push('libraryComponents: discovered ' + libraryComponents.length + ' remote library component(s) via existing instance scan. Use these keys with figma_instantiate_component.');
         } else if (assetTypes.indexOf('components') >= 0) {
-          out.notes.push('No library components found via instance scan. Either no DS instances exist in this file yet, or all instances are local. Hint: place one DS instance manually first, then re-run.');
+          out.notes.push('No library components found via instance scan. Either no DS instances exist in this file yet, or all instances are local.');
+          // v1.9.8+ REST fallback hint: if library file-key is known, enumerate via REST API
+          out._restFallbackHint = {
+            reason: 'instance_scan_empty',
+            suggestedAction: 'Use figma_rest_api to enumerate library components directly',
+            endpoint: '/v1/files/<LIBRARY_FILE_KEY>/components',
+            note: 'Replace <LIBRARY_FILE_KEY> with the actual library file-key from active.md. REST requires FIGMA_REST_TOKEN env var.'
+          };
+          out.notes.push('REST fallback: if you know the library file-key, call figma_rest_api with endpoint="/v1/files/<KEY>/components" to enumerate directly. See _restFallbackHint.');
         }
         out.notes.push('Components are from the current file (local + published keys via component.key).');
       }

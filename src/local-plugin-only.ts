@@ -2129,6 +2129,7 @@ export async function main() {
 				"(2) file-local COMPONENTS / COMPONENT_SETS, and " +
 				"(3) v1.8.0+: REMOTE LIBRARY COMPONENTS discovered by scanning existing INSTANCE nodes (returned as 'libraryComponents'). " +
 				"For library components to appear, at least one DS instance must exist in the file — place one manually first if empty. " +
+				"v1.9.8+: When instance scan returns empty, response includes '_restFallbackHint' suggesting figma_rest_api('/v1/files/<LIBRARY_FILE_KEY>/components') as a REST fallback to enumerate library components directly (requires FIGMA_REST_TOKEN env var + library file-key from active.md). " +
 				"Pass currentPageOnly=false to scan all pages for instance discovery. " +
 				"Use the returned componentKey with figma_instantiate_component to place new instances. " +
 				"Pass assetTypes to filter: ['variables'], ['components'], or both (default).",

@@ -10,10 +10,17 @@
 
 **Status:** ❌ Henüz seçilmedi
 
-**Library Name:** —
-**File Key:** → user-local cache'te (`~/.claude/data/fcm-ds/active.md`)
+**Primary Library:** —
 **Source Path:** `.claude/design-systems/<lib>/` (public pattern) + `~/.claude/data/fcm-ds/<file-key>/` (user-local cache)
 **Selected At:** —
+
+### Secondary Libraries (opsiyonel — multi-library DS için)
+
+Bir DS birden fazla Figma dosyasından oluşuyorsa (örn. ana + mobil + ikon + asset) buraya kaydedin. Gerçek `File Key`'ler **repo'ya yazılmaz** — `~/.claude/data/fcm-ds/active.md` user-local'e gider.
+
+| Library Adı | Rol | User-Local Cache |
+|---|---|---|
+| — | — | — |
 
 > **Güvenlik:** Gerçek `file key`, `variableKey`, `componentKey` **bu dosyada tutulmaz**.
 > Hepsi user-local cache'tedir (gitignored) ve Figma library IP'si olarak korunur.
@@ -39,13 +46,19 @@ Kullanıcı seçtiğinde Claude bu dosyayı **otomatik update eder** (gerçek fi
 
 **Status:** ✅ Aktif
 
-**Library Name:** ❖ <DS Name>
-**File Key:** → user-local (`~/.claude/data/fcm-ds/active.md`)
+**Primary Library:** ❖ <DS Name>
 **Source Path:** `.claude/design-systems/<lib>/` (public pattern)
 **Selected At:** YYYY-MM-DD
+
+### Secondary Libraries
+
+| Library Adı | Rol | User-Local Cache |
+|---|---|---|
+| <DS Name> Mobile | mobile components | → user-local |
+| <DS Name> Icons | icon library | → user-local |
 ```
 
-**Gerçek file key kaydı** `~/.claude/data/fcm-ds/active.md`'e yazılır (gitignored).
+**Gerçek file key'leri ve cache yolları** `~/.claude/data/fcm-ds/active.md`'e yazılır (gitignored). Multi-library DS için her file-key ayrı cache dizini alır: `~/.claude/data/fcm-ds/<key1>/`, `<key2>/`, vb.
 
 ---
 
