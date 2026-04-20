@@ -7,10 +7,10 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-20T08:56:27.486Z
- * Total estimated tokens: 9428
+ * Generated: 2026-04-20T11:05:09.230Z
+ * Total estimated tokens: 9469
  */
-export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2622 tokens) -->
+export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2632 tokens) -->
 ---
 name: fmcp-intent-router
 description: F-MCP ile ilgili herhangi bir kullanıcı talebinin ilk giriş noktası. Kullanıcının niyetini analiz eder, hangi hedef SKILL'in çalıştırılacağına karar verir, o SKILL için gereken eksik input'ları tek turda toplar, özet+onay alır ve ondan sonra hedef SKILL'i çalıştırır. "figma", "ekran oluştur", "tasarım yap", "component üret", "DS denetle", "token sync", "kod üret", "design system" gibi her F-MCP-tetiklemesiyle aktive olur. Claude hiçbir figma_* yazma tool'u çalıştırmadan ÖNCE bu protokolü uygulamak zorundadır.
@@ -50,14 +50,14 @@ Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 9 adım�
 3. \`Status:\` alanını kontrol et:
    - **\`✅ Aktif\`** → DS net, Blank File Sub-Check'e geç (madde 5)
    - **\`❌ Henüz seçilmedi\`** VEYA dosya yok → kullanıcıya DS sorusu sor (madde 4)
-4. **DS Sorusu (klasik):** "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz? (SUI / Material / kendi library)"
+4. **DS Sorusu (klasik):** "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz? (örn. Material / Apple HIG / Tailwind UI / kendi library'niz)"
 
 5. **BLANK FILE SUB-CHECK (v1.9.7, ZORUNLU):** \`figma_get_design_system_summary\` çağır.
    - \`components === 0 && componentSets === 0 && variableCollections.length === 0\` ise **BOŞ DOSYA** tespit edildi.
    - \`_nextStep: "BLANK_FILE_DIALOG_REQUIRED"\` response'ta görünüyorsa, **kullanıcıya 4 seçenek sun** (AskUserQuestion tek call, 4 option):
      \`\`\`
      Q: "Bu dosyada henüz Design System yok. Nasıl ilerleyelim?"
-     (a) Team library import — "Hangi library? SUI, Material 3, iOS HIG, veya kendi library'niz?"
+     (a) Team library import — "Hangi library? Örn. Material 3, iOS HIG, Tailwind UI, veya kendi library'niz"
      (b) Mini DS kur otomatik — figma_create_mini_ds tool'u çağrılır (12 color + 8 sizing + 3 text style + Button/Input/Card)
      (c) Referans DS kopyala — "Material 3 template / iOS HIG template"
      (d) DS'siz ilerle — linter tolerant mode, hardcoded değerler kabul (explicit acceptance)
@@ -511,7 +511,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
 
 ---
 
-<!-- fmcp-screen-recipes (2092 tokens) -->
+<!-- fmcp-screen-recipes (2124 tokens) -->
 ---
 name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için 5 mega-adımlı recipe. Max 15 op/execute, cache-first discovery, her adımda Türkçe micro-report.
@@ -611,9 +611,9 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce \`.claude/design-systems/sui/tokens.md\` oku. Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ SUI\` → \`sui\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
-Token name matching: SUI nested path formatı (\`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
+Token name matching: DS nested path formatı (örn. \`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
 \`\`\`js
 vars.find(v => v.name.endsWith("/" + suffix) || v.name === suffix)
 \`\`\`
@@ -813,7 +813,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9428;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9469;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T08:56:27.486Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T11:05:09.230Z";
 //# sourceMappingURL=embedded-skills.js.map

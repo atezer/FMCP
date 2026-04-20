@@ -26,7 +26,7 @@ required_inputs:
   - name: design_system
     type: from_state
     source: ".claude/design-systems/active-ds.md#Library Name"
-    fallback_question: "Hangi tasarım sistemi kullanılsın? (❖ SUI / Material / Apple HIG / Custom)"
+    fallback_question: "Hangi tasarım sistemi kullanılsın? (örn. Material / Apple HIG / Tailwind / kendi DS'iniz)"
     required: true
   - name: reference_benchmark
     type: node_id_or_none

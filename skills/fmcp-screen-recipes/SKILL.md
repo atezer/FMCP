@@ -97,9 +97,9 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce `.claude/design-systems/sui/tokens.md` oku. Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/tokens.md` oku (`<active-ds>` = `active-ds.md`'den `Library Name`'in slug hali — `❖ SUI` → `sui`, `Material` → `material`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
-Token name matching: SUI nested path formatı (`"Spacing/spacing-100"`). `endsWith` match kullan:
+Token name matching: DS nested path formatı (örn. `"Spacing/spacing-100"`). `endsWith` match kullan:
 ```js
 vars.find(v => v.name.endsWith("/" + suffix) || v.name === suffix)
 ```
@@ -277,7 +277,7 @@ return { contentBodyId: contentBody.id };
 
 ### Adım 6 — Component Discovery
 
-**Cache-First (v3.0+):** Önce `.claude/design-systems/sui/components.md` oku. Cache varsa → `figma_search_assets` ATLA, direkt `importComponentByKeyAsync` kullan. Yoksa: `figma_search_assets(query="<keywords>")` + Rule 24 fallback.
+**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/components.md` oku (DS adı `active-ds.md`'den). Cache varsa → `figma_search_assets` ATLA, direkt `importComponentByKeyAsync` kullan. Yoksa: `figma_search_assets(query="<keywords>")` + Rule 24 fallback.
 
 **Micro-report:** `✅ Component keşfi: <N> bulundu, <M> eksik`
 
@@ -550,5 +550,5 @@ card.layoutSizingHorizontal = "FILL";  // SONRA (Rule 11)
 - `skills/fmcp-screen-orchestrator/SKILL.md` — Fast Path tetiklenme
 - `skills/figma-canvas-ops/SKILL.md` — Rule 5a CHUNKING + Rule 22 Async + Rule 23 Style zorunlu
 - `.claude/design-systems/active-ds.md` — DS GATE state
-- `.claude/design-systems/sui/tokens.md` — Token cache
-- `.claude/design-systems/sui/components.md` — Component cache
+- `.claude/design-systems/<active-ds>/tokens.md` — Token cache (DS adı `active-ds.md`'den dinamik)
+- `.claude/design-systems/<active-ds>/components.md` — Component cache

@@ -23,7 +23,7 @@ required_inputs:
   - name: design_system
     type: from_state
     source: ".claude/design-systems/active-ds.md#Library Name"
-    fallback_question: "Hangi tasarım sistemine hizalayalım? (❖ SUI / Material / Custom)"
+    fallback_question: "Hangi tasarım sistemine hizalayalım? (örn. Material / Apple HIG / Tailwind / kendi DS'iniz)"
     required: true
   - name: backup_before_apply
     type: boolean
