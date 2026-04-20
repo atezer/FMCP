@@ -45,7 +45,32 @@ required_inputs:
 | `fmcp-screen-recipes` | Fast Path match | Sadece Fast Path'te |
 | `apply-figma-design-system` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 
-### Adım 0 — DS GATE (MUTLAK İLK KAPI)
+### Adım -1 — FMCP Cache Pre-Flight (BLOCKING — v3.1+ MUTLAK İLK ADIM)
+
+ANY `figma_*` tool çağırmadan ÖNCE:
+
+```
+1. figma_resolve_active_ds()  ← server-side cache read, plugin gerekmez
+2. response.status'a göre:
+   ✅ "fresh" → cache_mode = FMCP_CACHE_HIT, libraryName not al, Adım 0.5'e atla
+   ⚠️ "stale" → cache_mode = FMCP_CACHE_STALE, fallback chain (Rule 24.1+) hazır
+   ❌ "missing" → cache_mode = FMCP_CACHE_MISS, Adım 0'a düş (klasik DS GATE)
+```
+
+**Cache hit'te YASAK eylemler:**
+- `figma_execute` ile token discovery (`getAvailableLibraryVariableCollectionsAsync` vb.)
+- `figma_search_components(currentPageOnly=false)` runtime instance scan
+- `figma.currentPage.findAll(INSTANCE)` — başka sayfaları tarama
+- Kullanıcıya "library URL/file-key ver?" sorusu — cache zaten cevaplıyor
+
+**Cache hit'te ZORUNLU akış:**
+1. `figma_get_library_components(libraryName, filter?)` → componentKey listesi
+2. `figma_get_library_tokens(libraryName, filter?)` → variableKey listesi
+3. `importComponentByKeyAsync(key)` + `importVariableByKeyAsync(key)` → direkt üretim
+
+**Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤6 tool call** total.
+
+### Adım 0 — DS GATE (Cache MISS yolu)
 
 ```
 1. Read(".claude/design-systems/active-ds.md")

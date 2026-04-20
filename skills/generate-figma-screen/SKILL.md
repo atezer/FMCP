@@ -242,6 +242,8 @@ Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cev
 
 #### Step 3.1 — Cache Populate (v1.9.9+ OTONOM — G19)
 
+> **v3.1+ SKIP-ON-HIT:** Pre-flight `figma_resolve_active_ds()` `status: "fresh"` döndüyse **bu adımı tamamen ATLA**. Server zaten key'leri döndürüyor; populate gereksiz. Sadece `status: "missing"` veya `"stale"` ise aşağıdaki klasik populate akışı çalışır.
+
 Eğer user-local `~/.claude/data/fcm-ds/<file-key>/components.md` **yok veya stale** (>7 gün) VE `active-ds.md` Status: ✅ Aktif ise, Claude **kullanıcıya sormadan** aşağıdaki adımları otomatik çalıştırır:
 
 1. **Token populate:** `figma_get_library_variables()` çağır (tüm enabled library collection'ları için). Sonuçları `~/.claude/data/fcm-ds/<file-key>/tokens.md`'e yaz:
@@ -331,31 +333,29 @@ Her DS kütüphanesi `.claude/libraries/<ds>.md` dosyasında şu bölümleri iç
 
 **Cache oluşturma:** İlk ekran oluşturmada `figma_get_styles`, `figma_get_variables(summary)` ve `componentProperties` ile key'leri topla, `.claude/libraries/<ds>.md`'ye yaz. Sonraki oturumlarda direkt cache'den oku.
 
-#### 3a: Bileşen keşfi
+#### 3a: Bileşen keşfi (v3.1+ — server cache-first)
 
-**Tercih: önce mevcut ekranları incele.** Dosyada aynı DS'yi kullanan ekranlar varsa, `figma_execute` ile mevcut instance'ları tara:
-
-```js
-const frame = figma.currentPage.findOne(n => n.name === "Mevcut Ekran");
-const uniqueSets = new Map();
-frame.findAll(n => n.type === "INSTANCE").forEach(inst => {
-  const mc = inst.mainComponent;
-  const cs = mc?.parent?.type === "COMPONENT_SET" ? mc.parent : null;
-  const key = cs ? cs.key : mc?.key;
-  const name = cs ? cs.name : mc?.name;
-  if (key && !uniqueSets.has(key)) {
-    uniqueSets.set(key, { name, key, isSet: !!cs, sampleVariant: mc.name });
-  }
-});
-return [...uniqueSets.values()];
-```
-
-Mevcut ekran yoksa `figma_search_components` ve `figma_get_design_system_summary` kullan. **Geniş ara** — birden fazla terim dene:
+**ZORUNLU SIRA — Rule 24.0:**
 
 ```
-figma_search_components(query="button", currentPageOnly=false)
-figma_search_components(query="input", currentPageOnly=false)
-figma_search_components(query="card", currentPageOnly=false)
+1. figma_get_library_components(libraryName=<active>, filter?)  ← TEK ÇAĞRI
+   → componentKey listesi (cache hit'te 0 Plugin/REST call)
+2. importComponentByKeyAsync(key) → instance üret
+```
+
+**YASAK** (cache hit'te): `figma.currentPage.findAll(INSTANCE)` ile başka sayfaları/ekranları tarama. Sebep: timeout riski + yanlış instance + cache zaten dolu.
+
+**Cache miss fallback (sıra zorunlu — Rule 24):**
+- 24.0 → `figma_get_library_components` (cache hit'te bu)
+- 24.1 → `figma_rest_api GET /v1/files/<LIB_KEY>/components` (REST)
+- 24.2 → `figma_search_assets(currentPageOnly=false)` (Plugin instance scan, son çare)
+- 24.4 → kullanıcıya library URL sor
+
+**Geniş arama gerekirse** (cache miss'te) — birden fazla `filter` ile çağır:
+
+```
+figma_get_library_components(libraryName="❖ SUI", filter="button")
+figma_get_library_components(libraryName="❖ SUI", filter="input")
 ```
 
 #### 3b: Variable keşfi
@@ -375,6 +375,8 @@ figma_get_styles()
 Text style ve effect style'ları not al.
 
 #### 3d: DS Variable Key'lerini Hazırla (ZORUNLU)
+
+> **v3.1+ CACHE-FIRST:** Pre-flight `status: "fresh"` ise → `figma_get_library_tokens(libraryName, filter?)` **TEK CALL** ile variableKey listesi al. `figma_execute` içinde teamLibrary discovery YASAK (cache zaten dolu, gereksiz round-trip). Cache miss/stale ise aşağıdaki klasik akış.
 
 Ekran oluşturmadan önce kullanılacak tüm DS token'larının **variable key'lerini** topla. Bu adım atlanamaz.
 

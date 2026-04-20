@@ -220,15 +220,17 @@ Target skill `generate-figma-screen` veya `apply-figma-design-system` ise VE use
 
 Bu durumda:
 - ❌ G19 Step 3.1 Cache Populate **ATLA** (full scan gereksiz)
-- ✅ Direkt `figma_search_assets(currentPageOnly=false)` → mevcut instance'lardan `mainComponent.key` topla → sonraki yerleştirmeler için kullan
-- Discovery mini-mode: 2-3 tool call, Cache hit olmasa da plugin instance scan anında success
+- ✅ **PRIMARY (v3.1+):** `figma_get_library_components(libraryName)` ← server cache, 0 Plugin/REST call. Cache hit'te tek call'da componentKey listesi.
+- ✅ **FALLBACK (cache miss only):** `figma_search_assets(currentPageOnly=false)` → mevcut instance'lardan `mainComponent.key` topla
+- Discovery mini-mode: cache hit'te 1 call, cache miss'te 2-3 call
 
 **Component discovery öncelik sırası (Rule 24 köprüsü):**
 
-1. **Hybrid Quick-Start** (seed varsa — 2-3 tool call) — G26b
-2. **Rule 24.1 REST API** (`FIGMA_REST_TOKEN` setup ise — 1-2 call)
-3. **Rule 24.2 Cache** (G19 Step 3.1 auto-populate — 3-5 call)
-4. **Rule 24.3 Primitives fallback** (G17 ADVISORY — BLOCKING değil)
+1. **Rule 24.0 FMCP Server Cache** (`figma_get_library_components` — v3.1+ ana yol, 0 keşif) — G26c
+2. **Hybrid Quick-Start** (seed varsa — 2-3 tool call) — G26b
+3. **Rule 24.1 REST API** (`FIGMA_REST_TOKEN` setup ise — 1-2 call)
+4. **Rule 24.2 Cache** (G19 Step 3.1 auto-populate — 3-5 call)
+5. **Rule 24.3 Primitives fallback** (G17 ADVISORY — BLOCKING değil)
 
 ### Adım 4 — Read Target Skill Metadata
 

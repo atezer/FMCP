@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-20T12:54:16.802Z
- * Total estimated tokens: 10339
+ * Generated: 2026-04-20T13:40:58.308Z
+ * Total estimated tokens: 10630
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
@@ -215,7 +215,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (887 tokens) -->
+<!-- fmcp-screen-orchestrator (1173 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -238,7 +238,32 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 | \`fmcp-screen-recipes\` | Fast Path match | Sadece Fast Path'te |
 | \`apply-figma-design-system\` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 
-### Adım 0 — DS GATE (MUTLAK İLK KAPI)
+### Adım -1 — FMCP Cache Pre-Flight (BLOCKING — v3.1+ MUTLAK İLK ADIM)
+
+ANY \`figma_*\` tool çağırmadan ÖNCE:
+
+\`\`\`
+1. figma_resolve_active_ds()  ← server-side cache read, plugin gerekmez
+2. response.status'a göre:
+   ✅ "fresh" → cache_mode = FMCP_CACHE_HIT, libraryName not al, Adım 0.5'e atla
+   ⚠️ "stale" → cache_mode = FMCP_CACHE_STALE, fallback chain (Rule 24.1+) hazır
+   ❌ "missing" → cache_mode = FMCP_CACHE_MISS, Adım 0'a düş (klasik DS GATE)
+\`\`\`
+
+**Cache hit'te YASAK eylemler:**
+- \`figma_execute\` ile token discovery (\`getAvailableLibraryVariableCollectionsAsync\` vb.)
+- \`figma_search_components(currentPageOnly=false)\` runtime instance scan
+- \`figma.currentPage.findAll(INSTANCE)\` — başka sayfaları tarama
+- Kullanıcıya "library URL/file-key ver?" sorusu — cache zaten cevaplıyor
+
+**Cache hit'te ZORUNLU akış:**
+1. \`figma_get_library_components(libraryName, filter?)\` → componentKey listesi
+2. \`figma_get_library_tokens(libraryName, filter?)\` → variableKey listesi
+3. \`importComponentByKeyAsync(key)\` + \`importVariableByKeyAsync(key)\` → direkt üretim
+
+**Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤6 tool call** total.
+
+### Adım 0 — DS GATE (Cache MISS yolu)
 
 \`\`\`
 1. Read(".claude/design-systems/active-ds.md")
@@ -308,7 +333,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2485 tokens) -->
+<!-- figma-canvas-ops (2488 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -335,12 +360,26 @@ metadata:
 - F-MCP Bridge plugin bağlı olmalı (\`figma_get_status()\`)
 - Aktif DS context: \`.claude/design-systems/active-ds.md\` → \`Status: ✅\`
 
+> **🔒 FMCP Cache Resolve (v3.1+ — İLK YOL):**
+> Cache okuma için Claude'un filesystem'a bakması GEREKMEZ. Server tool'ları kullan:
+> - \`figma_resolve_active_ds()\` — active library + cache status (\`fresh\`/\`stale\`/\`missing\`)
+> - \`figma_get_library_components(libraryName)\` — componentKey listesi
+> - \`figma_get_library_tokens(libraryName)\` — variableKey listesi
+>
+> Cache hit'te **0 Plugin API call**, cross-file çalışır. Cache miss'te \`_restFallbackHint\` döner → Rule 24.1+ fallback chain'e düş.
+> **Token hedefi:** ödeme/login ekranı ≤6 tool call total.
+
 ## 0. Design System Context (ZORUNLU)
 
 ### 0a — Active DS check
 \`\`\`
-1. Read .claude/design-systems/active-ds.md
-2. ✅ Aktif → Library Name not al, 0b'ye geç
+1. ÖNCE figma_resolve_active_ds() — server cache (v3.1+)
+   ✅ "fresh" → Library Name + cache status not al, 0b'ye geç
+   ⚠️ "stale" → Library Name not al ama klasik fallback'e hazır ol
+   ❌ "missing" → Aşağıdaki klasik akışa düş
+
+2. Klasik akış (cache miss): Read .claude/design-systems/active-ds.md
+3. ✅ Aktif → Library Name not al, 0b'ye geç
    ❌ Seçilmedi → 0c'ye geç
    "DS bypass mode" → DS'siz devam
 \`\`\`
@@ -495,19 +534,6 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
     // Tüm oluşturulan node'ları doğrula:
     for (var n = 0; n < createdNodes.length; n++) assertBound(createdNodes[n]);
     \`\`\`
-
-    Bu kontrol atlanırsa \`figma_scan_ds_compliance\` final gate'te sonuç zaten BLOCKING olur — ama inline check erkendedir ve context'i az yer. **v1.9.4 önerisi:** Her mega-step sonunda bu assertion bloğunu execute'un sonuna koy.
-
-11. **appendChild sıralaması kritik.** ÖNCE \`parent.appendChild(child)\`, SONRA \`child.layoutSizingHorizontal = "FILL"\` / \`layoutPositioning = "ABSOLUTE"\`:
-    \`\`\`js
-    parent.appendChild(child);              // ÖNCE
-    child.layoutSizingHorizontal = "FILL";  // SONRA
-    \`\`\`
-    Hata: "Can only set layoutPositioning = ABSOLUTE if parent has layoutMode !== NONE" → child append edilmemiş.
-
-12. **Yeni node'ları (0,0)'dan uzağa konumlandır.** Boş alan bul.
-
-13. **Hata durumunda DUR.** Hata oku, düzelt, tekrar çalıştır. Atomik — hata olursa değişiklik uygulanmaz.
 
 ---
 
@@ -832,6 +858,6 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 10339;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 10630;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T12:54:16.802Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T13:40:58.308Z";
