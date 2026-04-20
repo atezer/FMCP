@@ -42,7 +42,7 @@ Recipe detayları: `skills/fmcp-screen-recipes/SKILL.md:357-471`.
 
 ## 3. SUI Bilgi Mimarisi (5 Tab — Anasayfa için Referans)
 
-Sahifinans ana uygulamasının navigasyon iskeleti:
+Example Brand ana uygulamasının navigasyon iskeleti:
 
 | # | Tab | İkon Pattern | Açıklama |
 |---|-----|--------------|----------|

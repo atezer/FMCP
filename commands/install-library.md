@@ -30,7 +30,7 @@ Dosyayı oku ve şunları kontrol et:
 ### Adım 3 — Kütüphane adını çıkar
 
 Dosyanın ilk satırındaki başlıktan kütüphane adını al:
-- `# SUI — Sahibinden Design System` → dosya adı: `sui.md`
+- `# MyDS — Example Design System` → dosya adı: `myds.md`
 - `# Primer — GitHub Design System` → dosya adı: `primer.md`
 
 Adı küçük harfe çevir, Türkçe karakterleri koru, boşlukları tire yap.

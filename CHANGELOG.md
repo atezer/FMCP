@@ -16,7 +16,7 @@ Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` ku
 
 ### Fixed — matchLayers DirectionalTransition için ZORUNLU (canlı test bulgusu)
 
-v1.9.10 düzeltmesinden sonra 2. canlı test (KsERiwGveHKi0nTNh6oLIZ dosyasında 8 bağlantılı İlan Detayı akışı) yeni bir bug tespit etti:
+v1.9.10 düzeltmesinden sonra 2. canlı test (<TEST_FILE_KEY> dosyasında 8 bağlantılı İlan Detayı akışı) yeni bir bug tespit etti:
 
 **BUG:** Figma schema'sı DirectionalTransition (SLIDE_IN/MOVE_IN/PUSH/SLIDE_OUT/MOVE_OUT) için `matchLayers` key'ini **zorunlu** istiyor. Değer `true` veya `false` olabilir ama key'in mutlaka olması gerekiyor.
 
@@ -42,7 +42,7 @@ v1.9.10 düzeltmesinden sonra 2. canlı test (KsERiwGveHKi0nTNh6oLIZ dosyasında
 
 ### Fixed — Canlı test bulguları (v1.9.9 prototype tools bug fix)
 
-Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/KsERiwGveHKi0nTNh6oLIZ). 3 bug tespit edildi ve düzeltildi:
+Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/<TEST_FILE_KEY>). 3 bug tespit edildi ve düzeltildi:
 
 **BUG 1: `matchLayers` yanlış transition tipine enjekte ediliyordu**
 - Figma schema: `matchLayers` **DirectionalTransition**'a (SLIDE_IN/MOVE_IN/PUSH/...) kabul edilir; **SMART_ANIMATE**'e kabul EDİLMEZ (SimpleTransition).
@@ -67,7 +67,7 @@ Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/Ks
 ### Canlı test sonuçları (v1.9.9 → v1.9.10 öncesi)
 - ✅ 5/6 bağlantı başarıyla kuruldu (Tab navigasyon, Smart Animate geçişleri, Back, Flow starting point)
 - ❌ 1/6 başarısız (overlay reaction — v1.9.10 ile düzeltildi)
-- İlk canlı kullanıcı testi (`KsERiwGveHKi0nTNh6oLIZ` dosyası): İlan Detayı akışı 5 reaction ile kuruldu, present modda çalıştı.
+- İlk canlı kullanıcı testi (`<TEST_FILE_KEY>` dosyası): İlan Detayı akışı 5 reaction ile kuruldu, present modda çalıştı.
 
 ## [1.9.9] - 2026-04-19
 
@@ -111,7 +111,7 @@ Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/Ks
 
 **Hedef:** Kullanıcı Claude Desktop'ta hiç setup yapmadan (Project Knowledge boş, başlangıç prompt'u kopyalamadan) sadece "figma linki + ödeme ekranı tasarla" diyince tüm agent + skill chain'in otomatik devreye girmesi. Başarı oranı: Claude Desktop %90-95, Claude Code %98-99.
 
-**Motivasyon:** Gerçek test raporunda (boş Figma dosyası `KsERiwGveHKi0nTNh6oLIZ`, 17 Nisan) Claude:
+**Motivasyon:** Gerçek test raporunda (boş Figma dosyası `<TEST_FILE_KEY>`, 17 Nisan) Claude:
 - İlk soru olarak DS değil stil sordu (yanlış sıra)
 - 0 component/0 variable tespit edince "sıfırdan çizeceğim" deyip ham createFrame + hardcoded değerlerle ekran kurdu
 - FMCP linter BLOCKING döndürünce "dosyada DS yok, geçerli değil" deyip **bastırdı**. v1.9.6 flag'leri dil seviyesinde skip edildi.
@@ -330,7 +330,7 @@ FCM açık kaynak MCP server/plugin dağıtımı — `@atezer/figma-mcp-bridge` 
 - `.claude/design-systems/sui/components.md`: Generic component isim paternleri (Top usage-ranked) + eksik listesi + primitive fallback tablosu — componentKey yok
 - `.claude/design-systems/sui/SUI_CHEATSHEET.md` (yeni): 10 bölümlük workflow rehberi (karar ağacı, 9 recipe index, 5-tab IA, custom dashboard pattern, 3 mutlak kural, anti-pattern listesi, hedef metrikleri, sorun giderme)
 - `.gitignore`: DS cache güvenlik katmanı eklendi (`.claude/design-systems/*/_meta.md`, `*.cache.md`, `*.local.md`)
-- `CHANGELOG.md`: v1.7.30 entry'sinden `P31qJTP8XVupmZG4BlTtPG` file key redact
+- `CHANGELOG.md`: v1.7.30 entry'sinden `<EXAMPLE_FILE_KEY>` file key redact
 - `install/TOKEN-BUDGET.md`: Text style import key redact (`fb3591835c86d00580e1f0cea2343d033107dc67`)
 
 **Kullanıcı için ne değişir:**
@@ -712,7 +712,7 @@ Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime ha
 - `FMCP_LEGACY_DEFAULTS=1` env var: v1.7.x default'larına geri dönmek için escape hatch (v1.9.0'da kaldırılacak).
 
 **Runtime Hata Fix'leri (E2-E7):**
-- **E2 — SHBGrotesk Medium font hatası**: `figma-canvas-ops` Kural 8a-1 eklendi — `figma.listAvailableFontsAsync()` ile available weight check + `pickStyle()` fallback (Medium → Semi Bold → Regular). DS fontlarında "Medium"un yokluğu artık otomatik handle ediliyor.
+- **E2 — Custom DS font Medium weight hatası**: `figma-canvas-ops` Kural 8a-1 eklendi — `figma.listAvailableFontsAsync()` ile available weight check + `pickStyle()` fallback (Medium → Semi Bold → Regular). DS fontlarında "Medium"un yokluğu artık otomatik handle ediliyor.
 - **E3 — `layoutPositioning = ABSOLUTE` parent layoutMode hatası**: `figma-canvas-ops` Kural 11 genişletildi. `appendChild` ÖNCE, `layoutPositioning` SONRA. Yeni `appendAbsolute(child, parent, x, y)` helper pattern dokümante edildi.
 - **E4 — Wrong MCP server selection**: `FMCP_INSTRUCTIONS` (`src/core/instructions.ts`) tamamen yeniden yazıldı. Yeni "TOOL SELECTION" bölümü Claude'a F-MCP plugin bağlıyken resmi Figma MCP `search_design_system`'i çağırmamasını söylüyor. "Resource links not supported" hatası önlendi.
 - **E5 — Frame oluşturma auto-layout eksik**: `figma_create_frame` MCP tool'una auto-layout parametreleri eklendi: `layoutMode` (default `"VERTICAL"`), `paddingTop/Bottom/Left/Right` (default 16), `itemSpacing` (default 12), `primaryAxisSizingMode/counterAxisSizingMode` (default `"AUTO"`), `primaryAxisAlignItems`, `counterAxisAlignItems`, `layoutWrap`. `layoutMode="NONE"` ile legacy free-form frame de mümkün.
@@ -791,12 +791,12 @@ F-MCP Bridge ile SUI gibi team library tabanli tasarim sistemleri kullanmak arti
 **SKILL Duzeltmeleri:**
 - `figma-canvas-ops/SKILL.md` ve `generate-figma-screen/SKILL.md`: "DS dosyasinda calistir" yaklasimi kaldirildi, `figma.teamLibrary` API zinciri ile hedef dosyada calisma akisi eklendi.
 - `fmcp-project-rules/SKILL.md`: LOCAL vs LIBRARY token ayrimi netlestirildi. `figma_get_styles()` ve `figma_get_variables()` sadece dosya ici degerleri donduruyor — kutuphane token'lari icin yeni `figma_get_library_variables` araci kullanilmali.
-- Font fallback: Kullanici "sen sec" derse once DS kutuphanesi text style'larindan font cikarilir, sonra Inter fallback. SUI gibi custom font (SHBGrotesk) kullanan kutuphanelerde dogru calisir.
+- Font fallback: Kullanici "sen sec" derse once DS kutuphanesi text style'larindan font cikarilir, sonra Inter fallback. Custom font kullanan kutuphanelerde dogru calisir.
 - Cache invalidation: `.claude/libraries/<ds>.md` cache'i 24 saatten eski ise yenilenir, `lastUpdated` alani eklendi.
 
 **Tool Description Iyilestirmeleri:**
 - `figma_execute`: FILL ordering, sync API, font loading, setCurrentPageAsync gotcha'lari description'da.
-- `figma_create_text`: SUI/DS kullaniyorsan SHBGrotesk gibi DS fontunu belirt uyarisi (Inter default).
+- `figma_create_text`: DS kullaniyorsan active-ds.md'deki DS fontunu belirt uyarisi (Inter default).
 - `figma_instantiate_component`: Library component destegi + `setProperties` kurali (findAll(TEXT) yerine).
 
 **Etkilenen Dosyalar:**

@@ -583,7 +583,7 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 | 5 | ui.html simetri (ana port + extra port) | PASS — her iki handler'da `getCodeConnectHints` route var |
 | 6 | Version senkronu (package.json + version.ts + bootstrap-injector + plugin code.js/ui.html) | PASS — 5/5 yer 1.9.8 |
 
-### 12.2 Canlı Test — Claude Desktop + Figma (Sahibinden DS dosyası)
+### 12.2 Canlı Test — Claude Desktop + Figma (Brand DS dosyası)
 
 | # | Senaryo | Sonuç |
 |---|---------|-------|
@@ -629,7 +629,7 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 
 ### 13.2 Canlı Test Turu #1 — v1.9.9 → v1.9.10 Patch
 
-**Dosya:** https://www.figma.com/design/KsERiwGveHKi0nTNh6oLIZ (e-ticaret ilan detayı akışı)
+**Dosya:** https://www.figma.com/design/<TEST_FILE_KEY> (e-ticaret ilan detayı akışı)
 
 | # | Senaryo | Sonuç |
 |---|---------|-------|

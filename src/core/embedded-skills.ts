@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-19T20:04:22.083Z
- * Total estimated tokens: 9399
+ * Generated: 2026-04-20T08:56:27.486Z
+ * Total estimated tokens: 9428
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2622 tokens) -->
@@ -308,7 +308,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2369 tokens) -->
+<!-- figma-canvas-ops (2398 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -402,8 +402,9 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
 
    **8a-1) Font weight check (ZORUNLU):** \`loadFontAsync\` öncesi \`listAvailableFontsAsync\` ile kontrol et. Fallback helper:
    \`\`\`js
+   const dsFontFamily = activeDS.fontFamily; // active-ds.md veya cache'ten dinamik oku — hardcoded font ismi YASAK
    const allFonts = await figma.listAvailableFontsAsync();
-   const styles = allFonts.filter(f => f.fontName.family === "SHBGrotesk").map(f => f.fontName.style);
+   const styles = allFonts.filter(f => f.fontName.family === dsFontFamily).map(f => f.fontName.style);
    function pickStyle(desired, available) {
      if (available.indexOf(desired) >= 0) return desired;
      var fb = { "Medium":["Semi Bold","Regular"], "ExtraBold":["Bold"], "Black":["Bold"], "Thin":["Light","Regular"] };
@@ -411,7 +412,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
      for (var i = 0; i < alts.length; i++) { if (available.indexOf(alts[i]) >= 0) return alts[i]; }
      return available.find(s => s.indexOf("Italic") < 0) || available[0];
    }
-   await figma.loadFontAsync({ family: "SHBGrotesk", style: pickStyle("Medium", styles) });
+   await figma.loadFontAsync({ family: dsFontFamily, style: pickStyle("Medium", styles) });
    \`\`\`
    **FigJam:** \`createShapeWithText()\` varsayılan "Inter Medium". Metin düzenlemeden önce \`await figma.loadFontAsync(shape.text.fontName)\`.
 
@@ -814,6 +815,6 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9399;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9428;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-19T20:04:22.083Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T08:56:27.486Z";

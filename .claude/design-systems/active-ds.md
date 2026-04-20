@@ -8,12 +8,12 @@
 
 ## Aktif DS
 
-**Status:** ✅ Aktif (kullanıcıya özel seçim — repo template)
+**Status:** ❌ Henüz seçilmedi
 
-**Library Name:** ❖ SUI
+**Library Name:** —
 **File Key:** → user-local cache'te (`~/.claude/data/fcm-ds/active.md`)
-**Source Path:** `.claude/design-systems/sui/` (public pattern) + `~/.claude/data/fcm-ds/<file-key>/` (user-local cache)
-**Selected At:** 2026-04-17
+**Source Path:** `.claude/design-systems/<lib>/` (public pattern) + `~/.claude/data/fcm-ds/<file-key>/` (user-local cache)
+**Selected At:** —
 
 > **Güvenlik:** Gerçek `file key`, `variableKey`, `componentKey` **bu dosyada tutulmaz**.
 > Hepsi user-local cache'tedir (gitignored) ve Figma library IP'si olarak korunur.

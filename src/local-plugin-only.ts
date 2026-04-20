@@ -1942,7 +1942,7 @@ export async function main() {
 		{
 			description:
 				"Create a new text node on the current page. Returns the created node ID. " +
-				"IMPORTANT: fontFamily defaults to 'Inter' — if using a design system (e.g. SUI uses SHBGrotesk), specify the DS font. " +
+				"IMPORTANT: fontFamily defaults to 'Inter' — if using a design system with a custom font (e.g. 'YourBrandFont'), specify the DS font from active-ds.md. " +
 				"For DS text with proper token binding, prefer figma_execute with importStyleByKeyAsync + setTextStyleIdAsync instead.",
 			inputSchema: {
 				text: z.string().describe("Text content"),
@@ -1950,7 +1950,7 @@ export async function main() {
 				y: z.number().optional().default(0),
 				name: z.string().optional().describe("Node name (default: text content)"),
 				fontSize: z.number().optional().default(16),
-				fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font if using a design system (e.g. SHBGrotesk for SUI)."),
+				fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font from active-ds.md if using a design system."),
 				fontStyle: z.string().optional().default("Regular"),
 				fillColor: z.string().optional().describe("Text color hex e.g. '#000000'"),
 				parentId: z.string().optional().describe("Parent node ID"),

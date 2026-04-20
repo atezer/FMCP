@@ -177,9 +177,9 @@ Her kütüphanenin `_meta.md` dosyası bu yapıyı takip eder:
 ## Kaynaklar (Source-to-Section Eşleştirme)
 | Source ID | Figma File Key | File Name | Yazılan Section'lar |
 |-----------|----------------|-----------|----------------------|
-| main      | 7T4iLZ...      | ❖ SUI     | tokens.md, components.md |
-| mobile    | Edxo31...      | ❖ SUI Mobil | mobile.md |
-| icons     | sFJFlf...      | 🙂 S-Icons | icons.md |
+| main      | AAAAAA...      | ❖ MyDS     | tokens.md, components.md |
+| mobile    | BBBBBB...      | ❖ MyDS Mobile | mobile.md |
+| icons     | CCCCCC...      | 🙂 MyDS-Icons | icons.md |
 
 ## Sync Durumu
 - **Son başarılı sync:** 2026-04-09T10:00:00Z

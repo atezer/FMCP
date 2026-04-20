@@ -72,10 +72,10 @@ describe("parseFigmaUrl", () => {
 		expect(result!.nodeId).toBe("1:2");
 	});
 
-	it("handles real-world SUI URL", () => {
-		const result = parseFigmaUrl("https://www.figma.com/design/7T4iLZCd3OmyI9Rokxm2av/SUI?node-id=37-1368");
+	it("handles real-world style URL with named library", () => {
+		const result = parseFigmaUrl("https://www.figma.com/design/AAAAAAAAAAAAAAAAAAAAAA/MyLibrary?node-id=37-1368");
 		expect(result).not.toBeNull();
-		expect(result!.fileKey).toBe("7T4iLZCd3OmyI9Rokxm2av");
+		expect(result!.fileKey).toBe("AAAAAAAAAAAAAAAAAAAAAA");
 		expect(result!.nodeId).toBe("37:1368");
 	});
 

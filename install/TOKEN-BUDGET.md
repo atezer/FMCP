@@ -233,7 +233,7 @@ Bu üç boyut **sadece mevcut mod** için ölçülüyor. Yani:
 
 **Durum:** Plugin core speed limitation.
 
-**Açıklama:** Sahifinans Playground gibi 2000+ instance'lı büyük dosyalarda `figma_validate_screen` 90 sn default timeout'a tutarlı olarak düşüyor. Plugin içinde validate algoritması tüm node tree'yi walk ediyor, her node için variable binding + auto-layout + instance check yapıyor — büyük file'larda çok yavaş. Gerçek test (2026-04-15, FP-1-R): 3 denemede de timeout, skor alınamadı.
+**Açıklama:** Example Brand Playground gibi 2000+ instance'lı büyük dosyalarda `figma_validate_screen` 90 sn default timeout'a tutarlı olarak düşüyor. Plugin içinde validate algoritması tüm node tree'yi walk ediyor, her node için variable binding + auto-layout + instance check yapıyor — büyük file'larda çok yavaş. Gerçek test (2026-04-15, FP-1-R): 3 denemede de timeout, skor alınamadı.
 
 **Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 25 — 3 seviyeli fallback:
 1. Timeout'u 180000ms (3 dk) yap
@@ -260,7 +260,7 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 
 **Durum:** Plugin veya MCP transport-side, YENİ bulgu (FP-1-R-v2 2026-04-15). Part 5 Kategori B adayı. Henüz root cause kesin değil.
 
-**Açıklama:** Sahifinans Playground (2000+ instance'lı file) üzerinde `figma_capture_screenshot` çağrıları ara ara `{}` empty object dönüyor — hata yok, image content yok, sadece boş obje. FP-1-R-v2 gözlemleri:
+**Açıklama:** Example Brand Playground (2000+ instance'lı file) üzerinde `figma_capture_screenshot` çağrıları ara ara `{}` empty object dönüyor — hata yok, image content yok, sadece boş obje. FP-1-R-v2 gözlemleri:
 
 1. **Referans node screenshot'ı (benchmark için)** → empty object
 2. **Node-id format çevirisi** (`135-6499` → `135:6499`) Claude tarafında manuel yapıldı, tool internal çevirisi belki eksik
@@ -278,7 +278,7 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 2. `{}` dönerse → `figma_get_component_for_development(nodeId)` dene (bu da screenshot + metadata döndüren alternatif)
 3. O da empty ise → `figma_get_file_data(depth=2, verbosity="summary")` ile yapı üzerinden ilerle, kullanıcıya "Figma Desktop'ta manuel göz kontrolü" öner
 
-**Çözüm roadmap (Part 5 Kategori B):** Plugin kodu `figma_capture_screenshot` implementation'ı read-only incelensin, empty return path'leri bulunsun. Başka file'larda test edilsin (Sahifinans spesifik mi, genel mi). Plugin fix veya transport fix uygulansın.
+**Çözüm roadmap (Part 5 Kategori B):** Plugin kodu `figma_capture_screenshot` implementation'ı read-only incelensin, empty return path'leri bulunsun. Başka file'larda test edilsin (Example Brand spesifik mi, genel mi). Plugin fix veya transport fix uygulansın.
 
 ---
 
