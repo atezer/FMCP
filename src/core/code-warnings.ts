@@ -150,22 +150,43 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 	}
 
 	// 2b. No-instance usage — 3+ createFrame but 0 component instantiation
+	// v1.9.9+ (G17): Token-bound primitive fallback (DS Fallback Chain Rule 3 + Rule 24.3)
+	// Eğer her createFrame için en az 1 binding (fill/padding/radius/textStyle) varsa,
+	// bu meşru "token-bound primitive fallback" — BLOCKING değil, ADVISORY.
 	const createFrameCount = (code.match(/figma\.createFrame\(\)/g) || []).length;
 	const hasInstanceCreation =
 		code.includes("importComponentByKeyAsync") ||
 		code.includes("createInstance()") ||
 		code.includes(".createInstance(") ||
 		code.includes("importComponentSetByKeyAsync");
-	if (createFrameCount >= 3 && !hasInstanceCreation) {
+	const setBoundVariableCount = (code.match(/setBoundVariable\s*\(/g) || []).length;
+	const setBoundVariableForPaintCount = (code.match(/setBoundVariableForPaint\s*\(/g) || []).length;
+	const setTextStyleCount = (code.match(/setTextStyleIdAsync\s*\(/g) || []).length;
+	const totalBindings = setBoundVariableCount + setBoundVariableForPaintCount + setTextStyleCount;
+	const isTokenBoundPrimitive = createFrameCount > 0 && totalBindings >= createFrameCount;
+
+	if (createFrameCount >= 3 && !hasInstanceCreation && !isTokenBoundPrimitive) {
 		warnings.push({
 			severity: "SEVERE",
 			category: "NO_INSTANCE_USAGE",
 			message:
 				`❌ DS BILESEN KULLANIMI EKSIK: ${createFrameCount} adet createFrame() cagrisi tespit edildi ama ` +
-				"hicbir component instance olusturulmamis (importComponentByKeyAsync / createInstance yok). " +
+				"hicbir component instance olusturulmamis (importComponentByKeyAsync / createInstance yok) " +
+				"VE token binding de yok (setBoundVariable / setTextStyleIdAsync). " +
 				"Design system bilesenleri varsa SIFIRDAN CIZME - once figma_search_assets ile mevcut DS " +
 				"bileseni ara, sonra figma_instantiate_component veya importComponentByKeyAsync kullan. " +
-				"Hesapkart, Button, NavigationTopBar, BottomNav, PillTabs gibi DS bilesenleri zaten library'de var.",
+				"Eger library components yoksa Rule 24 fallback chain: 24.1 REST API / 24.2 cache / " +
+				"24.3 token-bound primitives (her createFrame icin setBoundVariable + setTextStyleIdAsync).",
+		});
+	} else if (createFrameCount >= 3 && !hasInstanceCreation && isTokenBoundPrimitive) {
+		warnings.push({
+			severity: "ADVISORY",
+			category: "TOKEN_BOUND_PRIMITIVE_FALLBACK",
+			message:
+				`ℹ️ Token-bound primitive fallback (Rule 24.3) kullanildi: ${createFrameCount} frame, ` +
+				`${totalBindings} binding (setBoundVariable+setTextStyleIdAsync). ` +
+				"DS component library bos donduğunde bu mesru yol. Plugin post-execute scan " +
+				"unbound node'lari ayri denetler — bu uyari bilgi amacli.",
 		});
 	}
 

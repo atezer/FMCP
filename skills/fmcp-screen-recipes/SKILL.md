@@ -415,6 +415,29 @@ Her recipe = component listesi + yerleşim sırası + search keyword'leri + setP
    **setProperties:** `{ "Value": "Ödemeyi Tamamla" }`
 9. **Security Info** — `["text small", "caption"]`
 
+**🔀 Content Override (reference_benchmark varsa — v1.9.9+ G20):**
+
+`reference_benchmark` input dolu ise (görsel upload veya Figma node URL):
+
+1. `inspiration-intake` skill'i çağır. `structural_intent` JSON üret:
+   ```json
+   {
+     "sections": [
+       {"role": "amount", "text_hints": ["2.124,90 TL"]},
+       {"role": "segmented_tabs", "text_hints": ["Tek Çekim", "3 Taksit"]},
+       {"role": "method_card", "count": 2, "text_hints": [...]}
+     ]
+   }
+   ```
+
+2. Recipe 2 bileşen listesine override uygula (sadece **text + count**):
+   - Amount Display text → `sections[amount].text_hints[0]`
+   - Payment Method Cards `count` → `sections[method_card].count` (varsayılan 3, referansta 2 olabilir)
+   - Method Card text slot → `text_hints` map (örn. "Tek Çekim" / "3 Taksit")
+   - Security Info → referansta varsa extract, yoksa default
+
+**⚠️ Override sadece TEXT + COUNT.** Color/spacing/radius/font hep DS tokens'a bound kalır (K5 Token-Only Enforcement). Referansın hex değerleri, px piksel ölçüleri **KULLANILMAZ**.
+
 ### Recipe 3: Profile
 **Trigger:** profil, profile, hesap, account
 
@@ -534,6 +557,32 @@ card.layoutSizingHorizontal = "FILL";  // SONRA (Rule 11)
 | Execute timeout | Op sayısını azalt, böl |
 | Style import fail | Rule 23 try-catch, roleMap fallback |
 | 3× validate fail | Kullanıcıya generate-figma-screen öner |
+
+## Rule 24 — Component Fallback Chain (v1.9.9+)
+
+`figma_search_assets` library components boş dönerse (variables var ama component instance yok) sırayla şu yolu takip et:
+
+**24.1 — REST API enumerate:**
+- Response'ta `_restFallbackHint` varsa oku.
+- `FIGMA_REST_TOKEN` env var set ise: `figma_rest_api(endpoint="/v1/files/<LIBRARY_FILE_KEY>/components")` çağır.
+- Dönen `componentKey`'leri `importComponentByKeyAsync` ile kullan.
+
+**24.2 — Cache-populated keys (user-local):**
+- `~/.claude/data/fcm-ds/<file-key>/components.md` oku.
+- Yaygın rol → `componentKey` mapping varsa direkt `importComponentByKeyAsync`.
+- Cache yok/stale ise Step 3.1 Cache Populate (bkz. `generate-figma-screen`) otomatik tetikler.
+
+**24.3 — Token-bound primitive fallback (Rule 3 — MEŞRU):**
+- Yukarıdakiler fail ise: `createFrame` + her fill/padding/radius/textStyle için `setBoundVariable` / `setBoundVariableForPaint` / `setTextStyleIdAsync`.
+- Sayma kuralı: `totalBindings >= createFrameCount` → `code-warnings.ts` ADVISORY döner (BLOCKING değil).
+- Hardcoded renk/spacing/font **YASAK** — sadece bound primitives.
+
+**24.4 — Full stop:**
+- 24.1-24.3 hepsi fail ise kullanıcıya: "Library subscribe yok + REST token yok + cache boş. Manuel component sürüklemen gerek."
+
+**⚠️ `figma_search_assets` boş yanıt ≠ fallback yasağı.** Fallback chain Rule 3 (fmcp-screen-orchestrator) ile uyumlu ve server-level enforcement tarafından ADVISORY olarak kabul edilir.
+
+---
 
 ## Known Limitations
 

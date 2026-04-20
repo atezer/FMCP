@@ -62,6 +62,7 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
    | `figma.listAvailableFonts()` | `await figma.listAvailableFontsAsync()` |
    | `figma.loadFont(...)` | `await figma.loadFontAsync(...)` |
    | `figma.variables.getVariableCollectionById(id)` | `await figma.variables.getVariableCollectionByIdAsync(id)` |
+   | `figma.root.findAll()` / `page.findAll()` | **Önce** `await figma.loadAllPagesAsync()` (v2+ Plugin API gereksinimi). Tek sayfa traversal için `await figma.currentPage.loadAsync()` yeterli. `findAll` çağrıldığında page explicit yüklü değilse runtime error. |
 
 3. **`figma.notify()` çalışmaz** — kullanma.
 
@@ -104,6 +105,24 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
    await figma.loadFontAsync({ family: dsFontFamily, style: pickStyle("Medium", styles) });
    ```
    **FigJam:** `createShapeWithText()` varsayılan "Inter Medium". Metin düzenlemeden önce `await figma.loadFontAsync(shape.text.fontName)`.
+
+   **Rule 8b — Text Style + Font Ordering (v1.9.9+ ZORUNLU):**
+
+   Library text style uygularken MUTLAK SIRALAMA:
+   ```js
+   const style = await figma.importStyleByKeyAsync(textStyleKey);   // 1. import
+   await figma.loadFontAsync(style.fontName);                        // 2. font load
+   await textNode.setTextStyleIdAsync(style.id);                     // 3. style apply
+   ```
+
+   ❌ YANLIŞ: `setTextStyleIdAsync` önce, `loadFontAsync` sonra → runtime error ("font not loaded").
+   ❌ YANLIŞ: `loadFontAsync({family: "Inter"})` ama style'ın gerçek fontu farklı → silent mismatch, text render'ı beklenmedik.
+
+   Default font (Inter vb., text style olmadan):
+   ```js
+   await figma.loadFontAsync({ family: "Inter", style: "Regular" });  // ÖNCE
+   textNode.fontName = { family: "Inter", style: "Regular" };         // SONRA
+   ```
 
 9. **Sayfa konteksti her çağrıda sıfırlanır.** Farklı sayfa: `await figma.setCurrentPageAsync(page)`.
 

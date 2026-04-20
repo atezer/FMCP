@@ -32,9 +32,15 @@ required_inputs:
     required: true
   - name: reference_benchmark
     type: node_id_or_none
-    question: "Referans alınacak benchmark ekranı var mı? (Node ID veya Figma URL, yoksa 'yok')"
+    question: "Referans alınacak benchmark ekranı var mı? (Node ID, Figma URL veya upload görsel, yoksa 'yok')"
     required: false
-    affects: ["screen_type", "sections"]
+    affects: ["screen_type", "sections", "text_hints"]  # v1.9.9+ G20: text_hints ekle
+    # v1.9.9+ G20 OTONOM:
+    # Eğer dolu ise (upload görsel, Figma node URL veya node ID):
+    #   1. inspiration-intake skill'ini ÇAĞIR (otomatik, kullanıcıya sormadan)
+    #   2. structural_intent JSON al — {sections: [{role, text_hints, count}...]}
+    #   3. Recipe content override için Recipe'e geçir (bkz. fmcp-screen-recipes Recipe 2 §Content Override)
+    # Color/spacing/radius/font ASLA override edilmez — sadece text ve count override (K5 Token-Only Enforcement).
   - name: screen_type
     type: enum
     options:
@@ -191,6 +197,9 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 
 ### Step 2.4: DS-Contextual Defaults (ZORUNLU — v1.9.8+)
 
+**⚠️ MUTLAK — AskUserQuestion YASAK (v1.9.9+ K2+):**
+Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cevaplanmış sayılır**. Adım 5 smart skip'i bu üç input için **bypass** et; kullanıcıya device / preset / mode sorusu **SORMA**. `auto_resolved_reason` alanını log'a yaz (örn. "iOS mobile + payment → iPhone 17 defaulted from Step 2.4 table") ama soru olarak sunma. Sadece tabloda eşleşme YOKSA (fallback case) klasik Adım 5 sorusuna düş.
+
 **Amaç:** Kullanıcı aktif DS + screen_type belirttiğinde device / primary binding / font'u **otomatik çözerek** gereksiz soru sormayı önle.
 
 **Uygulama:** Prompt parse + `active-ds.md`'den `Library Name` oku, sonra aşağıdaki tabloyu çap:
@@ -230,6 +239,38 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 - F-MCP plugin bağlıysa **`figma_search_assets`** veya **`figma_get_library_variables`** kullan
 - Resmi Figma MCP'nin **`search_design_system`** tool'unu **ÇAĞIRMA** — "Resource links not supported" / "file could not be accessed" hatası verir
 - Detay: FMCP_INSTRUCTIONS → "TOOL SELECTION" bölümü
+
+#### Step 3.1 — Cache Populate (v1.9.9+ OTONOM — G19)
+
+Eğer user-local `~/.claude/data/fcm-ds/<file-key>/components.md` **yok veya stale** (>7 gün) VE `active-ds.md` Status: ✅ Aktif ise, Claude **kullanıcıya sormadan** aşağıdaki adımları otomatik çalıştırır:
+
+1. **Token populate:** `figma_get_library_variables()` çağır (tüm enabled library collection'ları için). Sonuçları `~/.claude/data/fcm-ds/<file-key>/tokens.md`'e yaz:
+   ```markdown
+   # Tokens (auto-populated YYYY-MM-DD)
+   | Name | Key | Type | Collection |
+   |---|---|---|---|
+   | spacing/100 | <variableKey> | FLOAT | Semantic Sizes |
+   | Global/primary/default | <variableKey> | COLOR | Semantic Colors |
+   ```
+
+2. **Component populate:** `figma_search_components(currentPageOnly=false, limit=500)` çağır. Library (remote=true) component'leri filtrele. `components.md`'e yaz:
+   ```markdown
+   # Components (auto-populated YYYY-MM-DD)
+   | Name | Key | Role | Source |
+   |---|---|---|---|
+   | Button | <componentKey> | primary_button | ❖ SUI |
+   | NavigationTopBar | <componentKey> | nav_top | ❖ SUI |
+   ```
+
+3. **Meta update:** `_meta.md` güncelle — `Son sync: YYYY-MM-DD`, `Durum: ✅ TAMAMLANDI (auto)`, `Sync yöntemi: Step 3.1 auto-populate`.
+
+4. **Exit:** Cache dolu → aşağıdaki ana Cache-First kuralı (var → kullan) devreye girer.
+
+**Neden otonom:** User-local dizin gitignored; Claude'un buraya yazması repo'ya etki etmez, sadece cache oluşur. Sonraki `/execute` sorguları cache-hit yapar → `importComponentByKeyAsync` direkt kullanılabilir (Rule 24.2 aktif).
+
+**Fail case:** `figma_get_library_variables` boş döner veya plugin erişemezse → `_restFallbackHint`'i logla, Rule 24 fallback chain'e (24.1 → 24.3) geç.
+
+
 
 **CACHE-FIRST KURALI (MUTLAK ZORUNLU - PRE-FLIGHT BLOCKER):**
 

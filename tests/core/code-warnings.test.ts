@@ -112,6 +112,42 @@ describe("analyzeCodeForWarnings — SEVERE: NO_INSTANCE_USAGE", () => {
 		const warnings = analyzeCodeForWarnings(code);
 		expect(hasCategory(warnings, "NO_INSTANCE_USAGE")).toBe(false);
 	});
+
+	// G17 (v1.9.9+): Token-bound primitive fallback — ADVISORY not SEVERE
+	it("downgrades to ADVISORY when createFrames are token-bound (Rule 24.3)", () => {
+		const code = `
+			const f1 = figma.createFrame();
+			figma.variables.setBoundVariableForPaint(f1.fills[0], 'color', v1);
+			figma.variables.setBoundVariable(f1, 'paddingTop', v2);
+			const f2 = figma.createFrame();
+			figma.variables.setBoundVariableForPaint(f2.fills[0], 'color', v3);
+			figma.variables.setBoundVariable(f2, 'itemSpacing', v4);
+			const f3 = figma.createFrame();
+			figma.variables.setBoundVariableForPaint(f3.fills[0], 'color', v5);
+			await t1.setTextStyleIdAsync(styleId);
+		`;
+		const warnings = analyzeCodeForWarnings(code);
+		// SEVERE NO_INSTANCE_USAGE should NOT fire
+		expect(hasCategory(warnings, "NO_INSTANCE_USAGE")).toBe(false);
+		// ADVISORY TOKEN_BOUND_PRIMITIVE_FALLBACK should fire instead
+		const advisory = findByCategory(warnings, "TOKEN_BOUND_PRIMITIVE_FALLBACK");
+		expect(advisory).toBeDefined();
+		expect(advisory?.severity).toBe("ADVISORY");
+	});
+
+	it("still flags SEVERE when createFrames have insufficient bindings", () => {
+		const code = `
+			const f1 = figma.createFrame();
+			const f2 = figma.createFrame();
+			const f3 = figma.createFrame();
+			figma.variables.setBoundVariableForPaint(f1.fills[0], 'color', v1);
+			// f2 and f3 have no bindings — fallback NOT meşru
+		`;
+		const warnings = analyzeCodeForWarnings(code);
+		const severe = findByCategory(warnings, "NO_INSTANCE_USAGE");
+		expect(severe).toBeDefined();
+		expect(severe?.severity).toBe("SEVERE");
+	});
 });
 
 describe("analyzeCodeForWarnings — SEVERE: HARDCODED_FONT_SIZE", () => {

@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-20T11:09:07.288Z
- * Total estimated tokens: 9873
+ * Generated: 2026-04-20T12:04:36.484Z
+ * Total estimated tokens: 9960
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2743 tokens) -->
 ---
@@ -307,7 +307,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2398 tokens) -->
+<!-- figma-canvas-ops (2485 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -372,6 +372,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
    | \`figma.listAvailableFonts()\` | \`await figma.listAvailableFontsAsync()\` |
    | \`figma.loadFont(...)\` | \`await figma.loadFontAsync(...)\` |
    | \`figma.variables.getVariableCollectionById(id)\` | \`await figma.variables.getVariableCollectionByIdAsync(id)\` |
+   | \`figma.root.findAll()\` / \`page.findAll()\` | **Önce** \`await figma.loadAllPagesAsync()\` (v2+ Plugin API gereksinimi). Tek sayfa traversal için \`await figma.currentPage.loadAsync()\` yeterli. \`findAll\` çağrıldığında page explicit yüklü değilse runtime error. |
 
 3. **\`figma.notify()\` çalışmaz** — kullanma.
 
@@ -414,6 +415,24 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
    await figma.loadFontAsync({ family: dsFontFamily, style: pickStyle("Medium", styles) });
    \`\`\`
    **FigJam:** \`createShapeWithText()\` varsayılan "Inter Medium". Metin düzenlemeden önce \`await figma.loadFontAsync(shape.text.fontName)\`.
+
+   **Rule 8b — Text Style + Font Ordering (v1.9.9+ ZORUNLU):**
+
+   Library text style uygularken MUTLAK SIRALAMA:
+   \`\`\`js
+   const style = await figma.importStyleByKeyAsync(textStyleKey);   // 1. import
+   await figma.loadFontAsync(style.fontName);                        // 2. font load
+   await textNode.setTextStyleIdAsync(style.id);                     // 3. style apply
+   \`\`\`
+
+   ❌ YANLIŞ: \`setTextStyleIdAsync\` önce, \`loadFontAsync\` sonra → runtime error ("font not loaded").
+   ❌ YANLIŞ: \`loadFontAsync({family: "Inter"})\` ama style'ın gerçek fontu farklı → silent mismatch, text render'ı beklenmedik.
+
+   Default font (Inter vb., text style olmadan):
+   \`\`\`js
+   await figma.loadFontAsync({ family: "Inter", style: "Regular" });  // ÖNCE
+   textNode.fontName = { family: "Inter", style: "Regular" };         // SONRA
+   \`\`\`
 
 9. **Sayfa konteksti her çağrıda sıfırlanır.** Farklı sayfa: \`await figma.setCurrentPageAsync(page)\`.
 
@@ -488,26 +507,6 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
 12. **Yeni node'ları (0,0)'dan uzağa konumlandır.** Boş alan bul.
 
 13. **Hata durumunda DUR.** Hata oku, düzelt, tekrar çalıştır. Atomik — hata olursa değişiklik uygulanmaz.
-
-14. **Tüm node ID'lerini RETURN ET:** \`return { createdNodeIds: [...] }\`
-
-15. **Variable scope'ları:** Arka plan: \`["FRAME_FILL"]\`, Metin: \`["TEXT_FILL"]\`, Boşluk: \`["GAP"]\`
-
-16. **Her Promise'i \`await\` et.**
-
-17. **v1.9.5 Concise Query Rule — tek satır boyut/metadata sorguları.**
-
-    Boyut, renk, layout sorgulamak için **20+ satır JS YAZMA**. Tek satır yeter:
-
-    \`\`\`js
-    // İYİ — tek satır, minimal context
-    return await figma.getNodeByIdAsync(id).then(n => ({ w: n.width, h: n.height, children: n.children?.length }));
-
-    // İYİ — toplu (birden fazla node)
-    return Promise.all(ids.map(async id => {
-      const n = await figma.getNodeByIdAsync(id);
-      return { id, name: n?.name, size: n ? [n.width, n.height] : null };
-    }));
 
 ---
 
@@ -831,7 +830,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9873;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9960;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T11:09:07.288Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T12:04:36.484Z";
 //# sourceMappingURL=embedded-skills.js.map
