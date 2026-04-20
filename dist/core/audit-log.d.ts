@@ -5,11 +5,13 @@
  */
 export interface AuditEntry {
     ts: string;
-    event: "tool" | "plugin_connect" | "plugin_disconnect" | "error";
+    event: "tool" | "plugin_connect" | "plugin_disconnect" | "error" | "cache_hit" | "cache_miss" | "cache_stale";
     method?: string;
     success?: boolean;
     error?: string;
     durationMs?: number;
+    libraryName?: string;
+    cacheRoot?: string;
 }
 /**
  * Log an audit entry. No-op if path not set or write fails.
@@ -23,6 +25,10 @@ export declare function auditTool(path: string | undefined, method: string, succ
  * Log plugin connection / disconnection.
  */
 export declare function auditPlugin(path: string | undefined, event: "plugin_connect" | "plugin_disconnect"): void;
+/**
+ * Log a DS cache hit/miss/stale event from the cache reader.
+ */
+export declare function auditCache(path: string | undefined, event: "cache_hit" | "cache_miss" | "cache_stale", method: string, libraryName?: string, cacheRoot?: string): void;
 /**
  * Flush and close the audit log stream. Call on graceful shutdown.
  */

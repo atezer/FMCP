@@ -28,7 +28,12 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { resolveDevice, DEVICE_PRESETS } from "./core/device-presets.js";
-import { closeAuditLog } from "./core/audit-log.js";
+import { closeAuditLog, auditCache } from "./core/audit-log.js";
+import {
+	resolveActiveDs as resolveActiveDsCache,
+	getLibraryComponents as getLibraryComponentsCache,
+	getLibraryTokens as getLibraryTokensCache,
+} from "./core/fmcp-cache-reader.js";
 import { FMCP_VERSION } from "./core/version.js";
 import { ResponseCache } from "./core/response-cache.js";
 import type {
@@ -2116,6 +2121,168 @@ export async function main() {
 				};
 			}
 		}
+	);
+
+	// ---- figma_resolve_active_ds (FMCP cache, server-side, no plugin needed) ----
+
+	server.registerTool(
+		"figma_resolve_active_ds",
+		{
+			description:
+				"Resolve the active design system from the FMCP user-local cache " +
+				"(~/.claude/data/fcm-ds/active.md) — server-side read, no Figma plugin or REST API call. " +
+				"Returns { libraryName, fileKey, cacheRoot, status: 'fresh'|'stale'|'missing', lastSync }. " +
+				"v3.1+ MANDATORY pre-flight before any DS discovery: a 'fresh' status means component & token keys " +
+				"are already cached (use figma_get_library_components / figma_get_library_tokens directly — do NOT scan other pages, " +
+				"do NOT ask the user for a library URL). 'stale' or 'missing' falls back to Rule 24.1+ (REST → plugin search → ask).",
+			inputSchema: {},
+			annotations: { readOnlyHint: true, destructiveHint: false },
+		},
+		safeToolHandler(async () => {
+			const ctx = await resolveActiveDsCache();
+			const event = ctx.status === "fresh"
+				? "cache_hit"
+				: ctx.status === "stale"
+					? "cache_stale"
+					: "cache_miss";
+			auditCache(auditLogPath, event, "figma_resolve_active_ds", ctx.libraryName ?? undefined, ctx.cacheRoot ?? undefined);
+			return {
+				content: [{
+					type: "text" as const,
+					text: JSON.stringify({ success: true, ...ctx }),
+				}],
+			};
+		})
+	);
+
+	// ---- figma_get_library_components (FMCP cache, server-side) ----
+
+	server.registerTool(
+		"figma_get_library_components",
+		{
+			description:
+				"Return library componentKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/components.md). " +
+				"Server-side read — no plugin or REST call. Use the returned key with figma.importComponentByKeyAsync(key) " +
+				"in figma_execute (cross-file: works in any target file as long as the library is enabled). " +
+				"v3.1+: PRIMARY component discovery path. Cache miss → response carries _restFallbackHint, then drop to Rule 24.1 (REST API).",
+			inputSchema: {
+				libraryName: z.string().describe("Library name as written in active.md (e.g. '❖ SUI')"),
+				filter: z.string().optional().describe("Substring filter on component name (case-insensitive)"),
+			},
+			annotations: { readOnlyHint: true, destructiveHint: false },
+		},
+		safeToolHandler(async ({ libraryName, filter }: { libraryName: string; filter?: string }) => {
+			const ctx = await resolveActiveDsCache();
+			if (ctx.status === "missing" || !ctx.cacheRoot) {
+				auditCache(auditLogPath, "cache_miss", "figma_get_library_components", libraryName);
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: false,
+							error: "FMCP cache missing",
+							_restFallbackHint:
+								"No FMCP cache found. Fall back to Rule 24.1: figma_rest_api GET /v1/files/<LIBRARY_FILE_KEY>/components " +
+								"(requires FIGMA_REST_TOKEN + library file-key).",
+							ctx,
+						}),
+					}],
+				};
+			}
+			if (ctx.libraryName !== libraryName) {
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: false,
+							error: `Active library '${ctx.libraryName ?? "<none>"}' != requested '${libraryName}'`,
+							_warnings: ["LIBRARY_MISMATCH"],
+							activeLibrary: ctx.libraryName,
+						}),
+					}],
+				};
+			}
+			const items = await getLibraryComponentsCache(libraryName, filter);
+			auditCache(auditLogPath, ctx.status === "fresh" ? "cache_hit" : "cache_stale", "figma_get_library_components", libraryName, ctx.cacheRoot);
+			return {
+				content: [{
+					type: "text" as const,
+					text: JSON.stringify({
+						success: true,
+						items,
+						_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
+						...(ctx.status === "stale" && {
+							_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
+						}),
+					}),
+				}],
+			};
+		})
+	);
+
+	// ---- figma_get_library_tokens (FMCP cache, server-side) ----
+
+	server.registerTool(
+		"figma_get_library_tokens",
+		{
+			description:
+				"Return library variableKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/tokens.md). " +
+				"Server-side read — no plugin or REST call. Use the returned key with figma.variables.importVariableByKeyAsync(key) " +
+				"in figma_execute (cross-file). Items carry { name, key, type: 'spacing'|'radius'|'color'|'typography'|'other', collection }. " +
+				"v3.1+: PRIMARY token discovery path. Cache miss → _restFallbackHint, fall back to figma_get_library_variables (plugin) or REST.",
+			inputSchema: {
+				libraryName: z.string().describe("Library name as written in active.md (e.g. '❖ SUI')"),
+				filter: z.string().optional().describe("Substring filter on token name (case-insensitive)"),
+			},
+			annotations: { readOnlyHint: true, destructiveHint: false },
+		},
+		safeToolHandler(async ({ libraryName, filter }: { libraryName: string; filter?: string }) => {
+			const ctx = await resolveActiveDsCache();
+			if (ctx.status === "missing" || !ctx.cacheRoot) {
+				auditCache(auditLogPath, "cache_miss", "figma_get_library_tokens", libraryName);
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: false,
+							error: "FMCP cache missing",
+							_restFallbackHint:
+								"No FMCP cache found. Fall back to figma_get_library_variables (plugin teamLibrary API) " +
+								"or figma_rest_api GET /v1/files/<LIBRARY_FILE_KEY>/variables/local.",
+							ctx,
+						}),
+					}],
+				};
+			}
+			if (ctx.libraryName !== libraryName) {
+				return {
+					content: [{
+						type: "text" as const,
+						text: JSON.stringify({
+							success: false,
+							error: `Active library '${ctx.libraryName ?? "<none>"}' != requested '${libraryName}'`,
+							_warnings: ["LIBRARY_MISMATCH"],
+							activeLibrary: ctx.libraryName,
+						}),
+					}],
+				};
+			}
+			const items = await getLibraryTokensCache(libraryName, filter);
+			auditCache(auditLogPath, ctx.status === "fresh" ? "cache_hit" : "cache_stale", "figma_get_library_tokens", libraryName, ctx.cacheRoot);
+			return {
+				content: [{
+					type: "text" as const,
+					text: JSON.stringify({
+						success: true,
+						items,
+						_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
+						...(ctx.status === "stale" && {
+							_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
+						}),
+					}),
+				}],
+			};
+		})
 	);
 
 	// ---- figma_search_assets (team library search via plugin) ----
