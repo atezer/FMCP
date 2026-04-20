@@ -42,7 +42,7 @@ SUI'de en sık karşılaşılan component **isimleri** (Figma'daki generic adlan
 - `.AppBar Item` — top bar içindeki icon button slot
 - `iOS & Android Status Bars` — status bar (edge-to-edge, en üst)
 - `iOS Bars / Home Indicator / iPhone / Light - Portrait` — home indicator (edge-to-edge, en alt)
-- `Sahibinden Appbar` — (kardeş ürün, SUI ekranda kullanma)
+- `Brand Appbar` — (kardeş ürün; SUI ekranlarında kullanma)
 
 ### Buttons & Actions
 - `Button` — primary action (en sık kullanılan component)

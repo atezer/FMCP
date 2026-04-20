@@ -253,7 +253,7 @@ Forgot Password:
 
 **Öncelik:** P0 — Prototipsiz tasarım eksik bir tasarımdır. Stakeholder review, kullanıcı testi ve geliştirici handoff için prototip zorunlu.
 
-**Durum (v1.9.10):** ✅ TAMAMLANDI — 5 tool + 1 skill + 5 skill güncellemesi. İlk canlı test (KsERiwGveHKi0nTNh6oLIZ) 5/6 bağlantı başarılı. v1.9.10 patch ile matchLayers + overlay readonly bug'ları düzeltildi. Bkz: CHANGELOG [1.9.9], [1.9.10].
+**Durum (v1.9.10):** ✅ TAMAMLANDI — 5 tool + 1 skill + 5 skill güncellemesi. İlk canlı test (<TEST_FILE_KEY>) 5/6 bağlantı başarılı. v1.9.10 patch ile matchLayers + overlay readonly bug'ları düzeltildi. Bkz: CHANGELOG [1.9.9], [1.9.10].
 
 ---
 

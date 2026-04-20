@@ -9,6 +9,47 @@ export const FMCP_INSTRUCTIONS = `F-MCP ATezer Bridge — Plugin-based Figma MCP
 Tool namespace: "figma_*". Server name: "figma-mcp-bridge".
 
 ═══════════════════════════════════════════════════════════════════
+🚨 CACHE-FIRST PRE-FLIGHT (v1.9.8+ MUTLAK — EN ÖNEMLİ KURAL)
+═══════════════════════════════════════════════════════════════════
+
+BEFORE calling ANY figma_* READ tool (figma_get_design_system_summary,
+figma_get_library_variables, figma_search_assets, figma_search_components,
+figma_get_variables, figma_get_styles, figma_get_file_data, figma_get_component,
+figma_get_design_context), Claude MUST follow this order:
+
+Step A — Read local DS state FIRST:
+  1. .claude/design-systems/active-ds.md → Library Name (DS identity)
+  2. .claude/design-systems/<ds-slug>/tokens.md (public pattern cache)
+  3. .claude/design-systems/<ds-slug>/components.md (public pattern cache)
+  4. ~/.claude/data/fcm-ds/active.md → real file-keys (user-local)
+  5. ~/.claude/data/fcm-ds/<file-key>/{tokens,components,_meta}.md (real keys)
+
+Step B — If cache answers the question, DO NOT call figma_* API:
+  • User says "SUI tasarım sistemi kullan" → read active-ds.md + sui/ cache
+    → announce DS context to user, DO NOT call figma_get_design_system_summary
+    on an empty file just to "check DS"
+  • Token/component list needed? Read cache first; API only if cache missing
+    or _meta.md says stale (>7 days)
+
+Step C — Only if cache missing/stale, call figma_* API AND populate cache:
+  • Call figma_get_library_variables / figma_search_assets
+  • Write results to ~/.claude/data/fcm-ds/<file-key>/ (never to repo)
+
+FORBIDDEN WITHOUT CACHE CHECK:
+  ❌ figma_get_design_system_summary just to "see if DS exists" — read active-ds.md first
+  ❌ figma_search_assets before reading cache components.md
+  ❌ figma_get_library_variables before reading cache tokens.md
+  ❌ Asking user "is SUI a team library or iOS style?" when active-ds.md says ❖ SUI
+
+ONLY pre-flight-exempt tools:
+  ✅ figma_get_status() — plugin connectivity check, DS-independent
+
+Rationale: Claude Desktop test logs show Claude calling figma_get_design_system_summary
+on empty target files without reading .claude/design-systems/active-ds.md first.
+This wastes tokens, confuses the user, and breaks the DS Gate protocol. Cache-first
+is MANDATORY — not optional.
+
+═══════════════════════════════════════════════════════════════════
 INTENT ROUTER ENTRY (ALWAYS FIRST — v1.8.1+)
 ═══════════════════════════════════════════════════════════════════
 

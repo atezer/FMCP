@@ -95,6 +95,28 @@ bash scripts/cleanup-ports.sh
 
 ---
 
+## Kendi Tasarım Sisteminizi Ekleyin (Bring Your Own DS)
+
+F-MCP **DS-agnostic** çalışır — herhangi bir Figma team library'yi (Material, Apple HIG, Tailwind UI, kurumsal kendi DS'iniz vb.) ekleyip kullanabilirsiniz. SUI bu repo'da **örnek/referans** bir DS'tir; gerçek key/token değerleri sizde tutulmaz.
+
+**İki yoldan birini seçin:**
+
+| Komut | Ne zaman? |
+|---|---|
+| `/add-library` | Yeni bir DS kurarken (ana + mobil + ikon + asset Figma dosyalarını tek seferde ekler, cache oluşturur) |
+| `/ds-add <Figma-URL>` | Hızlı ekleme — file-key otomatik parse edilir, varolan DS ile çakışma/fuzzy isim eşleşmesi kontrol edilir |
+| `/ds-sync <ds-name>` | Mevcut DS cache'ini Figma'dan güncelle (resume destekli, kısmi sync) |
+
+**Claude Desktop'ta:** Slash command'lar tetiklenmez ([Desktop sınırlamaları](#claude-desktop-sınırlamaları)). Bu komutların içeriğini prompt'a yapıştırın; Claude skill instruction'larını adım adım uygular. Veya doğal dil kullanın: *"Kütüphane ekle"*, *"SUI'yi güncelle"*.
+
+**Gizlilik:** Eklediğiniz DS'in gerçek `file-key`, `variableKey`, `componentKey` değerleri **repo'ya yazılmaz** — hepsi `~/.claude/data/fcm-ds/<file-key>/` user-local cache'tedir ([DS Cache User-Local Kuralı](.claude/design-systems/README.md)). Repo'daki `.claude/design-systems/<ds-name>/` dizini sadece public pattern + component isimlerini içerir; git-safe.
+
+**Multi-library DS:** SUI gibi birden fazla Figma dosyasından oluşan DS'ler desteklenir. `/add-library` ile ana + mobil + ikon + asset URL'lerini ayrı ayrı verebilirsiniz; `active-ds.md` Secondary Libraries tablosunda yönetilir.
+
+**Doğrulama:** `/ds-validate <ds-name>` ile cache tutarlılığını denetleyin (v1.9.8+).
+
+---
+
 ## Neler yapabilirsiniz?
 
 AI ile Figma arasında **çift yönlü** çalışırsınız:

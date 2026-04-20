@@ -91,8 +91,9 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
 
    **8a-1) Font weight check (ZORUNLU):** `loadFontAsync` öncesi `listAvailableFontsAsync` ile kontrol et. Fallback helper:
    ```js
+   const dsFontFamily = activeDS.fontFamily; // active-ds.md veya cache'ten dinamik oku — hardcoded font ismi YASAK
    const allFonts = await figma.listAvailableFontsAsync();
-   const styles = allFonts.filter(f => f.fontName.family === "SHBGrotesk").map(f => f.fontName.style);
+   const styles = allFonts.filter(f => f.fontName.family === dsFontFamily).map(f => f.fontName.style);
    function pickStyle(desired, available) {
      if (available.indexOf(desired) >= 0) return desired;
      var fb = { "Medium":["Semi Bold","Regular"], "ExtraBold":["Bold"], "Black":["Bold"], "Thin":["Light","Regular"] };
@@ -100,7 +101,7 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
      for (var i = 0; i < alts.length; i++) { if (available.indexOf(alts[i]) >= 0) return alts[i]; }
      return available.find(s => s.indexOf("Italic") < 0) || available[0];
    }
-   await figma.loadFontAsync({ family: "SHBGrotesk", style: pickStyle("Medium", styles) });
+   await figma.loadFontAsync({ family: dsFontFamily, style: pickStyle("Medium", styles) });
    ```
    **FigJam:** `createShapeWithText()` varsayılan "Inter Medium". Metin düzenlemeden önce `await figma.loadFontAsync(shape.text.fontName)`.
 

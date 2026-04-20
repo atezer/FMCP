@@ -7,11 +7,11 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-19T20:04:22.083Z
- * Total estimated tokens: 9399
+ * Generated: 2026-04-20T11:09:07.288Z
+ * Total estimated tokens: 9873
  */
 
-export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2622 tokens) -->
+export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (2743 tokens) -->
 ---
 name: fmcp-intent-router
 description: F-MCP ile ilgili herhangi bir kullanıcı talebinin ilk giriş noktası. Kullanıcının niyetini analiz eder, hangi hedef SKILL'in çalıştırılacağına karar verir, o SKILL için gereken eksik input'ları tek turda toplar, özet+onay alır ve ondan sonra hedef SKILL'i çalıştırır. "figma", "ekran oluştur", "tasarım yap", "component üret", "DS denetle", "token sync", "kod üret", "design system" gibi her F-MCP-tetiklemesiyle aktive olur. Claude hiçbir figma_* yazma tool'u çalıştırmadan ÖNCE bu protokolü uygulamak zorundadır.
@@ -51,14 +51,14 @@ Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 9 adım�
 3. \`Status:\` alanını kontrol et:
    - **\`✅ Aktif\`** → DS net, Blank File Sub-Check'e geç (madde 5)
    - **\`❌ Henüz seçilmedi\`** VEYA dosya yok → kullanıcıya DS sorusu sor (madde 4)
-4. **DS Sorusu (klasik):** "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz? (SUI / Material / kendi library)"
+4. **DS Sorusu (klasik):** "Aktif bir design system belirlenmemiş. Hangi DS ile ilerlemek istersiniz? (örn. Material / Apple HIG / Tailwind UI / kendi library'niz)"
 
 5. **BLANK FILE SUB-CHECK (v1.9.7, ZORUNLU):** \`figma_get_design_system_summary\` çağır.
    - \`components === 0 && componentSets === 0 && variableCollections.length === 0\` ise **BOŞ DOSYA** tespit edildi.
    - \`_nextStep: "BLANK_FILE_DIALOG_REQUIRED"\` response'ta görünüyorsa, **kullanıcıya 4 seçenek sun** (AskUserQuestion tek call, 4 option):
      \`\`\`
      Q: "Bu dosyada henüz Design System yok. Nasıl ilerleyelim?"
-     (a) Team library import — "Hangi library? SUI, Material 3, iOS HIG, veya kendi library'niz?"
+     (a) Team library import — "Hangi library? Örn. Material 3, iOS HIG, Tailwind UI, veya kendi library'niz"
      (b) Mini DS kur otomatik — figma_create_mini_ds tool'u çağrılır (12 color + 8 sizing + 3 text style + Button/Input/Card)
      (c) Referans DS kopyala — "Material 3 template / iOS HIG template"
      (d) DS'siz ilerle — linter tolerant mode, hardcoded değerler kabul (explicit acceptance)
@@ -67,7 +67,12 @@ Kullanıcı F-MCP ile ilgili herhangi bir talep yaptığında Claude bu 9 adım�
    - Kullanıcı "(b)" derse Claude \`figma_create_mini_ds({ primaryColor, fontFamily, name })\` tek tool çağrısı yapar, sonra ekran üretimine geçer.
    - Kullanıcı "(a)" derse Claude \`figma_get_library_variables(libraryName)\` ile listeleme yapar, seçenek sunar.
 
-6. Seçim sonrası \`active-ds.md\`'yi güncelle (\`Status: ✅ Aktif\`, \`Library Name: <isim>\`), sonra Adım 1'e geç.
+6. Seçim sonrası \`active-ds.md\`'yi güncelle (\`Status: ✅ Aktif\`, \`Primary Library: <isim>\`), sonra Adım 1'e geç.
+
+7. **Multi-Library Parse (v1.9.8+):** \`active-ds.md\`'de **"Secondary Libraries"** bölümü varsa parse et:
+   - Tabloda 1+ satır varsa, her library için \`~/.claude/data/fcm-ds/<file-key>/\` dizinini listele (cache mevcut mu kontrol).
+   - Eksik cache varsa kullanıcıya bildir: "Secondary library \`<X>\` için cache yok — \`/ds-sync <X>\` veya \`/add-library\` ile populate edin."
+   - User-local \`~/.claude/data/fcm-ds/active.md\` v2 multi-library schema'sı (Primary + Secondary liste) destekleniyor — eski single-key format da geriye uyumlu.
 
 **Neden bu kadar katı:**
 - DS belirsizken \`figma_search_assets\`, \`figma_get_file_data\`, \`figma_get_library_variables\` çağırmak = kullanıcının istemediği library'leri enumere etmek = **token israfı + UX bozulması**
@@ -207,11 +212,6 @@ required_inputs:
     question: "Referans benchmark node var mı?"
     required: false
     affects: ["screen_type", "sections"]  # verilirse bunlar atlanır
-  - name: screen_type
-    type: enum
-    ...
-    skip_if: "reference_benchmark != none"
-\`\`\`
 
 ---
 
@@ -308,7 +308,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2369 tokens) -->
+<!-- figma-canvas-ops (2398 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -402,8 +402,9 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
 
    **8a-1) Font weight check (ZORUNLU):** \`loadFontAsync\` öncesi \`listAvailableFontsAsync\` ile kontrol et. Fallback helper:
    \`\`\`js
+   const dsFontFamily = activeDS.fontFamily; // active-ds.md veya cache'ten dinamik oku — hardcoded font ismi YASAK
    const allFonts = await figma.listAvailableFontsAsync();
-   const styles = allFonts.filter(f => f.fontName.family === "SHBGrotesk").map(f => f.fontName.style);
+   const styles = allFonts.filter(f => f.fontName.family === dsFontFamily).map(f => f.fontName.style);
    function pickStyle(desired, available) {
      if (available.indexOf(desired) >= 0) return desired;
      var fb = { "Medium":["Semi Bold","Regular"], "ExtraBold":["Bold"], "Black":["Bold"], "Thin":["Light","Regular"] };
@@ -411,7 +412,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
      for (var i = 0; i < alts.length; i++) { if (available.indexOf(alts[i]) >= 0) return alts[i]; }
      return available.find(s => s.indexOf("Italic") < 0) || available[0];
    }
-   await figma.loadFontAsync({ family: "SHBGrotesk", style: pickStyle("Medium", styles) });
+   await figma.loadFontAsync({ family: dsFontFamily, style: pickStyle("Medium", styles) });
    \`\`\`
    **FigJam:** \`createShapeWithText()\` varsayılan "Inter Medium". Metin düzenlemeden önce \`await figma.loadFontAsync(shape.text.fontName)\`.
 
@@ -511,7 +512,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
 
 ---
 
-<!-- fmcp-screen-recipes (2092 tokens) -->
+<!-- fmcp-screen-recipes (2124 tokens) -->
 ---
 name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için 5 mega-adımlı recipe. Max 15 op/execute, cache-first discovery, her adımda Türkçe micro-report.
@@ -611,9 +612,9 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce \`.claude/design-systems/sui/tokens.md\` oku. Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ SUI\` → \`sui\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
-Token name matching: SUI nested path formatı (\`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
+Token name matching: DS nested path formatı (örn. \`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
 \`\`\`js
 vars.find(v => v.name.endsWith("/" + suffix) || v.name === suffix)
 \`\`\`
@@ -715,7 +716,7 @@ Ana frame: device preset boyutu, auto-layout VERTICAL, padding=0, gap=0, backgro
 
 ---
 
-<!-- fmcp-project-rules (1370 tokens) -->
+<!-- fmcp-project-rules (1662 tokens) -->
 ---
 name: fmcp-project-rules
 description: F-MCP Bridge kullanım kuralları — Design Token Kuralı, Bağlı Token Kuralı, kütüphane yönetimi, otomatik yanıt kuralları. Tüm F-MCP skill'leri için geçerli temel kurallar. Her Figma işleminde bu kurallar otomatik olarak geçerlidir.
@@ -749,6 +750,24 @@ Kullanıcıya ASLA terminal komutu söyleme, teknik adım açıklama. Her şeyi 
 
 ### Dil
 Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, ğ, ö, ü, ı, İ) doğru kullanılmalı.
+
+---
+
+## Token-Only Enforcement (v1.9.8+ MUTLAK)
+
+**Kullanıcıya soru/seçenek sunarken** (AskUserQuestion options, plan summary, onay metni, fallback dialog):
+
+- ❌ **YASAK:** ham hex değer (\`#195e90\`, \`#FFFFFF\`), ham px (\`375px\`, \`390px\`), ham pt, ham rem, ham RGB
+- ✅ **ZORUNLU:** token adı (\`<DS>/primary/default\`, \`<DS>/spacing/150\`, \`<DS>/text/body/M\`)
+- ✅ **ZORUNLU:** device preset adı (\`iPhone 17 (402×874)\`, \`Pixel 8 Pro (412×917)\`, \`iPad Pro 11 (834×1194)\`)
+
+**Self-check (ZORUNLU):** \`AskUserQuestion\` çağırmadan önce soru metnini ve tüm option text'lerini kontrol et:
+- Regex match: \`/#[0-9a-f]{3,8}\\b/i\` → **VARSA:** soru kuralı ihlali, hex'i \`<DS>/...\` token adıyla değiştir ve yeniden formüle et
+- Regex match: \`/\\b\\d{2,4}\\s*px\\b/i\` → **VARSA:** px yerine device preset adı veya \`<DS>/spacing/...\` kullan
+
+**Gerekçe:** Kullanıcı hex/px görmemeli — token adı DS-agnostic, DS değiştiğinde soru otomatik doğru kalır. Hex sunmak "Option A vs B" gibi sahte alternatifler üretir ve kullanıcıyı DS dışına çıkarır.
+
+**Tek istisna:** Kullanıcı açıkça "hex değeri göster" isterse debug/troubleshooting bağlamında gösterilebilir, ama UI seçim option'ı olarak DEĞİL.
 
 ---
 
@@ -814,6 +833,6 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9399;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 9873;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-19T20:04:22.083Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T11:09:07.288Z";

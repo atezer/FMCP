@@ -982,7 +982,7 @@ export async function main() {
     }));
     // ---- Design system summary (minimal tokens) ----
     server.registerTool("figma_get_design_system_summary", {
-        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file.",
+        description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file. PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read .claude/design-systems/active-ds.md + ~/.claude/data/fcm-ds/active.md first. If DS identity is already known from state, DO NOT call this tool on an empty target file just to 'check DS existence' — use the cache.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),
@@ -1628,7 +1628,7 @@ export async function main() {
     });
     server.registerTool("figma_create_text", {
         description: "Create a new text node on the current page. Returns the created node ID. " +
-            "IMPORTANT: fontFamily defaults to 'Inter' — if using a design system (e.g. SUI uses SHBGrotesk), specify the DS font. " +
+            "IMPORTANT: fontFamily defaults to 'Inter' — if using a design system with a custom font (e.g. 'YourBrandFont'), specify the DS font from active-ds.md. " +
             "For DS text with proper token binding, prefer figma_execute with importStyleByKeyAsync + setTextStyleIdAsync instead.",
         inputSchema: {
             text: z.string().describe("Text content"),
@@ -1636,7 +1636,7 @@ export async function main() {
             y: z.number().optional().default(0),
             name: z.string().optional().describe("Node name (default: text content)"),
             fontSize: z.number().optional().default(16),
-            fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font if using a design system (e.g. SHBGrotesk for SUI)."),
+            fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font from active-ds.md if using a design system."),
             fontStyle: z.string().optional().default("Regular"),
             fillColor: z.string().optional().describe("Text color hex e.g. '#000000'"),
             parentId: z.string().optional().describe("Parent node ID"),
@@ -1790,6 +1790,7 @@ export async function main() {
             "(2) file-local COMPONENTS / COMPONENT_SETS, and " +
             "(3) v1.8.0+: REMOTE LIBRARY COMPONENTS discovered by scanning existing INSTANCE nodes (returned as 'libraryComponents'). " +
             "For library components to appear, at least one DS instance must exist in the file — place one manually first if empty. " +
+            "v1.9.8+: When instance scan returns empty, response includes '_restFallbackHint' suggesting figma_rest_api('/v1/files/<LIBRARY_FILE_KEY>/components') as a REST fallback to enumerate library components directly (requires FIGMA_REST_TOKEN env var + library file-key from active.md). " +
             "Pass currentPageOnly=false to scan all pages for instance discovery. " +
             "Use the returned componentKey with figma_instantiate_component to place new instances. " +
             "Pass assetTypes to filter: ['variables'], ['components'], or both (default).",
@@ -1883,7 +1884,8 @@ export async function main() {
         description: "List variables from team library collections with import keys. " +
             "Uses figma.teamLibrary API — works in the TARGET file, no need to connect the DS source file. " +
             "Returns variable name, key (for importVariableByKeyAsync), resolvedType, collection, and library name. " +
-            "Use the returned keys with figma_bind_variable or figma.variables.importVariableByKeyAsync() in figma_execute.",
+            "Use the returned keys with figma_bind_variable or figma.variables.importVariableByKeyAsync() in figma_execute. " +
+            "PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read ~/.claude/data/fcm-ds/<file-key>/tokens.md cache first. If cache exists and <7 days old (per _meta.md), use cache directly — only call this tool on cache miss or stale.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
             fileKey: z.string().optional().describe("Target a specific connected file."),

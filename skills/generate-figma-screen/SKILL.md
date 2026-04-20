@@ -22,11 +22,13 @@ required_inputs:
       - "Custom (width×height ver)"
     question: "Hangi device boyutunda olsun?"
     required: true
+    default: "iPhone 17 (402×874)"
     default_source: ".claude/design-systems/last-intent.md#device"
+    skip_if: "prompt_contains('iOS') OR prompt_contains('iPhone') OR prompt_contains('mobil') OR reference_benchmark != none"
   - name: design_system
     type: from_state
     source: ".claude/design-systems/active-ds.md#Library Name"
-    fallback_question: "Hangi tasarım sistemi kullanılsın? (❖ SUI / Material / Apple HIG / Custom)"
+    fallback_question: "Hangi tasarım sistemi kullanılsın? (örn. Material / Apple HIG / Tailwind / kendi DS'iniz)"
     required: true
   - name: reference_benchmark
     type: node_id_or_none
@@ -186,6 +188,39 @@ Proje kökünde `.fmcp-brand-profile.json` varsa:
 - Display font: başlıklar, hero text, sayfa title
 - Body font: paragraflar, açıklamalar, form etiketleri
 - Font çifti kararını raporda belirt (neden bu çift?)
+
+### Step 2.4: DS-Contextual Defaults (ZORUNLU — v1.9.8+)
+
+**Amaç:** Kullanıcı aktif DS + screen_type belirttiğinde device / primary binding / font'u **otomatik çözerek** gereksiz soru sormayı önle.
+
+**Uygulama:** Prompt parse + `active-ds.md`'den `Library Name` oku, sonra aşağıdaki tabloyu çap:
+
+| platform keyword (prompt'tan) | screen_type keyword | device default | primary binding pattern | font pattern |
+|---|---|---|---|---|
+| iOS / iPhone / mobil | payment / ödeme / checkout | iPhone 17 (402×874) | `<DS>/primary/default` | `<DS>/text/body/M` |
+| iOS / iPhone / mobil | login / giriş | iPhone 17 (402×874) | `<DS>/primary/default` | `<DS>/text/body/M` |
+| iOS / iPhone / mobil | home / anasayfa / dashboard | iPhone 17 (402×874) | `<DS>/primary/default` | `<DS>/text/heading/L` |
+| iOS / iPhone / mobil | list / liste / arama | iPhone 17 (402×874) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
+| iOS / iPhone / mobil | detail / detay / profile / profil | iPhone 17 (402×874) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
+| iOS / iPhone / mobil | form / veri girişi | iPhone 17 (402×874) | `<DS>/primary/default` | `<DS>/text/body/M` |
+| iOS / iPhone / mobil | onboarding / empty state / error | iPhone 17 (402×874) | `<DS>/primary/default` | `<DS>/text/body/M` |
+| Android / Pixel / Galaxy | payment / login / form | Android Compact (412×917) | `<DS>/primary/default` | `<DS>/text/body/M` |
+| Android / Pixel / Galaxy | home / list / detail | Android Compact (412×917) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
+| tablet / iPad | dashboard / list / detail | iPad Pro 11 (834×1194) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
+| desktop / web / (platform yok) | dashboard / list | Desktop (1440×1024) | `<DS>/primary/default` | `<DS>/text/body/M` |
+
+**`<DS>` =** `active-ds.md`'deki `Library Name` slug'ı (örn. `❖ SUI` → `sui`, `Material` → `material`). Token isimleri DS convention'una göre değişebilir — eşleşme yoksa DS cache'inden (`.claude/design-systems/<DS>/tokens.md`) benzer token ara.
+
+**Algoritma:**
+1. User prompt'undan platform keyword parse et (iOS/iPhone/mobil/Android/Pixel/tablet/iPad/desktop/web).
+2. Prompt'tan screen_type keyword parse et (payment/login/home/list/detail/form/dashboard/onboarding).
+3. Tablodan `(platform, screen_type)` kombinasyonunu çap → `device`, `primary_binding`, `font_pattern` al.
+4. active-ds.md cache'inden `<DS>/primary/default` gerçek `variableKey`'ini çöz (Step 3 cache-first ile).
+5. **Kullanıcıya sorma** — Adım 6 summary'ye doğrudan bu değerleri yaz.
+
+**Fallback:** Tabloda eşleşme yoksa (örn. custom platform + custom screen_type): v1.9.5 "Sen seç" kuralı devreye girer → iPhone 17 + `<DS>/primary/default` default.
+
+**Neden ZORUNLU:** Önceki testlerde "SUI iOS ödeme sayfası" prompt'una device sorusu gereksiz yere soruldu. Bu tablo ile otonomi kırılma noktası #3 kapatılır.
 
 ### Step 3: Design System Keşfi (Cache-First Stratejisi)
 

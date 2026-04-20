@@ -25,7 +25,7 @@ required_inputs:
   - name: design_system
     type: from_state
     source: ".claude/design-systems/active-ds.md#Library Name"
-    fallback_question: "Hangi DS'ye göre denet? (❖ SUI / Material / Custom)"
+    fallback_question: "Hangi DS'ye göre denet? (örn. Material / Apple HIG / Tailwind / kendi DS'iniz)"
     required: true
   - name: severity_threshold
     type: enum
