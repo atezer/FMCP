@@ -7,11 +7,13 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
   <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.11"><img src="https://img.shields.io/badge/sürüm-v1.9.11-success" alt="version"></a>
-  <img src="https://img.shields.io/badge/araç-54-blue" alt="54 tools">
+  <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
   <img src="https://img.shields.io/badge/skill-26-blue" alt="26 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
+> **Yeni — v3.1 Server Cache Resolver (Unreleased):** 3 yeni MCP tool — DS cache okuma server tarafında. Claude Desktop'ta `~/.claude/data/fcm-ds/` filesystem izni gerekmiyor; cache hit'te ödeme/login ekranı **≤6 tool call** ile teslim. Detay: [CHANGELOG](CHANGELOG.md#unreleased--v31-server-cache-resolver).
+>
 > **Son sürüm — v1.9.11 (19 Nisan 2026):** Figma Prototype Connections + Animations. 5 yeni araç (`figma_create_prototype_connection`, `figma_get_prototype_connections`, `figma_set_flow_starting_point`, `figma_create_interaction`, `figma_set_scroll_behavior`) + `figma-prototype-flow` skill. AI artık ekranlarınız arasında otomatik navigasyon, animasyon ve flow starting point oluşturabiliyor. Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.11) · [Skill](skills/figma-prototype-flow/SKILL.md)
 
 Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
