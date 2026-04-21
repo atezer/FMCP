@@ -1813,10 +1813,9 @@ export async function main() {
     }));
     // ---- figma_get_library_components (FMCP cache, server-side) ----
     server.registerTool("figma_get_library_components", {
-        description: "Return library componentKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/components.md). " +
-            "Server-side read — no plugin or REST call. Use the returned key with figma.importComponentByKeyAsync(key) " +
-            "in figma_execute (cross-file: works in any target file as long as the library is enabled). " +
-            "v3.1+: PRIMARY component discovery path. Cache miss → response carries _restFallbackHint, then drop to Rule 24.1 (REST API).",
+        description: "[DEPRECATED v3.2+] Cache-based component lookup. Use figma_enumerate_library_components (live) instead. " +
+            "Return library componentKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/components.md). " +
+            "Only useful for offline / pre-populated scenarios. Cache goes stale as Figma updates — live enumeration preferred.",
         inputSchema: {
             libraryName: z.string().describe("Library name as written in active.md (e.g. '❖ SUI')"),
             filter: z.string().optional().describe("Substring filter on component name (case-insensitive)"),
@@ -1893,10 +1892,9 @@ export async function main() {
     }));
     // ---- figma_get_library_tokens (FMCP cache, server-side) ----
     server.registerTool("figma_get_library_tokens", {
-        description: "Return library variableKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/tokens.md). " +
-            "Server-side read — no plugin or REST call. Use the returned key with figma.variables.importVariableByKeyAsync(key) " +
-            "in figma_execute (cross-file). Items carry { name, key, type: 'spacing'|'radius'|'color'|'typography'|'other', collection }. " +
-            "v3.1+: PRIMARY token discovery path. Cache miss → _restFallbackHint, fall back to figma_get_library_variables (plugin) or REST.",
+        description: "[DEPRECATED v3.2+] Cache-based token lookup. Use figma_get_library_variables (live teamLibrary API) instead. " +
+            "Return library variableKeys from the FMCP cache (~/.claude/data/fcm-ds/<file-key>/tokens.md). " +
+            "Kept for backward compat. Live path works in any target file subscribing to the DS, no library file needed.",
         inputSchema: {
             libraryName: z.string().describe("Library name as written in active.md (e.g. '❖ SUI')"),
             filter: z.string().optional().describe("Substring filter on token name (case-insensitive)"),
@@ -1948,6 +1946,103 @@ export async function main() {
             content: [{
                     type: "text",
                     text: JSON.stringify({ ...payload, ...(nextStepObj && { _nextStepObj: nextStepObj }) }),
+                }],
+        };
+    }));
+    // ---- figma_enumerate_library_components (v3.2+ LIVE — no cache) ----
+    server.registerTool("figma_enumerate_library_components", {
+        description: "LIVE enumerate every published COMPONENT and COMPONENT_SET in a library Figma file. " +
+            "REQUIRES the library file to be open in FMCP plugin (see figma_list_connected_files). " +
+            "Returns items: [{name, key, kind, props, parent}]. Kind is authoritative — use " +
+            "importComponentSetByKeyAsync for COMPONENT_SET, importComponentByKeyAsync for COMPONENT. " +
+            "v3.2+ RECOMMENDED path — zero local cache dependency, always fresh as Figma updates. " +
+            "For multi-library DS (e.g. ❖ SUI + ❖ SUI Mobil + 🙂 S-Icons), call once per library file.",
+        inputSchema: {
+            libraryName: z.string().optional().describe("Match a connected file by name substring (case-insensitive, e.g. 'SUI Mobil' matches '❖ SUI Mobil')."),
+            libraryFileKey: z.string().optional().describe("Direct file key (e.g. from figma_list_connected_files). Takes precedence over libraryName."),
+        },
+        annotations: { readOnlyHint: true, destructiveHint: false },
+    }, safeToolHandler(async ({ libraryName, libraryFileKey }) => {
+        const files = bridge.listConnectedFiles();
+        if (files.length === 0) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: "No plugin connected. Open the library file in Figma and run the FMCP plugin.",
+                        }),
+                    }],
+            };
+        }
+        let target;
+        if (libraryFileKey) {
+            target = files.find((f) => f.fileKey === libraryFileKey);
+        }
+        else if (libraryName) {
+            const needle = libraryName.toLowerCase();
+            target = files.find((f) => (f.fileName ?? "").toLowerCase().includes(needle));
+        }
+        else if (files.length === 1) {
+            target = files[0];
+        }
+        if (!target || !target.fileKey) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: `No connected file matches libraryName='${libraryName ?? ""}' / libraryFileKey='${libraryFileKey ?? ""}'. Provide one that matches a connected file.`,
+                            connectedFiles: files.map((f) => ({ fileKey: f.fileKey, fileName: f.fileName })),
+                        }),
+                    }],
+            };
+        }
+        const conn = getConnector(bridge, target.fileKey);
+        const code = `
+				var items = [];
+				var nodes = figma.root.findAll(function(n) { return n.type === 'COMPONENT' || n.type === 'COMPONENT_SET'; });
+				for (var i = 0; i < nodes.length; i++) {
+					var n = nodes[i];
+					if (n.type === 'COMPONENT' && n.parent && n.parent.type === 'COMPONENT_SET') continue;
+					var props = null;
+					if (n.type === 'COMPONENT_SET' && n.componentPropertyDefinitions) {
+						props = [];
+						var defs = n.componentPropertyDefinitions;
+						for (var k in defs) {
+							if (Object.prototype.hasOwnProperty.call(defs, k)) {
+								props.push({ name: k, type: defs[k].type, variantOptions: defs[k].variantOptions || null });
+							}
+						}
+					}
+					items.push({
+						name: n.name,
+						key: n.key,
+						kind: n.type,
+						props: props,
+						pageName: n.parent && n.parent.type === 'PAGE' ? n.parent.name : (n.parent && n.parent.parent && n.parent.parent.type === 'PAGE' ? n.parent.parent.name : null),
+					});
+				}
+				return { items: items, total: items.length };
+			`;
+        const result = (await conn.executeCodeViaUI(code, 30000));
+        const items = Array.isArray(result.items) ? result.items : [];
+        const setCount = items.filter((i) => i.kind === "COMPONENT_SET").length;
+        return {
+            content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        sourceLibrary: target.fileName ?? libraryName ?? null,
+                        fileKey: target.fileKey,
+                        ...result,
+                        _metrics: {
+                            total: items.length,
+                            componentSets: setCount,
+                            singleComponents: items.length - setCount,
+                            source: "live_plugin_scan",
+                        },
+                    }),
                 }],
         };
     }));

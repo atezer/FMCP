@@ -45,28 +45,43 @@ required_inputs:
 | `fmcp-screen-recipes` | Fast Path match | Sadece Fast Path'te |
 | `apply-figma-design-system` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 
-### Adım -1 — FMCP Cache Pre-Flight (BLOCKING — v3.1+ MUTLAK İLK ADIM)
+### Adım -1 — Live DS Discovery (v3.2+ MUTLAK İLK ADIM, cache-free)
 
-ANY `figma_*` tool çağırmadan ÖNCE:
+**Prensip değişikliği (v3.2+):** Lokal cache bağımlılığı kaldırıldı. Figma sürekli güncellendiği için component key'leri cache'te stale olabilir. Artık **live enumeration** birincil yol — agent Figma'dan anlık okur.
+
+ANY `figma_*` screen-generation tool çağırmadan ÖNCE:
 
 ```
-1. figma_resolve_active_ds()  ← server-side cache read, plugin gerekmez
-2. response.status'a göre:
-   ✅ "fresh" → cache_mode = FMCP_CACHE_HIT, libraryName not al, Adım 0.5'e atla
-   ⚠️ "stale" → cache_mode = FMCP_CACHE_STALE, fallback chain (Rule 24.1+) hazır
-   ❌ "missing" → cache_mode = FMCP_CACHE_MISS, Adım 0'a düş (klasik DS GATE)
+1. figma_list_connected_files()
+   → connected library file'ları listele (örn. ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons)
+   → Target + library(ler) hepsi bağlı mı kontrol et
+
+2. figma_enumerate_library_components(libraryName="❖ SUI Mobil")
+   → target library'nin TÜM published component'lerini live al
+   → Her item: { name, key, kind: COMPONENT|COMPONENT_SET, props, pageName }
+   → Multi-library DS ise (SUI + SUI Mobil + S-Icons) her biri için ayrı call
+
+3. figma_get_library_variables(libraryName="❖ SUI")
+   → teamLibrary API ile live variable enumeration (library file açık olmasa bile çalışır)
+
+4. Keşif tamam → direkt üretim
 ```
 
-**Cache hit'te YASAK eylemler:**
-- `figma_execute` ile token discovery (`getAvailableLibraryVariableCollectionsAsync` vb.)
-- `figma_search_components(currentPageOnly=false)` runtime instance scan
-- `figma.currentPage.findAll(INSTANCE)` — başka sayfaları tarama
-- Kullanıcıya "library URL/file-key ver?" sorusu — cache zaten cevaplıyor
+**Ön-şart: Library file'ları plugin'de açık olmalı.**
 
-**Cache hit'te ZORUNLU akış:**
-1. `figma_get_library_components(libraryName, filter?)` → componentKey listesi
-2. `figma_get_library_tokens(libraryName, filter?)` → variableKey listesi
-3. `importComponentByKeyAsync(key)` + `importVariableByKeyAsync(key)` → direkt üretim
+Kullanıcı "SUI ile X yap" dediğinde, agent:
+- `figma_list_connected_files` çağırır
+- SUI library file'ları bağlı değilse kullanıcıya der: *"Lütfen ❖ SUI + ❖ SUI Mobil library file'larını Figma'da açıp FMCP plugin'i çalıştırın (her birinde ayrı tab). Sonra tekrar deneyeceğim."*
+- Library'ler bağlıysa live enumerate ile devam
+
+**Cache tool'ları (DEPRECATED v3.2+):**
+- `figma_resolve_active_ds`, `figma_get_library_components`, `figma_get_library_tokens` — backward compat için kalır ama kullanım önerilmez. Cache stale olma riski yüksek, Figma sürekli değişiyor.
+- Özel offline veya hızlı Pareto subset senaryoları için tercih edilebilir.
+
+**Yeni keşif akışının YASAKları:**
+- Local cache dosyasına (`~/.claude/data/fcm-ds/...`) bakma, hatta okuma — live path kullan
+- Cache subset'e güvenip missing component olduğunda hemen fallback'e düşmek — önce LIVE enumerate'i deneyip gerçek durumu gör
+- "Cache'te yok" diye pes etme — library file subscribe + enumerate yeterli
 
 **⚠️ CACHE KAPSAM SINIRI (v3.1+ MUTLAK — text styles + mode swap):**
 

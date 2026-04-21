@@ -12,6 +12,32 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [Unreleased] — v3.2 Live-First Discovery (Cache Deprecated)
+
+### Fundamental shift
+
+**Problem:** Cache (component key'leri + token'lar) bakım külfeti yaratıyordu. SUI gibi aktif library'ler sürekli güncellendiği için 27 component'lik Pareto subset hızla eksik/yanlış hale geliyor: stale key'ler, missing component'ler (Input, Select, Checkbox vb.), yanlış `sourceLibrary`, yanlış `kind`. Kullanıcı her sync gerektirmeyen canlı yaklaşım istedi.
+
+**Çözüm:** Live enumeration birincil yol. Agent library file'ları plugin'de açık olduğunda her seferinde Figma'dan taze component listesi alır.
+
+### Added
+
+- `figma_enumerate_library_components(libraryName|libraryFileKey)` — connected library file'da `figma.root.findAll(COMPONENT|COMPONENT_SET)` ile live scan. Her item: `{name, key, kind, props, pageName}`. Multi-library DS (SUI + SUI Mobil + S-Icons) için her biri için ayrı call.
+
+### Changed
+
+- **Orchestrator Adım -1** komple yeniden yazıldı: live-first discovery. Sıra: `figma_list_connected_files` → `figma_enumerate_library_components` (her library) → `figma_get_library_variables` (teamLibrary live) → üretim.
+- Cache tool'ları (`figma_resolve_active_ds`, `figma_get_library_components`, `figma_get_library_tokens`) `[DEPRECATED v3.2+]` — backward compat için kalıyor ama kullanımı önerilmiyor.
+
+### Migration
+
+Kullanıcı tarafında:
+- `~/.claude/data/fcm-ds/<file-key>/components.md` ve `tokens.md` dosyaları artık gerekli değil — isterseniz silebilirsiniz.
+- `active.md` minimal kalabilir (sadece library ismi hatırlatma) veya kaldırılabilir; agent artık user prompt'undan library adını çıkarıp `figma_list_connected_files`'te arar.
+
+Agent davranışı:
+- Kullanıcı "SUI ile X yap" dediğinde agent önce plugin'de SUI library file'larının bağlı olduğunu doğrular; bağlı değilse kullanıcıdan library file'ları açmasını ister.
+
 ## [Unreleased] — v3.1 Server Cache Resolver
 
 ### Added
