@@ -96,19 +96,32 @@ YASAK:
 - `figma_rest_api /v1/files/<consumer_file>/styles` — tüketici file'da style metadata yok
 - Hardcoded `family: "Inter"` — Adım 1.6'dan dönen `fontFamilies[0]` kullan (SUI için: `SHBGrotesk`)
 
-**2. Dark variant → MODE COLLECTION SWAP (setExplicitVariableModeForCollection):**
+**2. Dark variant — VARSAYILAN: TEK FRAME, Figma toggle ile preview**
+
+Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve tüm bound variable'larla) oluşturulduğunda, kullanıcı Figma'da `Semantic Colors (S Theme)` dropdown'undan **Auto/Light/Dark** arasında **preview** eder. İki ayrı frame YAYGIN OLARAK GEREKMEZ.
+
+**Kural:**
+- **Default (kullanıcı sadece "ekran yap" dedi):** Tek frame üret, Light mode'da bıraj. Kullanıcı Dark'ı Figma UI'dan görebilir.
+- **Clone YAP — SADECE şu durumlarda:**
+  - Kullanıcı explicit "Light + Dark iki ayrı frame" istedi
+  - Deliverable "Light + Dark yan yana karşılaştırma" gerektiriyor (spec dokümanı, handoff)
+
+**Clone gerektiğinde uygulama:**
 ```js
-// tokens.md "Collection Info" tablosundan oku (cache'te hazır):
+// tokens.md "Collection Info" — cache'ten hazır:
 // Semantic Colors collectionKey: 6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1
 // Light modeId: 3015:2  |  Dark modeId: 3019:3
 
 const coll = await figma.variables.importVariableCollectionByKeyAsync("6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1");
 const darkFrame = lightFrame.clone();
-darkFrame.setExplicitVariableModeForCollection(coll.id, "3019:3");  // modeId string
-// Artık bu frame ve child'ları Dark renkleri resolve eder — fill rebind YOK, variable swap YOK.
+darkFrame.setExplicitVariableModeForCollection(coll.id, "3019:3");
+// fill rebind YOK, variable swap YOK, ayrı component import YOK.
 ```
 
-YASAK: Dark variant için tek tek fill rebind, "dark" isimli token arama, ayrı component import. Tek doğru yol: **collection mode override**.
+YASAK:
+- Kullanıcı istemeden Dark klonu oluşturma (Figma toggle zaten var)
+- Tek tek fill'leri Dark'a yeniden bağlama
+- "Dark" isimli token arama — mode collection zaten işi yapıyor
 
 **3. LIBRARY_MISMATCH error handling:**
 Server tool `_warnings: ["LIBRARY_MISMATCH"]` dönerse (user istediği library ≠ active.md'dekiyle):
@@ -117,6 +130,20 @@ Server tool `_warnings: ["LIBRARY_MISMATCH"]` dönerse (user istediği library �
 - YASAK: sessizce farklı library'ye geçmek, başka file'ları taramak.
 
 **Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤8 tool call** total (variable cache + component cache + 1 runtime text style discovery + 2-3 execute + validate).
+
+**`_nextStepObj` izleme (v2.0+ — server-driven sequencing):** Her `figma_*` tool response'unda `_nextStepObj: { tool, args_hint?, reason }` alanı varsa, agent BİR SONRAKİ tool'u bu öneriden çağırır. Kullanım akışı:
+
+```
+response.json.parse → _nextStepObj varsa →
+  next_tool_name = obj.tool
+  next_args = obj.args_hint  (opsiyonel override)
+  rationale = obj.reason  (kullanıcıya/rapora yaz)
+→ tool çağır
+```
+
+Server cache zincirinde otomatik sequencing: `figma_resolve_active_ds` (fresh) → `_nextStepObj: figma_get_library_components` → `_nextStepObj: figma_get_library_tokens` → `_nextStepObj: figma_execute`. Agent karar ağacını her call'da yeniden yürütmez — server seqüans gönderir.
+
+**Backward compat:** Legacy `_nextStep` string alanı hâlâ mevcut (v1.9.7+); `_nextStepObj` yoksa agent klasik karar ağacına düşer. İki alan bir arada ise **objeyi tercih et**.
 
 ### Adım 0 — DS GATE (Cache MISS yolu)
 

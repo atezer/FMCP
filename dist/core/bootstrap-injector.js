@@ -69,6 +69,61 @@ export class BootstrapInjector {
         };
     }
     /**
+     * v2.0+ Typed _nextStepObj — structured next-call hint for Claude/sub-agents.
+     * Wraps the existing string hint into an object with explicit tool name +
+     * optional args hint + reason. String variant (`injectNextStep`) is kept
+     * for backward compat — both may appear on a response during the 1-version
+     * transition.
+     */
+    injectNextStepObj(toolName, result) {
+        if (!result || typeof result !== "object")
+            return undefined;
+        const r = result;
+        switch (toolName) {
+            case "figma_resolve_active_ds": {
+                const status = r.status;
+                if (status === "fresh") {
+                    const lib = r.libraryName;
+                    return {
+                        tool: "figma_get_library_components",
+                        args_hint: lib ? { libraryName: lib } : undefined,
+                        reason: "Cache fresh — component keys direkt oku (Adım 3a skip)",
+                    };
+                }
+                if (status === "stale") {
+                    return {
+                        tool: "figma_get_library_components",
+                        reason: "Cache stale — yine de dene, cache miss'te REST fallback",
+                    };
+                }
+                return {
+                    tool: "figma_get_design_system_summary",
+                    reason: "Cache missing — klasik DS discovery akışına düş",
+                };
+            }
+            case "figma_get_library_components": {
+                if (r.success === false)
+                    return undefined;
+                const lib = r._metrics?.source === "fmcp_cache" ? r.libraryName : undefined;
+                return {
+                    tool: "figma_get_library_tokens",
+                    args_hint: typeof lib === "string" ? { libraryName: lib } : undefined,
+                    reason: "Components alındı, şimdi variable keys (spacing/radius/color)",
+                };
+            }
+            case "figma_get_library_tokens": {
+                if (r.success === false)
+                    return undefined;
+                return {
+                    tool: "figma_execute",
+                    reason: "Tokens hazır — seed instance + Adım 1.6 (text style + font) + skeleton üret",
+                };
+            }
+            default:
+                return undefined;
+        }
+    }
+    /**
      * Generate _nextStep hint for a given tool + result.
      * Claude-facing string directing the next logical action.
      */

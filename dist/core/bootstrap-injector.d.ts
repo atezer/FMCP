@@ -14,6 +14,16 @@
  * - Her tool response'a `_nextStep` hint eklenir — Claude'u bir sonraki doğru
  *   adıma yönlendirir.
  */
+/**
+ * v2.0+ Typed next-step hint. Emitted as `_nextStepObj` alongside the legacy
+ * `_nextStep` string. Agents (Desktop + sub-agents via Claude Code) should
+ * prefer the typed form; string is kept for one version of compatibility.
+ */
+export type NextStep = {
+    tool: string;
+    args_hint?: Record<string, unknown>;
+    reason: string;
+};
 export type BootstrapPayload = {
     version: string;
     self_instruction: string;
@@ -38,6 +48,14 @@ export declare class BootstrapInjector {
      * Subsequent: short reminder.
      */
     getBootstrap(): BootstrapPayload;
+    /**
+     * v2.0+ Typed _nextStepObj — structured next-call hint for Claude/sub-agents.
+     * Wraps the existing string hint into an object with explicit tool name +
+     * optional args hint + reason. String variant (`injectNextStep`) is kept
+     * for backward compat — both may appear on a response during the 1-version
+     * transition.
+     */
+    injectNextStepObj(toolName: string, result: unknown): NextStep | undefined;
     /**
      * Generate _nextStep hint for a given tool + result.
      * Claude-facing string directing the next logical action.

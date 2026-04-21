@@ -22,5 +22,8 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Strip .js extension from relative imports so ts-jest can resolve .ts sources
+    // (source files use explicit .js extensions for ESM compatibility at runtime).
+    '^(\\.\\.?/.*)\\.js$': '$1',
   },
 };
