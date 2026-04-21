@@ -68,7 +68,42 @@ ANY `figma_*` tool çağırmadan ÖNCE:
 2. `figma_get_library_tokens(libraryName, filter?)` → variableKey listesi
 3. `importComponentByKeyAsync(key)` + `importVariableByKeyAsync(key)` → direkt üretim
 
-**Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤6 tool call** total.
+**⚠️ CACHE KAPSAM SINIRI (v3.1+ MUTLAK — text styles + mode swap):**
+
+Cache SADECE variable key'leri (renk/spacing/radius) ve component key'leri içerir. Text styles ve mode ID'leri için **farklı yollar** gerekir — bunları REST API ile çekmeye çalışma, cache miss değil, **mimari olarak başka kaynak**:
+
+**1. Text styles (typography) → RUNTIME DISCOVERY:**
+```js
+// SUI bir component import ettikten SONRA (en az 1 instance gelir ve style'lar local olur):
+await figma.importComponentByKeyAsync("<herhangi bir SUI componentKey>");
+const styles = await figma.getLocalTextStylesAsync();
+// styles[n].id → text.setTextStyleIdAsync(id)
+// Role map: name pattern'den "display", "title", "subtitle", "body", "caption", "button"
+```
+
+YASAK: Text styles için `figma_rest_api` `/v1/files/.../styles` denemesi — user'ın file'ında değil, SUI library file'ında. Bunun yerine ilk component import'undan sonra local'e düşen style'ları oku.
+
+**2. Dark variant → MODE COLLECTION SWAP (setExplicitVariableModeForCollection):**
+```js
+// tokens.md "Collection Info" tablosundan oku (cache'te hazır):
+// Semantic Colors collectionKey: 6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1
+// Light modeId: 3015:2  |  Dark modeId: 3019:3
+
+const coll = await figma.variables.importVariableCollectionByKeyAsync("6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1");
+const darkFrame = lightFrame.clone();
+darkFrame.setExplicitVariableModeForCollection(coll.id, "3019:3");  // modeId string
+// Artık bu frame ve child'ları Dark renkleri resolve eder — fill rebind YOK, variable swap YOK.
+```
+
+YASAK: Dark variant için tek tek fill rebind, "dark" isimli token arama, ayrı component import. Tek doğru yol: **collection mode override**.
+
+**3. LIBRARY_MISMATCH error handling:**
+Server tool `_warnings: ["LIBRARY_MISMATCH"]` dönerse (user istediği library ≠ active.md'dekiyle):
+- Kullanıcıya: *"active-ds.md'deki library `<ctx.libraryName>` olarak kayıtlı, siz `<requested>` dediniz. Hangisini kullanayım?"*
+- Yanıta göre `~/.claude/data/fcm-ds/active.md`'yi güncellemek için `/ds-select` komutunu öner.
+- YASAK: sessizce farklı library'ye geçmek, başka file'ları taramak.
+
+**Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤8 tool call** total (variable cache + component cache + 1 runtime text style discovery + 2-3 execute + validate).
 
 ### Adım 0 — DS GATE (Cache MISS yolu)
 
