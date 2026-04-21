@@ -4,8 +4,9 @@
 
 ### 1. Button
 - **componentKey:** `aaaa1111`
+- **kind:** COMPONENT_SET
 - **Usage:** 100
-- **Properties:** `Value#1:1` (text)
+- **Properties:** `Value#1:1` (text) · `Style` (variant: primary/secondary)
 - **Kullanım:** Primary CTA
 
 ### 2. NavigationTopBar

@@ -36,6 +36,14 @@ export interface LibraryComponent {
      * *this* library. When omitted the caller should assume the primary DS.
      */
     sourceLibrary: string | null;
+    /**
+     * Phase H (v3.1.5+): distinguishes a single COMPONENT from a COMPONENT_SET
+     * (variant container). Agents MUST call the matching import API —
+     * `importComponentByKeyAsync` fails with "Could not find a published
+     * component with the key" when invoked with a SET key. Variant-bearing
+     * components (Button, NavigationTopBar …) are always COMPONENT_SET.
+     */
+    kind: "COMPONENT" | "COMPONENT_SET";
 }
 export interface LibraryToken {
     name: string;

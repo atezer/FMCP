@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-21T11:57:46.162Z
- * Total estimated tokens: 12134
+ * Generated: 2026-04-21T12:32:36.056Z
+ * Total estimated tokens: 12462
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
@@ -215,7 +215,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (2598 tokens) -->
+<!-- fmcp-screen-orchestrator (2926 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -316,7 +316,29 @@ YASAK:
 - Tek tek fill'leri Dark'a yeniden bağlama
 - "Dark" isimli token arama — mode collection zaten işi yapıyor
 
-**3. Multi-Library Subscription (v3.1.4+ Phase G):**
+**3. COMPONENT vs COMPONENT_SET — Doğru Import API (v3.1.5+ Phase H — KRİTİK):**
+
+Figma Plugin API'de iki ayrı import fonksiyonu var:
+- \`figma.importComponentByKeyAsync(key)\` → **sadece tekil COMPONENT** için. SET key verirsen **"Could not find a published component with the key"** hatası alırsın (yanıltıcı hata mesajı — gerçek sebep yanlış API kullanımı).
+- \`figma.importComponentSetByKeyAsync(key)\` → **COMPONENT_SET (variant'lı)** için. Dönen \`ComponentSetNode\`'u \`.defaultVariant.createInstance()\` ile instance yap, sonra \`setProperties()\` ile variant seç.
+
+**Kural:** \`figma_get_library_components\` response'u her item'da \`kind: "COMPONENT" | "COMPONENT_SET"\` field döner. Ayrıca top-level \`componentSetKeys: string[]\` ve gerekirse \`_warnings: ["COMPONENT_SET_KEYS: ..."]\` verir.
+
+\`\`\`js
+// DOĞRU pattern (kind'a göre dallan):
+if (item.kind === "COMPONENT_SET") {
+  const set = await figma.importComponentSetByKeyAsync(item.key);
+  const inst = set.defaultVariant.createInstance();
+  inst.setProperties({ "Type": "primary", "State": "default" });
+} else {
+  const comp = await figma.importComponentByKeyAsync(item.key);
+  const inst = comp.createInstance();
+}
+\`\`\`
+
+**YASAK:** Variant'lı component'e (Button, NavigationTopBar, Badge vb.) \`importComponentByKeyAsync\` çağırmak. Daima \`item.kind\` kontrol et.
+
+**4. Multi-Library Subscription (v3.1.4+ Phase G):**
 
 SUI ekosistemi tek library değil — \`❖ SUI\` (ana) + \`❖ SUI Mobil\` (mobil UI) + başkaları. Her component belirli bir library'de yayımlanmıştır; \`importComponentByKeyAsync(key)\` hedef Figma dosyasının **ilgili library'yi subscribe etmiş olması** durumunda çalışır.
 
@@ -950,6 +972,6 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 12134;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 12462;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T11:57:46.162Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T12:32:36.056Z";
