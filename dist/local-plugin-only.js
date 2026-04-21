@@ -2046,6 +2046,101 @@ export async function main() {
                 }],
         };
     }));
+    // ---- figma_enumerate_published_components (v3.2+ REST — library file KAPALI olsa bile çalışır) ----
+    server.registerTool("figma_enumerate_published_components", {
+        description: "List every published COMPONENT + COMPONENT_SET of a library via the Figma REST API. " +
+            "Works WITHOUT the library file being open in plugin — the authoritative path when the user " +
+            "has SUI subscribed in the target file but doesn't want to keep library tabs open. " +
+            "Requires a REST token (figma_set_rest_token once per install). " +
+            "Returns items: [{name, key, kind, description}], variant children are filtered so " +
+            "each row maps 1:1 to importComponentByKeyAsync / importComponentSetByKeyAsync.",
+        inputSchema: {
+            libraryFileKey: z.string().describe("Library file key (e.g. '7T4iLZCd3OmyI9Rokxm2av'). Extract from URL: figma.com/design/<KEY>/..."),
+        },
+        annotations: { readOnlyHint: true, destructiveHint: false },
+    }, safeToolHandler(async ({ libraryFileKey }) => {
+        const tokenInfo = bridge.getFigmaRestToken();
+        if (!tokenInfo) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: "No Figma REST token. Run figma_set_rest_token (or set one in the plugin Advanced panel) and retry.",
+                            _hint: "The REST path is required when library files are not open in the plugin.",
+                        }),
+                    }],
+            };
+        }
+        const callRest = async (path) => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
+            try {
+                const res = await fetch(`https://api.figma.com${path}`, {
+                    headers: { "X-Figma-Token": tokenInfo.token },
+                    signal: controller.signal,
+                });
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => "");
+                    throw new Error(`REST ${path}: HTTP ${res.status} ${res.statusText} — ${errText}`);
+                }
+                return (await res.json());
+            }
+            finally {
+                clearTimeout(timeout);
+            }
+        };
+        let compsJson;
+        let setsJson;
+        try {
+            [compsJson, setsJson] = await Promise.all([
+                callRest(`/v1/files/${libraryFileKey}/components`),
+                callRest(`/v1/files/${libraryFileKey}/component_sets`),
+            ]);
+        }
+        catch (err) {
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                            _hint: "Library file key may be wrong, or token lacks access. Verify the URL and token scope.",
+                        }),
+                    }],
+            };
+        }
+        const compsMeta = compsJson.meta?.components ?? [];
+        const setsMeta = setsJson.meta?.component_sets ?? [];
+        const items = [];
+        for (const s of setsMeta) {
+            if (s.name && s.key)
+                items.push({ name: s.name, key: s.key, kind: "COMPONENT_SET", description: s.description ?? null });
+        }
+        for (const c of compsMeta) {
+            if (!c.name || !c.key)
+                continue;
+            if (c.containing_component_set?.key)
+                continue; // variant inside a set — covered by the set row
+            items.push({ name: c.name, key: c.key, kind: "COMPONENT", description: c.description ?? null });
+        }
+        return {
+            content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        libraryFileKey,
+                        items,
+                        _metrics: {
+                            total: items.length,
+                            componentSets: items.filter((i) => i.kind === "COMPONENT_SET").length,
+                            singleComponents: items.filter((i) => i.kind === "COMPONENT").length,
+                            source: "figma_rest_api",
+                        },
+                    }),
+                }],
+        };
+    }));
     // ---- figma_search_assets (team library search via plugin) ----
     server.registerTool("figma_search_assets", {
         description: "Search for design system assets in the current Figma file. Returns: " +
