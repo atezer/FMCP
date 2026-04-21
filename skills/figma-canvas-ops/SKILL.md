@@ -120,6 +120,16 @@ active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Y
    ```
    **FigJam:** `createShapeWithText()` varsayılan "Inter Medium". Metin düzenlemeden önce `await figma.loadFontAsync(shape.text.fontName)`.
 
+   **Rule 8b-pre — Font Family Source (v2.0+ ZORUNLU):**
+
+   `loadFontAsync({ family })` çağırmadan ÖNCE `family` değerini şu kaynaklardan sırayla dene:
+
+   1. **Adım 1.6 çıktısı:** `fontFamilies[0]` — `fmcp-screen-recipes` Adım 1.6 session'da önceden çalıştıysa (recommended)
+   2. **`style.fontName.family`:** `getStyleByIdAsync` sonucundan (library'den gelen style objesinde mevcut)
+   3. **Fallback `"Inter"`:** ADVISORY warning zorunlu — log'a yaz: `_warnings: ["FONT_FAMILY_FALLBACK_INTER"]`
+
+   YASAK: Hardcoded `"Inter"` family'yi doğrudan yazmak, DS'nin fontunu varsaymadan font load etmek. Yanlış family ile `loadFontAsync` + doğru family bekleyen `setTextStyleIdAsync` → silent mismatch (text görünmez veya default font'a düşer).
+
    **Rule 8b — Text Style + Font Ordering (v1.9.9+ ZORUNLU):**
 
    Library text style uygularken MUTLAK SIRALAMA:

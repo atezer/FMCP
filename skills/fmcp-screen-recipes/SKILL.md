@@ -32,6 +32,8 @@ outputs:
 
 # FMCP Screen Recipes — Fast Path Cookbook
 
+> **Kullanım (v3.1+):** `fmcp-screen-orchestrator` Adım 0.5 Fast Path 5/5 match olduğunda çağrılır. Bağımsız giriş noktası değil. Adım 1.6 (Text Style Resolution) canonical kopyası burada — orchestrator buraya referans verir, kod duplicate etmez.
+
 ## Ne Zaman Kullanılır
 
 **Fast Path DEVREYE GİRER** (hepsi TRUE olmalı):
@@ -160,18 +162,41 @@ return { tokenKeyMap };
 
 **Micro-report:** `✅ Pre-Flight Discovery: <N> collection, <M> token imported, surface=<found/missing>`
 
-### Adım 1.6 — Text Style Resolution
+### Adım 1.6 — Text Style Resolution (v2.0+ — fontFamilies + seed fallback)
 
-Dosyadaki mevcut text style'ları tara, role mapping üret. `importStyleByKeyAsync` ÇAĞIRMA — direkt `setTextStyleIdAsync(roleMap[role].id)` kullan.
+Dosyadaki mevcut text style'ları tara, role mapping + font family üret. `importStyleByKeyAsync` ÇAĞIRMA — direkt `setTextStyleIdAsync(roleMap[role].id)` kullan.
 
 ```js
+// Adım A: Sayfa boşsa ilk componentKey ile seed instance düşür (v2.0+ Page 4 senaryosu)
+// Caller `seedComponentKey` değişkenini opsiyonel olarak tanımlar (componentKey cache'ten).
+// Tanımsızsa sessizce skip edilir — styleMap boş dönebilir, fallback chain devreye girer.
+let seedInst = null;
+if (figma.currentPage.findAll(n => n.type === "TEXT").length === 0) {
+  const _seedKey = (typeof seedComponentKey !== "undefined") ? seedComponentKey : null;
+  if (_seedKey) {
+    try {
+      const seedComp = await figma.importComponentByKeyAsync(_seedKey);
+      seedInst = seedComp.createInstance();
+      figma.currentPage.appendChild(seedInst);
+    } catch(e) { /* fallback: keep going, styleMap may be empty */ }
+  }
+}
+
+// Adım B: findAll + getStyleByIdAsync
 const allTexts = figma.currentPage.findAll(n => n.type === "TEXT");
 const uniqueStyleIds = new Set();
 for (const t of allTexts) { if (t.textStyleId && typeof t.textStyleId === 'string') uniqueStyleIds.add(t.textStyleId); }
 
 const styleMap = {};
+const fontFamilySet = new Set();
 for (const id of uniqueStyleIds) {
-  try { const style = await figma.getStyleByIdAsync(id); if (style) styleMap[style.id] = { id: style.id, name: style.name, fontSize: style.fontSize || null }; } catch(e) {}
+  try {
+    const style = await figma.getStyleByIdAsync(id);
+    if (style) {
+      styleMap[style.id] = { id: style.id, name: style.name, fontSize: style.fontSize || null, fontName: style.fontName || null };
+      if (style.fontName?.family) fontFamilySet.add(style.fontName.family);  // v2.0+
+    }
+  } catch(e) {}
 }
 
 const roleKeywords = {
@@ -186,10 +211,21 @@ if (!roleMap.display) {
   const sorted = Object.values(styleMap).filter(s => s.fontSize).sort((a,b) => b.fontSize - a.fontSize);
   if (sorted.length > 0) roleMap.display = { id: sorted[0].id, name: sorted[0].name, fontSize: sorted[0].fontSize };
 }
-return { totalStyles: Object.keys(styleMap).length, styleMap, roleMap };
+
+// Adım C: Seed temizle (ekran dışına düşürürdü, kaldır)
+if (seedInst) { try { seedInst.remove(); } catch(e) {} }
+
+return {
+  totalStyles: Object.keys(styleMap).length,
+  styleMap,
+  roleMap,
+  fontFamilies: [...fontFamilySet],  // v2.0+ — loadFontAsync için
+};
 ```
 
-**Micro-report:** `✅ Text Style: <N> style, <M> role eşleşti`
+**Micro-report:** `✅ Text Style: <N> style, <M> role eşleşti, font: <family>`
+
+**Kritik:** `fontFamilies[0]` (örn. SUI için `SHBGrotesk`) sonraki tüm `loadFontAsync({ family })` çağrılarında kullanılır. Hardcoded `"Inter"` YASAK — `figma-canvas-ops` Rule 8b-pre.
 
 ---
 

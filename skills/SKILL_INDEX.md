@@ -19,6 +19,24 @@ Tüm skill'ler `.fmcp-brand-profile.json` dosyasını okuyarak marka ses/ton, ti
 
 **Oluşturma:** `ux-copy-guidance` skill'i profil yoksa otomatik 3-soru akışı başlatır. Manuel olarak da proje köküne `.fmcp-brand-profile.json` dosyası eklenebilir.
 
+## Karar Ağacı — Hangi Skill Ne Zaman? (v3.1+)
+
+Kullanıcı talebi → ilk yüklenecek **entry skill**:
+
+| Talep | Entry Skill | Alt-skill'ler (lazy-load, doğrudan çağırma) |
+|---|---|---|
+| "Ekran üret / tasarla / mockup / login / ödeme / form" | **`fmcp-screen-orchestrator`** | Fast Path match → `fmcp-screen-recipes` · aksi → `generate-figma-screen` · her `figma_execute` öncesi → `figma-canvas-ops` · remediation → `apply-figma-design-system` |
+| "DS sağlığı / audit / compliance / a11y / drift" | **`fmcp-ds-audit-orchestrator`** | `audit-figma-design-system` · `figma-a11y-audit` · `design-drift-detector` · `fix-figma-design-system-finding` |
+| "Token sync / platform codegen" | **`fmcp-token-sync-orchestrator`** | `design-token-pipeline` |
+| "Benchmark / ilham / görsel analiz" | **`inspiration-intake`** | → sonra `fmcp-screen-orchestrator`'a pas |
+| Belirsiz intent | **`fmcp-intent-router`** | Routing matrix üzerinden karar |
+
+**Prensip:** Agent bir alt-skill'i **doğrudan çağırmaz**. Önce ilgili **orchestrator** yüklenir; orchestrator alt-skill'i seçer. Tek istisna: `figma-canvas-ops` her `figma_execute` öncesi zorunlu pre-flight.
+
+**Cache hit'te (server-side cache resolver):** `figma_resolve_active_ds` → `figma_get_library_components` + `figma_get_library_tokens` → direkt üretim. Keşif adımları (Adım 3.1 Cache Populate, Adım 3a instance scan) skip edilir. Detay: `fmcp-screen-orchestrator` Adım -1.
+
+---
+
 ## Skill Listesi (26 skill)
 
 ### Temel Kurallar
