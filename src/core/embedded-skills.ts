@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-21T13:24:20.910Z
- * Total estimated tokens: 13303
+ * Generated: 2026-04-21T15:41:46.566Z
+ * Total estimated tokens: 13424
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
@@ -215,7 +215,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (3766 tokens) -->
+<!-- fmcp-screen-orchestrator (3887 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -266,10 +266,16 @@ Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 2. DS Library Registry'den libraryFileKey'leri oku (yukarıdaki tablo)
    → ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons
 
-3. figma_enumerate_published_components(libraryFileKey) × 3  (REST)
-   → Her library'nin tüm published component'leri (name, key, kind)
+3. figma_enumerate_published_components(libraryFileKey, filter?) × 3  (REST)
+   → Her library'nin published component'leri (name, key, kind)
    → Library file'ları AÇIK olmasına gerek YOK
    → REST token ilk kullanımda figma_set_rest_token ile set edilmiş olmalı
+   → **KRİTİK — filter zorunlu (büyük library'lerde):**
+     SUI main ~1300 component, SUI Mobil ~260. Filtersiz response 200K+ char → context patlar.
+     Screen tipi için gerekli komponent'leri NAMED filter'la çek:
+     - Payment: filter="button" → filter="input" → filter="radio" → filter="checkbox" → filter="divider" → filter="caption" → filter="label"
+     - Sadece gereken component'leri al, "all" çağırma
+     - NavigationTopBar: SUI Mobil'de tam isim "NavigationTopBar"
 
 4. figma_get_library_variables()  (teamLibrary API, live, open değil gerek)
    → Tüm variable'lar (spacing, radius, color) — cross-library
@@ -1031,6 +1037,6 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13303;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13424;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T13:24:20.910Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T15:41:46.566Z";

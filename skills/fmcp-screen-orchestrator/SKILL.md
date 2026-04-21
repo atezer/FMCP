@@ -73,10 +73,16 @@ Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 2. DS Library Registry'den libraryFileKey'leri oku (yukarıdaki tablo)
    → ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons
 
-3. figma_enumerate_published_components(libraryFileKey) × 3  (REST)
-   → Her library'nin tüm published component'leri (name, key, kind)
+3. figma_enumerate_published_components(libraryFileKey, filter?) × 3  (REST)
+   → Her library'nin published component'leri (name, key, kind)
    → Library file'ları AÇIK olmasına gerek YOK
    → REST token ilk kullanımda figma_set_rest_token ile set edilmiş olmalı
+   → **KRİTİK — filter zorunlu (büyük library'lerde):**
+     SUI main ~1300 component, SUI Mobil ~260. Filtersiz response 200K+ char → context patlar.
+     Screen tipi için gerekli komponent'leri NAMED filter'la çek:
+     - Payment: filter="button" → filter="input" → filter="radio" → filter="checkbox" → filter="divider" → filter="caption" → filter="label"
+     - Sadece gereken component'leri al, "all" çağırma
+     - NavigationTopBar: SUI Mobil'de tam isim "NavigationTopBar"
 
 4. figma_get_library_variables()  (teamLibrary API, live, open değil gerek)
    → Tüm variable'lar (spacing, radius, color) — cross-library
