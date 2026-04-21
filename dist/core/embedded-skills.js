@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-21T13:08:57.193Z
- * Total estimated tokens: 12940
+ * Generated: 2026-04-21T13:24:20.910Z
+ * Total estimated tokens: 13303
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
 ---
@@ -214,7 +214,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (3403 tokens) -->
+<!-- fmcp-screen-orchestrator (3766 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -237,52 +237,78 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 | \`fmcp-screen-recipes\` | Fast Path match | Sadece Fast Path'te |
 | \`apply-figma-design-system\` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 
-### Adım -1 — Live DS Discovery (v3.2+ MUTLAK İLK ADIM, cache-free, no library files open required)
+### DS Library Registry (v3.3+ — Agent Just Knows)
 
-**Prensip değişikliği (v3.2+):** Lokal cache bağımlılığı kaldırıldı. Agent Figma'dan **anlık** okur. **Ve artık library file'larının plugin'de açık olması da GEREKMEZ** — REST API ile uzaktan enumerate edilir.
+Agent, kullanıcı "SUI" (ya da tablodaki başka bir DS) dediğinde URL sormaz; aşağıdaki registry'den okur:
 
-**Discovery fallback zinciri (agent sırayla dener):**
+| Library Name | libraryFileKey | Açıklama |
+|---|---|---|
+| ❖ SUI | \`7T4iLZCd3OmyI9Rokxm2av\` | Ana DS (web + mobile ortak bileşenler, tokenlar) |
+| ❖ SUI Mobil | \`Edxo31lSGGb0cspxKhkUQc\` | Mobile-only: NavigationTopBar, BottomSheet, Input, Select... |
+| 🙂 S-Icons | \`sFJFlfakOktDfKTPpqrBDR\` | Icon component library |
+| 💼 Assets | \`PzY90yT6m3wwszId2HFfN6\` | Illüstrasyon / asset kütüphanesi |
+
+Kullanıcı "SUI ile X yap" dediğinde agent **otomatik** bu 3-4 library'yi enumerate eder (en azından \`❖ SUI\` + \`❖ SUI Mobil\` + \`🙂 S-Icons\`). URL/file key SORMAZ.
+
+Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
+
+### Adım -1 — Live DS Discovery (v3.3+ MUTLAK İLK ADIM, cache-free, zero user input)
+
+**Prensip (v3.3+):** Lokal cache YOK, kullanıcı input YOK. Agent DS Library Registry'den (yukarıda) URL'leri bilir, REST API ile canlı enumerate eder.
+
+**Standart akış (kullanıcı "SUI ile X yap" dedikten sonra):**
 
 \`\`\`
-Component enumeration:
+1. figma_get_status()
+   → plugin bağlantısı OK mi?
 
-A. Plugin live scan (library file açıksa — en hızlı)
-   figma_list_connected_files → SUI/Mobil/S-Icons bağlıysa
-   figma_enumerate_library_components(libraryName) → live
-   (Her library için ayrı call)
+2. DS Library Registry'den libraryFileKey'leri oku (yukarıdaki tablo)
+   → ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons
 
-B. REST API enumeration (library file açık OLMASA bile çalışır — DEFAULT)
-   figma_enumerate_published_components(libraryFileKey)
-   - Requires: figma_set_rest_token ile ayarlanmış REST token
-   - Library file'ları açmaya gerek yok; sadece target file açık olsun
-   - Library file key'leri kullanıcıdan ilk sefer alınır (bkz aşağı)
+3. figma_enumerate_published_components(libraryFileKey) × 3  (REST)
+   → Her library'nin tüm published component'leri (name, key, kind)
+   → Library file'ları AÇIK olmasına gerek YOK
+   → REST token ilk kullanımda figma_set_rest_token ile set edilmiş olmalı
 
-Variable enumeration:
+4. figma_get_library_variables()  (teamLibrary API, live, open değil gerek)
+   → Tüm variable'lar (spacing, radius, color) — cross-library
 
-figma_get_library_variables(libraryName=...)
-  - teamLibrary API kullanır, her zaman LIVE çalışır
-  - Library file açık olmasa bile target file'dan çağrılabilir
-  - v3.2+ birincil variable keşif yolu
+5. figma_execute (build):
+   - seed component import (NavigationTopBar — text style discovery için)
+   - Adım 1.6 (fmcp-screen-recipes) → roleMap + fontFamilies
+   - loadFontAsync({ family: fontFamilies[0] })  (SHBGrotesk)
+   - skeleton + sections + bindings
+
+6. figma_validate_screen → score ≥80
 \`\`\`
 
-**Library file key'lerini nasıl öğrenir?**
+**Alt-patika (library file açıksa):** Agent \`figma_list_connected_files\` çıktısında SUI library file'ı varsa \`figma_enumerate_library_components\` (plugin, daha hızlı) tercih eder. Yoksa REST path.
 
-Agent kullanıcıdan SADECE 1 KEZ bir session içinde library URL'lerini ister:
+**REST token eksikse:** \`figma_set_rest_token\`'ı TEK call ile (interactive wizard) set etmesini kullanıcıya öner. Olmadan devam ETME.
 
-> *"SUI library'lerin Figma URL'lerini verir misin (tek mesajda, her birini ayrı satır)?*
-> *❖ SUI: https://figma.com/design/XXX/...*
-> *❖ SUI Mobil: https://figma.com/design/YYY/...*
-> *🙂 S-Icons: https://figma.com/design/ZZZ/..."*
+**URL SORMA YASAK:** Kullanıcıya "SUI URL ver" sorusu artık **yasaktır**. Registry tablosu zaten biliyor.
 
-Kullanıcı yapıştırır → agent URL'den \`libraryFileKey\` çıkarır (figma.com/design/\`<KEY>\`/ pattern) → session boyunca hatırlar. Bir sonraki prompt'ta aynı URL'leri tekrar isteme. **Lokal dosyaya yazma — session-scoped state.**
+### Auto-Defaults — Soru SORMA Tablosu (v3.3+ MUTLAK)
 
-**REST token gereksinimi:**
+Kullanıcı bu bilgiyi zaten VERMİŞSE agent TEKRAR SORMAZ. User prompt'taki keyword'leri parse edip tablodan auto-resolve eder:
 
-\`figma_enumerate_published_components\` REST kullanır — bir defa \`figma_set_rest_token\` ile ayarlanmalı. Token yoksa agent talimatı verir:
+| User prompt keyword | Auto-resolve | Soru yasak |
+|---|---|---|
+| "iOS" / "iPhone" / "mobil" + payment/checkout/ödeme | \`device: iPhone 17 (402×874)\` | ❌ iPhone modeli sorma |
+| "Android" + [screen_type] | \`device: Android Compact (412×917)\` | ❌ Android modeli sorma |
+| "tablet" / "iPad" | \`device: iPad Pro 11 (834×1194)\` | ❌ Tablet boyutu sorma |
+| Referans ekran görüntüsü verildi | \`sections\`: görseldeki bölümleri otomatik çıkar | ❌ "Hangi bölümler?" sorma |
+| Library SUI | \`design_system: ❖ SUI\` (+ mobile alt library otomatik) | ❌ "Hangi DS?" sorma |
+| Tema belirtilmedi | \`variants: Tek varyant (Light)\` — Semantic Colors mode-aware, Dark toggle'la görülür | ❌ "Light/Dark?" sorma |
 
-> *"REST path için FIGMA_REST_TOKEN lazım. Bir kez \`figma_set_rest_token\` ile ayarla (Figma → Settings → Personal access token), sonra devam edelim."*
+**Kullanıcı BİLDİRMEDİYSE** (prompt'ta keyword yoksa), default'ları **sessiz uygula**, tool call response'larına \`auto_resolved: {...}\` alanı ekle, kullanıcıya özet bildir. Sessiz devam.
 
-**Öncelik:** Plugin path (A) daha hızlı ama library file açık olmayı gerektirir. Default olarak REST path (B) kullan — kullanıcı library file açmak zorunda değil. Eğer library file zaten bağlıysa (figma_list_connected_files döndürüyorsa) plugin path'i tercih et.
+**TEK İSTİSNA — onay gereken durumlar:**
+- Destructive operation (mevcut ekranı sil/overwrite et)
+- 3+ \`figma_validate_screen\` fail → rebuild önerisi
+- Library yok veya key resolve fail (Phase G LIBRARY_MISMATCH)
+
+Bunların dışında **figma_* çağrılarına direkt başla**. Soru sorma. User zaten onay vermiş sayılır.
 
 **Cache tool'ları (DEPRECATED v3.2+):**
 - \`figma_resolve_active_ds\`, \`figma_get_library_components\`, \`figma_get_library_tokens\` — backward compat için kalır ama kullanım önerilmez. Cache stale olma riski yüksek, Figma sürekli değişiyor.
@@ -1003,7 +1029,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 12940;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13303;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T13:08:57.193Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T13:24:20.910Z";
 //# sourceMappingURL=embedded-skills.js.map

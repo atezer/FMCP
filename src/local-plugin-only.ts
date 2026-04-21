@@ -2227,18 +2227,21 @@ export async function main() {
 		"figma_enumerate_published_components",
 		{
 			description:
-				"List every published COMPONENT + COMPONENT_SET of a library via the Figma REST API. " +
-				"Works WITHOUT the library file being open in plugin — the authoritative path when the user " +
-				"has SUI subscribed in the target file but doesn't want to keep library tabs open. " +
-				"Requires a REST token (figma_set_rest_token once per install). " +
-				"Returns items: [{name, key, kind, description}], variant children are filtered so " +
-				"each row maps 1:1 to importComponentByKeyAsync / importComponentSetByKeyAsync.",
+				"List published COMPONENT + COMPONENT_SET of a library via the Figma REST API. " +
+				"Works WITHOUT the library file being open in plugin — use when SUI is subscribed in the " +
+				"target file but library tabs aren't open. Requires figma_set_rest_token (one-time). " +
+				"v3.4+ RESPONSE SHAPE: items are compact by default ({name, key, kind}) — descriptions " +
+				"stripped to keep responses <10KB. Pass `filter` to search by name substring; large " +
+				"libraries (1000+ components) REQUIRE filter to avoid context overflow.",
 			inputSchema: {
 				libraryFileKey: z.string().describe("Library file key (e.g. '7T4iLZCd3OmyI9Rokxm2av'). Extract from URL: figma.com/design/<KEY>/..."),
+				filter: z.string().optional().describe("Substring filter on component name (case-insensitive). Use for libraries with many components (e.g. filter='button' in SUI main = 1300+ components)."),
+				limit: z.number().min(1).max(500).optional().default(200).describe("Max items returned. Default 200. Hard cap 500 to prevent context overflow."),
+				includeDescription: z.boolean().optional().default(false).describe("Include component description text (can be very long — 10KB+ per item). Default false."),
 			},
 			annotations: { readOnlyHint: true, destructiveHint: false },
 		},
-		safeToolHandler(async ({ libraryFileKey }: { libraryFileKey: string }) => {
+		safeToolHandler(async ({ libraryFileKey, filter, limit, includeDescription }: { libraryFileKey: string; filter?: string; limit?: number; includeDescription?: boolean }) => {
 			const tokenInfo = bridge.getFigmaRestToken();
 			if (!tokenInfo) {
 				return {
@@ -2292,14 +2295,33 @@ export async function main() {
 			type RestSet = { name?: string; key?: string; description?: string };
 			const compsMeta = (compsJson.meta as { components?: RestComp[] } | undefined)?.components ?? [];
 			const setsMeta = (setsJson.meta as { component_sets?: RestSet[] } | undefined)?.component_sets ?? [];
-			const items: Array<{ name: string; key: string; kind: "COMPONENT" | "COMPONENT_SET"; description: string | null }> = [];
+			const itemsAll: Array<{ name: string; key: string; kind: "COMPONENT" | "COMPONENT_SET"; description?: string | null }> = [];
 			for (const s of setsMeta) {
-				if (s.name && s.key) items.push({ name: s.name, key: s.key, kind: "COMPONENT_SET", description: s.description ?? null });
+				if (s.name && s.key) {
+					const item: { name: string; key: string; kind: "COMPONENT_SET"; description?: string | null } = { name: s.name, key: s.key, kind: "COMPONENT_SET" };
+					if (includeDescription) item.description = s.description ?? null;
+					itemsAll.push(item);
+				}
 			}
 			for (const c of compsMeta) {
 				if (!c.name || !c.key) continue;
 				if (c.containing_component_set?.key) continue; // variant inside a set — covered by the set row
-				items.push({ name: c.name, key: c.key, kind: "COMPONENT", description: c.description ?? null });
+				const item: { name: string; key: string; kind: "COMPONENT"; description?: string | null } = { name: c.name, key: c.key, kind: "COMPONENT" };
+				if (includeDescription) item.description = c.description ?? null;
+				itemsAll.push(item);
+			}
+			const filteredByName = filter
+				? itemsAll.filter((i) => i.name.toLowerCase().includes(filter.toLowerCase()))
+				: itemsAll;
+			const effectiveLimit = Math.min(limit ?? 200, 500);
+			const items = filteredByName.slice(0, effectiveLimit);
+			const truncated = filteredByName.length > effectiveLimit;
+			const warnings: string[] = [];
+			if (truncated) {
+				warnings.push(
+					`TRUNCATED: ${filteredByName.length} items matched, ${effectiveLimit} returned. ` +
+					`Use a narrower \`filter\` or increase \`limit\` (max 500). Total in library: ${itemsAll.length}.`,
+				);
 			}
 			return {
 				content: [{
@@ -2309,11 +2331,16 @@ export async function main() {
 						libraryFileKey,
 						items,
 						_metrics: {
-							total: items.length,
+							returned: items.length,
+							matchedByFilter: filteredByName.length,
+							totalInLibrary: itemsAll.length,
 							componentSets: items.filter((i) => i.kind === "COMPONENT_SET").length,
 							singleComponents: items.filter((i) => i.kind === "COMPONENT").length,
 							source: "figma_rest_api",
+							filter: filter ?? null,
+							truncated,
 						},
+						...(warnings.length > 0 && { _warnings: warnings }),
 					}),
 				}],
 			};
