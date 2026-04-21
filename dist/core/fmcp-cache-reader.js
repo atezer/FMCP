@@ -190,12 +190,26 @@ export async function getLibraryComponents(libraryName, filter) {
                 .find((l) => /^-\s*\*\*sourceLibrary:\*\*/.test(l))
                 ?.replace(/^-\s*\*\*sourceLibrary:\*\*\s*/, "")
                 .trim() ?? null;
+            // Phase H: explicit kind annotation wins; otherwise auto-infer from
+            // Properties line — any "(variant...)" mention means this is a
+            // COMPONENT_SET and callers must use importComponentSetByKeyAsync.
+            const kindLine = section.lines
+                .find((l) => /^-\s*\*\*kind:\*\*/.test(l))
+                ?.replace(/^-\s*\*\*kind:\*\*\s*/, "")
+                .trim();
+            const propsLine = section.lines.find((l) => /\*\*Properties:\*\*/.test(l)) ?? "";
+            const inferredKind = kindLine === "COMPONENT_SET" || kindLine === "COMPONENT"
+                ? kindLine
+                : /\(variant/i.test(propsLine)
+                    ? "COMPONENT_SET"
+                    : "COMPONENT";
             items.push({
                 name,
                 key: keyMatch[1],
                 role,
                 source: ctx.libraryName,
                 sourceLibrary: sourceLibrary ?? ctx.libraryName,
+                kind: inferredKind,
             });
             continue;
         }
@@ -225,6 +239,14 @@ export async function getLibraryComponents(libraryName, filter) {
                     role: "icon",
                     source: ctx.libraryName,
                     sourceLibrary: sourceLibrary ?? ctx.libraryName,
+                    // Icons default to COMPONENT. Only mark as COMPONENT_SET when
+                    // the Props column explicitly mentions "variant" (filled/outlined
+                    // selectors). A bare "Type" label is not enough — it's just a
+                    // property name that could be anything.
+                    kind: (header.findIndex((h) => h === "props") >= 0
+                        && /variant/i.test(cells[header.findIndex((h) => h === "props")] ?? ""))
+                        ? "COMPONENT_SET"
+                        : "COMPONENT",
                 });
             }
         }

@@ -109,6 +109,21 @@ describe("getLibraryComponents", () => {
 		expect(button?.sourceLibrary).toBe("❖ TEST");
 	});
 
+	it("parses kind annotation + auto-infers COMPONENT_SET from variant syntax (Phase H)", async () => {
+		setupCache(new Date().toISOString());
+		const { getLibraryComponents } = await loadReader();
+		const items = await getLibraryComponents("❖ TEST");
+		// Explicit annotation
+		const button = items.find((i) => i.name === "Button");
+		expect(button?.kind).toBe("COMPONENT_SET");
+		// Non-variant entry defaults to COMPONENT
+		const divider = items.find((i) => i.name === "Divider_H");
+		expect(divider?.kind).toBe("COMPONENT");
+		// Icons default to COMPONENT (no Props/Type column value with variant)
+		const chevron = items.find((i) => i.name === "chevron_right");
+		expect(chevron?.kind).toBe("COMPONENT");
+	});
+
 	it("skips Eksik (missing) components", async () => {
 		setupCache(new Date().toISOString());
 		const { getLibraryComponents } = await loadReader();

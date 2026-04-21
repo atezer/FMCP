@@ -2211,6 +2211,9 @@ export async function main() {
 			const requiredLibraries = Array.from(
 				new Set(items.map((c) => c.sourceLibrary).filter((l): l is string => !!l)),
 			);
+			// Phase H: surface which items are COMPONENT_SET so the agent can
+			// switch to importComponentSetByKeyAsync for those.
+			const componentSetKeys = items.filter((c) => c.kind === "COMPONENT_SET").map((c) => c.key);
 			const warnings: string[] = [];
 			if (ctx.status === "stale") {
 				warnings.push(`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`);
@@ -2222,11 +2225,19 @@ export async function main() {
 					"(Assets panel → Libraries → enable).",
 				);
 			}
+			if (componentSetKeys.length > 0) {
+				warnings.push(
+					`COMPONENT_SET_KEYS: ${componentSetKeys.length} adet variant-içeren component. ` +
+					"`importComponentSetByKeyAsync(key)` kullan — `importComponentByKeyAsync` SET key'lerde fail eder " +
+					`(\"Could not find a published component with the key\"). Her item'in \`kind\` field'ına bak.`,
+				);
+			}
 			const payload = {
 				success: true,
 				libraryName,
 				items,
 				requiredLibraries,
+				componentSetKeys,
 				_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
 				...(warnings.length > 0 && { _warnings: warnings }),
 			};

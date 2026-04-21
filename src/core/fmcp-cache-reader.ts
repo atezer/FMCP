@@ -46,6 +46,14 @@ export interface LibraryComponent {
 	 * *this* library. When omitted the caller should assume the primary DS.
 	 */
 	sourceLibrary: string | null;
+	/**
+	 * Phase H (v3.1.5+): distinguishes a single COMPONENT from a COMPONENT_SET
+	 * (variant container). Agents MUST call the matching import API —
+	 * `importComponentByKeyAsync` fails with "Could not find a published
+	 * component with the key" when invoked with a SET key. Variant-bearing
+	 * components (Button, NavigationTopBar …) are always COMPONENT_SET.
+	 */
+	kind: "COMPONENT" | "COMPONENT_SET";
 }
 
 export interface LibraryToken {
@@ -231,12 +239,27 @@ export async function getLibraryComponents(libraryName: string, filter?: string)
 				.find((l) => /^-\s*\*\*sourceLibrary:\*\*/.test(l))
 				?.replace(/^-\s*\*\*sourceLibrary:\*\*\s*/, "")
 				.trim() ?? null;
+			// Phase H: explicit kind annotation wins; otherwise auto-infer from
+			// Properties line — any "(variant...)" mention means this is a
+			// COMPONENT_SET and callers must use importComponentSetByKeyAsync.
+			const kindLine = section.lines
+				.find((l) => /^-\s*\*\*kind:\*\*/.test(l))
+				?.replace(/^-\s*\*\*kind:\*\*\s*/, "")
+				.trim();
+			const propsLine = section.lines.find((l) => /\*\*Properties:\*\*/.test(l)) ?? "";
+			const inferredKind: "COMPONENT" | "COMPONENT_SET" =
+				kindLine === "COMPONENT_SET" || kindLine === "COMPONENT"
+					? (kindLine as "COMPONENT" | "COMPONENT_SET")
+					: /\(variant/i.test(propsLine)
+						? "COMPONENT_SET"
+						: "COMPONENT";
 			items.push({
 				name,
 				key: keyMatch[1],
 				role,
 				source: ctx.libraryName,
 				sourceLibrary: sourceLibrary ?? ctx.libraryName,
+				kind: inferredKind,
 			});
 			continue;
 		}
@@ -263,6 +286,14 @@ export async function getLibraryComponents(libraryName: string, filter?: string)
 					role: "icon",
 					source: ctx.libraryName,
 					sourceLibrary: sourceLibrary ?? ctx.libraryName,
+					// Icons default to COMPONENT. Only mark as COMPONENT_SET when
+					// the Props column explicitly mentions "variant" (filled/outlined
+					// selectors). A bare "Type" label is not enough — it's just a
+					// property name that could be anything.
+					kind: ((header.findIndex((h) => h === "props") >= 0
+						&& /variant/i.test(cells[header.findIndex((h) => h === "props")] ?? "")) as boolean)
+						? "COMPONENT_SET"
+						: "COMPONENT",
 				});
 			}
 		}
