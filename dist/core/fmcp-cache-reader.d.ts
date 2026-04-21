@@ -29,6 +29,13 @@ export interface LibraryComponent {
     key: string;
     role: string | null;
     source: string | null;
+    /**
+     * Phase G (v3.1.4+): specific library this component was published from
+     * (e.g. "❖ SUI Mobil" vs "❖ SUI"). Remote library keys are library-scoped,
+     * so importComponentByKeyAsync requires the TARGET file to subscribe to
+     * *this* library. When omitted the caller should assume the primary DS.
+     */
+    sourceLibrary: string | null;
 }
 export interface LibraryToken {
     name: string;

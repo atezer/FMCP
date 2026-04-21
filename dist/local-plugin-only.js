@@ -1854,14 +1854,25 @@ export async function main() {
         }
         const items = await getLibraryComponentsCache(libraryName, filter);
         auditCache(auditLogPath, ctx.status === "fresh" ? "cache_hit" : "cache_stale", "figma_get_library_components", libraryName, ctx.cacheRoot);
+        // Phase G: aggregate unique source libraries so the agent can warn the
+        // user if non-primary libraries (e.g. "❖ SUI Mobil") are required.
+        const requiredLibraries = Array.from(new Set(items.map((c) => c.sourceLibrary).filter((l) => !!l)));
+        const warnings = [];
+        if (ctx.status === "stale") {
+            warnings.push(`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`);
+        }
+        if (requiredLibraries.length > 1) {
+            warnings.push(`REQUIRED_LIBRARIES: ${requiredLibraries.join(", ")} — ` +
+                "importComponentByKeyAsync'ten önce hedef Figma dosyasında bu library'lerin TÜMÜ subscribe edilmiş olmalı " +
+                "(Assets panel → Libraries → enable).");
+        }
         const payload = {
             success: true,
             libraryName,
             items,
+            requiredLibraries,
             _metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
-            ...(ctx.status === "stale" && {
-                _warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
-            }),
+            ...(warnings.length > 0 && { _warnings: warnings }),
         };
         const nextStepObj = bootstrapInjector.injectNextStepObj("figma_get_library_components", payload);
         return {
