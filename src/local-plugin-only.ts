@@ -2146,10 +2146,12 @@ export async function main() {
 					? "cache_stale"
 					: "cache_miss";
 			auditCache(auditLogPath, event, "figma_resolve_active_ds", ctx.libraryName ?? undefined, ctx.cacheRoot ?? undefined);
+			const payload = { success: true, ...ctx };
+			const nextStepObj = bootstrapInjector.injectNextStepObj("figma_resolve_active_ds", payload);
 			return {
 				content: [{
 					type: "text" as const,
-					text: JSON.stringify({ success: true, ...ctx }),
+					text: JSON.stringify({ ...payload, ...(nextStepObj && { _nextStepObj: nextStepObj }) }),
 				}],
 			};
 		})
@@ -2204,17 +2206,20 @@ export async function main() {
 			}
 			const items = await getLibraryComponentsCache(libraryName, filter);
 			auditCache(auditLogPath, ctx.status === "fresh" ? "cache_hit" : "cache_stale", "figma_get_library_components", libraryName, ctx.cacheRoot);
+			const payload = {
+				success: true,
+				libraryName,
+				items,
+				_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
+				...(ctx.status === "stale" && {
+					_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
+				}),
+			};
+			const nextStepObj = bootstrapInjector.injectNextStepObj("figma_get_library_components", payload);
 			return {
 				content: [{
 					type: "text" as const,
-					text: JSON.stringify({
-						success: true,
-						items,
-						_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
-						...(ctx.status === "stale" && {
-							_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
-						}),
-					}),
+					text: JSON.stringify({ ...payload, ...(nextStepObj && { _nextStepObj: nextStepObj }) }),
 				}],
 			};
 		})
@@ -2269,17 +2274,20 @@ export async function main() {
 			}
 			const items = await getLibraryTokensCache(libraryName, filter);
 			auditCache(auditLogPath, ctx.status === "fresh" ? "cache_hit" : "cache_stale", "figma_get_library_tokens", libraryName, ctx.cacheRoot);
+			const payload = {
+				success: true,
+				libraryName,
+				items,
+				_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
+				...(ctx.status === "stale" && {
+					_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
+				}),
+			};
+			const nextStepObj = bootstrapInjector.injectNextStepObj("figma_get_library_tokens", payload);
 			return {
 				content: [{
 					type: "text" as const,
-					text: JSON.stringify({
-						success: true,
-						items,
-						_metrics: { count: items.length, source: "fmcp_cache", cacheStatus: ctx.status },
-						...(ctx.status === "stale" && {
-							_warnings: [`Cache stale (last sync ${ctx.lastSync ?? "unknown"}). Consider /ds-sync.`],
-						}),
-					}),
+					text: JSON.stringify({ ...payload, ...(nextStepObj && { _nextStepObj: nextStepObj }) }),
 				}],
 			};
 		})
