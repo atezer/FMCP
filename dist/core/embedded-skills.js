@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-21T12:56:16.707Z
- * Total estimated tokens: 12697
+ * Generated: 2026-04-21T13:08:57.193Z
+ * Total estimated tokens: 12940
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
 ---
@@ -214,7 +214,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (3161 tokens) -->
+<!-- fmcp-screen-orchestrator (3403 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -237,34 +237,52 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 | \`fmcp-screen-recipes\` | Fast Path match | Sadece Fast Path'te |
 | \`apply-figma-design-system\` | Mevcut ekranı DS'ye hizala | Sadece remediation |
 
-### Adım -1 — Live DS Discovery (v3.2+ MUTLAK İLK ADIM, cache-free)
+### Adım -1 — Live DS Discovery (v3.2+ MUTLAK İLK ADIM, cache-free, no library files open required)
 
-**Prensip değişikliği (v3.2+):** Lokal cache bağımlılığı kaldırıldı. Figma sürekli güncellendiği için component key'leri cache'te stale olabilir. Artık **live enumeration** birincil yol — agent Figma'dan anlık okur.
+**Prensip değişikliği (v3.2+):** Lokal cache bağımlılığı kaldırıldı. Agent Figma'dan **anlık** okur. **Ve artık library file'larının plugin'de açık olması da GEREKMEZ** — REST API ile uzaktan enumerate edilir.
 
-ANY \`figma_*\` screen-generation tool çağırmadan ÖNCE:
+**Discovery fallback zinciri (agent sırayla dener):**
 
 \`\`\`
-1. figma_list_connected_files()
-   → connected library file'ları listele (örn. ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons)
-   → Target + library(ler) hepsi bağlı mı kontrol et
+Component enumeration:
 
-2. figma_enumerate_library_components(libraryName="❖ SUI Mobil")
-   → target library'nin TÜM published component'lerini live al
-   → Her item: { name, key, kind: COMPONENT|COMPONENT_SET, props, pageName }
-   → Multi-library DS ise (SUI + SUI Mobil + S-Icons) her biri için ayrı call
+A. Plugin live scan (library file açıksa — en hızlı)
+   figma_list_connected_files → SUI/Mobil/S-Icons bağlıysa
+   figma_enumerate_library_components(libraryName) → live
+   (Her library için ayrı call)
 
-3. figma_get_library_variables(libraryName="❖ SUI")
-   → teamLibrary API ile live variable enumeration (library file açık olmasa bile çalışır)
+B. REST API enumeration (library file açık OLMASA bile çalışır — DEFAULT)
+   figma_enumerate_published_components(libraryFileKey)
+   - Requires: figma_set_rest_token ile ayarlanmış REST token
+   - Library file'ları açmaya gerek yok; sadece target file açık olsun
+   - Library file key'leri kullanıcıdan ilk sefer alınır (bkz aşağı)
 
-4. Keşif tamam → direkt üretim
+Variable enumeration:
+
+figma_get_library_variables(libraryName=...)
+  - teamLibrary API kullanır, her zaman LIVE çalışır
+  - Library file açık olmasa bile target file'dan çağrılabilir
+  - v3.2+ birincil variable keşif yolu
 \`\`\`
 
-**Ön-şart: Library file'ları plugin'de açık olmalı.**
+**Library file key'lerini nasıl öğrenir?**
 
-Kullanıcı "SUI ile X yap" dediğinde, agent:
-- \`figma_list_connected_files\` çağırır
-- SUI library file'ları bağlı değilse kullanıcıya der: *"Lütfen ❖ SUI + ❖ SUI Mobil library file'larını Figma'da açıp FMCP plugin'i çalıştırın (her birinde ayrı tab). Sonra tekrar deneyeceğim."*
-- Library'ler bağlıysa live enumerate ile devam
+Agent kullanıcıdan SADECE 1 KEZ bir session içinde library URL'lerini ister:
+
+> *"SUI library'lerin Figma URL'lerini verir misin (tek mesajda, her birini ayrı satır)?*
+> *❖ SUI: https://figma.com/design/XXX/...*
+> *❖ SUI Mobil: https://figma.com/design/YYY/...*
+> *🙂 S-Icons: https://figma.com/design/ZZZ/..."*
+
+Kullanıcı yapıştırır → agent URL'den \`libraryFileKey\` çıkarır (figma.com/design/\`<KEY>\`/ pattern) → session boyunca hatırlar. Bir sonraki prompt'ta aynı URL'leri tekrar isteme. **Lokal dosyaya yazma — session-scoped state.**
+
+**REST token gereksinimi:**
+
+\`figma_enumerate_published_components\` REST kullanır — bir defa \`figma_set_rest_token\` ile ayarlanmalı. Token yoksa agent talimatı verir:
+
+> *"REST path için FIGMA_REST_TOKEN lazım. Bir kez \`figma_set_rest_token\` ile ayarla (Figma → Settings → Personal access token), sonra devam edelim."*
+
+**Öncelik:** Plugin path (A) daha hızlı ama library file açık olmayı gerektirir. Default olarak REST path (B) kullan — kullanıcı library file açmak zorunda değil. Eğer library file zaten bağlıysa (figma_list_connected_files döndürüyorsa) plugin path'i tercih et.
 
 **Cache tool'ları (DEPRECATED v3.2+):**
 - \`figma_resolve_active_ds\`, \`figma_get_library_components\`, \`figma_get_library_tokens\` — backward compat için kalır ama kullanım önerilmez. Cache stale olma riski yüksek, Figma sürekli değişiyor.
@@ -985,7 +1003,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 12697;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 12940;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T12:56:16.707Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T13:08:57.193Z";
 //# sourceMappingURL=embedded-skills.js.map
