@@ -184,7 +184,19 @@ export async function getLibraryComponents(libraryName, filter) {
                 .find((l) => /^-\s*\*\*Kullan(ı|i)m:\*\*/.test(l))
                 ?.replace(/^-\s*\*\*Kullan(ı|i)m:\*\*\s*/, "")
                 .trim() ?? null;
-            items.push({ name, key: keyMatch[1], role, source: ctx.libraryName });
+            // Phase G: optional per-component library attribution. When missing
+            // falls back to the active library (legacy cache format compat).
+            const sourceLibrary = section.lines
+                .find((l) => /^-\s*\*\*sourceLibrary:\*\*/.test(l))
+                ?.replace(/^-\s*\*\*sourceLibrary:\*\*\s*/, "")
+                .trim() ?? null;
+            items.push({
+                name,
+                key: keyMatch[1],
+                role,
+                source: ctx.libraryName,
+                sourceLibrary: sourceLibrary ?? ctx.libraryName,
+            });
             continue;
         }
         if (isIconTableSection) {
@@ -194,6 +206,7 @@ export async function getLibraryComponents(libraryName, filter) {
             const header = splitRow(tableLines[0]).map((h) => h.toLowerCase());
             const keyIdx = header.findIndex((h) => h.includes("key"));
             const nameIdx = header.findIndex((h) => h === "icon" || h.includes("name"));
+            const sourceLibraryIdx = header.findIndex((h) => h === "sourcelibrary" || h === "source library" || h === "library");
             if (keyIdx < 0 || nameIdx < 0)
                 continue;
             for (let i = 1; i < tableLines.length; i++) {
@@ -205,7 +218,14 @@ export async function getLibraryComponents(libraryName, filter) {
                 const name = cells[nameIdx] ?? "";
                 if (!key || !name)
                     continue;
-                items.push({ name, key, role: "icon", source: ctx.libraryName });
+                const sourceLibrary = sourceLibraryIdx >= 0 ? (cells[sourceLibraryIdx] || "").trim() || null : null;
+                items.push({
+                    name,
+                    key,
+                    role: "icon",
+                    source: ctx.libraryName,
+                    sourceLibrary: sourceLibrary ?? ctx.libraryName,
+                });
             }
         }
     }

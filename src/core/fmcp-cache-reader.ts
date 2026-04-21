@@ -39,6 +39,13 @@ export interface LibraryComponent {
 	key: string;
 	role: string | null;
 	source: string | null;
+	/**
+	 * Phase G (v3.1.4+): specific library this component was published from
+	 * (e.g. "❖ SUI Mobil" vs "❖ SUI"). Remote library keys are library-scoped,
+	 * so importComponentByKeyAsync requires the TARGET file to subscribe to
+	 * *this* library. When omitted the caller should assume the primary DS.
+	 */
+	sourceLibrary: string | null;
 }
 
 export interface LibraryToken {
@@ -218,7 +225,19 @@ export async function getLibraryComponents(libraryName: string, filter?: string)
 				.find((l) => /^-\s*\*\*Kullan(ı|i)m:\*\*/.test(l))
 				?.replace(/^-\s*\*\*Kullan(ı|i)m:\*\*\s*/, "")
 				.trim() ?? null;
-			items.push({ name, key: keyMatch[1], role, source: ctx.libraryName });
+			// Phase G: optional per-component library attribution. When missing
+			// falls back to the active library (legacy cache format compat).
+			const sourceLibrary = section.lines
+				.find((l) => /^-\s*\*\*sourceLibrary:\*\*/.test(l))
+				?.replace(/^-\s*\*\*sourceLibrary:\*\*\s*/, "")
+				.trim() ?? null;
+			items.push({
+				name,
+				key: keyMatch[1],
+				role,
+				source: ctx.libraryName,
+				sourceLibrary: sourceLibrary ?? ctx.libraryName,
+			});
 			continue;
 		}
 
@@ -228,6 +247,7 @@ export async function getLibraryComponents(libraryName: string, filter?: string)
 			const header = splitRow(tableLines[0]).map((h) => h.toLowerCase());
 			const keyIdx = header.findIndex((h) => h.includes("key"));
 			const nameIdx = header.findIndex((h) => h === "icon" || h.includes("name"));
+			const sourceLibraryIdx = header.findIndex((h) => h === "sourcelibrary" || h === "source library" || h === "library");
 			if (keyIdx < 0 || nameIdx < 0) continue;
 			for (let i = 1; i < tableLines.length; i++) {
 				const row = tableLines[i];
@@ -236,7 +256,14 @@ export async function getLibraryComponents(libraryName: string, filter?: string)
 				const key = stripCode(cells[keyIdx] ?? "");
 				const name = cells[nameIdx] ?? "";
 				if (!key || !name) continue;
-				items.push({ name, key, role: "icon", source: ctx.libraryName });
+				const sourceLibrary = sourceLibraryIdx >= 0 ? (cells[sourceLibraryIdx] || "").trim() || null : null;
+				items.push({
+					name,
+					key,
+					role: "icon",
+					source: ctx.libraryName,
+					sourceLibrary: sourceLibrary ?? ctx.libraryName,
+				});
 			}
 		}
 	}

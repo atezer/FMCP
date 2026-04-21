@@ -98,6 +98,17 @@ describe("getLibraryComponents", () => {
 		expect(chevron?.role).toBe("icon");
 	});
 
+	it("parses sourceLibrary annotation (Phase G multi-library)", async () => {
+		setupCache(new Date().toISOString());
+		const { getLibraryComponents } = await loadReader();
+		const items = await getLibraryComponents("❖ TEST");
+		const nav = items.find((i) => i.name === "NavigationTopBar");
+		expect(nav?.sourceLibrary).toBe("❖ TEST Mobil");
+		// Other items without explicit annotation fall back to active library
+		const button = items.find((i) => i.name === "Button");
+		expect(button?.sourceLibrary).toBe("❖ TEST");
+	});
+
 	it("skips Eksik (missing) components", async () => {
 		setupCache(new Date().toISOString());
 		const { getLibraryComponents } = await loadReader();

@@ -123,7 +123,24 @@ YASAK:
 - Tek tek fill'leri Dark'a yeniden bağlama
 - "Dark" isimli token arama — mode collection zaten işi yapıyor
 
-**3. LIBRARY_MISMATCH error handling:**
+**3. Multi-Library Subscription (v3.1.4+ Phase G):**
+
+SUI ekosistemi tek library değil — `❖ SUI` (ana) + `❖ SUI Mobil` (mobil UI) + başkaları. Her component belirli bir library'de yayımlanmıştır; `importComponentByKeyAsync(key)` hedef Figma dosyasının **ilgili library'yi subscribe etmiş olması** durumunda çalışır.
+
+**Kaynak:** `figma_get_library_components` response'u her item'da `sourceLibrary` (örn. `❖ SUI Mobil`) field'ı döner. Ayrıca top-level `requiredLibraries: string[]` ve gerekirse `_warnings: ["REQUIRED_LIBRARIES: ..."]` verir.
+
+**Kural — ilk figma_execute öncesi kontrol:**
+1. `figma_get_library_components` response'undan `requiredLibraries` oku
+2. Eğer `requiredLibraries.length > 1` (yani mobil + ana gibi birden çok library) → kullanıcıya **onay sorusu sor**:
+   > *"Bu ekran için `❖ SUI` ve `❖ SUI Mobil` library'lerinin ikisi de subscribe olmalı. Figma'da Assets panelini açıp her ikisinin enabled olduğunu onaylar mısınız?"*
+3. Onay geldikten sonra üretime geç.
+
+**importComponentByKeyAsync fail ederse** (`Could not find a published component with the key`):
+- Component'in item'ına bak → `sourceLibrary` değeri ne?
+- Kullanıcıya **kesin olarak** söyle: *"`<component name>` `<sourceLibrary>` library'sinde. Assets → Libraries → `<sourceLibrary>`'yi enable edin, sonra tekrar deneyin."*
+- YASAK: fallback olarak `figma_search_assets` ile aynı component'i başka yerden aramak — key zaten scope'lu, boşuna denenir.
+
+**4. LIBRARY_MISMATCH error handling:**
 Server tool `_warnings: ["LIBRARY_MISMATCH"]` dönerse (user istediği library ≠ active.md'dekiyle):
 - Kullanıcıya: *"active-ds.md'deki library `<ctx.libraryName>` olarak kayıtlı, siz `<requested>` dediniz. Hangisini kullanayım?"*
 - Yanıta göre `~/.claude/data/fcm-ds/active.md`'yi güncellemek için `/ds-select` komutunu öner.
