@@ -49,6 +49,8 @@ required_inputs:
 
 # Audit Figma Design System (tuval içi)
 
+> **Kullanım (v3.1+):** SADECE `fmcp-ds-audit-orchestrator` alt-skill'i olarak çağrılır. Doğrudan entry point DEĞİL. Kullanıcı "audit et" dediğinde önce orchestrator yüklenir; orchestrator hangi audit tipini seçer (compliance / a11y / drift / visual_qa / impact).
+
 ## Overview
 
 Bu skill **yalnızca okur**; Figma node'unun yayınlanmış design system ile ne kadar entegre olduğunu yapısal kanıta dayanarak denetler. Görsel tatmin değil, **instance / tekrar / ham değer / token bağlama** odaklıdır.

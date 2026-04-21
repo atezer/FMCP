@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-20T14:10:17.199Z
- * Total estimated tokens: 11183
+ * Generated: 2026-04-21T11:22:57.700Z
+ * Total estimated tokens: 11408
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
 ---
@@ -214,7 +214,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (1726 tokens) -->
+<!-- fmcp-screen-orchestrator (1872 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -264,16 +264,29 @@ ANY \`figma_*\` tool çağırmadan ÖNCE:
 
 Cache SADECE variable key'leri (renk/spacing/radius) ve component key'leri içerir. Text styles ve mode ID'leri için **farklı yollar** gerekir — bunları REST API ile çekmeye çalışma, cache miss değil, **mimari olarak başka kaynak**:
 
-**1. Text styles (typography) → RUNTIME DISCOVERY:**
+**1. Text styles (typography) → SEED INSTANCE + \`findAll(TEXT)\` + \`getStyleByIdAsync\`:**
+
+SUI remote library'dir; \`getLocalTextStylesAsync()\` 0 döner. Canonical pattern \`fmcp-screen-recipes\` **Adım 1.6**'dadır — orchestrator bu adımı çağırır, kod duplicate etmez:
+
 \`\`\`js
-// SUI bir component import ettikten SONRA (en az 1 instance gelir ve style'lar local olur):
-await figma.importComponentByKeyAsync("<herhangi bir SUI componentKey>");
-const styles = await figma.getLocalTextStylesAsync();
-// styles[n].id → text.setTextStyleIdAsync(id)
-// Role map: name pattern'den "display", "title", "subtitle", "body", "caption", "button"
+// Adım A: Sayfa boşsa (Page 4 senaryosu) seed instance — componentKey cache'ten
+const seedInst = (await figma.importComponentByKeyAsync(navTopBarKey)).createInstance();
+figma.currentPage.appendChild(seedInst);
+
+// Adım B: findAll(TEXT) → her textStyleId için getStyleByIdAsync
+// → styleMap (id/name/fontSize/fontName) + roleMap (display/title/body/caption/button)
+// → fontFamilies = unique style.fontName.family listesi
+// (Tam kod fmcp-screen-recipes Adım 1.6'da)
+
+// Adım C: seedInst.remove() ile temizle (veya ekranın parçası olacaksa tut)
 \`\`\`
 
-YASAK: Text styles için \`figma_rest_api\` \`/v1/files/.../styles\` denemesi — user'ın file'ında değil, SUI library file'ında. Bunun yerine ilk component import'undan sonra local'e düşen style'ları oku.
+Sonuç: \`roleMap[role].id\` → \`setTextStyleIdAsync(id)\`, \`fontFamilies[0]\` → \`loadFontAsync({family})\`.
+
+YASAK:
+- \`getLocalTextStylesAsync()\` — remote library styles'ı dönmez, SUI'de 0 döner
+- \`figma_rest_api /v1/files/<consumer_file>/styles\` — tüketici file'da style metadata yok
+- Hardcoded \`family: "Inter"\` — Adım 1.6'dan dönen \`fontFamilies[0]\` kullan (SUI için: \`SHBGrotesk\`)
 
 **2. Dark variant → MODE COLLECTION SWAP (setExplicitVariableModeForCollection):**
 \`\`\`js
@@ -367,7 +380,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2488 tokens) -->
+<!-- figma-canvas-ops (2565 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -490,6 +503,16 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
    \`\`\`
    **FigJam:** \`createShapeWithText()\` varsayılan "Inter Medium". Metin düzenlemeden önce \`await figma.loadFontAsync(shape.text.fontName)\`.
 
+   **Rule 8b-pre — Font Family Source (v2.0+ ZORUNLU):**
+
+   \`loadFontAsync({ family })\` çağırmadan ÖNCE \`family\` değerini şu kaynaklardan sırayla dene:
+
+   1. **Adım 1.6 çıktısı:** \`fontFamilies[0]\` — \`fmcp-screen-recipes\` Adım 1.6 session'da önceden çalıştıysa (recommended)
+   2. **\`style.fontName.family\`:** \`getStyleByIdAsync\` sonucundan (library'den gelen style objesinde mevcut)
+   3. **Fallback \`"Inter"\`:** ADVISORY warning zorunlu — log'a yaz: \`_warnings: ["FONT_FAMILY_FALLBACK_INTER"]\`
+
+   YASAK: Hardcoded \`"Inter"\` family'yi doğrudan yazmak, DS'nin fontunu varsaymadan font load etmek. Yanlış family ile \`loadFontAsync\` + doğru family bekleyen \`setTextStyleIdAsync\` → silent mismatch (text görünmez veya default font'a düşer).
+
    **Rule 8b — Text Style + Font Ordering (v1.9.9+ ZORUNLU):**
 
    Library text style uygularken MUTLAK SIRALAMA:
@@ -558,20 +581,10 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
             throw new Error("UNBOUND_RADIUS: " + node.name + "." + r + "=" + node[r]);
           }
         }
-      }
-      // Text style
-      if (node.type === "TEXT" && !(node.textStyleId && typeof node.textStyleId === "string" && node.textStyleId !== "")) {
-        throw new Error("UNBOUND_TEXTSTYLE: '" + (node.characters||"").slice(0,30) + "' — setTextStyleIdAsync(style.id) cagrisi eksik");
-      }
-    }
-
-    // Tüm oluşturulan node'ları doğrula:
-    for (var n = 0; n < createdNodes.length; n++) assertBound(createdNodes[n]);
-    \`\`\`
 
 ---
 
-<!-- fmcp-screen-recipes (2124 tokens) -->
+<!-- fmcp-screen-recipes (2126 tokens) -->
 ---
 name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için 5 mega-adımlı recipe. Max 15 op/execute, cache-first discovery, her adımda Türkçe micro-report.
@@ -605,6 +618,8 @@ outputs:
 ---
 
 # FMCP Screen Recipes — Fast Path Cookbook
+
+> **Kullanım (v3.1+):** \`fmcp-screen-orchestrator\` Adım 0.5 Fast Path 5/5 match olduğunda çağrılır. Bağımsız giriş noktası değil. Adım 1.6 (Text Style Resolution) canonical kopyası burada — orchestrator buraya referans verir, kod duplicate etmez.
 
 ## Ne Zaman Kullanılır
 
@@ -734,44 +749,42 @@ return { tokenKeyMap };
 
 **Micro-report:** \`✅ Pre-Flight Discovery: <N> collection, <M> token imported, surface=<found/missing>\`
 
-### Adım 1.6 — Text Style Resolution
+### Adım 1.6 — Text Style Resolution (v2.0+ — fontFamilies + seed fallback)
 
-Dosyadaki mevcut text style'ları tara, role mapping üret. \`importStyleByKeyAsync\` ÇAĞIRMA — direkt \`setTextStyleIdAsync(roleMap[role].id)\` kullan.
+Dosyadaki mevcut text style'ları tara, role mapping + font family üret. \`importStyleByKeyAsync\` ÇAĞIRMA — direkt \`setTextStyleIdAsync(roleMap[role].id)\` kullan.
 
 \`\`\`js
+// Adım A: Sayfa boşsa ilk componentKey ile seed instance düşür (v2.0+ Page 4 senaryosu)
+// Caller \`seedComponentKey\` değişkenini opsiyonel olarak tanımlar (componentKey cache'ten).
+// Tanımsızsa sessizce skip edilir — styleMap boş dönebilir, fallback chain devreye girer.
+let seedInst = null;
+if (figma.currentPage.findAll(n => n.type === "TEXT").length === 0) {
+  const _seedKey = (typeof seedComponentKey !== "undefined") ? seedComponentKey : null;
+  if (_seedKey) {
+    try {
+      const seedComp = await figma.importComponentByKeyAsync(_seedKey);
+      seedInst = seedComp.createInstance();
+      figma.currentPage.appendChild(seedInst);
+    } catch(e) { /* fallback: keep going, styleMap may be empty */ }
+  }
+}
+
+// Adım B: findAll + getStyleByIdAsync
 const allTexts = figma.currentPage.findAll(n => n.type === "TEXT");
 const uniqueStyleIds = new Set();
 for (const t of allTexts) { if (t.textStyleId && typeof t.textStyleId === 'string') uniqueStyleIds.add(t.textStyleId); }
 
 const styleMap = {};
+const fontFamilySet = new Set();
 for (const id of uniqueStyleIds) {
-  try { const style = await figma.getStyleByIdAsync(id); if (style) styleMap[style.id] = { id: style.id, name: style.name, fontSize: style.fontSize || null }; } catch(e) {}
+  try {
+    const style = await figma.getStyleByIdAsync(id);
+    if (style) {
+      styleMap[style.id] = { id: style.id, name: style.name, fontSize: style.fontSize || null, fontName: style.fontName || null };
+      if (style.fontName?.family) fontFamilySet.add(style.fontName.family);  // v2.0+
+    }
+  } catch(e) {}
 }
-
-const roleKeywords = {
-  display: ["display","hero","amount","title-xl"], title: ["section-title","title","heading"],
-  subtitle: ["subtitle","body-semibold","body-bold"], body: ["body-medium","body-regular","body"],
-  caption: ["small","caption","footnote"], button: ["button"]
-};
-function findStyle(kws) { for (const kw of kws) { const m = Object.values(styleMap).find(s => (s.name||"").toLowerCase().includes(kw.toLowerCase())); if (m) return m; } return null; }
-const roleMap = {};
-for (const [role, kws] of Object.entries(roleKeywords)) { const m = findStyle(kws); if (m) roleMap[role] = { id: m.id, name: m.name, fontSize: m.fontSize }; }
-if (!roleMap.display) {
-  const sorted = Object.values(styleMap).filter(s => s.fontSize).sort((a,b) => b.fontSize - a.fontSize);
-  if (sorted.length > 0) roleMap.display = { id: sorted[0].id, name: sorted[0].name, fontSize: sorted[0].fontSize };
-}
-return { totalStyles: Object.keys(styleMap).length, styleMap, roleMap };
-\`\`\`
-
-**Micro-report:** \`✅ Text Style: <N> style, <M> role eşleşti\`
-
----
-
-### Adım 2 — Wrapper Frame + Background (Edge-to-Edge)
-
-Ana frame: device preset boyutu, auto-layout VERTICAL, padding=0, gap=0, background DS variable'a bağlı.
-
-**Edge-to-Edge yapı:**
 
 ---
 
@@ -891,7 +904,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 11183;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 11408;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-20T14:10:17.199Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T11:22:57.700Z";
 //# sourceMappingURL=embedded-skills.js.map

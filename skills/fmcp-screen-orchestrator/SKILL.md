@@ -72,16 +72,29 @@ ANY `figma_*` tool çağırmadan ÖNCE:
 
 Cache SADECE variable key'leri (renk/spacing/radius) ve component key'leri içerir. Text styles ve mode ID'leri için **farklı yollar** gerekir — bunları REST API ile çekmeye çalışma, cache miss değil, **mimari olarak başka kaynak**:
 
-**1. Text styles (typography) → RUNTIME DISCOVERY:**
+**1. Text styles (typography) → SEED INSTANCE + `findAll(TEXT)` + `getStyleByIdAsync`:**
+
+SUI remote library'dir; `getLocalTextStylesAsync()` 0 döner. Canonical pattern `fmcp-screen-recipes` **Adım 1.6**'dadır — orchestrator bu adımı çağırır, kod duplicate etmez:
+
 ```js
-// SUI bir component import ettikten SONRA (en az 1 instance gelir ve style'lar local olur):
-await figma.importComponentByKeyAsync("<herhangi bir SUI componentKey>");
-const styles = await figma.getLocalTextStylesAsync();
-// styles[n].id → text.setTextStyleIdAsync(id)
-// Role map: name pattern'den "display", "title", "subtitle", "body", "caption", "button"
+// Adım A: Sayfa boşsa (Page 4 senaryosu) seed instance — componentKey cache'ten
+const seedInst = (await figma.importComponentByKeyAsync(navTopBarKey)).createInstance();
+figma.currentPage.appendChild(seedInst);
+
+// Adım B: findAll(TEXT) → her textStyleId için getStyleByIdAsync
+// → styleMap (id/name/fontSize/fontName) + roleMap (display/title/body/caption/button)
+// → fontFamilies = unique style.fontName.family listesi
+// (Tam kod fmcp-screen-recipes Adım 1.6'da)
+
+// Adım C: seedInst.remove() ile temizle (veya ekranın parçası olacaksa tut)
 ```
 
-YASAK: Text styles için `figma_rest_api` `/v1/files/.../styles` denemesi — user'ın file'ında değil, SUI library file'ında. Bunun yerine ilk component import'undan sonra local'e düşen style'ları oku.
+Sonuç: `roleMap[role].id` → `setTextStyleIdAsync(id)`, `fontFamilies[0]` → `loadFontAsync({family})`.
+
+YASAK:
+- `getLocalTextStylesAsync()` — remote library styles'ı dönmez, SUI'de 0 döner
+- `figma_rest_api /v1/files/<consumer_file>/styles` — tüketici file'da style metadata yok
+- Hardcoded `family: "Inter"` — Adım 1.6'dan dönen `fontFamilies[0]` kullan (SUI için: `SHBGrotesk`)
 
 **2. Dark variant → MODE COLLECTION SWAP (setExplicitVariableModeForCollection):**
 ```js
