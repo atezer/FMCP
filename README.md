@@ -6,15 +6,15 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
-  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.11"><img src="https://img.shields.io/badge/sürüm-v1.9.11-success" alt="version"></a>
+  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.13"><img src="https://img.shields.io/badge/sürüm-v1.9.13-success" alt="version"></a>
   <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
   <img src="https://img.shields.io/badge/skill-26-blue" alt="26 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
-> **Yeni — v3.1 Server Cache Resolver (Unreleased):** 3 yeni MCP tool — DS cache okuma server tarafında. Claude Desktop'ta `~/.claude/data/fcm-ds/` filesystem izni gerekmiyor; cache hit'te ödeme/login ekranı **≤6 tool call** ile teslim. Detay: [CHANGELOG](CHANGELOG.md#unreleased--v31-server-cache-resolver).
+> **Yeni — v1.9.13 Sıfır-Kurulum DS Oto-Uyumlanma (v3.5):** Hiçbir kurulum gerekmez — "tasarım sistemimle bir ekran yap" demeniz yeterli. Agent, Figma ortamınızdan DS'inizi otomatik keşfeder ve size özel `registry.local.md`'ye kaydeder. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.13) · [CHANGELOG](CHANGELOG.md).
 >
-> **Son sürüm — v1.9.11 (19 Nisan 2026):** Figma Prototype Connections + Animations. 5 yeni araç (`figma_create_prototype_connection`, `figma_get_prototype_connections`, `figma_set_flow_starting_point`, `figma_create_interaction`, `figma_set_scroll_behavior`) + `figma-prototype-flow` skill. AI artık ekranlarınız arasında otomatik navigasyon, animasyon ve flow starting point oluşturabiliyor. Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.11) · [Skill](skills/figma-prototype-flow/SKILL.md)
+> **Son sürüm — v1.9.13 (11 Temmuz 2026):** Sıfır-kurulum DS oto-uyumlanma + ~850 satır atıl kod temizliği + tam DS-agnostic süpürme (62 tool, 89/89 test). Önceki öne çıkanlar: v1.9.11 Prototype Connections + Animations ([figma-prototype-flow](skills/figma-prototype-flow/SKILL.md)). Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.13)
 
 Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
@@ -113,7 +113,7 @@ F-MCP **DS-agnostic** çalışır — herhangi bir Figma team library'yi (Materi
 
 **Claude Desktop'ta:** Slash command'lar tetiklenmez ([Desktop sınırlamaları](#claude-desktop-sınırlamaları)). Bu komutların içeriğini prompt'a yapıştırın; Claude skill instruction'larını adım adım uygular. Veya doğal dil kullanın: *"Kütüphane ekle"*, *"Ana-DS'yi güncelle"*.
 
-**Gizlilik:** Eklediğiniz DS'in gerçek `file-key`, `variableKey`, `componentKey` değerleri **repo'ya yazılmaz** — hepsi `~/.claude/data/fcm-ds/<file-key>/` user-local cache'tedir ([DS Cache User-Local Kuralı](.claude/design-systems/README.md)). Repo'daki `.claude/design-systems/<ds-name>/` dizini sadece public pattern + component isimlerini içerir; git-safe.
+**Gizlilik:** Eklediğiniz DS'in gerçek `file-key`, `variableKey`, `componentKey` değerleri **repo'ya yazılmaz** — hepsi size özel, gitignore'lu yerel dosyalardadır: `.claude/design-systems/registry.local.md` (DS kaydı) ve `.claude/design-systems/<ds-name>/` altındaki yerel dokümanlar. v3.3+ live-first mimaride veriler her istekte Figma'dan canlı okunur; eski `~/.claude/data/fcm-ds/` cache dizini opsiyoneldir ve hiçbir zaman repoya girmez.
 
 **Multi-library DS:** Ana-DS gibi birden fazla Figma dosyasından oluşan DS'ler desteklenir. `/add-library` ile ana + mobil + ikon + asset URL'lerini ayrı ayrı verebilirsiniz; `active-ds.md` Secondary Libraries tablosunda yönetilir.
 

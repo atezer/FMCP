@@ -68,7 +68,7 @@ Her üç iş için de:
 
 1. **Skill Registry** — tahmin yasak, her orchestrator'ın içinde açık liste
 2. **Cheap-first** — `figma_get_*` çağrılarında `depth=1`, `verbosity="summary"`; ≤5 `figma_execute` hedefi
-3. **Cache-first** — `.claude/design-systems/<lib>/` cache'i API'den önce oku
+3. **Live-first (v3.3+)** — `registry.local.md`'deki DS ile `figma_enumerate_*` tool'larından canlı oku; `.claude/design-systems/<lib>/` yerel dokümanları opsiyonel destektir
 4. **User onay kapıları** — approach, destructive action, skill evolution, 3. self-audit fail
 5. **Self-audit gate** — screen için `figma_validate_screen(minScore=80)`, audit için SEVERE kategori coverage, token sync için binding coverage
 6. **Türkçe rapor** — metrik bloğu zorunlu (kullanılan skill'ler, API call, cache hit/miss, score)

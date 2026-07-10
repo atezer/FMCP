@@ -143,7 +143,7 @@ Bu çağrı döner:
 - Typography (font, size, weight → platform-spesifik font API'sine çevrilecek)
 - Renkler (hex → UIColor/Color/SwiftUI Color, Android Color, CSS var)
 - Component yapısı ve variant'lar
-- roleHint / suiComponent
+- roleHint / dsComponent
 
 ### Step 5: Screenshot Al
 

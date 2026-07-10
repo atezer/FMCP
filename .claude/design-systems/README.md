@@ -1,5 +1,7 @@
 # Design System Framework
 
+> **v3.5 notu:** Birincil DS kaydı artık `registry.local.md`'dir (AUTO-ONBOARD otomatik yazar) ve keşif live-first çalışır — aşağıda anlatılan cache yapısı **opsiyonel** yerel destektir; hiçbir akış için zorunlu değildir.
+
 Bu klasör, Claude'un tasarım sistemi (DS) referanslarını tuttuğu merkezi yerdir. Her tasarım sistemi bir alt klasördür ve içinde o DS'nin bileşen, token ve ikon bilgileri MD dosyaları halinde bulunur.
 
 **Amaç:** Figma'ya her seferinde API çağrısı yapmak yerine, DS bilgilerini yerel MD dosyalarından okuyarak hız ve maliyet kazanmak.
