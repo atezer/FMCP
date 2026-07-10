@@ -7,8 +7,8 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
   <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.13"><img src="https://img.shields.io/badge/sürüm-v1.9.13-success" alt="version"></a>
-  <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
-  <img src="https://img.shields.io/badge/skill-26-blue" alt="26 skills">
+  <img src="https://img.shields.io/badge/araç-62-blue" alt="62 tools">
+  <img src="https://img.shields.io/badge/skill-27-blue" alt="27 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
@@ -154,7 +154,7 @@ AI ile Figma arasında **çift yönlü** çalışırsınız:
 
 Otomatik navigasyon haritası (TR+EN button text heuristic), 9 trigger / 8 action / 9 transition tipi × 4 yön, ON_KEY_DOWN (keyCodes + device), overlay config, scroll behavior, flow starting point — Figma Prototype panel'inin tüm yetenekleri.
 
-54 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
+62 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
 
 ---
 
@@ -211,13 +211,13 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
 - **Figma** — Masaüstü ve tarayıcı, birden fazla AI aynı dosyaya aynı anda bağlanabilir
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
-- **Detay** — [54 araç](docs/TOOLS_FULL_LIST.md) · [26 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
+- **Detay** — [62 araç](docs/TOOLS_FULL_LIST.md) · [27 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
 ---
 
 | | |
 |---|---|
-| Güncel sürüm | **1.9.11** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.11)) — Figma Prototype Connections + Animations |
+| Güncel sürüm | **1.9.13** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.13)) — Sıfır-kurulum DS oto-uyumlanma |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 
