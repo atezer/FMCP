@@ -99,7 +99,7 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/tokens.md` oku (`<active-ds>` = `active-ds.md`'den `Library Name`'in slug hali — `❖ SUI` → `sui`, `Material` → `material`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/tokens.md` oku (`<active-ds>` = `active-ds.md`'den `Library Name`'in slug hali — `❖ Ana-DS` → `sui`, `Material` → `material`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
 Token name matching: DS nested path formatı (örn. `"Spacing/spacing-100"`). `endsWith` match kullan:
 ```js
@@ -225,7 +225,7 @@ return {
 
 **Micro-report:** `✅ Text Style: <N> style, <M> role eşleşti, font: <family>`
 
-**Kritik:** `fontFamilies[0]` (örn. SUI için `SHBGrotesk`) sonraki tüm `loadFontAsync({ family })` çağrılarında kullanılır. Hardcoded `"Inter"` YASAK — `figma-canvas-ops` Rule 8b-pre.
+**Kritik:** `fontFamilies[0]` (DS'inizin gerçek font ailesi) sonraki tüm `loadFontAsync({ family })` çağrılarında kullanılır. Hardcoded `"Inter"` YASAK — `figma-canvas-ops` Rule 8b-pre.
 
 ---
 
@@ -354,7 +354,7 @@ figma_scan_ds_compliance(nodeId=frameId, threshold=85)
 - `passed: false` veya `coverage.paddings.pct < 90` veya `coverage.radius.pct < 90` veya `coverage.textStyle.pct < 90` → M3/M4 retry zorunlu.
 - `samples.hardcodedHex` döndüyse → o node'lardaki fill'ler için `setBoundVariableForPaint` çağrısı eksik, derhal düzelt.
 - `samples.hardcodedFontSize` döndüyse → o text'ler için `setTextStyleIdAsync(roleMap[role].id)` çağrısı eksik.
-- `samples.primitiveFrames` döndüyse → o frame'ler için SUI'de component var mı ara (`figma_search_assets`); varsa instance'a dönüştür.
+- `samples.primitiveFrames` döndüyse → o frame'ler için Ana-DS'de component var mı ara (`figma_search_assets`); varsa instance'a dönüştür.
 - `overflow.overflowPx > 0` ve `clipsContent: true` → içerik kesiliyor, kullanıcıya "scroll mu, body genişletme mi?" sor.
 
 **9b. Final validate (her frame için, ZORUNLU):**
@@ -598,13 +598,12 @@ card.layoutSizingHorizontal = "FILL";  // SONRA (Rule 11)
 
 `figma_search_assets` library components boş dönerse (variables var ama component instance yok) sırayla şu yolu takip et:
 
-**24.0 — FMCP Server Cache (v3.1+ — İLK SIRA):**
-- `figma_resolve_active_ds()` → `status: "fresh"` dönüyorsa:
-  - `figma_get_library_components(libraryName, filter?)` → componentKey listesi
-  - `figma_get_library_tokens(libraryName, filter?)` → variableKey listesi
-- Server-side okuma; **0 Plugin/REST API call**, cross-file çalışır.
-- Cache hit'te 24.1-24.4 atlanır → direkt `importComponentByKeyAsync(key)`.
-- Status `"missing"` veya `"stale"` ise 24.1'e düş.
+**24.0 — Live Enumerate (v3.3+ — İLK SIRA):**
+- DS Library Registry'de `libraryFileKey` kayıtlıysa:
+  - `figma_enumerate_published_components(libraryFileKey, filter?)` → componentKey listesi (REST; dosya açıksa `figma_enumerate_library_components` tercih et)
+  - `figma_get_library_variables(query?)` → variableKey listesi (teamLibrary — hedef dosyada çalışır)
+- Başarılıysa 24.1-24.4 atlanır → direkt `importComponentByKeyAsync(key)` / `importComponentSetByKeyAsync(key)`.
+- Registry boş veya REST token yoksa 24.1'e düş.
 
 **24.1 — REST API enumerate:**
 - Response'ta `_restFallbackHint` varsa oku.
@@ -630,7 +629,7 @@ card.layoutSizingHorizontal = "FILL";  // SONRA (Rule 11)
 
 ## Known Limitations
 
-1. SUI dışında test edilmedi — başka DS için isim farkı olabilir
+1. Ana-DS dışında test edilmedi — başka DS için isim farkı olabilir
 2. Dark mode validate ayrı ölçülmez — manuel göz kontrolü gerekli
 3. 9 recipe sabit — yeni tip → generate-figma-screen
 4. Multi-screen ve prototype/interactions YOK

@@ -73,7 +73,7 @@ Claude Desktop chat'te Claude orchestrator skill'i **otomatik referans etmez**. 
 Lütfen Project knowledge'daki fmcp-screen-orchestrator.md dosyasını referans al
 ve workflow'unu uygula.
 
-Görev: Bir e-ticaret sepet ekranı tasarla. Aktif DS SUI. 3 alternatif üret.
+Görev: Bir e-ticaret sepet ekranı tasarla. Aktif DS Ana-DS. 3 alternatif üret.
 ```
 
 Claude Project knowledge'dan dosyayı okur, Essentials bölümündeki karar akışını uygular, sub-skill'leri lazy load eder, `figma_*` tool'larını çağırır.
@@ -102,7 +102,7 @@ Yeni oturum açtığında **yine manuel referans** gerekir.
 
 **Ekran üretimi:**
 ```
-Project knowledge'daki fmcp-screen-orchestrator.md'yi uygula. Görev: fitness tracker için bir onboarding ekranı, 3 aşamalı, SUI design system.
+Project knowledge'daki fmcp-screen-orchestrator.md'yi uygula. Görev: fitness tracker için bir onboarding ekranı, 3 aşamalı, Ana-DS design system.
 ```
 
 **DS audit:**
@@ -112,7 +112,7 @@ Project knowledge'daki fmcp-ds-audit-orchestrator.md'yi uygula. Görev: node 139
 
 **Token sync:**
 ```
-Project knowledge'daki fmcp-token-sync-orchestrator.md'yi uygula. Görev: SUI tokenlarını tailwind.config.js'e export et, diff preview göster.
+Project knowledge'daki fmcp-token-sync-orchestrator.md'yi uygula. Görev: Ana-DS tokenlarını tailwind.config.js'e export et, diff preview göster.
 ```
 
 ## Doğrulama

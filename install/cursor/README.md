@@ -70,7 +70,7 @@ Rule'a gerek kalmadan direkt skill'i çağır:
 
 ```
 Lütfen skills/fmcp-screen-orchestrator/SKILL.md dosyasını oku ve workflow'unu uygula.
-Görev: bir dashboard ekranı tasarla, aktif DS SUI, 3 alternatif üret.
+Görev: bir dashboard ekranı tasarla, aktif DS Ana-DS, 3 alternatif üret.
 ```
 
 Cursor main context'e orchestrator yüklenir (~5K token), sonra common case sub-skill'leri lazy Read eder.
@@ -84,7 +84,7 @@ skills/fmcp-ds-audit-orchestrator/SKILL.md'yi uygula: node 139:3407 için a11y a
 ```
 
 ```
-skills/fmcp-token-sync-orchestrator/SKILL.md'yi uygula: SUI tokenlarını tailwind.config.js'e export et
+skills/fmcp-token-sync-orchestrator/SKILL.md'yi uygula: Ana-DS tokenlarını tailwind.config.js'e export et
 ```
 
 ## Cursor-Özgü Notlar

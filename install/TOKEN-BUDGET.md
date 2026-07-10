@@ -244,17 +244,17 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 
 **Plugin roadmap (Part 5 adayı):** Validate algorithmasında sampling (her 10. node'u kontrol et), incremental validation (sadece değişen node'lar), veya background worker'a taşıma.
 
-### 7. SUI Library Display/Heading Text Style Missing
+### 7. Ana-DS Library Display/Heading Text Style Missing
 
-**Durum:** SUI library data issue — SUI'de "display" text style (büyük başlık) yayınlanmamış veya key expired. Recipe'de amount display gibi büyük metin komponentleri için workaround gerekli.
+**Durum:** Ana-DS library data issue — Ana-DS'de "display" text style (büyük başlık) yayınlanmamış veya key expired. Recipe'de amount display gibi büyük metin komponentleri için workaround gerekli.
 
 **Gerçek hata (2026-04-15 FP-1-R):** Text style import key runtime'da expired → `"Failed to import style by key"`. Recipe büyük başlıklar için `body-semibold + hardcoded fontSize=36` kullanmak zorunda kaldı → `HARDCODED_FONT_SIZE` SEVERE violation.
 
 **Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 26 — text style discovery strategy: instance scan → library search → kabul et, en büyük mevcut style'ı kullan + recipe'de `characters` property ile büyük metin. `HARDCODED_FONT_SIZE` violation kabul edilir (minimum violation, üretim kullanılabilir, kullanıcıya açıkça raporlanır).
 
-**SUI-side roadmap:** SUI library'sine `display` / `heading-large` text style yayınlanması (DS team işi, FCM scope dışı). FCM rapor kanalı üzerinden SUI ekibine iletilecek.
+**Ana-DS-side roadmap:** Ana-DS library'sine `display` / `heading-large` text style yayınlanması (DS team işi, FCM scope dışı). FCM rapor kanalı üzerinden Ana-DS ekibine iletilecek.
 
-**v1.9.5 Fix J revizesi:** `skills/fmcp-screen-recipes/SKILL.md` Adım 1.6 Text Style Resolution Verification eklendi. Recipe başında dosyadaki çalışan text style'lar taranıyor, `roleMap` üretiliyor, display rolü için en büyük mevcut style fallback'i kullanılıyor. Amount Display artık `section-title` (18px) + `characters` field'ında büyük metin ile render ediliyor — **HARDCODED_FONT_SIZE sıfır**, Rule 19 ihlali yok. SUI'nin display style publish'i gelene kadar bu workaround yeterli.
+**v1.9.5 Fix J revizesi:** `skills/fmcp-screen-recipes/SKILL.md` Adım 1.6 Text Style Resolution Verification eklendi. Recipe başında dosyadaki çalışan text style'lar taranıyor, `roleMap` üretiliyor, display rolü için en büyük mevcut style fallback'i kullanılıyor. Amount Display artık `section-title` (18px) + `characters` field'ında büyük metin ile render ediliyor — **HARDCODED_FONT_SIZE sıfır**, Rule 19 ihlali yok. Ana-DS'nin display style publish'i gelene kadar bu workaround yeterli.
 
 ### 8. `figma_capture_screenshot` Empty Object on Large Files
 
@@ -343,15 +343,15 @@ Fast Path'in ana UX kazancı: Her figma_execute sonrası tek satır Türkçe mic
 
 ```
 ✅ Pre-flight: screen_type=payment, platform=mobile, device=iPhone 17, variants=[light,dark]
-✅ Frame oluşturuldu: iPhone 17 (402×874), background: SUI/Surface/background level-0
-✅ Breakpoint: SUI/Breakpoints/Screen bound
-✅ Theme: Light (SUI/Semantic Colors), Size: Mobil (SUI/Semantic Size)
+✅ Frame oluşturuldu: iPhone 17 (402×874), background: Ana-DS/Surface/background level-0
+✅ Breakpoint: Ana-DS/Breakpoints/Screen bound
+✅ Theme: Light (Ana-DS/Semantic Colors), Size: Mobil (Ana-DS/Semantic Size)
 ✅ Auto-layout: VERTICAL, padding/spacing bound
 ✅ Component keşfi: 5 bulundu, 1 eksik
-✅ AppBar eklendi: SUI/Navigation/TopBar
-✅ Amount Display eklendi: SUI/Display/Large
+✅ AppBar eklendi: Ana-DS/Navigation/TopBar
+✅ Amount Display eklendi: Ana-DS/Display/Large
 ⚠️ Payment Method Card eksik → token-bound primitive ile 3 adet inşa
-✅ CTA Button eklendi: SUI/Button/Primary
+✅ CTA Button eklendi: Ana-DS/Button/Primary
 ✅ Dark variant oluşturuldu
 ✅ Validate Light: 92/100, Dark: 89/100
 ```

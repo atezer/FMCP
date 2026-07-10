@@ -61,16 +61,16 @@ Bu talimat sayesinde her chat'te manuel referans vermek zorunda kalmazsın — C
 Kullanıcı bir tasarım işi ister, Claude orchestrator workflow'unu metinle yürütür:
 
 ```
-Kullanıcı: "SUI design system ile bir e-ticaret sepet ekranı tasarla, 3 alternatif"
+Kullanıcı: "Ana-DS design system ile bir e-ticaret sepet ekranı tasarla, 3 alternatif"
 
 Claude:
 1. Orchestrator Essentials okur, text_only mod → generate-figma-screen workflow
-2. DS kontrolü: "Aktif DS SUI varsayıyorum, doğru mu?"
+2. DS kontrolü: "Aktif DS Ana-DS varsayıyorum, doğru mu?"
 3. Build-from-scratch gerekçesi: "alternatif" keyword'ü → v1.8.2 kuralı, clone değil
 4. Her alternatif için layout planı (skeleton → content → polish)
 5. Adım adım talimat:
    "Şimdi Claude Code'da şunu çalıştır:
-   Task(subagent_type: 'screen-builder', prompt: '3 alternatif e-ticaret sepet ekranı, aktif DS SUI')"
+   Task(subagent_type: 'screen-builder', prompt: '3 alternatif e-ticaret sepet ekranı, aktif DS Ana-DS')"
 ```
 
 Kullanıcı bu talimatı alıp Claude Code'a taşır. Claude Web planı, Claude Code implement eder.

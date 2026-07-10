@@ -417,14 +417,13 @@
     // ============================================================================
     window.__figmaVariablesData = null;
     window.__figmaVariablesReady = false;
-    window.__figmaComponentData = null;
     window.__figmaComponentRequests = new Map();
     window.__figmaPendingRequests = new Map();
     window.__figmaFileKey = null;
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.9.12';
+    var FMCP_PLUGIN_VERSION = '1.9.13';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -907,17 +906,11 @@
         case 'VARIABLES_DATA':
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
-          if (mcpConnectedPort) {
-            var _cn = mcpConnections.get(mcpConnectedPort);
-            updateStatus('Ready', true, false);
-          } else {
-            updateStatus('Ready', true, false);
-          }
+          updateStatus('Ready', true, false);
           console.log('[F-MCP ATezer Bridge] Active - ' + (msg.data.variables?.length || 0) + ' vars');
           break;
 
         case 'COMPONENT_DATA':
-          window.__figmaComponentData = msg.data;
           var req = window.__figmaComponentRequests.get(msg.requestId);
           if (req) { req.resolve(msg.data); window.__figmaComponentRequests.delete(msg.requestId); }
           break;

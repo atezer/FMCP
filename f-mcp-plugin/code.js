@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.12';
+var FMCP_PLUGIN_VERSION = '1.9.13';
 
 /**
  * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları
@@ -432,7 +432,7 @@ figma.ui.onmessage = async (msg) => {
     return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
   }
 
-  function nameToSuiComponent(name, description) {
+  function nameToDsComponent(name, description) {
     var raw = (name || '') + (description ? ' ' + description : '');
     raw = raw.replace(/[0-9_\-\s]+/g, ' ').trim().split(/\s+/);
     if (raw.length === 0 || (raw.length === 1 && !raw[0])) return null;
@@ -461,7 +461,7 @@ figma.ui.onmessage = async (msg) => {
     return parts.join(', ');
   }
 
-  // Resolve variable alias(es) to names (SUI token reference — 2.3)
+  // Resolve variable alias(es) to names (Ana-DS token reference — 2.3)
   async function resolveVariableNames(aliases) {
     if (!aliases) return [];
     var list = Array.isArray(aliases) ? aliases : (aliases.id ? [aliases] : []);
@@ -478,7 +478,7 @@ figma.ui.onmessage = async (msg) => {
     return names;
   }
 
-  // Build node payload for GET_DOCUMENT_STRUCTURE / GET_NODE_CONTEXT (layout, constraints, visual, typography, code-ready, SUI)
+  // Build node payload for GET_DOCUMENT_STRUCTURE / GET_NODE_CONTEXT (layout, constraints, visual, typography, code-ready, Ana-DS)
   async function buildNodePayload(node, currentDepth, maxDepth, opts) {
     if (currentDepth > maxDepth) return null;
     var verbosity = opts.verbosity || 'summary';
@@ -499,8 +499,8 @@ figma.ui.onmessage = async (msg) => {
 
     var incompleteReasons = [];
     if (node.description !== undefined && node.description !== '') out.description = node.description;
-    var suiName = nameToSuiComponent(node.name, node.description);
-    if (suiName) { out.roleHint = suiName; out.suiComponent = suiName; }
+    var dsName = nameToDsComponent(node.name, node.description);
+    if (dsName) { out.roleHint = dsName; out.dsComponent = dsName; }
 
     if (node.type === 'INSTANCE' && 'componentProperties' in node && node.componentProperties) {
       var props = node.componentProperties;
@@ -1565,7 +1565,7 @@ figma.ui.onmessage = async (msg) => {
         // v1.8.0: Library components discovered from INSTANCE nodes via mainComponent.key.
         // The Figma Plugin API does not expose a list-library-components endpoint,
         // so we walk existing instances in the file and collect their library keys.
-        // This finds SUI/DS components that have been used at least once in the file.
+        // This finds Ana-DS/DS components that have been used at least once in the file.
         async function extractFromInstance(inst) {
           if (libraryComponents.length >= limit) return;
           try {

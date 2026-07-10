@@ -10,7 +10,7 @@ Kullanıcıdan şu bilgileri iste. Eksik olan her şeyi sor, tahmin etme:
 
 **Zorunlu:**
 
-1. **Kütüphane adı** — Kısa isim (örn: SUI, Primer, Carbon)
+1. **Kütüphane adı** — Kısa isim (örn: Ana-DS, Primer, Carbon)
 2. **Ana Figma dosyası URL'si** — Bileşenler + variables + styles içeren dosya. En az 1 tane olmalı.
 
 **İsteğe bağlı (varsa sor):**

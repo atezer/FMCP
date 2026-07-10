@@ -225,6 +225,7 @@ docs/analysis/
 
 # FCM — kullanıcıya özel DS örneği ve oturum durumu (repoya girmez; framework gerektiğinde yeniden üretir)
 .claude/design-systems/*/
+.claude/design-systems/*.local.md
 .claude/design-systems/active-ds.md
 .claude/design-systems/intent-history.md
 .claude/design-systems/last-intent.md

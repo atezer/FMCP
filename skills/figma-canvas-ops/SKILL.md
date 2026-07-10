@@ -24,23 +24,22 @@ metadata:
 - F-MCP Bridge plugin bağlı olmalı (`figma_get_status()`)
 - Aktif DS context: `.claude/design-systems/active-ds.md` → `Status: ✅`
 
-> **🔒 FMCP Cache Resolve (v3.1+ — İLK YOL):**
-> Cache okuma için Claude'un filesystem'a bakması GEREKMEZ. Server tool'ları kullan:
-> - `figma_resolve_active_ds()` — active library + cache status (`fresh`/`stale`/`missing`)
-> - `figma_get_library_components(libraryName)` — componentKey listesi
-> - `figma_get_library_tokens(libraryName)` — variableKey listesi
+> **🔒 Live DS Discovery (v3.3+ — İLK YOL):**
+> Yerel cache YOK. DS Library Registry'deki file key'lerle canlı oku:
+> - `figma_enumerate_published_components(libraryFileKey, filter)` — componentKey listesi (REST, dosya kapalıyken de çalışır)
+> - `figma_enumerate_library_components(libraryFileKey|libraryName)` — dosya AÇIKSA plugin'den daha hızlı liste
+> - `figma_get_library_variables(query?)` — variableKey listesi (teamLibrary, hedef dosyada çalışır)
 >
-> Cache hit'te **0 Plugin API call**, cross-file çalışır. Cache miss'te `_restFallbackHint` döner → Rule 24.1+ fallback chain'e düş.
+> Registry boşsa/REST token yoksa Rule 24.1+ fallback chain'e düş.
 > **Token hedefi:** ödeme/login ekranı ≤6 tool call total.
 
 ## 0. Design System Context (ZORUNLU)
 
 ### 0a — Active DS check
 ```
-1. ÖNCE figma_resolve_active_ds() — server cache (v3.1+)
-   ✅ "fresh" → Library Name + cache status not al, 0b'ye geç
-   ⚠️ "stale" → Library Name not al ama klasik fallback'e hazır ol
-   ❌ "missing" → Aşağıdaki klasik akışa düş
+1. ÖNCE `.claude/design-systems/registry.local.md` oku; yoksa orchestrator'daki registry tablosuna bak (v3.3+)
+   ✅ Kayıtlı → Library Name + libraryFileKey not al, 0b'ye geç
+   ❌ Kayıtlı değil → orchestrator Adım -2 AUTO-ONBOARD'u çalıştır (kullanıcıya sormadan keşfet + registry.local.md'ye yaz)
 
 2. Klasik akış (cache miss): Read .claude/design-systems/active-ds.md
 3. ✅ Aktif → Library Name not al, 0b'ye geç
@@ -56,7 +55,7 @@ metadata:
 ```
 
 ### 0c — Kullanıcıya DS seçimi sor
-active-ds.md `❌` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Yanıt sonrası active-ds.md güncelle, 0b'ye geç. Sonraki turlarda TEKRAR SORMA.
+active-ds.md `❌` ise: "Hangi DS? (Ana-DS / Material / HIG / Kendi / Hiçbiri)". Yanıt sonrası active-ds.md güncelle, 0b'ye geç. Sonraki turlarda TEKRAR SORMA.
 
 ## 1. Kritik Kurallar
 

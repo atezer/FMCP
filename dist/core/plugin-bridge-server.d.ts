@@ -139,12 +139,6 @@ export declare class PluginBridgeServer {
      * may have already exited and calls onAccepted.
      */
     private sendShutdownRequest;
-    /**
-     * Send a POST /shutdown to an old F-MCP bridge on the given port,
-     * wait for it to exit, then retry binding to the same port.
-     * @deprecated Legacy method — kept for backward compatibility. New code uses sendShutdownRequest + tryListenWithAutoIncrement.
-     */
-    private requestShutdownAndRetry;
     /** Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints. */
     private createBridgeHttpServer;
     /**
@@ -162,11 +156,6 @@ export declare class PluginBridgeServer {
      * `_listenResolve` is called exactly once: on success or when all ports are exhausted.
      */
     private tryListenWithAutoIncrement;
-    /**
-     * @deprecated Legacy method — new startup uses tryListenWithAutoIncrement().
-     * Kept for backward compatibility with requestShutdownAndRetry retry path.
-     */
-    private tryListenFixed;
     /**
      * Send a request to a plugin and wait for the response.
      * If fileKey is specified, routes to the client serving that file.

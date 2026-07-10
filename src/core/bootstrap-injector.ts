@@ -37,17 +37,6 @@ const ANTI_PATTERNS = [
 	"ask_user_input_v0 3+ soru ust uste",
 ];
 
-/**
- * v2.0+ Typed next-step hint. Emitted as `_nextStepObj` alongside the legacy
- * `_nextStep` string. Agents (Desktop + sub-agents via Claude Code) should
- * prefer the typed form; string is kept for one version of compatibility.
- */
-export type NextStep = {
-	tool: string;
-	args_hint?: Record<string, unknown>;
-	reason: string;
-};
-
 export type BootstrapPayload = {
 	version: string;
 	self_instruction: string;
@@ -56,7 +45,6 @@ export type BootstrapPayload = {
 	embedded_skills?: string;
 	embedded_instructions_token_estimate?: number;
 	skill_cache_hint?: string;
-	reference_docs?: string;
 	// Reminder mode
 	reminder?: string;
 	session_tool_count?: number;
@@ -88,8 +76,6 @@ export class BootstrapInjector {
 				embedded_instructions_token_estimate: EMBEDDED_SKILLS_TOKEN_ESTIMATE,
 				skill_cache_hint:
 					"Bu embedded_skills oturum boyunca etkili. Sadece ilk figma_get_status'ta gelir, sonraki call'larda _bootstrap.reminder doner (~100 token). LLM prompt cache ile 5 dk icinde yeniden enjeksiyon bedavadir.",
-				reference_docs:
-					"MCP resources: fmcp://skills/master-instructions, fmcp://skills/blank-file-workflow. MCP prompts: fmcp-start-session, fmcp-design-screen, fmcp-audit-screen.",
 			};
 		}
 		return {
@@ -99,60 +85,6 @@ export class BootstrapInjector {
 				"Rules from first figma_get_status call still in effect. See critical_rules in initial _bootstrap response.",
 			session_tool_count: this.toolCallCount,
 		};
-	}
-
-	/**
-	 * v2.0+ Typed _nextStepObj — structured next-call hint for Claude/sub-agents.
-	 * Wraps the existing string hint into an object with explicit tool name +
-	 * optional args hint + reason. String variant (`injectNextStep`) is kept
-	 * for backward compat — both may appear on a response during the 1-version
-	 * transition.
-	 */
-	injectNextStepObj(toolName: string, result: unknown): NextStep | undefined {
-		if (!result || typeof result !== "object") return undefined;
-		const r = result as Record<string, unknown>;
-
-		switch (toolName) {
-			case "figma_resolve_active_ds": {
-				const status = r.status as string | undefined;
-				if (status === "fresh") {
-					const lib = r.libraryName as string | undefined;
-					return {
-						tool: "figma_get_library_components",
-						args_hint: lib ? { libraryName: lib } : undefined,
-						reason: "Cache fresh — component keys direkt oku (Adım 3a skip)",
-					};
-				}
-				if (status === "stale") {
-					return {
-						tool: "figma_get_library_components",
-						reason: "Cache stale — yine de dene, cache miss'te REST fallback",
-					};
-				}
-				return {
-					tool: "figma_get_design_system_summary",
-					reason: "Cache missing — klasik DS discovery akışına düş",
-				};
-			}
-			case "figma_get_library_components": {
-				if (r.success === false) return undefined;
-				const lib = (r._metrics as Record<string, unknown> | undefined)?.source === "fmcp_cache" ? r.libraryName : undefined;
-				return {
-					tool: "figma_get_library_tokens",
-					args_hint: typeof lib === "string" ? { libraryName: lib } : undefined,
-					reason: "Components alındı, şimdi variable keys (spacing/radius/color)",
-				};
-			}
-			case "figma_get_library_tokens": {
-				if (r.success === false) return undefined;
-				return {
-					tool: "figma_execute",
-					reason: "Tokens hazır — seed instance + Adım 1.6 (text style + font) + skeleton üret",
-				};
-			}
-			default:
-				return undefined;
-		}
 	}
 
 	/**

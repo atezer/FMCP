@@ -19,7 +19,7 @@ import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
-import { truncateRestResponse, truncatePluginResponse, calculateSizeKB } from "./core/response-guard.js";
+import { truncateRestResponse, truncatePluginResponse } from "./core/response-guard.js";
 import { analyzeCodeForWarnings, type CodeWarning } from "./core/code-warnings.js";
 import { discoveryCounter } from "./core/discovery-counter.js";
 import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
@@ -34,7 +34,7 @@ import { ResponseCache } from "./core/response-cache.js";
 import type {
 	RGBColor, FigmaVariable, FigmaVariableCollection, FigmaVariableMode,
 	FigmaComponent, FigmaPaintStyle, FigmaTextStyle, FigmaFill,
-	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload, PluginScreenshotPayload,
+	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload,
 } from "./core/types/figma.js";
 
 const logger = createChildLogger({ component: "plugin-only-mcp" });
@@ -42,8 +42,8 @@ const logger = createChildLogger({ component: "plugin-only-mcp" });
 /**
  * Legacy default flag — when set, restores pre-v1.8.0 default values for
  * read-only tools (depth=2, verbosity="standard", scale=2, format="PNG").
- * Allows downstream consumers to opt back into the heavier defaults during
- * the v1.8.0 → v1.9.0 transition. Will be removed in v1.9.0.
+ * Allows downstream consumers to opt back into the heavier defaults
+ * (kept as a long-lived escape hatch; enable with the env var below).
  *
  * Set: FMCP_LEGACY_DEFAULTS=1
  */

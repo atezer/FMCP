@@ -79,7 +79,6 @@ function generate() {
 	const combinedTokens = estimateTokens(combined);
 	console.log(`[generate-embedded-skills] Total: ${combinedTokens} tokens (~${Math.round(combinedTokens / 1000)}K)`);
 
-	const generatedAt = new Date().toISOString();
 	const output = `/**
  * v1.9.7: Auto-generated embedded skill summary for Claude Desktop zero-click enforcement.
  *
@@ -89,15 +88,12 @@ function generate() {
  * DO NOT EDIT MANUALLY. Run \`npm run generate:embedded-skills\` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: ${generatedAt}
  * Total estimated tokens: ${combinedTokens}
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = \`${escapeTemplateLiteral(combined)}\`;
 
 export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = ${combinedTokens};
-export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "${generatedAt}";
 `;
 
 	const outPath = join(ROOT, "src/core/embedded-skills.ts");

@@ -6,9 +6,9 @@ Rule 24.1 REST API fallback'ini kullanabilmek ve library component'lerini **1-2 
 
 ## Ne zaman gerekli?
 
-- Hedef dosyada SUI (veya başka DS) library'leri **subscribed** ama Claude component'leri bulamıyor
+- Hedef dosyada Ana-DS (veya başka DS) library'leri **subscribed** ama Claude component'leri bulamıyor
 - `figma_search_components` instance scan yavaş veya boş dönüyor
-- Token-bound primitives fallback'e düşmek yerine **gerçek SUI component instance** kullanmak istiyorsun
+- Token-bound primitives fallback'e düşmek yerine **gerçek Ana-DS component instance** kullanmak istiyorsun
 
 ## Adım 1 — Figma Personal Access Token oluştur
 

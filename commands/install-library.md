@@ -45,7 +45,7 @@ Hedef: `.claude/libraries/{kütüphane-adı}.md`
 1. Mevcut dosyadaki `Son tarama` tarihini oku
 2. Yeni dosyadaki `Son tarama` tarihini oku
 3. Kullanıcıya bildir:
-   > "SUI kütüphanesi zaten kurulu (son tarama: 2026-04-10). Yeni versiyon: 2026-04-15. Güncellemek istediğinize emin misiniz?"
+   > "Ana-DS kütüphanesi zaten kurulu (son tarama: 2026-04-10). Yeni versiyon: 2026-04-15. Güncellemek istediğinize emin misiniz?"
 4. Onay alırsan üzerine yaz
 
 ### Adım 5 — Sistem dosyalarını kontrol et

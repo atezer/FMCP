@@ -10,8 +10,8 @@ import type { PluginBridgeServer } from "./plugin-bridge-server.js";
 import { logger } from "./logger.js";
 import type {
 	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload,
-	PluginDocumentStructure, PluginScreenshotPayload, PluginExecuteResult,
-	DesignSystemSummary, PluginCrudResult,
+	PluginDocumentStructure, PluginScreenshotPayload,
+	PluginCrudResult,
 } from "./types/figma.js";
 
 export class PluginBridgeConnector {

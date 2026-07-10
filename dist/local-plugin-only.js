@@ -33,8 +33,8 @@ const logger = createChildLogger({ component: "plugin-only-mcp" });
 /**
  * Legacy default flag — when set, restores pre-v1.8.0 default values for
  * read-only tools (depth=2, verbosity="standard", scale=2, format="PNG").
- * Allows downstream consumers to opt back into the heavier defaults during
- * the v1.8.0 → v1.9.0 transition. Will be removed in v1.9.0.
+ * Allows downstream consumers to opt back into the heavier defaults
+ * (kept as a long-lived escape hatch; enable with the env var below).
  *
  * Set: FMCP_LEGACY_DEFAULTS=1
  */

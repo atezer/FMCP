@@ -7,10 +7,9 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-07-10T10:53:28.631Z
- * Total estimated tokens: 13532
+ * Total estimated tokens: 13923
  */
-export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
+export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3126 tokens) -->
 ---
 name: fmcp-intent-router
 description: F-MCP ile ilgili herhangi bir kullanıcı talebinin ilk giriş noktası. Kullanıcının niyetini analiz eder, hangi hedef SKILL'in çalıştırılacağına karar verir, o SKILL için gereken eksik input'ları tek turda toplar, özet+onay alır ve ondan sonra hedef SKILL'i çalıştırır. "figma", "ekran oluştur", "tasarım yap", "component üret", "DS denetle", "token sync", "kod üret", "design system" gibi her F-MCP-tetiklemesiyle aktive olur. Claude hiçbir figma_* yazma tool'u çalıştırmadan ÖNCE bu protokolü uygulamak zorundadır.
@@ -99,7 +98,7 @@ Kullanıcı talebini oku. Anahtar kelimeleri tara:
 | Kullanıcı ifadesi | Olası SKILL adayı |
 |---|---|
 | "ekran yap", "tasarım oluştur", "ui çiz", "UI'ı Figma'ya aktar", "landing page", "mobil ekran" | \`generate-figma-screen\` |
-| "DS hizala", "SUI'ye uygula", "design system uygula", "token'lara bağla" | \`apply-figma-design-system\` |
+| "DS hizala", "Ana-DS'ye uygula", "design system uygula", "token'lara bağla" | \`apply-figma-design-system\` |
 | "denet", "audit", "DS sağlığı", "token bağlı mı", "ne kadar DS uyumlu" | \`audit-figma-design-system\` |
 | "kütüphane yap", "component set üret", "DS kütüphane inşa" | \`generate-figma-library\` |
 | "Figma'dan kod üret", "implement design", "SwiftUI/Compose/React kodu" | \`implement-design\` |
@@ -127,7 +126,7 @@ Claude her seferinde üç state dosyasını okur:
 
 \`\`\`
 1. .claude/design-systems/active-ds.md
-   → Aktif DS belirtilmiş mi? (örn "❖ SUI")
+   → Aktif DS belirtilmiş mi? (örn "❖ Ana-DS")
 
 2. .claude/design-systems/last-intent.md
    → Son tamamlanan intent nedir? (device, ds, skill, inputs)
@@ -166,7 +165,7 @@ Kullanıcının cümlesinde şu keyword'leri ara ve \`approach\` input'unu doldu
 
 Eğer \`approach = build-from-scratch\` ise, Claude'un akış haritası:
 \`\`\`
-figma_search_assets ile SUI bileşenlerini bul
+figma_search_assets ile Ana-DS bileşenlerini bul
   ↓
 figma_get_library_variables ile DS token key'lerini topla
   ↓
@@ -185,7 +184,7 @@ figma_validate_screen ile skor kontrolü (≥80)
 \`\`\`
 📋 Yaklaşım: build-from-scratch ⭐
  Bu kullanıcının "alternatif tasarım" isteğine uygun doğru yol.
- Clone tool kullanılmayacak. Her alternatif sıfırdan SUI bileşenleriyle inşa edilecek.
+ Clone tool kullanılmayacak. Her alternatif sıfırdan Ana-DS bileşenleriyle inşa edilecek.
  Benchmark (139:xxx) sadece ilham kaynağı — kopyalanmayacak.
 \`\`\`
 
@@ -214,7 +213,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (3996 tokens) -->
+<!-- fmcp-screen-orchestrator (4356 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -239,9 +238,10 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ### DS Library Registry (v3.3+ — Agent Just Knows)
 
-Agent, kullanıcı registry'de kayıtlı bir DS adını söylediğinde URL sormaz; aşağıdaki registry'den okur.
+Registry'nin **iki kaynağı** var; okuma sırası:
 
-> **ŞABLON:** Aşağıdaki tablo örnek/placeholder'dır — kendi design system kütüphanelerinizin adlarını ve file key'lerini yazın (file key: \`figma.com/design/<FILE_KEY>/...\` URL'inden alınır). \`/ds-add\` komutu da bu tabloyu güncelleyebilir.
+1. **\`.claude/design-systems/registry.local.md\`** (kullanıcıya özel, gitignore'lu) — Adım -2 oto-uyumlanma veya \`/ds-add\` tarafından otomatik yazılır. VARSA tek doğru kaynak budur.
+2. Aşağıdaki şablon tablo (repo'da paylaşılan takım varsayılanları — placeholder ise yok say).
 
 | Library Name | libraryFileKey | Açıklama |
 |---|---|---|
@@ -250,9 +250,44 @@ Agent, kullanıcı registry'de kayıtlı bir DS adını söylediğinde URL sorma
 | 🙂 Icons *(örnek)* | \`<ICONS_FILE_KEY>\` | Icon component library |
 | 💼 Assets *(örnek)* | \`<ASSETS_FILE_KEY>\` | Illüstrasyon / asset kütüphanesi |
 
-Kullanıcı "<Ana-DS> ile X yap" dediğinde agent **otomatik** registry'deki ilgili library'leri enumerate eder (en azından ana DS + mobil DS + icons). Tablo doluysa URL/file key SORMAZ.
+Kullanıcı registry'deki bir DS ile "X yap" dediğinde agent **otomatik** ilgili library'leri enumerate eder. Registry doluysa URL/file key SORMAZ.
 
-Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
+### Adım -2 — Sıfır-Kurulum Oto-Uyumlanma (v3.5+ AUTO-ONBOARD)
+
+**Amaç:** Kullanıcı HİÇBİR kurulum yapmadan "tasarım sistemimle bir ekran yap" diyebilmeli. Registry boşsa agent kullanıcının Figma ortamından DS'i KENDİSİ keşfeder ve kalıcılaştırır.
+
+**Tetik:** DS gerektiren herhangi bir istek + \`registry.local.md\` YOK + şablon tablo placeholder.
+
+**Keşif zinciri (sırayla, kullanıcıya SORMADAN):**
+
+\`\`\`
+1. figma_list_connected_files
+   → Bağlı dosyalar içinde library görünümlü olanlar (❖/icons/assets/DS/UI kit
+     adlandırması, veya birden çok dosya açıksa hedef-dışı olanlar) → aday {name, fileKey}
+2. figma_get_library_variables (hedef dosyada, query'siz, limit=20)
+   → Subscribe edilmiş variable library'lerinin ADLARI (file key gerekmez).
+     Bu adlar DS'in kimliğidir; token kaynağı da budur.
+3. figma_search_assets(currentPageOnly=false)
+   → Hedef dosyadaki instance'lardan mainComponent key'leri + kaynak library adları.
+     importComponentByKeyAsync için file key GEREKMEZ — component key yeterli.
+4. figma_get_status → REST token varsa ve adım 1'den fileKey geldiyse
+   figma_enumerate_published_components ile envanteri zenginleştir.
+\`\`\`
+
+**Kalıcılaştırma:** Bulguları \`.claude/design-systems/registry.local.md\` dosyasına yaz (Write tool):
+
+\`\`\`markdown
+# DS Registry (otomatik keşif — <tarih>)
+| Library Name | libraryFileKey | Keşif yöntemi |
+|---|---|---|
+| <ad> | <key veya bilinmiyor> | connected-file / team-library / instance-scan |
+\`\`\`
+
+Sonraki tüm oturumlar bu dosyayı okur — keşif TEKRARLANMAZ (kullanıcı "DS'i yeniden tara" demedikçe).
+
+**Soru hakkı = en fazla 1:** Zincirin 4 adımı da boş dönerse (hedef dosya hiçbir library'ye subscribe değil, hiç instance yok, hiçbir library dosyası açık değil) → kullanıcıya TEK soru: *"Design system kütüphanenin Figma linkini paylaşır mısın? (bir kez — kaydedeceğim)"* → cevabı registry.local.md'ye yaz. Aynı soru bir daha SORULMAZ.
+
+**YASAK:** Registry veya keşif sonucu varken kullanıcıdan URL/file key/kütüphane adı istemek; keşfi her istekte baştan koşmak; kullanıcıdan manuel dosya düzenlemesi beklemek.
 
 ### Adım -1 — Live DS Discovery (v3.3+ MUTLAK İLK ADIM, cache-free, zero user input)
 
@@ -284,7 +319,7 @@ Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 5. figma_execute (build):
    - seed component import (NavigationTopBar — text style discovery için)
    - Adım 1.6 (fmcp-screen-recipes) → roleMap + fontFamilies
-   - loadFontAsync({ family: fontFamilies[0] })  (SHBGrotesk)
+   - loadFontAsync({ family: fontFamilies[0] })  (DS'inizin fontu)
    - skeleton + sections + bindings
 
 6. figma_validate_screen → score ≥80
@@ -318,9 +353,9 @@ Kullanıcı bu bilgiyi zaten VERMİŞSE agent TEKRAR SORMAZ. User prompt'taki ke
 
 Bunların dışında **figma_* çağrılarına direkt başla**. Soru sorma. User zaten onay vermiş sayılır.
 
-**Cache tool'ları (DEPRECATED v3.2+):**
-- \`figma_resolve_active_ds\`, \`figma_get_library_components\`, \`figma_get_library_tokens\` — backward compat için kalır ama kullanım önerilmez. Cache stale olma riski yüksek, Figma sürekli değişiyor.
-- Özel offline veya hızlı Pareto subset senaryoları için tercih edilebilir.
+**Cache tool'ları (KALDIRILDI — v3.3):**
+- Eski cache tool'ları (\`…resolve_active_ds\`, \`…get_library_components\`, \`…get_library_tokens\`) artık MEVCUT DEĞİL. Çağırma — "unknown tool" hatası alırsın.
+- Canlı karşılıkları: \`figma_enumerate_published_components\` (REST) / \`figma_enumerate_library_components\` (plugin) + \`figma_get_library_variables\`.
 
 **Yeni keşif akışının YASAKları:**
 - Local cache dosyasına (\`~/.claude/data/fcm-ds/...\`) bakma, hatta okuma — live path kullan
@@ -388,7 +423,7 @@ Figma Plugin API'de iki ayrı import fonksiyonu var:
 - \`figma.importComponentByKeyAsync(key)\` → **sadece tekil COMPONENT** için. SET key verirsen **"Could not find a published component with the key"** hatası alırsın (yanıltıcı hata mesajı — gerçek sebep yanlış API kullanımı).
 - \`figma.importComponentSetByKeyAsync(key)\` → **COMPONENT_SET (variant'lı)** için. Dönen \`ComponentSetNode\`'u \`.defaultVariant.createInstance()\` ile instance yap, sonra \`setProperties()\` ile variant seç.
 
-**Kural:** \`figma_get_library_components\` response'u her item'da \`kind: "COMPONENT" | "COMPONENT_SET"\` field döner. Ayrıca top-level \`componentSetKeys: string[]\` ve gerekirse \`_warnings: ["COMPONENT_SET_KEYS: ..."]\` verir.
+**Kural:** \`figma_enumerate_published_components\` ve \`figma_enumerate_library_components\` response'ları her item'da \`kind: "COMPONENT" | "COMPONENT_SET"\` field döner — import fonksiyonunu buna göre seç.
 
 \`\`\`js
 // DOĞRU pattern (kind'a göre dallan):
@@ -408,11 +443,11 @@ if (item.kind === "COMPONENT_SET") {
 
 Çoklu-library DS ekosistemleri tek library değildir — ana DS + mobil DS + icon/asset library'leri. Her component belirli bir library'de yayımlanmıştır; \`importComponentByKeyAsync(key)\` hedef Figma dosyasının **ilgili library'yi subscribe etmiş olması** durumunda çalışır.
 
-**Kaynak:** \`figma_get_library_components\` response'u her item'da \`sourceLibrary\` (örn. \`❖ Ana-DS Mobil\`) field'ı döner. Ayrıca top-level \`requiredLibraries: string[]\` ve gerekirse \`_warnings: ["REQUIRED_LIBRARIES: ..."]\` verir.
+**Kaynak:** \`figma_enumerate_library_components\` response'u top-level \`sourceLibrary\` (taranan library'nin adı) döner; her library ayrı çağrıyla taranır. Hangi library'lerden key kullandıysan, gereken library seti de odur.
 
 **Kural — ilk figma_execute öncesi kontrol:**
-1. \`figma_get_library_components\` response'undan \`requiredLibraries\` oku
-2. Eğer \`requiredLibraries.length > 1\` (yani mobil + ana gibi birden çok library) → kullanıcıya **onay sorusu sor**:
+1. Kullanacağın componentKey'lerin hangi library çağrılarından geldiğini not et (registry'deki library listesi)
+2. Eğer birden çok library'den key kullanıyorsan (yani mobil + ana gibi) → kullanıcıya **onay sorusu sor**:
    > *"Bu ekran için \`<Ana-DS>\` ve \`<Ana-DS Mobil>\` library'lerinin ikisi de subscribe olmalı. Figma'da Assets panelini açıp her ikisinin enabled olduğunu onaylar mısınız?"*
 3. Onay geldikten sonra üretime geç.
 
@@ -429,19 +464,7 @@ Server tool \`_warnings: ["LIBRARY_MISMATCH"]\` dönerse (user istediği library
 
 **Token hedefi:** Cache hit'te bir ödeme/login/form ekranı **≤8 tool call** total (variable cache + component cache + 1 runtime text style discovery + 2-3 execute + validate).
 
-**\`_nextStepObj\` izleme (v2.0+ — server-driven sequencing):** Her \`figma_*\` tool response'unda \`_nextStepObj: { tool, args_hint?, reason }\` alanı varsa, agent BİR SONRAKİ tool'u bu öneriden çağırır. Kullanım akışı:
-
-\`\`\`
-response.json.parse → _nextStepObj varsa →
-  next_tool_name = obj.tool
-  next_args = obj.args_hint  (opsiyonel override)
-  rationale = obj.reason  (kullanıcıya/rapora yaz)
-→ tool çağır
-\`\`\`
-
-Server cache zincirinde otomatik sequencing: \`figma_resolve_active_ds\` (fresh) → \`_nextStepObj: figma_get_library_components\` → \`_nextStepObj: figma_get_library_tokens\` → \`_nextStepObj: figma_execute\`. Agent karar ağacını her call'da yeniden yürütmez — server seqüans gönderir.
-
-**Backward compat:** Legacy \`_nextStep\` string alanı hâlâ mevcut (v1.9.7+); \`_nextStepObj\` yoksa agent klasik karar ağacına düşer. İki alan bir arada ise **objeyi tercih et**.
+**\`_nextStep\` izleme:** Bazı \`figma_*\` tool response'ları \`_nextStep\` string hint'i taşır (örn. "continue_with_next_section..."). Hint'i oku ve mantıklıysa uygula; karar ağacını yine bu skill'deki akış belirler. (Not: eski \`_nextStepObj\` typed sequencing v1.9.13'te kaldırıldı — cache zinciriyle birlikte ölmüştü.)
 
 ### Adım 0 — DS GATE (Cache MISS yolu)
 
@@ -513,7 +536,7 @@ Teslim öncesi kontrol: validate ≥80, ham shape yok, tüm değerler token'a ba
 
 ---
 
-<!-- figma-canvas-ops (2565 tokens) -->
+<!-- figma-canvas-ops (2592 tokens) -->
 ---
 name: figma-canvas-ops
 description: F-MCP Bridge ile Figma tuvalinde güvenli yazma/düzenleme için zorunlu önkoşul kılavuzu. figma_execute çağrısı öncesi bu skill yüklenmelidir.
@@ -540,23 +563,22 @@ metadata:
 - F-MCP Bridge plugin bağlı olmalı (\`figma_get_status()\`)
 - Aktif DS context: \`.claude/design-systems/active-ds.md\` → \`Status: ✅\`
 
-> **🔒 FMCP Cache Resolve (v3.1+ — İLK YOL):**
-> Cache okuma için Claude'un filesystem'a bakması GEREKMEZ. Server tool'ları kullan:
-> - \`figma_resolve_active_ds()\` — active library + cache status (\`fresh\`/\`stale\`/\`missing\`)
-> - \`figma_get_library_components(libraryName)\` — componentKey listesi
-> - \`figma_get_library_tokens(libraryName)\` — variableKey listesi
+> **🔒 Live DS Discovery (v3.3+ — İLK YOL):**
+> Yerel cache YOK. DS Library Registry'deki file key'lerle canlı oku:
+> - \`figma_enumerate_published_components(libraryFileKey, filter)\` — componentKey listesi (REST, dosya kapalıyken de çalışır)
+> - \`figma_enumerate_library_components(libraryFileKey|libraryName)\` — dosya AÇIKSA plugin'den daha hızlı liste
+> - \`figma_get_library_variables(query?)\` — variableKey listesi (teamLibrary, hedef dosyada çalışır)
 >
-> Cache hit'te **0 Plugin API call**, cross-file çalışır. Cache miss'te \`_restFallbackHint\` döner → Rule 24.1+ fallback chain'e düş.
+> Registry boşsa/REST token yoksa Rule 24.1+ fallback chain'e düş.
 > **Token hedefi:** ödeme/login ekranı ≤6 tool call total.
 
 ## 0. Design System Context (ZORUNLU)
 
 ### 0a — Active DS check
 \`\`\`
-1. ÖNCE figma_resolve_active_ds() — server cache (v3.1+)
-   ✅ "fresh" → Library Name + cache status not al, 0b'ye geç
-   ⚠️ "stale" → Library Name not al ama klasik fallback'e hazır ol
-   ❌ "missing" → Aşağıdaki klasik akışa düş
+1. ÖNCE \`.claude/design-systems/registry.local.md\` oku; yoksa orchestrator'daki registry tablosuna bak (v3.3+)
+   ✅ Kayıtlı → Library Name + libraryFileKey not al, 0b'ye geç
+   ❌ Kayıtlı değil → orchestrator Adım -2 AUTO-ONBOARD'u çalıştır (kullanıcıya sormadan keşfet + registry.local.md'ye yaz)
 
 2. Klasik akış (cache miss): Read .claude/design-systems/active-ds.md
 3. ✅ Aktif → Library Name not al, 0b'ye geç
@@ -572,7 +594,7 @@ metadata:
 \`\`\`
 
 ### 0c — Kullanıcıya DS seçimi sor
-active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)". Yanıt sonrası active-ds.md güncelle, 0b'ye geç. Sonraki turlarda TEKRAR SORMA.
+active-ds.md \`❌\` ise: "Hangi DS? (Ana-DS / Material / HIG / Kendi / Hiçbiri)". Yanıt sonrası active-ds.md güncelle, 0b'ye geç. Sonraki turlarda TEKRAR SORMA.
 
 ## 1. Kritik Kurallar
 
@@ -714,10 +736,11 @@ active-ds.md \`❌\` ise: "Hangi DS? (SUI / Material / HIG / Kendi / Hiçbiri)".
             throw new Error("UNBOUND_RADIUS: " + node.name + "." + r + "=" + node[r]);
           }
         }
+      }
 
 ---
 
-<!-- fmcp-screen-recipes (2126 tokens) -->
+<!-- fmcp-screen-recipes (2127 tokens) -->
 ---
 name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için 5 mega-adımlı recipe. Max 15 op/execute, cache-first discovery, her adımda Türkçe micro-report.
@@ -819,7 +842,7 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ SUI\` → \`sui\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ Ana-DS\` → \`sui\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
 Token name matching: DS nested path formatı (örn. \`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
 \`\`\`js
@@ -1037,7 +1060,5 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13532;
-export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-07-10T10:53:28.631Z";
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13923;
 //# sourceMappingURL=embedded-skills.js.map

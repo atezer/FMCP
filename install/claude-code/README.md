@@ -64,7 +64,7 @@ Agent'lar bu skill'leri `Read("skills/fmcp-<X>-orchestrator/SKILL.md")` ile yük
 ### Task Tool ile Agent Çağrısı
 
 ```
-Task(subagent_type: "screen-builder", prompt: "bir e-ticaret sepet ekranı tasarla, aktif DS SUI")
+Task(subagent_type: "screen-builder", prompt: "bir e-ticaret sepet ekranı tasarla, aktif DS Ana-DS")
 ```
 
 Sub-agent:
@@ -124,7 +124,7 @@ Task(
 ```
 Task(
   subagent_type: "token-syncer",
-  prompt: "SUI design system tokenlarını tailwind.config.js'e export et"
+  prompt: "Ana-DS design system tokenlarını tailwind.config.js'e export et"
 )
 ```
 

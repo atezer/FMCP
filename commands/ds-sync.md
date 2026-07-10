@@ -67,7 +67,7 @@ Lütfen:
 Bazı kaynaklar bağlı, bazıları değil → kullanıcıya bildir:
 ```
 ⚠️ Bazı kaynaklar bağlı değil:
-✅ main (❖ SUI)
+✅ main (❖ Ana-DS)
 ❌ assets (💼 Assets)
 
 Sadece bağlı olanları güncelleyeyim mi? (evet / iptal)
@@ -229,7 +229,7 @@ Sync geçmişine yeni satır ekle:
 - `.bak` dosyalarını sil (gerekmez artık)
 - Kullanıcıya rapor:
 ```
-✅ SUI sync tamamlandı.
+✅ Ana-DS sync tamamlandı.
 ⏱️ Süre: 18 dakika 32 saniye
 📊 İstatistikler:
    • tokens: 841 öğe
@@ -266,7 +266,7 @@ Sync geçmişine yeni satır ekle:
 Sync sırasında kullanıcıya düzenli olarak bildirim ver:
 
 ```
-📥 SUI sync başlıyor (tahmini 18 dk)...
+📥 Ana-DS sync başlıyor (tahmini 18 dk)...
 📊 tokens: 841/841 ✓ (45s)
 📊 components: 5/163 (son: Button ✓)
 📊 components: 10/163 (son: Input ✓)
@@ -298,7 +298,7 @@ Claude: "📖 76 bileşen eksik. Devam ediyorum..."
 Claude: [88, 89, 90, ... 163]
 Claude: [mobile section'a geç]
 Claude: [icons section'a geç]
-Claude: "✅ SUI sync tamamlandı."
+Claude: "✅ Ana-DS sync tamamlandı."
 ```
 
 **Kod yok. Sadece talimatlar.** Claude Read + figma MCP + Write araçlarıyla yapar.
@@ -308,7 +308,7 @@ Claude: "✅ SUI sync tamamlandı."
 ## Doğal Dil Desteği
 
 Slash command olmadan da aynı mantığı uygula:
-- "SUI'yi güncelle" → `/ds-sync sui`
-- "Sadece SUI bileşenlerini güncelle" → `/ds-sync sui components`
-- "Yarım kalan SUI sync'i devam ettir" → `/ds-sync sui` (resume otomatik)
+- "Ana-DS'yi güncelle" → `/ds-sync sui`
+- "Sadece Ana-DS bileşenlerini güncelle" → `/ds-sync sui components`
+- "Yarım kalan Ana-DS sync'i devam ettir" → `/ds-sync sui` (resume otomatik)
 - "devam et" (önceki sync'ten sonra) → resume

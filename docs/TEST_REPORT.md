@@ -64,7 +64,7 @@ Token Oluşturma → Bileşen Tasarımı → Ekran Yapımı → DS Denetimi → 
 | C1 | Auto-increment: Port 5454 dolu → 5455'e gec | PASS — `autoIncremented: true`, `preferredPort: 5454`, `actualPort: 5455` |
 | C2 | Coexistence: Claude Desktop (5454) + Claude Code (5455) ayni anda | PASS — her iki bridge ayni anda calisiyor, birbirini oldurmuyor |
 | C3 | `GET /status` endpoint | PASS — `{"clients":2,"uptime":33,"version":"1.7.28"}` (yeni versiyon: 1.7.29) |
-| C4 | `figma_execute` port 5455 uzerinden | PASS — 36ms, SUI Mobil dosyasi, 16 child node |
+| C4 | `figma_execute` port 5455 uzerinden | PASS — 36ms, Ana-DS Mobil dosyasi, 16 child node |
 | C5 | Eski versiyon uyumluluk: /status yok → ATLA | PASS — port 5454'teki eski bridge oldurulmedi, `unknown health` logu |
 
 ### 2.2 Faz 1: Token & DS Kütüphanesi — 14/14 PASS + 1 EXPECTED FAIL

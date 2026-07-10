@@ -18,7 +18,7 @@ Bu dokümanda, Cursor üzerinde F-MCP (F-MCP Bridge) ile geliştirirken **Figma 
 | **Stiller (katalog)** | Paint, Text, Effect stilleri (isim, id; full’da renk/font/boyut/effect detayı) | `figma_get_styles` |
 | **Dosya özeti** | Sayfa sayısı, bileşen sayıları, token koleksiyonları | `figma_get_design_system_summary` |
 | **Bileşen arama** | İsme göre component bulma | `figma_search_components` |
-| **Code-ready & SUI** | `roleHint`/`suiComponent`, `layoutSummary`, `colorHex`, `fillVariableNames`/`strokeVariableNames` (SUI token adı; değer platformda), `variantSummary`/`suggestedProps`, `incompleteReasons`, `hasImageFill`; `outputHint: react \| tailwind` | `figma_get_design_context`, `figma_get_file_data` (verbosity standard/full veya includeLayout/includeVisual) |
+| **Code-ready & Ana-DS** | `roleHint`/`dsComponent`, `layoutSummary`, `colorHex`, `fillVariableNames`/`strokeVariableNames` (Ana-DS token adı; değer platformda), `variantSummary`/`suggestedProps`, `incompleteReasons`, `hasImageFill`; `outputHint: react \| tailwind` | `figma_get_design_context`, `figma_get_file_data` (verbosity standard/full veya includeLayout/includeVisual) |
 | **Plugin API** | İsteğe özel okuma/yazma (node’ları gez, property oku) | `figma_execute` |
 
 Tüm bu veriler **Figma REST API token’ı kullanılmadan**, yalnızca **Plugin API** (F-MCP Bridge eklentisi) ile alınır; rate limit ve Figma tarafı token tüketimi yoktur.
@@ -86,16 +86,16 @@ Tüm bu veriler **Figma REST API token’ı kullanılmadan**, yalnızca **Plugin
 
 ---
 
-## 5. Uygulanan iyileştirmeler (Code-ready, SUI, token referansı)
+## 5. Uygulanan iyileştirmeler (Code-ready, Ana-DS, token referansı)
 
 - **Layout özeti:** `layoutSummary` (flex/grid, gap, padding); `outputHint: react` veya `tailwind` ile framework’e uygun metin.
 - **Renk:** `colorHex` / `primaryColorHex` (ilk solid fill).
-- **SUI bileşen adı:** `roleHint`, `suiComponent` (node name + description → PascalCase).
-- **SUI token referansı:** Fill/stroke variable’a bağlıysa `fillVariableNames`, `strokeVariableNames` (variable **adı**; değer platform kütüphanesinden).
+- **Ana-DS bileşen adı:** `roleHint`, `dsComponent` (node name + description → PascalCase).
+- **Ana-DS token referansı:** Fill/stroke variable’a bağlıysa `fillVariableNames`, `strokeVariableNames` (variable **adı**; değer platform kütüphanesinden).
 - **Instance:** `variantSummary`, `suggestedProps`.
 - **Eksik uyarı:** `incompleteReasons`, `hasImageFill`.
 
-**Not:** SUI token değerleri her platformda kendi kütüphanesinde olduğu için plugin yalnızca bileşen adı ve token **adı** üretir.
+**Not:** Ana-DS token değerleri her platformda kendi kütüphanesinde olduğu için plugin yalnızca bileşen adı ve token **adı** üretir.
 
 ---
 

@@ -61,12 +61,6 @@ export function auditPlugin(path, event) {
     auditLog(path, { event });
 }
 /**
- * Log a DS cache hit/miss/stale event from the cache reader.
- */
-export function auditCache(path, event, method, libraryName, cacheRoot) {
-    auditLog(path, { event, method, libraryName, cacheRoot });
-}
-/**
  * Flush and close the audit log stream. Call on graceful shutdown.
  */
 export function closeAuditLog() {

@@ -161,6 +161,8 @@ Bu şekilde kaydetmek istiyor musun? (evet / değiştir / iptal)
 
 ### 4d. Onay Sonrası
 
+0. **`registry.local.md` güncelle:** `.claude/design-systems/registry.local.md` dosyasına (yoksa oluştur) library satırı ekle/güncelle: `| <display_name> | <file_key> | ds-add |`. Bu dosya orchestrator'ın DS Library Registry'sinin kullanıcıya özel birincil kaynağıdır (Adım -2 AUTO-ONBOARD ile aynı format).
+
 1. **Dizin oluştur:** `mkdir -p .claude/design-systems/<id>`
 
 2. **`_meta.md` yaz** (kaynak-section eşleştirme ile):

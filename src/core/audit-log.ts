@@ -82,19 +82,6 @@ export function auditPlugin(path: string | undefined, event: "plugin_connect" | 
 }
 
 /**
- * Log a DS cache hit/miss/stale event from the cache reader.
- */
-export function auditCache(
-	path: string | undefined,
-	event: "cache_hit" | "cache_miss" | "cache_stale",
-	method: string,
-	libraryName?: string,
-	cacheRoot?: string,
-): void {
-	auditLog(path, { event, method, libraryName, cacheRoot });
-}
-
-/**
  * Flush and close the audit log stream. Call on graceful shutdown.
  */
 export function closeAuditLog(): void {

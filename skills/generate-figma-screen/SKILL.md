@@ -118,7 +118,7 @@ Topluluk `figma-generate-design` skill'inden uyarlanmış, F-MCP Bridge araçlar
    ✅ Aktif        → Library Name'i not al, Step 1'e geç
    ❌ Henüz seçilmedi → Kullanıcıya sor:
      "Hangi tasarım sistemi ile ilerleyelim?
-      - ❖ SUI (varsa)
+      - ❖ Ana-DS (varsa)
       - Material Design
       - Apple HIG
       - Kendi DS'iniz (Figma library URL verin)
@@ -220,7 +220,7 @@ Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cev
 | tablet / iPad | dashboard / list / detail | iPad Pro 11 (834×1194) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
 | desktop / web / (platform yok) | dashboard / list | Desktop (1440×1024) | `<DS>/primary/default` | `<DS>/text/body/M` |
 
-**`<DS>` =** `active-ds.md`'deki `Library Name` slug'ı (örn. `❖ SUI` → `sui`, `Material` → `material`). Token isimleri DS convention'una göre değişebilir — eşleşme yoksa DS cache'inden (`.claude/design-systems/<DS>/tokens.md`) benzer token ara.
+**`<DS>` =** `active-ds.md`'deki `Library Name` slug'ı (örn. `❖ Ana-DS` → `sui`, `Material` → `material`). Token isimleri DS convention'una göre değişebilir — eşleşme yoksa DS cache'inden (`.claude/design-systems/<DS>/tokens.md`) benzer token ara.
 
 **Algoritma:**
 1. User prompt'undan platform keyword parse et (iOS/iPhone/mobil/Android/Pixel/tablet/iPad/desktop/web).
@@ -231,7 +231,7 @@ Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cev
 
 **Fallback:** Tabloda eşleşme yoksa (örn. custom platform + custom screen_type): v1.9.5 "Sen seç" kuralı devreye girer → iPhone 17 + `<DS>/primary/default` default.
 
-**Neden ZORUNLU:** Önceki testlerde "SUI iOS ödeme sayfası" prompt'una device sorusu gereksiz yere soruldu. Bu tablo ile otonomi kırılma noktası #3 kapatılır.
+**Neden ZORUNLU:** Önceki testlerde "Ana-DS iOS ödeme sayfası" prompt'una device sorusu gereksiz yere soruldu. Bu tablo ile otonomi kırılma noktası #3 kapatılır.
 
 ### Step 3: Design System Keşfi (Cache-First Stratejisi)
 
@@ -244,7 +244,7 @@ Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cev
 
 #### Step 3.1 — Cache Populate (v1.9.9+ OTONOM — G19)
 
-> **v3.1+ SKIP-ON-HIT:** Pre-flight `figma_resolve_active_ds()` `status: "fresh"` döndüyse **bu adımı tamamen ATLA**. Server zaten key'leri döndürüyor; populate gereksiz. Sadece `status: "missing"` veya `"stale"` ise aşağıdaki klasik populate akışı çalışır.
+> **v3.3+ SKIP-ON-LIVE:** Adım -1'deki canlı enumerate (`figma_enumerate_published_components` / `figma_enumerate_library_components`) componentKey'leri zaten döndürdüyse **bu adımı tamamen ATLA** — populate gereksiz. Yalnızca registry boş / REST token yoksa aşağıdaki klasik populate akışı çalışır.
 
 Eğer user-local `~/.claude/data/fcm-ds/<file-key>/components.md` **yok veya stale** (>7 gün) VE `active-ds.md` Status: ✅ Aktif ise, Claude **kullanıcıya sormadan** aşağıdaki adımları otomatik çalıştırır:
 
@@ -262,8 +262,8 @@ Eğer user-local `~/.claude/data/fcm-ds/<file-key>/components.md` **yok veya sta
    # Components (auto-populated YYYY-MM-DD)
    | Name | Key | Role | Source |
    |---|---|---|---|
-   | Button | <componentKey> | primary_button | ❖ SUI |
-   | NavigationTopBar | <componentKey> | nav_top | ❖ SUI |
+   | Button | <componentKey> | primary_button | ❖ Ana-DS |
+   | NavigationTopBar | <componentKey> | nav_top | ❖ Ana-DS |
    ```
 
 3. **Meta update:** `_meta.md` güncelle — `Son sync: YYYY-MM-DD`, `Durum: ✅ TAMAMLANDI (auto)`, `Sync yöntemi: Step 3.1 auto-populate`.
@@ -340,24 +340,24 @@ Her DS kütüphanesi `.claude/libraries/<ds>.md` dosyasında şu bölümleri iç
 **ZORUNLU SIRA — Rule 24.0:**
 
 ```
-1. figma_get_library_components(libraryName=<active>, filter?)  ← TEK ÇAĞRI
-   → componentKey listesi (cache hit'te 0 Plugin/REST call)
-2. importComponentByKeyAsync(key) → instance üret
+1. figma_enumerate_published_components(libraryFileKey=<registry>, filter?)  ← TEK ÇAĞRI
+   → componentKey listesi (REST; library dosyası açıksa figma_enumerate_library_components tercih et)
+2. importComponentByKeyAsync(key) / importComponentSetByKeyAsync(key) → instance üret
 ```
 
-**YASAK** (cache hit'te): `figma.currentPage.findAll(INSTANCE)` ile başka sayfaları/ekranları tarama. Sebep: timeout riski + yanlış instance + cache zaten dolu.
+**YASAK** (enumerate başarılıyken): `figma.currentPage.findAll(INSTANCE)` ile başka sayfaları/ekranları tarama. Sebep: timeout riski + yanlış instance + liste zaten elde.
 
-**Cache miss fallback (sıra zorunlu — Rule 24):**
-- 24.0 → `figma_get_library_components` (cache hit'te bu)
-- 24.1 → `figma_rest_api GET /v1/files/<LIB_KEY>/components` (REST)
+**Fallback (sıra zorunlu — Rule 24):**
+- 24.0 → `figma_enumerate_published_components` / `figma_enumerate_library_components` (ana yol)
+- 24.1 → `figma_rest_api GET /v1/files/<LIB_KEY>/components` (ham REST)
 - 24.2 → `figma_search_assets(currentPageOnly=false)` (Plugin instance scan, son çare)
 - 24.4 → kullanıcıya library URL sor
 
-**Geniş arama gerekirse** (cache miss'te) — birden fazla `filter` ile çağır:
+**Geniş arama gerekirse** — birden fazla `filter` ile çağır (büyük library'lerde filter ZORUNLU):
 
 ```
-figma_get_library_components(libraryName="❖ SUI", filter="button")
-figma_get_library_components(libraryName="❖ SUI", filter="input")
+figma_enumerate_published_components(libraryFileKey=<registry>, filter="button")
+figma_enumerate_published_components(libraryFileKey=<registry>, filter="input")
 ```
 
 #### 3b: Variable keşfi
@@ -378,20 +378,20 @@ Text style ve effect style'ları not al.
 
 #### 3d: DS Variable Key'lerini Hazırla (ZORUNLU)
 
-> **v3.1+ CACHE-FIRST:** Pre-flight `status: "fresh"` ise → `figma_get_library_tokens(libraryName, filter?)` **TEK CALL** ile variableKey listesi al. `figma_execute` içinde teamLibrary discovery YASAK (cache zaten dolu, gereksiz round-trip). Cache miss/stale ise aşağıdaki klasik akış.
+> **v3.3+ LIVE-FIRST:** `figma_get_library_variables(query?, collectionName?)` **TEK CALL** ile variableKey listesi al (teamLibrary — hedef dosyada çalışır, library dosyasının açık olması gerekmez). `figma_execute` içinde elle teamLibrary discovery YASAK (gereksiz round-trip). Tool başarısızsa aşağıdaki klasik akış.
 
 Ekran oluşturmadan önce kullanılacak tüm DS token'larının **variable key'lerini** topla. Bu adım atlanamaz.
 
 1. **Kütüphane dosyasını oku:** `.claude/libraries/` dizinindeki kütüphane dosyasından font ailesi, variable collection ve text style bilgilerini al.
 2. **HEDEF dosyada variable key'lerini çek** (DS dosyasına bağlanmak GEREKMEZ):
    ```
-   figma_get_library_variables({ libraryName: "❖ SUI" })
+   figma_get_library_variables({ libraryName: "❖ Ana-DS" })
    ```
    Veya `figma_execute` ile:
    ```js
    // HEDEF dosyada çalıştır — DS dosyası değil!
    var cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-   var target = cols.filter(function(c) { return c.libraryName === "❖ SUI"; });
+   var target = cols.filter(function(c) { return c.libraryName === "❖ Ana-DS"; });
    var results = [];
    for (var ci = 0; ci < target.length; ci++) {
      var vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(target[ci].key);
@@ -441,12 +441,12 @@ Bu **clone'un kapsamında DEĞİL**. Clone sadece "kopyala, isim değiştir" yap
 
 Benchmark varsa:
 1. **Step 3.x'te benchmark'ı `figma_get_design_context` ile OKU** — yapısal anlayış için
-2. Benchmark'ta kullanılan SUI instance'ları not al (NavigationTopBar, PillTabs, vb.)
+2. Benchmark'ta kullanılan Ana-DS instance'ları not al (NavigationTopBar, PillTabs, vb.)
 3. Benchmark'ta **yanlış olan şeyleri kopyalama**:
    - Hardcoded rectangle separator'lar → DS Divider component kullan
    - Non-responsive iç frame'ler → auto-layout FILL'e çevir
    - Missing token bindings → her yerde `setBoundVariable*` kullan
-4. **Step 4 + Step 5 akışını takip et** — sıfırdan, SUI kurallarıyla
+4. **Step 4 + Step 5 akışını takip et** — sıfırdan, Ana-DS kurallarıyla
 5. Her alternatif için benzersiz layout çözümü:
    - Hero Card: bakiye kartı büyütülmüş, quick actions altta sade
    - Liste Odaklı: hesap listesi dominant, özet sağ-altta
@@ -749,7 +749,7 @@ Estetik yön belirlendiyse (Step 2.5), bölüm inşa sırasında şu detaylar ek
 
 Intent router `variants` input'unda "Light + Dark mode" seçildiyse (veya kullanıcı açıkça dark+light istiyorsa), Step 6'ya geçmeden önce bu alt adımı uygula.
 
-**Ön koşul:** DS'de theme modlar tanımlı bir variable collection var. SUI için tipik: `Colors` collection + `Light` mode + `Dark` mode.
+**Ön koşul:** DS'de theme modlar tanımlı bir variable collection var. Ana-DS için tipik: `Colors` collection + `Light` mode + `Dark` mode.
 
 **Akış (4 adım):**
 
@@ -822,7 +822,7 @@ Sorun varsa hedefli `figma_execute` ile düzelt.
 #### Adım 1 — `figma_validate_screen` çağır
 
 ```
-figma_validate_screen(nodeId="wrapper-frame-id", expectedDs="❖ SUI", minScore=80)
+figma_validate_screen(nodeId="wrapper-frame-id", expectedDs="❖ Ana-DS", minScore=80)
 ```
 
 Tool şunu döner:

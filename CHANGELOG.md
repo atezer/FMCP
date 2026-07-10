@@ -12,6 +12,31 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.13] — 2026-07-11 — Sıfır-kurulum DS oto-uyumlanma + atıl kod temizliği
+
+### Added — Zero-Setup DS Auto-Onboard (v3.5)
+
+- **Adım -2 AUTO-ONBOARD** (`fmcp-screen-orchestrator`): kullanıcı hiçbir kurulum yapmadan "tasarım sistemimle X yap" diyebilir. Registry boşsa agent DS'i kendisi keşfeder: bağlı library dosyaları → subscribe edilmiş variable library'leri (`figma_get_library_variables`, file key gerekmez) → instance taraması (`figma_search_assets`) → opsiyonel REST zenginleştirme. Bulgular kullanıcıya özel `.claude/design-systems/registry.local.md`'ye (gitignore'lu) kalıcılaştırılır; keşif tekrarlanmaz. Tüm sinyaller boşsa en fazla BİR kez kütüphane linki sorulur ve kaydedilir.
+- DS Library Registry artık iki kaynaklı: `registry.local.md` (birincil, kullanıcıya özel) → repo şablon tablosu. `/ds-add` da `registry.local.md`'yi günceller; `figma-canvas-ops` 0a adımı yeni okuma sırasına bağlandı; README'ye "Sıfır kurulum" bölümü eklendi.
+
+### Removed/Fixed — Atıl kod temizliği (davranış değişikliği YOK)
+
+Sağlık taramasında (%100 doğrulanmış, salt üretimden çağrılmayan) ölü kod kaldırıldı; canlı davranış değişmedi. Doğrulama: 89/89 test, `tsc --noEmit` temiz, `validate:fmcp-skills` exit 0, temiz dist üzerinde gerçek MCP el sıkışması (initialize + tools/list 62 tool + tools/call) ve HTTP köprü smoke testi.
+
+### Removed — ölü kod (~850 satır)
+
+- **`src/core/instructions.ts`** (287 satır) — hiçbir yerden import edilmiyordu; içeriği v3.2'de kaldırılan "CACHE-FIRST" akışını anlatıyordu ve npm paketine gidiyordu.
+- **`src/core/fmcp-cache-reader.ts`** (372 satır) + testi — v3.3 "cache tools removed" kalıntısı; tek referansı kendi testiydi.
+- **`bootstrap-injector.injectNextStepObj` + `NextStep` tipi** — üretimden hiç çağrılmıyordu; üç case'i de kaldırılmış cache tool'larına aitti. `reference_docs` alanı da kaldırıldı (var olmayan MCP resource/prompt'ları duyuruyordu).
+- **`plugin-bridge-server`: `requestShutdownAndRetry` + `tryListenFixed`** (~95 satır) — yalnızca birbirini çağıran `@deprecated` ada; canlı başlangıç `tryListenWithAutoIncrement` kullanıyor.
+- **`audit-log.auditCache`**, kullanılmayan importlar (`calculateSizeKB`, `PluginScreenshotPayload`, `PluginExecuteResult`, `DesignSystemSummary`), ui.html'de `_cn` ölü dalı ve `__figmaComponentData` ölü global'i.
+
+### Fixed — dokümantasyon/üretici tutarlılığı
+
+- **Skill'lerdeki kaldırılmış tool referansları** (6 dosya): `figma_resolve_active_ds`, `figma_get_library_components`, `figma_get_library_tokens` akışları canlı karşılıklarıyla (`figma_enumerate_published_components` / `figma_enumerate_library_components` / `figma_get_library_variables`) yeniden yazıldı; response-alan iddiaları (`requiredLibraries`, `componentSetKeys`, per-item `sourceLibrary`) gerçek sözleşmeye hizalandı. `validate:fmcp-skills` artık temiz geçiyor.
+- **`generate-embedded-skills` deterministik yapıldı:** gömülü timestamp ve ölü `EMBEDDED_SKILLS_VERSION`/`GENERATED_AT` exportları kaldırıldı — yeniden üretim artık sahte diff üretmiyor.
+- `LEGACY_DEFAULTS` üzerindeki bayat "v1.9.0'da kaldırılacak" yorumu düzeltildi.
+
 ## [1.9.12] — 2026-07-10 — Kapsamlı test düzeltmeleri + DS-agnostic temizlik
 
 ### Fixed — Plugin (f-mcp-plugin)
@@ -43,13 +68,13 @@ Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` ku
 
 ### Fundamental shift
 
-**Problem:** Cache (component key'leri + token'lar) bakım külfeti yaratıyordu. SUI gibi aktif library'ler sürekli güncellendiği için 27 component'lik Pareto subset hızla eksik/yanlış hale geliyor: stale key'ler, missing component'ler (Input, Select, Checkbox vb.), yanlış `sourceLibrary`, yanlış `kind`. Kullanıcı her sync gerektirmeyen canlı yaklaşım istedi.
+**Problem:** Cache (component key'leri + token'lar) bakım külfeti yaratıyordu. Ana-DS gibi aktif library'ler sürekli güncellendiği için 27 component'lik Pareto subset hızla eksik/yanlış hale geliyor: stale key'ler, missing component'ler (Input, Select, Checkbox vb.), yanlış `sourceLibrary`, yanlış `kind`. Kullanıcı her sync gerektirmeyen canlı yaklaşım istedi.
 
 **Çözüm:** Live enumeration birincil yol. Agent library file'ları plugin'de açık olduğunda her seferinde Figma'dan taze component listesi alır.
 
 ### Added
 
-- `figma_enumerate_library_components(libraryName|libraryFileKey)` — connected library file'da `figma.root.findAll(COMPONENT|COMPONENT_SET)` ile live scan. Her item: `{name, key, kind, props, pageName}`. Multi-library DS (SUI + SUI Mobil + S-Icons) için her biri için ayrı call.
+- `figma_enumerate_library_components(libraryName|libraryFileKey)` — connected library file'da `figma.root.findAll(COMPONENT|COMPONENT_SET)` ile live scan. Her item: `{name, key, kind, props, pageName}`. Multi-library DS (Ana-DS + Ana-DS Mobil + S-Icons) için her biri için ayrı call.
 
 ### Changed
 
@@ -63,7 +88,7 @@ Kullanıcı tarafında:
 - `active.md` minimal kalabilir (sadece library ismi hatırlatma) veya kaldırılabilir; agent artık user prompt'undan library adını çıkarıp `figma_list_connected_files`'te arar.
 
 Agent davranışı:
-- Kullanıcı "SUI ile X yap" dediğinde agent önce plugin'de SUI library file'larının bağlı olduğunu doğrular; bağlı değilse kullanıcıdan library file'ları açmasını ister.
+- Kullanıcı "Ana-DS ile X yap" dediğinde agent önce plugin'de Ana-DS library file'larının bağlı olduğunu doğrular; bağlı değilse kullanıcıdan library file'ları açmasını ister.
 
 ## [Unreleased] — v3.1 Server Cache Resolver
 
@@ -268,9 +293,9 @@ Claude Desktop + Figma plugin yeniden aç. Console'da `[F-MCP v1.9.7]` gör.
 
 Gerçek test raporunda (chat `eedf8ec8`, 14:39 Claude Desktop) gözlemlenen iki kritik regression'ı kapatır:
 
-1. **"SUI olmayan renkler kullandı, tasarım sistemi dışına çıktı"** — `figma_execute` statik kod analizi unbound fill'i yakalıyor ama sadece kod'da `.fills = [{type:"SOLID"}]` literal yazılınca. Değişkenle gelen unbound fill atlanıyordu. **v1.9.6 runtime post-execute scan** execute sonrası oluşturulan node'ları tarar.
+1. **"Ana-DS olmayan renkler kullandı, tasarım sistemi dışına çıktı"** — `figma_execute` statik kod analizi unbound fill'i yakalıyor ama sadece kod'da `.fills = [{type:"SOLID"}]` literal yazılınca. Değişkenle gelen unbound fill atlanıyordu. **v1.9.6 runtime post-execute scan** execute sonrası oluşturulan node'ları tarar.
 
-2. **"SUI Alt 3'ü atla dediği halde referans aldı"** — Skill'ler user intent parse etmiyordu, özellikle negative instruction'ları ("atla", "bakma", "dışında"). **v1.9.6 Negative Intent Detection** intent-router'da tanımlı pattern seti.
+2. **"Ana-DS Alt 3'ü atla dediği halde referans aldı"** — Skill'ler user intent parse etmiyordu, özellikle negative instruction'ları ("atla", "bakma", "dışında"). **v1.9.6 Negative Intent Detection** intent-router'da tanımlı pattern seti.
 
 **Plugin tarafı (f-mcp-plugin/code.js):**
 
@@ -294,7 +319,7 @@ Gerçek test raporunda (chat `eedf8ec8`, 14:39 Claude Desktop) gözlemlenen iki 
 **Kullanıcı için ne değişir:**
 
 1. **Runtime enforcement**: `figma_execute` ile kod çalışırsa ve oluşan node'larda unbound fill/padding/radius/text-style varsa response üstünde `_POST_EXECUTE_SCAN_BLOCKING: true` görürsün — Claude retry yapmak zorunda. Statik kod analizi eksik kalan runtime bugs artık yakalanır.
-2. **Intent parsing**: "SUI Alt 3 atla" gibi negative instruction Claude tarafından doğru parse edilir, referans alınmaz.
+2. **Intent parsing**: "Ana-DS Alt 3 atla" gibi negative instruction Claude tarafından doğru parse edilir, referans alınmaz.
 3. Plugin reload gerekir: yeni `postExecuteScan` handler v1.9.6 plugin'de.
 
 **Regresyon:** Sıfır. Backwards compatible:
@@ -339,7 +364,7 @@ Claude Desktop'ta test edilen gerçek oturumda context bütçesi patlaması (188
   - `install/claude-desktop/HOW-TO-ENFORCE.md`: v1.9.5 sertleştirilmiş başlangıç prompt'u — discovery budget + screenshot method selection + elicitation kuralları. cleanup-ports.sh rehberi eklendi.
   - `README.md`: Claude Desktop sınırlamaları güncellendi (dört katmanlı enforcement), cleanup-ports.sh notu.
   - `.claude/design-systems/README.md`: user-local `file-map.md` bölümü eklendi.
-  - `.claude/design-systems/sui/SUI_CHEATSHEET.md`: Anti-pattern tablosu yöntem-odaklı güncellendi (yasak yerine doğru yöntem örnekleri).
+  - `.claude/design-systems/<ds>/CHEATSHEET.md` (kullanıcı-lokal): Anti-pattern tablosu yöntem-odaklı güncellendi (yasak yerine doğru yöntem örnekleri).
 
 - **Plugin version sync**: `code.js`, `ui.html`, `package.json` → `1.9.5`. Plugin'de `buildNodeSummary()` helper metadata çıkarımı için eklendi.
 
@@ -369,7 +394,7 @@ Claude Desktop'ta test edilen gerçek oturumda context bütçesi patlaması (188
 
 ### Claude Desktop Enforcement Gap Kapatma — Runtime DS Compliance Scan + BLOCKING signal
 
-Claude Desktop'ta (hook/sub-agent/slash command yok) token binding ve DS disiplininin skip edilmesini engelleyen üç katmanlı enforcement sistemi. Önceki sürümlerde skill'lerde HARD LANGUAGE (168+ ZORUNLU/MUTLAK keyword) vardı ama Claude Desktop'ta plugin tarafında runtime zorlayıcı yoktu. Gerçek bir test ekranında (SUI Anasayfa, 217 node) padding %5, radius %3, text style %25 bound olduğu ölçülünce bu sürüm acil hazırlandı.
+Claude Desktop'ta (hook/sub-agent/slash command yok) token binding ve DS disiplininin skip edilmesini engelleyen üç katmanlı enforcement sistemi. Önceki sürümlerde skill'lerde HARD LANGUAGE (168+ ZORUNLU/MUTLAK keyword) vardı ama Claude Desktop'ta plugin tarafında runtime zorlayıcı yoktu. Gerçek bir test ekranında (Ana-DS Anasayfa, 217 node) padding %5, radius %3, text style %25 bound olduğu ölçülünce bu sürüm acil hazırlandı.
 
 **Değişiklikler:**
 
@@ -418,14 +443,14 @@ FCM açık kaynak MCP server/plugin dağıtımı — `@atezer/figma-mcp-bridge` 
 - `.claude/design-systems/active-ds.md`: Gerçek `file key` kaldırıldı, user-local pointer pattern'ine geçildi
 - `.claude/design-systems/sui/tokens.md`: Generic token isim paternleri (spacing/radius/surface/typography rol haritası) — variableKey yok
 - `.claude/design-systems/sui/components.md`: Generic component isim paternleri (Top usage-ranked) + eksik listesi + primitive fallback tablosu — componentKey yok
-- `.claude/design-systems/sui/SUI_CHEATSHEET.md` (yeni): 10 bölümlük workflow rehberi (karar ağacı, 9 recipe index, 5-tab IA, custom dashboard pattern, 3 mutlak kural, anti-pattern listesi, hedef metrikleri, sorun giderme)
+- `.claude/design-systems/<ds>/CHEATSHEET.md` (yeni, kullanıcı-lokal): 10 bölümlük workflow rehberi (karar ağacı, 9 recipe index, 5-tab IA, custom dashboard pattern, 3 mutlak kural, anti-pattern listesi, hedef metrikleri, sorun giderme)
 - `.gitignore`: DS cache güvenlik katmanı eklendi (`.claude/design-systems/*/_meta.md`, `*.cache.md`, `*.local.md`)
 - `CHANGELOG.md`: v1.7.30 entry'sinden `<EXAMPLE_FILE_KEY>` file key redact
 - `install/TOKEN-BUDGET.md`: Text style import key redact (`fb3591835c86d00580e1f0cea2343d033107dc67`)
 
 **Kullanıcı için ne değişir:**
 
-- İlk kurulum: `/ds-sync sui` (veya "SUI cache oluştur") komutu ile kendi makinenizde user-local cache oluşur; repo'ya girmez
+- İlk kurulum: `/ds-sync sui` (veya "Ana-DS cache oluştur") komutu ile kendi makinenizde user-local cache oluşur; repo'ya girmez
 - `fmcp-screen-recipes` cache-first mantığı değişmez ama artık önce user-local'e bakar, yoksa repo template'ine düşer, yoksa runtime resolve yapar
 - Mevcut cache'i olan kullanıcılar: `.claude/design-systems/<lib>/` altında gerçek key varsa manuel olarak `~/.claude/data/fcm-ds/<file-key>/` altına taşıyın
 
@@ -498,9 +523,9 @@ Plugin DevTools console'unda görülen 22+ `WebSocket connection to ws://localho
 
 ## [1.9.0] - 2026-04-17
 
-### Kural Enflasyonu Temizliği + Bridge Crash Koruması + SUI Cache
+### Kural Enflasyonu Temizliği + Bridge Crash Koruması + Ana-DS Cache
 
-5 ardışık testten (FP-1-R serisi) elde edilen bulgularla yapılan kapsamlı temizlik. Skill dosyaları %57 küçültüldü, plugin tarafında büyük component set'lerin bridge'i kilitlemesi engellendi, SUI cache altyapısı eklendi.
+5 ardışık testten (FP-1-R serisi) elde edilen bulgularla yapılan kapsamlı temizlik. Skill dosyaları %57 küçültüldü, plugin tarafında büyük component set'lerin bridge'i kilitlemesi engellendi, Ana-DS cache altyapısı eklendi.
 
 **Skill Compaction — 2298 → 979 satır (%57 azalma, ~10K token tasarruf):**
 
@@ -525,15 +550,15 @@ Plugin DevTools console'unda görülen 22+ `WebSocket connection to ws://localho
 
 **Bridge Crash Koruması:**
 
-- `f-mcp-plugin/code.js:extractComponentSetData` — `MAX_VARIANTS = 50` guard eklendi. SUI Button (336 variant) gibi büyük component set'lerin children iterasyonu ilk 50 ile sınırlandırıldı. Response'a `_totalVariantCount` ve `_truncated` metadata alanları eklendi. 4+ dakika bridge timeout ve plugin crash riski ortadan kaldırıldı.
+- `f-mcp-plugin/code.js:extractComponentSetData` — `MAX_VARIANTS = 50` guard eklendi. Ana-DS Button (336 variant) gibi büyük component set'lerin children iterasyonu ilk 50 ile sınırlandırıldı. Response'a `_totalVariantCount` ve `_truncated` metadata alanları eklendi. 4+ dakika bridge timeout ve plugin crash riski ortadan kaldırıldı.
 - `f-mcp-plugin/code.js:extractComponentData` + componentSetData properties bloğu — `MAX_PROPERTIES = 100` guard eklendi. `componentPropertyDefinitions` iterasyonu property sayısıyla sınırlandırıldı.
 - `src/local-plugin-only.ts:figma_execute` — Timeout clamp 120s → 30s'ye indirildi. 15 op = ~200ms gerçek test verisi; 30s hâlâ çok bol. Yüksek timeout'lar artık bridge hang'lerini maskeleyemez.
 
 **Collection Keyword Match Düzeltmesi:**
 
-- `skills/fmcp-screen-recipes/SKILL.md:Adım 1.5 Execute 1` — `findColl(["semantic color", "s theme", "theme"])` içindeki jenerik `"theme"` fallback keyword'ü kaldırıldı. SUI dışı DS collection'larının yanlışlıkla match edip her testte 1 ek düzeltme execute'u harcamasına neden oluyordu. `"s theme"` SUI'nin "S Theme Colors" collection'ını zaten tam olarak yakalar.
+- `skills/fmcp-screen-recipes/SKILL.md:Adım 1.5 Execute 1` — `findColl(["semantic color", "s theme", "theme"])` içindeki jenerik `"theme"` fallback keyword'ü kaldırıldı. Ana-DS dışı DS collection'larının yanlışlıkla match edip her testte 1 ek düzeltme execute'u harcamasına neden oluyordu. `"s theme"` Ana-DS'nin "S Theme Colors" collection'ını zaten tam olarak yakalar.
 
-**SUI Component Key Cache Altyapısı (yeni):**
+**Ana-DS Component Key Cache Altyapısı (yeni):**
 
 - `.claude/design-systems/sui/components.md` (yeni) — component key cache şablonu. NavigationTopBar, Button, Divider_H, TextField, Card, Avatar, ListItem, SearchBar, Chip, BottomNavBar için slot'lar. Recipes Adım 6 bu dosyayı önce okur; cache varsa (< 7 gün) `figma_search_assets` çağrısını atlar, direkt `importComponentByKeyAsync(key)` kullanır.
 - `.claude/design-systems/sui/tokens.md` (yeni) — spacing token'ları, collection info (S Theme Colors, Semantic Sizes), surface background için cache şablonu. Recipes Adım 1.5 bu cache'i önce okur, fresh ise token discovery'yi komple atlar.
@@ -541,7 +566,7 @@ Plugin DevTools console'unda görülen 22+ `WebSocket connection to ws://localho
 **Beklenen Etkiler:**
 
 - Claude Desktop'ta her recipe çağrısı için okunacak skill yükü ~25K → ~12K token (%52 azalma, ~10K token/oturum)
-- SUI gibi büyük library'lerle çalışırken bridge crash riski sıfıra yakın (variant/property guard)
+- Ana-DS gibi büyük library'lerle çalışırken bridge crash riski sıfıra yakın (variant/property guard)
 - Fast Path recipe süresi hedefi: 30+ dk → 10-12 dk (cache-first + skill compaction etkisi bir arada)
 - Collection/component discovery için harcanan execute sayısı: -2 ile -3 arası (cache hit durumunda)
 
@@ -561,7 +586,7 @@ Hotfix for v1.8.1 live test findings. The root cause of "Claude produces 3 ident
 **Live test evidence (what v1.8.1 did wrong):**
 - User requested "3 alternatives" (Hero Card / Liste Odaklı / Dark Header)
 - Claude used `figma_clone_screen_to_device` as shortcut → cloned benchmark 3 times → renamed → "done"
-- All 3 "alternatives" turned out **byte-for-byte identical** (same 14 children, same 3 SUI instances, zero layout variation)
+- All 3 "alternatives" turned out **byte-for-byte identical** (same 14 children, same 3 Ana-DS instances, zero layout variation)
 - Claude picked the **wrong benchmark** (139:3678 "Hesaplarım" draft with 14 children + `_childrenTruncated: 9`) instead of the ready-to-use `169:1917 v10 Hero Card` (4 clean children)
 - Clone timed out repeatedly (30s too short), leaving **7 orphan duplicates** in the file
 - `getNodeById` sync call hit dynamic-page error (Claude had no warning)
@@ -685,7 +710,7 @@ Cleanup `figma_execute` ile yapıldı, tümü başarılı: `removed: 7/7, failed
 
 ### DS Discipline Enforcement + Intent Router + High-Level Screen Tools
 
-Root cause fix for "Claude ignores SUI tokens and builds screens from scratch". v1.8.0 added SKILL-level "MUTLAK ZORUNLU" wording but Claude still bypassed it on simple "ekran yap" requests. v1.8.1 combines three independent layers of enforcement:
+Root cause fix for "Claude ignores Ana-DS tokens and builds screens from scratch". v1.8.0 added SKILL-level "MUTLAK ZORUNLU" wording but Claude still bypassed it on simple "ekran yap" requests. v1.8.1 combines three independent layers of enforcement:
 
 1. **Proaktif** — `figma_execute` code is statically analyzed for hardcoded colors/paddings/typography + no-instance usage; violations surface as `_designSystemViolations` banner Claude cannot ignore
 2. **Upstream** — `fmcp-intent-router` meta-SKILL forces Claude to gather missing inputs + obtain explicit confirmation BEFORE executing any write tool
@@ -723,7 +748,7 @@ Root cause fix for "Claude ignores SUI tokens and builds screens from scratch". 
 - New `src/core/device-presets.ts` with 22 built-in presets (iPhone 17, iPhone 16 Pro Max, Android Compact, iPad Pro, MacBook Pro, Apple Watch, etc.) + custom "WxH" dimension support
 - Auto-layout resize fix: switch `primaryAxisSizingMode`/`counterAxisSizingMode` from AUTO to FIXED before `resize()` to prevent hug-content no-op
 - Clone counts preserved elements (totalNodes, instanceCount, libraryInstanceCount, boundVariableCount) and returns them in result for Claude to verify
-- Example: `figma_clone_screen_to_device({ sourceNodeId: "139:3407", targetDevice: "iPhone 17" })` → new node with all SUI instances preserved, root resized to 402×874, auto-layout intact
+- Example: `figma_clone_screen_to_device({ sourceNodeId: "139:3407", targetDevice: "iPhone 17" })` → new node with all Ana-DS instances preserved, root resized to 402×874, auto-layout intact
 
 **Phase 12D — `figma_validate_screen` tool:**
 - Post-creation audit. Iterative (stack-safe, max 5000 nodes) tree walker computes 3 DS compliance metrics:
@@ -789,7 +814,7 @@ Root cause fix for "Claude ignores SUI tokens and builds screens from scratch". 
 
 ### Context-Safe Defaults + Plugin Response Guard + DS Context Enforcement
 
-Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime hataları kökünden çözüldü. 1-2 tool çağrısından sonra "This conversation is too long" hatası alan kullanıcılar artık tek session'da tam bir Figma → SUI ekran üretim akışını tamamlayabilir.
+Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime hataları kökünden çözüldü. 1-2 tool çağrısından sonra "This conversation is too long" hatası alan kullanıcılar artık tek session'da tam bir Figma → Ana-DS ekran üretim akışını tamamlayabilir.
 
 **Context Bloat Fix'leri (E1 — kritik):**
 - `figma_get_design_context`: default `depth=2 → 1`, `verbosity="standard" → "summary"`. Tipik response 150-400 KB → 5-25 KB. ~%75 token tasarrufu.
@@ -806,7 +831,7 @@ Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime ha
 - **E3 — `layoutPositioning = ABSOLUTE` parent layoutMode hatası**: `figma-canvas-ops` Kural 11 genişletildi. `appendChild` ÖNCE, `layoutPositioning` SONRA. Yeni `appendAbsolute(child, parent, x, y)` helper pattern dokümante edildi.
 - **E4 — Wrong MCP server selection**: `FMCP_INSTRUCTIONS` (`src/core/instructions.ts`) tamamen yeniden yazıldı. Yeni "TOOL SELECTION" bölümü Claude'a F-MCP plugin bağlıyken resmi Figma MCP `search_design_system`'i çağırmamasını söylüyor. "Resource links not supported" hatası önlendi.
 - **E5 — Frame oluşturma auto-layout eksik**: `figma_create_frame` MCP tool'una auto-layout parametreleri eklendi: `layoutMode` (default `"VERTICAL"`), `paddingTop/Bottom/Left/Right` (default 16), `itemSpacing` (default 12), `primaryAxisSizingMode/counterAxisSizingMode` (default `"AUTO"`), `primaryAxisAlignItems`, `counterAxisAlignItems`, `layoutWrap`. `layoutMode="NONE"` ile legacy free-form frame de mümkün.
-- **E6 — Library bileşen keşfi (SUI Button vb.)**: Plugin handler `SEARCH_LIBRARY_ASSETS` genişletildi. INSTANCE node'larını tarayarak `mainComponent.key` üzerinden remote library bileşenlerini keşfediyor. Yeni `libraryComponents` field ile dönüyor. `figma_search_assets({assetTypes: ['components'], currentPageOnly: false})` artık SUI gibi DS bileşenlerini bulup `figma_instantiate_component` ile kullanılabilir hale getiriyor.
+- **E6 — Library bileşen keşfi (Ana-DS Button vb.)**: Plugin handler `SEARCH_LIBRARY_ASSETS` genişletildi. INSTANCE node'larını tarayarak `mainComponent.key` üzerinden remote library bileşenlerini keşfediyor. Yeni `libraryComponents` field ile dönüyor. `figma_search_assets({assetTypes: ['components'], currentPageOnly: false})` artık Ana-DS gibi DS bileşenlerini bulup `figma_instantiate_component` ile kullanılabilir hale getiriyor.
 - **E7 — Token binding eksik**: `figma-canvas-ops` Kural 10 (token binding) MUTLAK ZORUNLU olarak işaretlendi. Pre-flight checklist eklendi (active DS / component cache / token cache / font weights / variable keys). Eğer DS'te token yoksa Claude DURDURUR ve kullanıcıya sorar — sessizce hardcoded fallback YASAK.
 
 **DS Context Enforcement (yeni paradigm):**
@@ -864,9 +889,9 @@ Major improvement: Claude chat'te F-MCP kullanırken context bloat ve runtime ha
 
 ## [1.7.30] - 2026-04-14
 
-### SUI Design System Integration — search_assets bridge fix, new library tools, SKILL corrections
+### Ana-DS Design System Integration — search_assets bridge fix, new library tools, SKILL corrections
 
-F-MCP Bridge ile SUI gibi team library tabanli tasarim sistemleri kullanmak artik tam destekli. `figma_search_assets` artik bridge handler'ini dogru kullaniyor (hem variable hem local component dondurur), 3 yeni arac ile team library variable/style import + binding mumkun, SKILL'lerdeki "DS dosyasinda calistir" celiskisi giderildi.
+F-MCP Bridge ile Ana-DS gibi team library tabanli tasarim sistemleri kullanmak artik tam destekli. `figma_search_assets` artik bridge handler'ini dogru kullaniyor (hem variable hem local component dondurur), 3 yeni arac ile team library variable/style import + binding mumkun, SKILL'lerdeki "DS dosyasinda calistir" celiskisi giderildi.
 
 **Kritik Bug Fix'leri:**
 - `figma_search_assets` artik plugin'in `SEARCH_LIBRARY_ASSETS` handler'ini kullaniyor (eski inline executeCodeViaUI bypass'i kaldirildi). `assetTypes`, `limit`, `currentPageOnly`, `figmaUrl`, `fileKey` parametreleri eklendi. Hem variable collection'lari hem local file component'lerini donduruyor.
@@ -895,7 +920,7 @@ F-MCP Bridge ile SUI gibi team library tabanli tasarim sistemleri kullanmak arti
 - `src/local-plugin-only.ts`: 1 bug fix + 1 enrichment + 3 yeni tool + description guncellemeleri
 - `skills/figma-canvas-ops/SKILL.md`, `skills/generate-figma-screen/SKILL.md`, `skills/fmcp-project-rules/SKILL.md`
 
-**Test Edildi:** Ozel bir consumer Figma dosyasi uzerinde SUI kutuphanesi ile uctan uca dogrulandi: `figma_search_assets` 25 variable + 4 lib collection donduruyor, `figma_get_library_variables` 84-100 variable key'iyle donuyor, frame olusturma → `figma_bind_variable` ile `Surface/background level-0` baglama → screenshot dogrulamasi basarili, `_warnings` static analiz hem success hem error path'lerinde calisiyor.
+**Test Edildi:** Ozel bir consumer Figma dosyasi uzerinde Ana-DS kutuphanesi ile uctan uca dogrulandi: `figma_search_assets` 25 variable + 4 lib collection donduruyor, `figma_get_library_variables` 84-100 variable key'iyle donuyor, frame olusturma → `figma_bind_variable` ile `Surface/background level-0` baglama → screenshot dogrulamasi basarili, `_warnings` static analiz hem success hem error path'lerinde calisiyor.
 
 ---
 
