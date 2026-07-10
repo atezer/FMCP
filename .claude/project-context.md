@@ -150,7 +150,7 @@ Her ekran/bileşen üretimi tamamlandıktan sonra **final gate** çalıştırıl
 2. `passed: false` veya herhangi bir coverage <%90 ise:
    - `samples.hardcodedHex` → listelenen node'ların fill'ini `setBoundVariableForPaint` ile bağla
    - `samples.hardcodedFontSize` → listelenen text'lerin style'ını `setTextStyleIdAsync` ile bağla
-   - `samples.primitiveFrames` → listelenen frame'ler için SUI component araması yap (`figma_search_assets`)
+   - `samples.primitiveFrames` → listelenen frame'ler için DS component araması yap (`figma_search_assets`)
    - `overflow.overflowPx > 0` → içerik kesiliyor, kullanıcıya sor
 3. Düzeltme sonrası tekrar scan. 3× fail → kullanıcıya `generate-figma-screen` fallback öner.
 4. Son olarak **`figma_validate_screen(frameId, minScore=80)`** (3-eksen score, backwards compat).

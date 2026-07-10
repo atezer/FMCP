@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.9.8';
+var FMCP_PLUGIN_VERSION = '1.9.12';
 
 /**
  * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları
@@ -204,12 +204,25 @@ console.log('🌉 [F-MCP ATezer Bridge] Plugin loaded and ready');
 // Start compact; UI asks for dynamic resize based on content.
 figma.showUI(__html__, { width: 200, height: 96, visible: true, themeColors: true });
 
-// Send file identity to UI so it can include it in the WebSocket handshake
-figma.ui.postMessage({
-  type: 'FILE_IDENTITY',
-  fileKey: figma.fileKey || null,
-  fileName: figma.root.name || null
-});
+// Send file identity to UI so it can include it in the WebSocket handshake.
+// figma.fileKey dosya tam yüklenmeden undefined olabilir — kimlik gelene kadar
+// artan aralıklarla yeniden dene, gelince son bir kez gönder ve dur.
+function sendFileIdentity() {
+  figma.ui.postMessage({
+    type: 'FILE_IDENTITY',
+    fileKey: figma.fileKey || null,
+    fileName: figma.root.name || null
+  });
+}
+sendFileIdentity();
+var IDENTITY_RETRY_DELAYS = [1000, 3000, 8000, 20000, 60000];
+(function retryIdentity(i) {
+  if (figma.fileKey || i >= IDENTITY_RETRY_DELAYS.length) return;
+  setTimeout(function() {
+    sendFileIdentity();
+    retryIdentity(i + 1);
+  }, IDENTITY_RETRY_DELAYS[i]);
+})(0);
 
 // Restore saved Figma REST API token from clientStorage (persists across plugin restarts)
 (async () => {
@@ -412,9 +425,10 @@ figma.ui.onmessage = async (msg) => {
 
   function rgbaToHex(color) {
     if (!color || typeof color !== 'object') return null;
-    var r = Math.round((Number(color.r) !== undefined ? Number(color.r) : 0) * 255);
-    var g = Math.round((Number(color.g) !== undefined ? Number(color.g) : 0) * 255);
-    var b = Math.round((Number(color.b) !== undefined ? Number(color.b) : 0) * 255);
+    // Number(x) !== undefined her zaman true'ydu — NaN guard'ı çalışmıyordu
+    var r = Math.round((isNaN(Number(color.r)) ? 0 : Number(color.r)) * 255);
+    var g = Math.round((isNaN(Number(color.g)) ? 0 : Number(color.g)) * 255);
+    var b = Math.round((isNaN(Number(color.b)) ? 0 : Number(color.b)) * 255);
     return '#' + [r, g, b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
   }
 
@@ -627,10 +641,12 @@ figma.ui.onmessage = async (msg) => {
 
       console.log('🌉 [F-MCP ATezer Bridge] Wrapped code for eval');
 
-      // Execute with timeout
+      // Execute with timeout (timer handle tutulur; kod zamanında biterse
+      // temizlenir — geç reject'in unhandled-rejection gürültüsü engellenir)
       var timeoutMs = msg.timeout || 15000;
+      var execTimeoutHandle = null;
       var timeoutPromise = new Promise(function(_, reject) {
-        setTimeout(function() {
+        execTimeoutHandle = setTimeout(function() {
           reject(new Error('Execution timed out after ' + timeoutMs + 'ms'));
         }, timeoutMs);
       });
@@ -656,6 +672,7 @@ figma.ui.onmessage = async (msg) => {
         codePromise,
         timeoutPromise
       ]);
+      if (execTimeoutHandle) { clearTimeout(execTimeoutHandle); execTimeoutHandle = null; }
 
       console.log('🌉 [F-MCP ATezer Bridge] Code executed successfully, result type:', typeof result);
 
@@ -756,6 +773,11 @@ figma.ui.onmessage = async (msg) => {
       });
 
     } catch (error) {
+      // Kod hata ile bittiğinde de bekleyen timeout timer'ı temizle
+      if (typeof execTimeoutHandle !== 'undefined' && execTimeoutHandle) {
+        clearTimeout(execTimeoutHandle);
+        execTimeoutHandle = null;
+      }
       // Extract error message explicitly - don't rely on console.error serialization
       var errorName = error && error.name ? error.name : 'Error';
       var errorMsg = error && error.message ? error.message : String(error);
@@ -1274,6 +1296,10 @@ figma.ui.onmessage = async (msg) => {
       var hitLimit = false;
 
       // Helper to extract component data
+      // MAX_PROPERTIES iki extract fonksiyonunun ortak sınırı — burada (ortak
+      // scope'ta) tanımlı olmalı; iç fonksiyonda tanımlıyken extractComponentData
+      // ReferenceError fırlatıyordu ve component envanteri komple çöküyordu.
+      var MAX_PROPERTIES = 100;
       function extractComponentData(node, isPartOfSet) {
         var data = {
           key: node.key,
@@ -1363,7 +1389,6 @@ figma.ui.onmessage = async (msg) => {
           }
         }
 
-        var MAX_PROPERTIES = 100;
         var propList = [];
         if (node.componentPropertyDefinitions) {
           var allPropKeys = Object.keys(node.componentPropertyDefinitions);
@@ -1544,7 +1569,9 @@ figma.ui.onmessage = async (msg) => {
         async function extractFromInstance(inst) {
           if (libraryComponents.length >= limit) return;
           try {
-            var mc = inst.mainComponent || (inst.getMainComponentAsync ? await inst.getMainComponentAsync() : null);
+            // dynamic-page'de senkron mainComponent getter'ı THROW eder ve ||
+            // fallback'e hiç ulaşılamaz — önce async denenmeli.
+            var mc = inst.getMainComponentAsync ? await inst.getMainComponentAsync() : inst.mainComponent;
             if (!mc) return;
             var isSet = mc.parent && mc.parent.type === 'COMPONENT_SET';
             var node = isSet ? mc.parent : mc;
@@ -2491,7 +2518,8 @@ figma.ui.onmessage = async (msg) => {
           for (var i = 0; i < instances.length; i++) {
             var inst = instances[i];
             try {
-              var mc = inst.mainComponent || (inst.getMainComponentAsync ? await inst.getMainComponentAsync() : null);
+              // async-first: dynamic-page'de senkron getter throw eder
+              var mc = inst.getMainComponentAsync ? await inst.getMainComponentAsync() : inst.mainComponent;
               var remote = mc && (mc.remote || (mc.parent && mc.parent.remote));
               if (remote) libraryInstanceCount++;
             } catch (e) { /* skip */ }
@@ -3677,6 +3705,11 @@ figma.ui.onmessage = async (msg) => {
 
       console.log('🌉 [F-MCP ATezer Bridge] Instance properties updated');
 
+      // Yanıt kurulurken senkron mainComponent throw ederse mutasyon uygulanmış
+      // ama caller success:false görür (retry çifte set yapar) — async + guard.
+      var respMc = null;
+      try { respMc = await node.getMainComponentAsync(); } catch (e) { respMc = null; }
+
       figma.ui.postMessage({
         type: 'SET_INSTANCE_PROPERTIES_RESULT',
         requestId: msg.requestId,
@@ -3684,7 +3717,7 @@ figma.ui.onmessage = async (msg) => {
         instance: {
           id: node.id,
           name: node.name,
-          componentId: node.mainComponent ? node.mainComponent.id : null,
+          componentId: respMc ? respMc.id : null,
           propertiesSet: Object.keys(propsToSet),
           currentProperties: Object.keys(updatedProps).reduce(function(acc, key) {
             acc[key] = {

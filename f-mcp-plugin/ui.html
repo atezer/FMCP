@@ -424,7 +424,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.9.8';
+    var FMCP_PLUGIN_VERSION = '1.9.12';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -853,6 +853,22 @@
           window.__figmaFileKey = msg.fileKey || null;
           window.__figmaFileName = msg.fileName || null;
           console.log('[F-MCP ATezer Bridge] File identity: ' + (msg.fileName || '?') + ' (' + (msg.fileKey || '?') + ')');
+          // Kimlik WS handshake'ten SONRA gelmiş olabilir — açık bağlantılara
+          // 'ready' mesajını yeniden gönder ki sunucu client kaydını güncellesin.
+          if (msg.fileKey) {
+            var identityMsg = JSON.stringify({
+              type: 'ready',
+              fileKey: window.__figmaFileKey,
+              fileName: window.__figmaFileName,
+              pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
+            });
+            if (mcpBridgeWs && mcpBridgeWs.readyState === 1) mcpBridgeWs.send(identityMsg);
+            if (typeof mcpConnections !== 'undefined') {
+              mcpConnections.forEach(function(conn) {
+                if (conn.ws && conn.ws !== mcpBridgeWs && conn.ws.readyState === 1) conn.ws.send(identityMsg);
+              });
+            }
+          }
           break;
 
         case 'RESTORE_TOKEN':
@@ -1011,9 +1027,25 @@
           break;
 
         // NEW: Screenshot and instance properties (visual validation loop fix)
-        case 'CAPTURE_SCREENSHOT_RESULT':
-          handleResult('CAPTURE_SCREENSHOT', 'image');
+        case 'CAPTURE_SCREENSHOT_RESULT': {
+          // v1.9.5 summary/regions modları payload'ı top-level taşır (summary,
+          // regions, rootSummary, mode) — generic handler bunları düşürüyordu.
+          var reqShot = window.__figmaPendingRequests.get(msg.requestId);
+          if (reqShot) {
+            if (reqShot.timeoutId) clearTimeout(reqShot.timeoutId);
+            if (msg.success) {
+              var shotOut = { success: true };
+              ['image', 'data', 'mode', 'summary', 'regions', 'rootSummary', 'executionMs', 'resultAnalysis'].forEach(function(fk) {
+                if (msg[fk] !== undefined) shotOut[fk] = msg[fk];
+              });
+              reqShot.resolve(shotOut);
+            } else {
+              reqShot.resolve({ success: false, error: msg.error || 'Unknown error' });
+            }
+            window.__figmaPendingRequests.delete(msg.requestId);
+          }
           break;
+        }
         case 'BATCH_EXPORT_NODES_RESULT':
           handleResult('BATCH_EXPORT_NODES', null);
           break;
@@ -1047,6 +1079,27 @@
         case 'ARRANGE_COMPONENT_SET_RESULT':
           handleResult('ARRANGE_COMPONENT_SET', 'data');
           break;
+
+        // Bu üç sonuç payload'ı top-level alanlarda taşır (clone/score/dsName...)
+        // — generic handleResult yerine tüm alanlar kopyalanır. Case'lerin
+        // eksikliği bu komutların daima timeout almasına yol açıyordu.
+        case 'CLONE_SCREEN_TO_DEVICE_RESULT':
+        case 'VALIDATE_SCREEN_RESULT':
+        case 'CREATE_MINI_DS_RESULT': {
+          var reqFull = window.__figmaPendingRequests.get(msg.requestId);
+          if (reqFull) {
+            if (reqFull.timeoutId) clearTimeout(reqFull.timeoutId);
+            var outFull = {};
+            for (var mk in msg) {
+              if (mk !== 'type' && mk !== 'requestId') outFull[mk] = msg[mk];
+            }
+            if (outFull.success === undefined) outFull.success = false;
+            if (!outFull.success && !outFull.error) outFull.error = 'Unknown error';
+            reqFull.resolve(outFull);
+            window.__figmaPendingRequests.delete(msg.requestId);
+          }
+          break;
+        }
       }
     };
 
@@ -1257,6 +1310,9 @@
             var days = getSelectedExpiryDays();
             var expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
             __tokenExpiresAt = expiresAt;
+            // Yeni token girildi — eski restore-pending token'ı geçersiz kıl,
+            // yoksa reconnect'te welcome handler eskisini yenisinin üstüne yazar.
+            window.__pendingRestoreToken = null;
             // Save to Figma clientStorage (persists across plugin close/reopen)
             parent.postMessage({ pluginMessage: { type: 'SAVE_TOKEN', token: token, expiresAt: expiresAt } }, '*');
             // Send to bridge
@@ -1280,6 +1336,8 @@
           var expSel = document.getElementById('token-expiry');
           if (expSel) { expSel.disabled = false; expSel.style.opacity = '1'; }
           __tokenExpiresAt = 0;
+          // Silinen token reconnect'te geri gelmesin
+          window.__pendingRestoreToken = null;
           // Delete from Figma clientStorage
           parent.postMessage({ pluginMessage: { type: 'DELETE_TOKEN' } }, '*');
           // Clear from bridge
@@ -1414,6 +1472,13 @@
 
     function scheduleReconnect() {
       if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
+      // Backoff tavana ulaştıysa bağlantı bir süredir kurulamıyor demektir —
+      // welcome sonrası tek porta daraltılan listeyi tam tarama listesine
+      // genişlet ki sunucu farklı bir portta yeniden açıldıysa bulunabilsin.
+      if (!manualPortLocked && mcpReconnectDelay >= MCP_RECONNECT_MAX) {
+        candidatePorts = listCandidatePorts();
+        candidatePortIndex = 0;
+      }
       mcpBridgeReconnectTimer = setTimeout(function() {
         mcpBridgeReconnectTimer = null;
         connectMcpBridge();
@@ -1509,6 +1574,7 @@
                 status: 'ready'
               });
               mcpActivePort = mcpConnectedPort;
+              if (typeof updatePortLabel === 'function') updatePortLabel();
               // v1.9.1+: Server'dan gelen aktif bridge listesi varsa, SADECE listed'a bagla
               // (blind scan elenir → DevTools console'da 0 error). Aksi halde fallback scan.
               if (msg.activeBridges && Array.isArray(msg.activeBridges)) {
@@ -1669,6 +1735,9 @@
               if (method === 'validateScreen') {
                 return window.validateScreen(params);
               }
+              if (method === 'createMiniDs') {
+                return window.createMiniDs(params);
+              }
               if (method === 'cloneNode') {
                 return window.cloneNode(params.nodeId);
               }
@@ -1756,10 +1825,13 @@
           }
         };
         mcpBridgeWs.onclose = function() {
+          // Stale-socket guard İLK sırada olmalı: eski socket'in geç gelen
+          // onclose'u yeni bağlantının keepalive'ını ve map kaydını silmemeli.
+          if (mcpBridgeWs !== currentWs) return;
           stopKeepAlive();
           // Adım 3: Bağlantıyı Map'ten sil
           if (mcpConnectedPort) mcpConnections.delete(mcpConnectedPort);
-          if (mcpBridgeWs !== currentWs) return;
+          if (typeof updatePortLabel === 'function') updatePortLabel();
           mcpBridgeWs = null;
           mcpConnecting = false;
           mcpConnectedPort = null;
@@ -1794,10 +1866,16 @@
     function connectToExtraPort(port, host) {
       if (mcpConnections.has(port)) return; // zaten bağlı
       if (port === mcpConnectedPort) return; // ana bağlantı bunu yönetiyor
+      // Ana bağlantı kopukken (mcpConnectedPort=null) ana hedef porta extra
+      // bağlantı açma — reconnect aynı porta gelince çifte ws oluşuyordu.
+      var mainTarget = (candidatePorts && candidatePorts.length)
+        ? candidatePorts[Math.min(candidatePortIndex, candidatePorts.length - 1)] : null;
+      if (mcpConnectedPort === null && port === mainTarget) return;
       var url = 'ws://' + (host || getMcpBridgeHost()) + ':' + port;
       var handshakeOk = false;
       var handshakeTimer = null;
       var keepaliveTimer = null;
+      var registeredPort = null; // welcome'da map'e yazılan gerçek anahtar (msg.port || port)
       try {
         var ws = new WebSocket(url);
 
@@ -1821,21 +1899,28 @@
               handshakeOk = true;
               if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
               var connPort = msg.port || port;
+              registeredPort = connPort;
               mcpConnections.set(connPort, {
                 ws: ws,
                 port: connPort,
                 clientName: msg.clientName || 'MCP',
                 status: 'ready'
               });
+              if (typeof updatePortLabel === 'function') updatePortLabel();
               // Token gönder (per-connection)
               var tokenInput = document.getElementById('figma-token');
               if (tokenInput && tokenInput.value && ws.readyState === 1) {
                 ws.send(JSON.stringify({ type: 'setToken', token: tokenInput.value.trim() }));
               }
-              // Keepalive başlat
+              // Keepalive başlat (tekrar welcome gelirse önceki interval'i temizle;
+              // ws açık değilse interval kendini durdurur — orphan interval kalmaz)
+              if (keepaliveTimer) { clearInterval(keepaliveTimer); keepaliveTimer = null; }
               keepaliveTimer = setInterval(function() {
                 if (ws.readyState === 1) {
                   try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch(e) {}
+                } else {
+                  clearInterval(keepaliveTimer);
+                  keepaliveTimer = null;
                 }
               }, 5000);
               console.log('[F-MCP] Extra port connected: ' + connPort + ' (' + (msg.clientName || 'MCP') + ')');
@@ -1945,8 +2030,14 @@
         ws.onclose = function() {
           if (keepaliveTimer) { clearInterval(keepaliveTimer); keepaliveTimer = null; }
           if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
-          mcpConnections.delete(port);
-          console.log('[F-MCP] Extra port disconnected: ' + port);
+          // Map'e welcome'daki gerçek anahtarla yazıldı (msg.port farklı olabilir)
+          // ve kayıt bu arada ana bağlantı tarafından ezilmiş olabilir — yalnızca
+          // hâlâ BU ws'e ait olan kaydı sil, başkasının kaydını silme.
+          var delKey = (registeredPort !== null ? registeredPort : port);
+          var entry = mcpConnections.get(delKey);
+          if (entry && entry.ws === ws) mcpConnections.delete(delKey);
+          if (typeof updatePortLabel === 'function') updatePortLabel();
+          console.log('[F-MCP] Extra port disconnected: ' + delKey);
         };
 
         ws.onerror = function() {
@@ -2035,9 +2126,13 @@
         if (ports.length === 0) {
           portsList.innerHTML = '<div>—</div>';
         } else {
+          // clientName sunucudan gelir — innerHTML'e basılmadan önce escape edilir
+          var escapeHtml = function(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          };
           portsList.innerHTML = ports.map(function(p) {
             var isActive = p.port === mcpActivePort;
-            return '<div>' + (isActive ? '● ' : '○ ') + p.port + ' (' + p.clientName + ')' + (isActive ? ' ← aktif' : '') + '</div>';
+            return '<div>' + (isActive ? '● ' : '○ ') + p.port + ' (' + escapeHtml(p.clientName) + ')' + (isActive ? ' ← aktif' : '') + '</div>';
           }).join('');
         }
       }

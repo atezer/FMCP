@@ -499,12 +499,20 @@ export async function main() {
 				out.variables = raw.variables.map((v: FigmaVariable) => ({ id: v.id, name: v.name }));
 				out.variableCollections = (raw.variableCollections || []).map((c: FigmaVariableCollection) => ({ id: c.id, name: c.name }));
 			} else if (verbosity === "summary") {
-				out.variables = raw.variables.map((v: FigmaVariable) => ({
+				// summary bağlam-güvenli olmalı: valuesByMode düşürülür (1000+ variable'lı
+				// DS dosyalarında yanıt 285KB'a şişiyordu) ve liste 300 ile sınırlanır.
+				const SUMMARY_CAP = 300;
+				const slim = raw.variables.map((v: FigmaVariable) => ({
 					id: v.id,
 					name: v.name,
 					resolvedType: v.resolvedType,
-					valuesByMode: v.valuesByMode,
+					variableCollectionId: v.variableCollectionId,
 				}));
+				out.variableCount = slim.length;
+				out.variables = slim.slice(0, SUMMARY_CAP);
+				if (slim.length > SUMMARY_CAP) {
+					out._truncated = `${slim.length - SUMMARY_CAP} variable gösterilmedi — filtre için figma_get_library_variables(query) veya verbosity:'inventory'/'full' kullanın`;
+				}
 			}
 			return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
 		})
@@ -836,7 +844,7 @@ export async function main() {
 				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				nodeId: z.string().describe("Node ID of the screen to validate"),
-				expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ SUI') for library match scoring"),
+				expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ My-DS') for library match scoring"),
 				minScore: z.number().min(0).max(100).optional().default(80).describe("Minimum acceptable score (0-100). Below this, the screen is considered non-compliant."),
 			},
 			annotations: { readOnlyHint: true },
@@ -886,7 +894,7 @@ export async function main() {
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				nodeId: z.string().describe("Node ID of the completed screen to audit"),
 				threshold: z.number().min(0).max(100).optional().default(85).describe("Pass threshold (0-100). Default 85. Below this, screen is non-compliant and must be fixed."),
-				expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ SUI')"),
+				expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ My-DS')"),
 			},
 			annotations: { readOnlyHint: true },
 		},
@@ -1239,17 +1247,22 @@ export async function main() {
 		},
 		safeToolHandler(async ({ figmaUrl, fileKey, query, currentPageOnly, limit }: { figmaUrl?: string; fileKey?: string; query?: string; currentPageOnly: boolean; limit?: number }) => {
 			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-			const result = (await conn.getLocalComponents({ currentPageOnly, limit })) as PluginComponentPayload;
+			// limit SONUÇ sayısıdır, tarama sınırı değil: query varken taramaya limit
+			// geçirilmez (aksi halde "ilk N component içinde ara" olur ve eşleşmeler kaçar).
+			const hasQuery = Boolean(query && query.trim());
+			const result = (await conn.getLocalComponents({ currentPageOnly, limit: hasQuery ? undefined : limit })) as PluginComponentPayload;
 			const data = result?.data;
 			if (!data) {
 				return { content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: "No component data" }) }] };
 			}
 			let list = [...(data.components || []), ...(data.componentSets || [])];
-			if (query && query.trim()) {
-				const q = query.trim().toLowerCase();
+			if (hasQuery) {
+				const q = (query as string).trim().toLowerCase();
 				list = list.filter((c: FigmaComponent) => (c.name || "").toLowerCase().includes(q));
 			}
-			const summary = list.map((c: FigmaComponent) => ({ id: c.id, name: c.name, key: c.key, type: c.type }));
+			if (limit && limit > 0) list = list.slice(0, limit);
+			// Plugin nodeId alanıyla gönderir — id eşlemesinde her ikisi de desteklenir
+			const summary = list.map((c: FigmaComponent & { nodeId?: string }) => ({ id: c.id ?? c.nodeId, name: c.name, key: c.key, type: c.type }));
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, components: summary }) }] };
 		})
 	);
@@ -1297,12 +1310,16 @@ export async function main() {
 	server.registerTool(
 		"figma_get_console_logs",
 		{
-			description: "Get plugin console logs (log/warn/error) from the F-MCP plugin buffer. No CDP. Limit default 50.",
-			inputSchema: { limit: z.number().min(1).max(200).optional().default(50) },
+			description: "Get plugin console logs (log/warn/error) from the F-MCP plugin buffer. No CDP. Limit default 50. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
+			inputSchema: {
+				limit: z.number().min(1).max(200).optional().default(50),
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ limit }: { limit: number }) => {
-			const conn = getConnector(bridge);
+		safeToolHandler(async ({ limit, figmaUrl, fileKey }: { limit: number; figmaUrl?: string; fileKey?: string }) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const data = await conn.getConsoleLogs(limit);
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...data }) }] };
 		})
@@ -1383,17 +1400,19 @@ export async function main() {
 	server.registerTool(
 		"figma_get_component_image",
 		{
-			description: "Get screenshot of a node (component/frame). Returns base64 image. Defaults to JPG@1x q70 (v1.8.0 context-safe).",
+			description: "Get screenshot of a node (component/frame). Returns base64 image. Defaults to JPG@1x q70 (v1.8.0 context-safe). Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
 			inputSchema: {
 				nodeId: z.string(),
 				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
 				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
 				jpegQuality: z.number().min(30).max(100).optional().default(70),
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ nodeId, scale, format, jpegQuality }: { nodeId: string; scale: number; format: string; jpegQuality: number }) => {
-			const conn = getConnector(bridge);
+		safeToolHandler(async ({ nodeId, scale, format, jpegQuality, figmaUrl, fileKey }: { nodeId: string; scale: number; format: string; jpegQuality: number; figmaUrl?: string; fileKey?: string }) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const result = await conn.captureScreenshot(nodeId, { scale, format, jpegQuality });
 			return toolResult(result, "figma_get_component_image");
 		})
@@ -1660,15 +1679,17 @@ export async function main() {
 	server.registerTool(
 		"figma_get_token_browser",
 		{
-			description: "Token Browser: hierarchical view of design tokens for browsing. Returns variable collections with variables and modes, plus paint and text styles. Use for exploring and auditing tokens in the open Figma file. No REST API.",
+			description: "Token Browser: hierarchical view of design tokens for browsing. Returns variable collections with variables and modes, plus paint and text styles. Use for exploring and auditing tokens in the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
 			inputSchema: {
 				verbosity: z.enum(["summary", "full"]).optional().default("summary"),
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ verbosity }) => {
+		async ({ verbosity, figmaUrl, fileKey }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 				const [varsPayload, stylesPayload] = await Promise.all([
 					conn.getVariablesFromPluginUI(),
 					conn.getLocalStyles(verbosity === "full" ? "full" : "summary"),
@@ -2130,9 +2151,9 @@ export async function main() {
 				"Returns items: [{name, key, kind, props, parent}]. Kind is authoritative — use " +
 				"importComponentSetByKeyAsync for COMPONENT_SET, importComponentByKeyAsync for COMPONENT. " +
 				"v3.2+ RECOMMENDED path — zero local cache dependency, always fresh as Figma updates. " +
-				"For multi-library DS (e.g. ❖ SUI + ❖ SUI Mobil + 🙂 S-Icons), call once per library file.",
+				"For multi-library DS (e.g. main DS + mobile DS + icons), call once per library file.",
 			inputSchema: {
-				libraryName: z.string().optional().describe("Match a connected file by name substring (case-insensitive, e.g. 'SUI Mobil' matches '❖ SUI Mobil')."),
+				libraryName: z.string().optional().describe("Match a connected file by name substring (case-insensitive, e.g. 'Mobil' matches '❖ My-DS Mobil')."),
 				libraryFileKey: z.string().optional().describe("Direct file key (e.g. from figma_list_connected_files). Takes precedence over libraryName."),
 			},
 			annotations: { readOnlyHint: true, destructiveHint: false },
@@ -2228,14 +2249,14 @@ export async function main() {
 		{
 			description:
 				"List published COMPONENT + COMPONENT_SET of a library via the Figma REST API. " +
-				"Works WITHOUT the library file being open in plugin — use when SUI is subscribed in the " +
+				"Works WITHOUT the library file being open in plugin — use when the DS library is subscribed in the " +
 				"target file but library tabs aren't open. Requires figma_set_rest_token (one-time). " +
 				"v3.4+ RESPONSE SHAPE: items are compact by default ({name, key, kind}) — descriptions " +
 				"stripped to keep responses <10KB. Pass `filter` to search by name substring; large " +
 				"libraries (1000+ components) REQUIRE filter to avoid context overflow.",
 			inputSchema: {
-				libraryFileKey: z.string().describe("Library file key (e.g. '7T4iLZCd3OmyI9Rokxm2av'). Extract from URL: figma.com/design/<KEY>/..."),
-				filter: z.string().optional().describe("Substring filter on component name (case-insensitive). Use for libraries with many components (e.g. filter='button' in SUI main = 1300+ components)."),
+				libraryFileKey: z.string().describe("Library file key. Extract from URL: figma.com/design/<FILE_KEY>/..."),
+				filter: z.string().optional().describe("Substring filter on component name (case-insensitive). Use for libraries with many components (1000+): e.g. filter='button'."),
 				limit: z.number().min(1).max(500).optional().default(200).describe("Max items returned. Default 200. Hard cap 500 to prevent context overflow."),
 				includeDescription: z.boolean().optional().default(false).describe("Include component description text (can be very long — 10KB+ per item). Default false."),
 			},
@@ -2493,7 +2514,7 @@ export async function main() {
 				fileKey: z.string().optional().describe("Target a specific connected file."),
 				query: z.string().optional().describe("Filter variables by name (case-insensitive contains)"),
 				collectionName: z.string().optional().describe("Filter by collection name (exact match)"),
-				libraryName: z.string().optional().describe("Filter by library name (exact match, e.g. '❖ SUI')"),
+				libraryName: z.string().optional().describe("Filter by library name (exact match, e.g. '❖ My-DS')"),
 				limit: z.number().min(1).max(500).optional().describe("Max results (default 100)"),
 			},
 			annotations: { readOnlyHint: true },
@@ -3129,12 +3150,14 @@ export async function main() {
 				nodeId: z.string().optional().describe("Scans this node and its descendants."),
 				pageScope: z.boolean().optional().default(false).describe("true: scan the entire current page. Either nodeId or pageScope is required."),
 				includeFlowStartingPoints: z.boolean().optional().default(true),
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ nodeId, pageScope, includeFlowStartingPoints }) => {
+		async ({ nodeId, pageScope, includeFlowStartingPoints, figmaUrl, fileKey }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 				const code = `
 					if (!${JSON.stringify(nodeId || "")} && !${pageScope}) throw new Error("MISSING_SCOPE: nodeId veya pageScope=true gerekli");
 

@@ -222,3 +222,17 @@ docs/analysis/
 .claude/design-systems/*/_meta.md
 .claude/design-systems/*/*.cache.md
 .claude/design-systems/*/*.local.md
+
+# FCM — kullanıcıya özel DS örneği ve oturum durumu (repoya girmez; framework gerektiğinde yeniden üretir)
+.claude/design-systems/*/
+.claude/design-systems/active-ds.md
+.claude/design-systems/intent-history.md
+.claude/design-systems/last-intent.md
+.claude/plans/
+.claude/agents
+.claude/skills
+.claude/settings.json
+
+# AI-Ready — gerçek component-key manifest'leri lokal kalır, repoya yalnız örnek girer
+ai-ready/manifests/*.json
+!ai-ready/manifests/example.component-manifest.json

@@ -1,0 +1,15 @@
+{
+ "name": "icons",
+ "fileKey": "<ICONS_FILE_KEY>",
+ "generatedAt": "2026-01-01",
+ "components": [
+  {
+   "key": "ornekkey0000000000000000000000000000001",
+   "name": "icon/arrow-right"
+  },
+  {
+   "key": "ornekkey0000000000000000000000000000002",
+   "name": "icon/close"
+  }
+ ]
+}

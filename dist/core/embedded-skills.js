@@ -7,8 +7,8 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Generated: 2026-04-21T13:24:20.910Z
- * Total estimated tokens: 13303
+ * Generated: 2026-07-10T10:53:28.631Z
+ * Total estimated tokens: 13532
  */
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3123 tokens) -->
 ---
@@ -214,7 +214,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (3766 tokens) -->
+<!-- fmcp-screen-orchestrator (3996 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -239,16 +239,18 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ### DS Library Registry (v3.3+ — Agent Just Knows)
 
-Agent, kullanıcı "SUI" (ya da tablodaki başka bir DS) dediğinde URL sormaz; aşağıdaki registry'den okur:
+Agent, kullanıcı registry'de kayıtlı bir DS adını söylediğinde URL sormaz; aşağıdaki registry'den okur.
+
+> **ŞABLON:** Aşağıdaki tablo örnek/placeholder'dır — kendi design system kütüphanelerinizin adlarını ve file key'lerini yazın (file key: \`figma.com/design/<FILE_KEY>/...\` URL'inden alınır). \`/ds-add\` komutu da bu tabloyu güncelleyebilir.
 
 | Library Name | libraryFileKey | Açıklama |
 |---|---|---|
-| ❖ SUI | \`7T4iLZCd3OmyI9Rokxm2av\` | Ana DS (web + mobile ortak bileşenler, tokenlar) |
-| ❖ SUI Mobil | \`Edxo31lSGGb0cspxKhkUQc\` | Mobile-only: NavigationTopBar, BottomSheet, Input, Select... |
-| 🙂 S-Icons | \`sFJFlfakOktDfKTPpqrBDR\` | Icon component library |
-| 💼 Assets | \`PzY90yT6m3wwszId2HFfN6\` | Illüstrasyon / asset kütüphanesi |
+| ❖ Ana-DS *(örnek)* | \`<ANA_DS_FILE_KEY>\` | Ana DS (web + mobile ortak bileşenler, tokenlar) |
+| ❖ Ana-DS Mobil *(örnek)* | \`<MOBIL_DS_FILE_KEY>\` | Mobile-only bileşenler (navbar, bottomsheet, input...) |
+| 🙂 Icons *(örnek)* | \`<ICONS_FILE_KEY>\` | Icon component library |
+| 💼 Assets *(örnek)* | \`<ASSETS_FILE_KEY>\` | Illüstrasyon / asset kütüphanesi |
 
-Kullanıcı "SUI ile X yap" dediğinde agent **otomatik** bu 3-4 library'yi enumerate eder (en azından \`❖ SUI\` + \`❖ SUI Mobil\` + \`🙂 S-Icons\`). URL/file key SORMAZ.
+Kullanıcı "<Ana-DS> ile X yap" dediğinde agent **otomatik** registry'deki ilgili library'leri enumerate eder (en azından ana DS + mobil DS + icons). Tablo doluysa URL/file key SORMAZ.
 
 Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 
@@ -256,19 +258,25 @@ Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 
 **Prensip (v3.3+):** Lokal cache YOK, kullanıcı input YOK. Agent DS Library Registry'den (yukarıda) URL'leri bilir, REST API ile canlı enumerate eder.
 
-**Standart akış (kullanıcı "SUI ile X yap" dedikten sonra):**
+**Standart akış (kullanıcı registry'deki DS ile "X yap" dedikten sonra):**
 
 \`\`\`
 1. figma_get_status()
    → plugin bağlantısı OK mi?
 
 2. DS Library Registry'den libraryFileKey'leri oku (yukarıdaki tablo)
-   → ❖ SUI, ❖ SUI Mobil, 🙂 S-Icons
+   → registry'deki library'ler (ana DS, mobil DS, icons...)
 
-3. figma_enumerate_published_components(libraryFileKey) × 3  (REST)
-   → Her library'nin tüm published component'leri (name, key, kind)
+3. figma_enumerate_published_components(libraryFileKey, filter?) × 3  (REST)
+   → Her library'nin published component'leri (name, key, kind)
    → Library file'ları AÇIK olmasına gerek YOK
    → REST token ilk kullanımda figma_set_rest_token ile set edilmiş olmalı
+   → **KRİTİK — filter zorunlu (büyük library'lerde):**
+     Büyük DS'lerde (1000+ component) filtersiz response 200K+ char → context patlar.
+     Screen tipi için gerekli komponent'leri NAMED filter'la çek:
+     - Payment: filter="button" → filter="input" → filter="radio" → filter="checkbox" → filter="divider" → filter="caption" → filter="label"
+     - Sadece gereken component'leri al, "all" çağırma
+     - Örnek: aranan component'in library'deki tam adını kullanın (örn. "NavigationTopBar")
 
 4. figma_get_library_variables()  (teamLibrary API, live, open değil gerek)
    → Tüm variable'lar (spacing, radius, color) — cross-library
@@ -282,11 +290,11 @@ Başka bir DS için bu tabloyu update edin (repo-commit, herkese yayılır).
 6. figma_validate_screen → score ≥80
 \`\`\`
 
-**Alt-patika (library file açıksa):** Agent \`figma_list_connected_files\` çıktısında SUI library file'ı varsa \`figma_enumerate_library_components\` (plugin, daha hızlı) tercih eder. Yoksa REST path.
+**Alt-patika (library file açıksa):** Agent \`figma_list_connected_files\` çıktısında registry'deki library file'ı varsa \`figma_enumerate_library_components\` (plugin, daha hızlı) tercih eder. Yoksa REST path.
 
 **REST token eksikse:** \`figma_set_rest_token\`'ı TEK call ile (interactive wizard) set etmesini kullanıcıya öner. Olmadan devam ETME.
 
-**URL SORMA YASAK:** Kullanıcıya "SUI URL ver" sorusu artık **yasaktır**. Registry tablosu zaten biliyor.
+**URL SORMA YASAK:** Registry tablosu doluysa kullanıcıya "DS URL ver" sorusu **yasaktır**. Tablo boşsa bir kez sorup tabloya kaydedin.
 
 ### Auto-Defaults — Soru SORMA Tablosu (v3.3+ MUTLAK)
 
@@ -298,7 +306,7 @@ Kullanıcı bu bilgiyi zaten VERMİŞSE agent TEKRAR SORMAZ. User prompt'taki ke
 | "Android" + [screen_type] | \`device: Android Compact (412×917)\` | ❌ Android modeli sorma |
 | "tablet" / "iPad" | \`device: iPad Pro 11 (834×1194)\` | ❌ Tablet boyutu sorma |
 | Referans ekran görüntüsü verildi | \`sections\`: görseldeki bölümleri otomatik çıkar | ❌ "Hangi bölümler?" sorma |
-| Library SUI | \`design_system: ❖ SUI\` (+ mobile alt library otomatik) | ❌ "Hangi DS?" sorma |
+| Library DS | \`design_system: <registry'deki DS adı>\` (+ mobile alt library otomatik) | ❌ "Hangi DS?" sorma |
 | Tema belirtilmedi | \`variants: Tek varyant (Light)\` — Semantic Colors mode-aware, Dark toggle'la görülür | ❌ "Light/Dark?" sorma |
 
 **Kullanıcı BİLDİRMEDİYSE** (prompt'ta keyword yoksa), default'ları **sessiz uygula**, tool call response'larına \`auto_resolved: {...}\` alanı ekle, kullanıcıya özet bildir. Sessiz devam.
@@ -325,7 +333,7 @@ Cache SADECE variable key'leri (renk/spacing/radius) ve component key'leri içer
 
 **1. Text styles (typography) → SEED INSTANCE + \`findAll(TEXT)\` + \`getStyleByIdAsync\`:**
 
-SUI remote library'dir; \`getLocalTextStylesAsync()\` 0 döner. Canonical pattern \`fmcp-screen-recipes\` **Adım 1.6**'dadır — orchestrator bu adımı çağırır, kod duplicate etmez:
+DS genellikle remote library'dir; \`getLocalTextStylesAsync()\` 0 döner. Canonical pattern \`fmcp-screen-recipes\` **Adım 1.6**'dadır — orchestrator bu adımı çağırır, kod duplicate etmez:
 
 \`\`\`js
 // Adım A: Sayfa boşsa (Page 4 senaryosu) seed instance — componentKey cache'ten
@@ -343,9 +351,9 @@ figma.currentPage.appendChild(seedInst);
 Sonuç: \`roleMap[role].id\` → \`setTextStyleIdAsync(id)\`, \`fontFamilies[0]\` → \`loadFontAsync({family})\`.
 
 YASAK:
-- \`getLocalTextStylesAsync()\` — remote library styles'ı dönmez, SUI'de 0 döner
+- \`getLocalTextStylesAsync()\` — remote library styles'ı dönmez, remote DS'lerde 0 döner
 - \`figma_rest_api /v1/files/<consumer_file>/styles\` — tüketici file'da style metadata yok
-- Hardcoded \`family: "Inter"\` — Adım 1.6'dan dönen \`fontFamilies[0]\` kullan (SUI için: \`SHBGrotesk\`)
+- Hardcoded \`family: "Inter"\` — Adım 1.6'dan dönen \`fontFamilies[0]\` kullan (DS'inizin gerçek font ailesi)
 
 **2. Dark variant — VARSAYILAN: TEK FRAME, Figma toggle ile preview**
 
@@ -398,14 +406,14 @@ if (item.kind === "COMPONENT_SET") {
 
 **4. Multi-Library Subscription (v3.1.4+ Phase G):**
 
-SUI ekosistemi tek library değil — \`❖ SUI\` (ana) + \`❖ SUI Mobil\` (mobil UI) + başkaları. Her component belirli bir library'de yayımlanmıştır; \`importComponentByKeyAsync(key)\` hedef Figma dosyasının **ilgili library'yi subscribe etmiş olması** durumunda çalışır.
+Çoklu-library DS ekosistemleri tek library değildir — ana DS + mobil DS + icon/asset library'leri. Her component belirli bir library'de yayımlanmıştır; \`importComponentByKeyAsync(key)\` hedef Figma dosyasının **ilgili library'yi subscribe etmiş olması** durumunda çalışır.
 
-**Kaynak:** \`figma_get_library_components\` response'u her item'da \`sourceLibrary\` (örn. \`❖ SUI Mobil\`) field'ı döner. Ayrıca top-level \`requiredLibraries: string[]\` ve gerekirse \`_warnings: ["REQUIRED_LIBRARIES: ..."]\` verir.
+**Kaynak:** \`figma_get_library_components\` response'u her item'da \`sourceLibrary\` (örn. \`❖ Ana-DS Mobil\`) field'ı döner. Ayrıca top-level \`requiredLibraries: string[]\` ve gerekirse \`_warnings: ["REQUIRED_LIBRARIES: ..."]\` verir.
 
 **Kural — ilk figma_execute öncesi kontrol:**
 1. \`figma_get_library_components\` response'undan \`requiredLibraries\` oku
 2. Eğer \`requiredLibraries.length > 1\` (yani mobil + ana gibi birden çok library) → kullanıcıya **onay sorusu sor**:
-   > *"Bu ekran için \`❖ SUI\` ve \`❖ SUI Mobil\` library'lerinin ikisi de subscribe olmalı. Figma'da Assets panelini açıp her ikisinin enabled olduğunu onaylar mısınız?"*
+   > *"Bu ekran için \`<Ana-DS>\` ve \`<Ana-DS Mobil>\` library'lerinin ikisi de subscribe olmalı. Figma'da Assets panelini açıp her ikisinin enabled olduğunu onaylar mısınız?"*
 3. Onay geldikten sonra üretime geç.
 
 **importComponentByKeyAsync fail ederse** (\`Could not find a published component with the key\`):
@@ -1029,7 +1037,7 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni DS kural kategorisi eklendiğinde bu skill güncellenmelidir.
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13303;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13532;
 export const EMBEDDED_SKILLS_VERSION = "1.9.7";
-export const EMBEDDED_SKILLS_GENERATED_AT = "2026-04-21T13:24:20.910Z";
+export const EMBEDDED_SKILLS_GENERATED_AT = "2026-07-10T10:53:28.631Z";
 //# sourceMappingURL=embedded-skills.js.map

@@ -12,6 +12,33 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.12] — 2026-07-10 — Kapsamlı test düzeltmeleri + DS-agnostic temizlik
+
+### Fixed — Plugin (f-mcp-plugin)
+
+- **Eksik result case'leri:** `CLONE_SCREEN_TO_DEVICE_RESULT`, `VALIDATE_SCREEN_RESULT`, `CREATE_MINI_DS_RESULT` ui.html switch'inde yoktu — bu komutlar canvas'ta başarılı olsa bile caller'a timeout dönüyordu (retry → duplicate riski). Payload'ı top-level alanlarıyla eksiksiz kopyalayan handler eklendi.
+- **`MAX_PROPERTIES` ReferenceError:** yalnız `extractComponentSetData` içinde tanımlıydı; sayfada standalone COMPONENT varsa component envanteri komple çöküyordu (`figma_search_components` "No component data" kök nedeni). Ortak scope'a taşındı.
+- **`createMiniDs` yönlendirmesi:** yalnız extra-port handler'ındaydı; ana bağlantıdan "Unknown method" dönüyordu.
+- **FILE_IDENTITY raporlama:** `figma.fileKey` geç yüklenen dosyalarda kimlik hiç raporlanmıyordu → artan aralıklı retry (1s→60s) + kimlik geç gelirse açık WS bağlantılarına `ready` yeniden gönderimi.
+- **WS yaşam döngüsü:** ana `onclose`'ta stale-socket guard'ı başa alındı; extra-port'ta doğru anahtarla silme + yalnız kendi kaydını silme + orphan keepalive'ın kendini durdurması + ana hedef porta çifte bağlanma guard'ı; backoff tavanında port listesi tam taramaya genişletiliyor (sunucu port değiştirirse ölü-port döngüsü bitti).
+- **Dynamic-page:** üç noktada senkron `mainComponent` → async-first (`getMainComponentAsync`); instance keşfi sessiz boş dönmüyor, `setProperties` sonrası sahte `success:false` bitti.
+- **Screenshot `summary`/`regions` modları:** payload UI'da düşürülüyordu — artık `mode`/`summary`/`regions`/`rootSummary` alanları geçiriliyor.
+- **REST token:** silinen/değiştirilen token'ın reconnect'te `__pendingRestoreToken` üzerinden geri gelmesi engellendi.
+- **Küçükler:** `rgbaToHex` NaN guard'ı, execute timeout timer temizliği (başarı+hata yolları), `clientName` innerHTML escape, bağlantı yaşam döngüsünde port label güncellemesi.
+
+### Fixed — Server (src)
+
+- **`figma_search_components` limit semantiği:** `limit` tarama sınırı olarak uygulanıyordu ("ilk N component içinde ara" → boş sonuç). Artık query varken tarama sınırsız, `limit` filtre SONRASI uygulanır; `id` alanı eşlemesi düzeltildi (plugin `nodeId` gönderir).
+- **`figma_get_variables` summary:** 1000+ variable'lı dosyalarda `valuesByMode` ile 285KB dönüyordu — summary artık gerçek özet (300 kayıt tavanı + `variableCount` + `_truncated` yönlendirmesi).
+- **fileKey yönlendirmesi:** `figma_get_console_logs`, `figma_get_component_image`, `figma_get_token_browser`, `figma_get_prototype_connections` araçlarına `fileKey`/`figmaUrl` parametreleri eklendi — çoklu dosyada varsayılan istemciye düşüp yanıltıcı hata üretme sorunu kapandı.
+- **Discovery budget — `// BULK_READ` muafiyeti:** manifest/envanter gibi meşru toplu okuma işleri artık keşif bütçesine sayılmıyor (kod içinde `// BULK_READ` işareti).
+
+### Changed — DS-agnostic temizlik
+
+- Gerçek design-system file key'leri ve şirket-özel kütüphane verileri repodan çıkarıldı: DS Library Registry artık **şablon** (placeholder key'ler), araç açıklamalarındaki örnekler genelleştirildi.
+- Kullanıcıya özel DS dokümanları (`.claude/design-systems/<ds>/`) ve oturum-durumu dosyaları (`active-ds.md`, `last-intent.md`, `intent-history.md`, `.claude/plans/`) untrack edildi ve gitignore'a alındı — framework bunları gerektiğinde yerelde üretir.
+- **Yeni: `ai-ready/`** — Figma tasarımlarının AI araçlarınca doğru okunmasını denetleyen sistemin geliştirici tarafı: `rules/` (CLAUDE.md/.cursorrules kuralları), `cli/audit.mjs` (REST+PAT, bağımlılıksız, CI gate), `manifests/` (component-key manifest köprüsü — gerçek manifest'ler gitignore'lu, örnek şablon dahil).
+
 ## [Unreleased] — v3.2 Live-First Discovery (Cache Deprecated)
 
 ### Fundamental shift

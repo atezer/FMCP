@@ -20,7 +20,16 @@
  * - figma_instantiate_component, figma_bind_variable, figma_clone_screen_to_device
  * - figma_validate_screen, figma_scan_ds_compliance (read-only audit ama üretim sonrası)
  * - figma_execute (mutation pattern: createFrame, createText, setFills, appendChild, ...)
+ *
+ * v1.9.12 — BULK_READ muafiyeti:
+ * Bütçe, ekran üretim akışında keşif fazının uzamasını engellemek için var.
+ * Manifest üretimi, envanter çıkarma gibi meşru toplu okuma işleri ekran üretimi
+ * değildir ve bütçeye sayılmamalıdır. figma_execute koduna "// BULK_READ" yorumu
+ * eklenirse çağrı "neutral" sayılır (sayılmaz, reset de etmez).
  */
+
+/** Toplu okuma muafiyet işareti — kod içinde geçerse çağrı bütçeye sayılmaz */
+const BULK_READ_MARKER = /\/\/\s*BULK_READ\b/;
 
 /** Read-only kod pattern'leri — bu pattern'ler tespit edilirse figma_execute DISCOVERY sayılır */
 const READ_ONLY_PATTERNS = [
@@ -144,6 +153,9 @@ export class DiscoveryCounter {
 		// figma_execute — pattern analysis
 		if (toolName === "figma_execute") {
 			if (!executeCode) return "discovery"; // default to discovery if no code (conservative)
+			// v1.9.12: açık BULK_READ işareti — manifest/envanter gibi toplu okuma
+			// işleri ekran üretim keşfi değildir, bütçeye sayılmaz.
+			if (BULK_READ_MARKER.test(executeCode)) return "neutral";
 			const isMutation = MUTATION_PATTERNS.some((p) => p.test(executeCode));
 			if (isMutation) return "build";
 			const isReadOnly = READ_ONLY_PATTERNS.some((p) => p.test(executeCode));

@@ -20,6 +20,12 @@
  * - figma_instantiate_component, figma_bind_variable, figma_clone_screen_to_device
  * - figma_validate_screen, figma_scan_ds_compliance (read-only audit ama üretim sonrası)
  * - figma_execute (mutation pattern: createFrame, createText, setFills, appendChild, ...)
+ *
+ * v1.9.12 — BULK_READ muafiyeti:
+ * Bütçe, ekran üretim akışında keşif fazının uzamasını engellemek için var.
+ * Manifest üretimi, envanter çıkarma gibi meşru toplu okuma işleri ekran üretimi
+ * değildir ve bütçeye sayılmamalıdır. figma_execute koduna "// BULK_READ" yorumu
+ * eklenirse çağrı "neutral" sayılır (sayılmaz, reset de etmez).
  */
 export type DiscoveryBudgetResult = {
     count: number;
