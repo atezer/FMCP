@@ -12,6 +12,25 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.14] — 2026-07-31 — Contract Extractor: Component Set → design contract JSON spec
+
+### Added — `figma_extract_contract` aracı + `extract-contract` skill'i
+
+- **`figma_extract_contract` aracı** (63. tool): bir COMPONENT_SET'i (veya içindeki COMPONENT/INSTANCE'ı, ya da aktif seçimi) 3 aşamada okuyup tam design contract JSON spec üretir — props (componentPropertyDefinitions: boolean-like variant → `is` prefix, "State/Durum/Interaction" değerleri → `states` normalizasyonu), anatomy (default variant ağacı, boundVariables → CSS property eşleme, `{Collection.Path}` token referansları, semantic part naming + dedupe), variantOverrides (her variant değerinin default variant'a karşı token diff'i; kaldırılanlar `"(none)"`), resolvedTokens (tüm mode'larda alias-chain çözümü, döngü korumalı; koleksiyonlar arası alias'ta mode ADA göre eşlenir, bulunamazsa defaultModeId), baseSpecs (ham ölçüler; hug/fixed eşlemesi layoutMode eksenine göre) ve a11y kontrast çiftleri (WCAG 2.1, mode bazlı AA/AAA; alpha'lı renkler alpha-blend edilir — opak varsayımı yapılmaz). Orphan prop tespiti + `report` özeti (`{kebab-name}-spec.json` öneri adı, "draft" durumu). Salt okunur; REST token gerekmez; **plugin güncellemesi gerektirmez** (mevcut EXECUTE_CODE altyapısını kullanır). Aşama 2/3 hatasında kısmi çıktı üretilir ve `report.notes`'a ⚠ uyarı düşülür — sessiz eksik veri yok.
+- **`src/core/contract-extractor.ts`**: plugin script üreticileri (structure / overrides / tokens — HAM veri döndürür) + saf TS assembly katmanı. 43 birim testi: isimlendirme, WCAG kontrast (tamamen sentetik palet), props normalizasyonu, override formatı, a11y çiftleri, VERTICAL layout ekseni, küçük harfli boolean-like variant, tekil COMPONENT akışı, a11y mode-fallback, parseVariantCombo kenar durumları.
+- **`extract-contract` skill'i** (28. skill): birincil yol `figma_extract_contract` tek çağrısı; eski sunucular için 3 aşamalı `figma_execute` fallback'i + hata yönetimi tablosu.
+- Canlı doğrulama: 3 aşama gerçek bir 72-variant'lık Component Set üzerinde uçtan uca çalıştırıldı (17ms / 127ms / 22ms).
+
+### Fixed — release-öncesi denetim düzeltmeleri (multi-agent audit)
+
+- `buildBaseSpecs`: VERTICAL layout'ta primary axis = height olduğundan hug/fixed eşlemesi eksene göre seçilir (dikey bileşenlerde width/height ters raporlanıyordu).
+- Boolean-like VARIANT binding `values`'ı sabit `"True"/"False"` yerine gerçek seçenek string'lerinden türetilir (küçük harfli set'lerde `setProperties` geri-yazması kırılmasın).
+- Token alias zinciri guard'ı tükenirse contract'a `VARIABLE_ALIAS` objesi sızdırılmaz (null'a düşülür); a11y stil grubu seçiminde state-benzeri gruplar atlanır ve ada göre öncelik uygulanır; overrides script'i structure ile aynı depth/budget (8/400), aynı boundVariables anahtar listesi ve aynı opacity'li hex formatını kullanır (parite); TEXT lineHeight birimi (`PIXELS`/`PERCENT`) korunur.
+
+### Docs
+
+- SKILL_INDEX'e eksik `fmcp-intent-router` tablo satırı eklendi; TOOLS_FULL_LIST bayat "Toplam: 48 araç" → 63 düzeltildi; README rozet + vitrin + footer sürüm yüzeyleri v1.9.14'e alındı (63 araç / 28 skill).
+
 ## [1.9.13] — 2026-07-11 — Sıfır-kurulum DS oto-uyumlanma + atıl kod temizliği
 
 ### Added — Zero-Setup DS Auto-Onboard (v3.5)

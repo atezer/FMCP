@@ -37,7 +37,7 @@ Kullanıcı talebi → ilk yüklenecek **entry skill**:
 
 ---
 
-## Skill Listesi (26 skill)
+## Skill Listesi (28 skill)
 
 ### Temel Kurallar
 
@@ -69,6 +69,7 @@ Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (
 
 | Skill | Dosya | Personalar | Kısa açıklama |
 |---|---|---|---|
+| `fmcp-intent-router` | [fmcp-intent-router/SKILL.md](fmcp-intent-router/SKILL.md) | designer, designops, uidev, po | Universal giriş kapısı — belirsiz intent'te routing matrix ile hedef skill seçimi, eksik input'ları tek turda toplama, özet + onay sonrası hedef skill'i çalıştırma |
 | `fmcp-screen-orchestrator` | [fmcp-screen-orchestrator/SKILL.md](fmcp-screen-orchestrator/SKILL.md) | designer, uidev | DS-compliant Figma ekran üretimi orkestratörü — 4 intake modu (text/benchmark/image/no_idea), DS fallback chain, step-by-step mode, self-audit gate |
 | `fmcp-ds-audit-orchestrator` | [fmcp-ds-audit-orchestrator/SKILL.md](fmcp-ds-audit-orchestrator/SKILL.md) | designops, uidev | 5 audit tipi orkestrasyonu (compliance / a11y / drift / visual_qa / impact), read-only discipline, cache-first audit |
 | `fmcp-token-sync-orchestrator` | [fmcp-token-sync-orchestrator/SKILL.md](fmcp-token-sync-orchestrator/SKILL.md) | designops, uidev | Token sync orkestratörü (CSS / Tailwind / Swift / Compose / Sass), diff preview zorunluluğu, binding coverage raporu |
@@ -96,6 +97,7 @@ Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (
 |---|---|---|---|
 | `ai-handoff-export` | [ai-handoff-export/SKILL.md](ai-handoff-export/SKILL.md) | uidev, po | HANDOFF şablonu + manifest + executive summary |
 | `implement-design` | [implement-design/SKILL.md](implement-design/SKILL.md) | uidev | Figma → iOS/Android/Web production kod |
+| `extract-contract` | [extract-contract/SKILL.md](extract-contract/SKILL.md) | uidev, designops, designer | Component Set → design contract JSON spec (`figma_extract_contract` — props, anatomy, variant overrides, resolved tokens, WCAG kontrast, base specs) |
 
 ### Doğrulama ve Analiz
 

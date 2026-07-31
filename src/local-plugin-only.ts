@@ -36,6 +36,11 @@ import type {
 	FigmaComponent, FigmaPaintStyle, FigmaTextStyle, FigmaFill,
 	PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload,
 } from "./core/types/figma.js";
+import {
+	buildStructureScript, buildOverridesScript, buildTokensScript,
+	collectVariableIds, assembleContract, parseScriptResult,
+	type RawStructure, type RawOverrides, type RawTokens,
+} from "./core/contract-extractor.js";
 
 const logger = createChildLogger({ component: "plugin-only-mcp" });
 
@@ -1439,6 +1444,92 @@ export async function main() {
 			const comp = (component as PluginComponentPayload)?.component ?? component;
 			const out = { success: true, component: comp, image: screenshot?.image ?? screenshot?.data };
 			return toolResult(out, "figma_get_component_for_development");
+		})
+	);
+
+	// ---- figma_extract_contract (v1.9.14) ----
+	// Component Set → tam design contract JSON spec. 3 aşamalı okuma (structure /
+	// variant overrides / token resolve) + sunucu tarafı birleştirme (props
+	// normalizasyonu, WCAG kontrast, semantic part naming, orphan prop tespiti).
+	server.registerTool(
+		"figma_extract_contract",
+		{
+			description:
+				"Extract a complete design contract JSON spec from a COMPONENT_SET (or a COMPONENT/INSTANCE inside one). " +
+				"Reads props (componentPropertyDefinitions with boolean-like variant + state normalization), anatomy " +
+				"(default variant tree with token bindings mapped to CSS properties), variantOverrides (token diffs of " +
+				"every variant value vs the default variant), resolvedTokens (per-mode values with alias chains), " +
+				"baseSpecs (raw measurements) and a11y contrast pairs (WCAG AA/AAA per mode). " +
+				"nodeId omitted → current Figma selection. DS-agnostic; no REST API. " +
+				"Returns { success, contract, report } — contract status is 'draft', anchors.code needs manual verification. " +
+				"Use for design-to-code handoff, DS documentation, or as the source of truth for component codegen.",
+			inputSchema: {
+				figmaUrl: z.string().optional().describe("Figma file URL for routing."),
+				fileKey: z.string().optional().describe("Target a specific connected file."),
+				nodeId: z.string().optional().describe("COMPONENT_SET / COMPONENT / INSTANCE node ID. Omit to use the current selection."),
+				importPathTemplate: z.string().optional().describe("anchors.code.importPath template; {Name} → PascalCase component name. Default '@ds/components/{Name}'."),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, importPathTemplate }: { figmaUrl?: string; fileKey?: string; nodeId?: string; importPathTemplate?: string }) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+
+			// Aşama 1 — structure (metadata + props + default variant ağacı)
+			const structure = parseScriptResult<RawStructure>(
+				await conn.executeCodeViaUI(buildStructureScript(nodeId), 30000),
+				"structure",
+			);
+			if (!structure.ok) {
+				const e = structure.error ?? "unknown";
+				let hint = "Hata mesajını kontrol et.";
+				if (e === "NO_SELECTION") hint = "Figma'da bir Component Set (veya içindeki variant/instance) seç, ya da nodeId parametresi ver.";
+				else if (e.startsWith("NOT_COMPONENT")) hint = `Seçili node uygun değil (${e.split(":")[1] ?? "?"}). COMPONENT_SET, COMPONENT veya INSTANCE seçilmeli.`;
+				else if (e.startsWith("NODE_NOT_FOUND")) hint = "nodeId bu dosyada bulunamadı. figma_get_file_data ile doğru id'yi bul.";
+				return errorResult(`Contract extraction failed at structure stage: ${e}. ${hint}`);
+			}
+
+			// Aşama 2/3 hataları contract üretimini durdurmaz (kısmi çıktı > hiç çıktı)
+			// ama SESSİZCE de yutulmaz — not düşülüp report.notes'a taşınır ki
+			// kullanıcı eksik variantOverrides/resolvedTokens'ı tam çıktı sanmasın.
+			const stageNotes: string[] = [];
+
+			// Aşama 2 — variant overrides (yalnızca COMPONENT_SET için anlamlı)
+			let overrides: RawOverrides = { ok: true, overrides: {} };
+			if (structure.kind === "COMPONENT_SET" && structure.set?.id) {
+				overrides = parseScriptResult<RawOverrides>(
+					await conn.executeCodeViaUI(buildOverridesScript(structure.set.id), 30000),
+					"overrides",
+				);
+				if (!overrides.ok) {
+					stageNotes.push(`⚠ Overrides aşaması başarısız: ${overrides.error ?? "unknown"} — contract variantOverrides OLMADAN üretildi (kısmi çıktı).`);
+					overrides = { ok: true, overrides: {} };
+				}
+			}
+
+			// Aşama 3 — token çözümü (structure + overrides'ta geçen tüm variable'lar).
+			// MAX_TOKEN_IDS=150: id listesi script string'ine gömülür ve her variable
+			// mode×alias-chain başına ayrı async çağrı demektir — 150 üzeri hem 50K
+			// kod limitini hem 30s plugin exec bütçesini zorlar; aşım rapora yazılır.
+			const MAX_TOKEN_IDS = 150;
+			const variableIds = collectVariableIds(structure, overrides);
+			let tokens: RawTokens = { ok: true, tokens: {} };
+			if (variableIds.length > 0) {
+				tokens = parseScriptResult<RawTokens>(
+					await conn.executeCodeViaUI(buildTokensScript(variableIds.slice(0, MAX_TOKEN_IDS)), 30000),
+					"tokens",
+				);
+				if (!tokens.ok) {
+					stageNotes.push(`⚠ Token çözümü aşaması başarısız: ${tokens.error ?? "unknown"} — resolvedTokens boş, token referansları {unresolved:...} kalabilir (kısmi çıktı).`);
+					tokens = { ok: true, tokens: {} };
+				}
+			}
+
+			const { contract, report } = assembleContract(structure, overrides, tokens, { importPathTemplate });
+			report.notes.push(...stageNotes);
+			if (variableIds.length > MAX_TOKEN_IDS) {
+				report.notes.push(`Token çözümü ilk ${MAX_TOKEN_IDS} variable ile sınırlandı (toplam ${variableIds.length}).`);
+			}
+			return toolResult({ success: true, contract, report }, "figma_extract_contract");
 		})
 	);
 

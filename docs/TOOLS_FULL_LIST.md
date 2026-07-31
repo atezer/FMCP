@@ -31,6 +31,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_enumerate_published_components` | Library dosyası KAPALIYKEN yayınlanmış component'leri REST ile listele (libraryFileKey + filter; büyük DS'lerde filter zorunlu) |
 | `figma_execute` | Figma Plugin API ile doğrudan JS çalıştır |
 | `figma_export_nodes` | Batch SVG/PNG/JPG/PDF export (1-50 node, scale 0.5-4, base64). Token gerektirmez |
+| `figma_extract_contract` | Component Set → tam design contract JSON spec: props (boolean-like variant + state normalizasyonu), anatomy (token bindings → CSS), variant overrides (default'a karşı token diff), resolved tokens (mode + alias chain), base specs, WCAG kontrast çiftleri. nodeId verilmezse aktif seçim |
 | `figma_get_code_connect` | Code Connect hint'leri (documentationLinks + componentKey) — v1.9.8+ |
 | `figma_get_component` | Belirli bir node’un metadata’sı |
 | `figma_get_component_for_development` | Component metadata + base64 screenshot (tek çağrı) |
@@ -69,7 +70,7 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 | `figma_validate_screen` | Ekranın DS disiplin skorunu hesapla (0-100): instance/token-binding/auto-layout coverage + ihlal listesi (read-only) |
 | `figma_watch_console` | Yeni console log’ları timeout’a kadar stream et |
 
-**Toplam: 48 araç.** (Plugin-only `registerTool` ile uyumlu.)
+**Toplam: 63 araç.** (Plugin-only `registerTool` ile uyumlu.)
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
 **Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.

@@ -60,6 +60,7 @@
 | — | `figma_get_component` | Tekil bileşen detayı. |
 | — | `figma_get_component_image` | Bileşen SVG/PNG export. |
 | — | `figma_get_component_for_development` | Geliştirici odaklı bileşen bilgisi. |
+| — | `figma_extract_contract` | Resmi MCP'de yok; Component Set → tam design contract JSON spec (props, anatomy token bindings, variant overrides, resolved tokens, WCAG kontrast, base specs). |
 
 ## Code Connect
 

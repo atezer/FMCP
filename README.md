@@ -6,15 +6,15 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
-  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.13"><img src="https://img.shields.io/badge/sürüm-v1.9.13-success" alt="version"></a>
-  <img src="https://img.shields.io/badge/araç-62-blue" alt="62 tools">
-  <img src="https://img.shields.io/badge/skill-27-blue" alt="27 skills">
+  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.14"><img src="https://img.shields.io/badge/sürüm-v1.9.14-success" alt="version"></a>
+  <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
+  <img src="https://img.shields.io/badge/skill-28-blue" alt="28 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
-> **Yeni — v1.9.13 Sıfır-Kurulum DS Oto-Uyumlanma (v3.5):** Hiçbir kurulum gerekmez — "tasarım sistemimle bir ekran yap" demeniz yeterli. Agent, Figma ortamınızdan DS'inizi otomatik keşfeder ve size özel `registry.local.md`'ye kaydeder. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.13) · [CHANGELOG](CHANGELOG.md).
+> **Yeni — v1.9.14 Contract Extractor:** Bir Component Set'i seçin, `figma_extract_contract` deyin — props, anatomy token binding'leri, variant override diff'leri, mode bazlı resolved token'lar, WCAG kontrast denetimi ve base spec'ler tek design contract JSON'unda. Design-to-code handoff'un tek doğruluk kaynağı. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14) · [extract-contract SKILL](skills/extract-contract/SKILL.md).
 >
-> **Son sürüm — v1.9.13 (11 Temmuz 2026):** Sıfır-kurulum DS oto-uyumlanma + ~850 satır atıl kod temizliği + tam DS-agnostic süpürme (62 tool, 89/89 test). Önceki öne çıkanlar: v1.9.11 Prototype Connections + Animations ([figma-prototype-flow](skills/figma-prototype-flow/SKILL.md)). Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.13)
+> **Son sürüm — v1.9.14 (31 Temmuz 2026):** Contract Extractor — Component Set → design contract JSON spec (63 tool, 132/132 test). Önceki öne çıkanlar: v1.9.13 sıfır-kurulum DS oto-uyumlanma, v1.9.11 Prototype Connections + Animations ([figma-prototype-flow](skills/figma-prototype-flow/SKILL.md)). Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14)
 
 Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
@@ -154,7 +154,7 @@ AI ile Figma arasında **çift yönlü** çalışırsınız:
 
 Otomatik navigasyon haritası (TR+EN button text heuristic), 9 trigger / 8 action / 9 transition tipi × 4 yön, ON_KEY_DOWN (keyCodes + device), overlay config, scroll behavior, flow starting point — Figma Prototype panel'inin tüm yetenekleri.
 
-62 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
+63 aracın tam listesi: [TOOLS_FULL_LIST.md](docs/TOOLS_FULL_LIST.md)
 
 ---
 
@@ -211,13 +211,13 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
 - **Figma** — Masaüstü ve tarayıcı, birden fazla AI aynı dosyaya aynı anda bağlanabilir
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
-- **Detay** — [62 araç](docs/TOOLS_FULL_LIST.md) · [27 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
+- **Detay** — [63 araç](docs/TOOLS_FULL_LIST.md) · [28 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
 ---
 
 | | |
 |---|---|
-| Güncel sürüm | **1.9.13** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.13)) — Sıfır-kurulum DS oto-uyumlanma |
+| Güncel sürüm | **1.9.14** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.14)) — Contract Extractor (Component Set → design contract JSON) |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 
