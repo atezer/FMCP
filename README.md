@@ -62,9 +62,12 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 | Araç | F-MCP çalışır mı? | Not |
 |------|-------------------|-----|
 | **Claude Desktop** (masaüstü uygulaması) | ✅ | Sohbet arayüzü — günlük kullanım için önerilen |
-| **Claude Code** (terminal uygulaması) | ✅ | Kod yazma ve geliştirme için |
+| **Claude Code** (Mac/PC'de terminal uygulaması) | ✅ | Kod yazma ve geliştirme için |
 | **Cursor** | ✅ | Kod editörü — geliştiriciler için |
+| **Claude Code** (claude.ai/code web veya mobil) | ❌ | Oturum Anthropic bulutunda çalışır; bilgisayarınızdaki plugin'e erişemez |
 | **Claude Chat** (claude.ai web) | ❌ | Web tarayıcısı Figma plugin'ine erişemez |
+
+> **Temel kural:** F-MCP, Claude ile Figma'nın **aynı bilgisayarda** çalışmasını gerektirir. Bridge yalnızca `localhost` (5454–5470) üzerinde dinler ve plugin yalnızca `localhost`'a bağlanır. Bulutta veya başka bir makinede çalışan bir Claude oturumu bu köprüye ulaşamaz; plugin bu durumda sarı **"auto-connect"** durumunda kalır.
 
 ### Claude Desktop sınırlamaları
 
@@ -195,6 +198,8 @@ Detay: [UPDATE.md](docs/UPDATE.md)
 | Sorun | Çözüm |
 |-------|-------|
 | Plugin "no server" diyor | Önce AI aracını (Claude Desktop / Cursor / Claude Code) açın, sonra Figma'da plugin'i çalıştırın |
+| Plugin sarı "auto-connect :54xx" durumunda kalıyor, yeşil olmuyor | Bilgisayarınızda dinleyen bir bridge yok. Claude'u **claude.ai/code (web/mobil)** üzerinden açtıysanız oturum bulutta çalışır ve plugin'e ulaşamaz — Claude Desktop'ı veya terminalden Claude Code'u kullanın. Doğrulamak için: `lsof -iTCP:5454-5470 -sTCP:LISTEN` boş dönüyorsa bridge çalışmıyor demektir |
+| Bulut oturumunda / başka makinede `figma-mcp-bridge` "Connection closed" | `.mcp.json` içindeki `args` yolu (`/Users/<kullanıcı>/FCM/dist/local-plugin-only.js`) o makinede yok. Yerel kurulumda yolu kendi clone kökünüze göre düzenleyin; bulut oturumunda ise bu sunucu tasarım gereği çalışmaz (yukarıdaki "Temel kural") |
 | Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
 | Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
 | DevTools console'da WebSocket hataları | v1.9.1+ ile server-side probe ile giderildi. Plugin hâlâ eski kodu cache'liyorsa: Figma → Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest |
