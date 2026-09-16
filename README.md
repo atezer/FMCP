@@ -6,13 +6,15 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
-  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.14"><img src="https://img.shields.io/badge/sürüm-v1.9.14-success" alt="version"></a>
+  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.15"><img src="https://img.shields.io/badge/sürüm-v1.9.15-success" alt="version"></a>
   <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
   <img src="https://img.shields.io/badge/skill-28-blue" alt="28 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
-> **Yeni — v1.9.14 Contract Extractor:** Bir Component Set'i seçin, `figma_extract_contract` deyin — props, anatomy token binding'leri, variant override diff'leri, mode bazlı resolved token'lar, WCAG kontrast denetimi ve base spec'ler tek design contract JSON'unda. Design-to-code handoff'un tek doğruluk kaynağı. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14) · [extract-contract SKILL](skills/extract-contract/SKILL.md).
+> **Yeni — v1.9.15 `fmcp` CLI:** `npx fmcp doctor` kurulum ve bağlantıyı 5 saniyede teşhis eder, `fmcp fix` zombie süreçleri temizler, `fmcp start/stop` plugin'i Claude olmadan test eder. Sunucu artık istemci kapanınca kendini kapatır (zombie bridge yok) ve bulut oturumlarında "Connection closed" yerine anlaşılır bir durum mesajı verir. Detay: [CHANGELOG](CHANGELOG.md).
+>
+> **v1.9.14 Contract Extractor:** Bir Component Set'i seçin, `figma_extract_contract` deyin — props, anatomy token binding'leri, variant override diff'leri, mode bazlı resolved token'lar, WCAG kontrast denetimi ve base spec'ler tek design contract JSON'unda. Design-to-code handoff'un tek doğruluk kaynağı. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14) · [extract-contract SKILL](skills/extract-contract/SKILL.md).
 >
 > **Son sürüm — v1.9.14 (31 Temmuz 2026):** Contract Extractor — Component Set → design contract JSON spec (63 tool, 132/132 test). Önceki öne çıkanlar: v1.9.13 sıfır-kurulum DS oto-uyumlanma, v1.9.11 Prototype Connections + Animations ([figma-prototype-flow](skills/figma-prototype-flow/SKILL.md)). Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14)
 
@@ -93,10 +95,11 @@ Detaylı rehber ve ilk-prompt örneği: **[install/claude-desktop/HOW-TO-ENFORCE
 Plugin bağlantı sorunları veya zombie process temizliği için:
 
 ```bash
-bash scripts/cleanup-ports.sh
+npx fmcp doctor      # 10 kontrol, her bulguya bir satır çözüm
+npx fmcp fix         # zombie FMCP süreçlerini ve bayat bridge'leri temizler
 ```
 
-5454-5470 aralığındaki eski FMCP process'lerini güvenle öldürür (sadece FMCP adıyla eşleşenler).
+Repo klonuyla kurduysanız `npx fmcp` yerine `node dist/cli/fmcp.js` yazın. Eski `scripts/cleanup-ports.sh` hâlâ çalışır ama `fmcp fix` daha güvenli (yalnızca FMCP süreçleri, önce düzgün kapanma isteği).
 
 ---
 
@@ -193,13 +196,31 @@ Detay: [UPDATE.md](docs/UPDATE.md)
 
 ---
 
+## `fmcp` komut satırı (v1.9.15+)
+
+Bağlantıyı elle kurcalamak yerine tek komut:
+
+| Komut | Ne yapar |
+|---|---|
+| `fmcp doctor` | Node, build, bağımlılık, ortam (bulut mu?), 5454–5470 portları, plugin bağlantısı ve dosyaları, zombie süreçler, Claude/Cursor config yolları, sürüm tutarlılığı — 10 kontrol, her bulguya bir satır çözüm. `--json` makine çıktısı |
+| `fmcp fix` | doctor'ın güvenli bulduğu düzeltmeleri uygular (zombie süreç, bayat bridge, bayat pid dosyası) |
+| `fmcp status` | Hangi portta hangi bridge çalışıyor, kim başlattı (Claude/Cursor/standalone), hangi Figma dosyaları bağlı |
+| `fmcp start` / `fmcp stop` | Plugin'i Claude olmadan test etmek için arka planda standalone bridge; `stop` düzgün kapatır. `stop --all` tüm FMCP bridge'lerini kapatır |
+| `fmcp versions --check` | package.json, plugin.json, manifest ve plugin ui.html sürümleri aynı mı (CI'da da çalışır) |
+| `fmcp serve` | MCP sunucusu; `.mcp.json` ve Claude Desktop config bunu çağırır. Bulut oturumunda veya `node_modules` yokken **degraded** moda düşer: "Connection closed" yerine `figma_get_status` neden çalışmadığını söyler |
+
+Çalıştırma: npm kurulumunda `npx fmcp …`, repo klonunda `node dist/cli/fmcp.js …`. Eski giriş noktası `dist/local-plugin-only.js` ve `figma-mcp-bridge-plugin` bin adı çalışmaya devam eder.
+
+---
+
 ## Sorun mu yaşıyorsunuz?
 
 | Sorun | Çözüm |
 |-------|-------|
+| **Her şeyden önce** | `npx fmcp doctor` (repo klonunda `node dist/cli/fmcp.js doctor`). Aşağıdaki sorunların çoğunu adıyla ve çözümüyle gösterir |
 | Plugin "no server" diyor | Önce AI aracını (Claude Desktop / Cursor / Claude Code) açın, sonra Figma'da plugin'i çalıştırın |
-| Plugin sarı "auto-connect :54xx" durumunda kalıyor, yeşil olmuyor | Bilgisayarınızda dinleyen bir bridge yok. Claude'u **claude.ai/code (web/mobil)** üzerinden açtıysanız oturum bulutta çalışır ve plugin'e ulaşamaz — Claude Desktop'ı veya terminalden Claude Code'u kullanın. Doğrulamak için: `lsof -iTCP:5454-5470 -sTCP:LISTEN` boş dönüyorsa bridge çalışmıyor demektir. Hızlı test: Terminal'de `cd <clone-kökü> && node dist/local-plugin-only.js` çalıştırın; plugin birkaç saniyede yeşile dönmeli (bu yalnızca teşhis içindir — günlük kullanımda bridge'i Claude Desktop / Claude Code kendisi başlatır; testten sonra Ctrl+C ile kapatın) |
-| Bulut oturumunda / başka makinede `figma-mcp-bridge` "Connection closed" | `.mcp.json` içindeki `args` yolu (`/Users/<kullanıcı>/FCM/dist/local-plugin-only.js`) o makinede yok. Yerel kurulumda yolu kendi clone kökünüze göre düzenleyin; bulut oturumunda ise bu sunucu tasarım gereği çalışmaz (yukarıdaki "Temel kural") |
+| Plugin sarı "auto-connect :54xx" durumunda kalıyor, yeşil olmuyor | Bilgisayarınızda dinleyen bir bridge yok. Claude'u **claude.ai/code (web/mobil)** üzerinden açtıysanız oturum bulutta çalışır ve plugin'e ulaşamaz — Claude Desktop'ı veya terminalden Claude Code'u kullanın. Doğrulamak için `fmcp status`. Hızlı test: `fmcp start` → plugin birkaç saniyede yeşile dönmeli → `fmcp stop` (günlük kullanımda bridge'i Claude Desktop / Claude Code kendisi başlatır) |
+| Bulut oturumunda / başka makinede `figma-mcp-bridge` "Connection closed" | v1.9.15+ `.mcp.json` göreli yol kullanır (`dist/cli/fmcp.js serve`) ve bulutta degraded moda düşer; `figma_get_status` nedenini söyler. Hâlâ "Connection closed" görüyorsanız config eski bir mutlak yolu gösteriyordur: `fmcp doctor` yakalar |
 | Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
 | Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
 | DevTools console'da WebSocket hataları | v1.9.1+ ile server-side probe ile giderildi. Plugin hâlâ eski kodu cache'liyorsa: Figma → Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest |
@@ -222,7 +243,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | | |
 |---|---|
-| Güncel sürüm | **1.9.14** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.14)) — Contract Extractor (Component Set → design contract JSON) |
+| Güncel sürüm | **1.9.15** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.15)) — `fmcp` CLI (doctor/fix/status/start/stop), zombie-siz yaşam döngüsü, degraded mod |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 

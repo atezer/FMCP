@@ -36,8 +36,8 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
 >
 > | Sorun | Kontrol |
 > |--------|---------|
-> | Claude’da **Server disconnected** / logda `MODULE_NOT_FOUND` | `args` yolu **clone kökündeki** `dist/local-plugin-only.js` olmalı. `…/f-mcp-bridge/dist/…` **yanlış** (eski yapı); bu klasör çoğu kurulumda yoktur. |
-> | `dist` yok | Depo kökünde `npm run build:local` çalıştırın. |
+> | Claude’da **Server disconnected** / logda `MODULE_NOT_FOUND` | Önce `node <clone-kökü>/dist/cli/fmcp.js doctor` çalıştırın. `args` yolu **clone kökündeki** `dist/cli/fmcp.js` (+ `serve`) olmalı; `…/f-mcp-bridge/dist/…` **yanlış** (eski yapı). `node_modules` yoksa `npm ci`. |
+> | `dist` yok | Depo kökünde `npm run build` çalıştırın. |
 > | Plugin’de **MCP no server** | Bridge **hangi portta** dinliyorsa (varsayılan 5454 veya `FIGMA_PLUGIN_BRIDGE_PORT`) Figma plugin **Advanced → Port** ile **aynı** olmalı. İsterseniz `env` içindeki portu kaldırıp her iki tarafta 5454 kullanın. |
 >
 > Tam örnekler ve `env` açıklaması: [README.md](README.md#hızlı-başlangıç) Hızlı başlangıç bölümü
@@ -48,12 +48,12 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/Users/abdussamed.tezer/FCM/dist/local-plugin-only.js"]
+      "args": ["/Users/abdussamed.tezer/FCM/dist/cli/fmcp.js", "serve"]
     }
   }
 }
 ```
-`/Users/abdussamed.tezer/FCM` kısmını kendi proje yolunuzla değiştirin.
+`/Users/abdussamed.tezer/FCM` kısmını kendi proje yolunuzla değiştirin. (Eski `dist/local-plugin-only.js` girişi de çalışır; `fmcp.js serve` ek olarak bağımlılık eksikse veya bulut oturumundaysanız anlaşılır bir durum mesajı verir.)
 
 **NPX (repo indirmeden):**
 ```json
@@ -71,8 +71,8 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
 
 ## 🚀 Kullanım Adımları
 
-1. **Build alın** (bir kez): `cd <proje> && npm run build:local`
-2. Claude config’te `local-plugin-only.js` kullanın (yukarıdaki örnek).
+1. **Build alın** (bir kez): `cd <proje> && npm run build`
+2. Claude config’te `dist/cli/fmcp.js serve` kullanın (yukarıdaki örnek).
 3. Figma’yı **normal** açın (özel port gerekmez).
 4. Figma’da: **Plugins → Development → F-MCP ATezer Bridge** ile plugin’i çalıştırın; “ready” / “Bridge active” görünene kadar bekleyin.
 5. Claude’u yeniden başlatın; araçları kullanabilirsiniz.
@@ -115,6 +115,15 @@ Detay: `scripts/README.md`
 
 ## 🔍 Sorun Giderme
 
+### İlk adım: `fmcp doctor`
+```bash
+cd /Users/abdussamed.tezer/FCM
+node dist/cli/fmcp.js doctor     # 10 kontrol, her bulguya bir satır çözüm
+node dist/cli/fmcp.js fix        # zombie süreç / bayat bridge temizliği
+node dist/cli/fmcp.js status     # hangi portta kim çalışıyor, hangi dosyalar bağlı
+node dist/cli/fmcp.js start      # plugin'i Claude olmadan test et (bitince: stop)
+```
+
 ### MCP listelenmiyor
 ```bash
 tail -f ~/Library/Logs/Claude/mcp*.log
@@ -123,7 +132,7 @@ tail -f ~/Library/Logs/Claude/mcp*.log
 ### Build güncellemesi
 ```bash
 cd /Users/abdussamed.tezer/FCM
-npm run build:local
+npm run build
 ```
 
 ### Sürüm takibi ve güncelleme notları
@@ -135,7 +144,7 @@ npm run build:local
 | Yayın bildirimi | GitHub [Releases](https://github.com/atezer/FMCP/releases) — depoyu izleyin (*Watch* → *Custom* → *Releases*) |
 | npm paket sürümü | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) veya `npm view @atezer/figma-mcp-bridge version` |
 
-**Repo ile kurduysanız (sil-yeniden-kur gerekmez):** `git pull` → gerekirse `npm install` → `npm run build:local` → Claude/Cursor’u yeniden başlatın. `f-mcp-plugin/` güncellendiyse Figma’da Development → ilgili plugin için manifest’i yeniden import edin veya plugin’i kapatıp açın.
+**Repo ile kurduysanız (sil-yeniden-kur gerekmez):** `git pull` → gerekirse `npm install` → `npm run build` → Claude/Cursor’u yeniden başlatın. `f-mcp-plugin/` güncellendiyse Figma’da Development → ilgili plugin için manifest’i yeniden import edin veya plugin’i kapatıp açın.
 
 **NPX ile kurduysanız:** Config’te `@atezer/figma-mcp-bridge@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra genelde bir sonraki `npx` çalıştırmasında indirilir; önbellek sorununda `npx clear-npx-cache` veya sürümü sabitleyin (`@1.2.0` gibi). Değişiklik listesi için [CHANGELOG.md](CHANGELOG.md) ve [Releases](https://github.com/atezer/FMCP/releases).
 

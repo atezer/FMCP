@@ -42,6 +42,7 @@ export class PluginBridgeServer {
         this.siblingProbeInterval = null;
         /** Figma REST API token (in-memory only, never written to disk). */
         this.figmaRestToken = null;
+        this.startedAt = Date.now();
         /** Last error message when bridge could not bind (port conflict, etc.) */
         this.startError = null;
         /** Internal resolve callback for async listen flow. */
@@ -50,6 +51,9 @@ export class PluginBridgeServer {
         this.preferredPort = clamped;
         this.port = clamped;
         this.auditLogPath = options?.auditLogPath;
+        this.onShutdownRequested = options?.onShutdownRequested;
+        this.installPath = options?.installPath ?? null;
+        this.standalone = options?.standalone ?? false;
         this.clientName = this.detectClientNameSync();
     }
     /** Detect AI client name from env vars (instant, no I/O). */
@@ -328,19 +332,50 @@ export class PluginBridgeServer {
         return createServer((req, res) => {
             // Graceful shutdown endpoint: a new bridge instance requests this old one to exit
             if (req.method === "POST" && req.url === "/shutdown") {
+                // v1.9.15: browsers always send an Origin header on cross-site POSTs; bridge-to-bridge
+                // and CLI requests never do. Rejecting Origin-bearing requests closes the CSRF hole
+                // where any web page could stop the local bridge.
+                if (typeof req.headers.origin === "string" && req.headers.origin.length > 0) {
+                    res.writeHead(403, { "Content-Type": "text/plain" });
+                    res.end("forbidden\n");
+                    logger.warn({ origin: req.headers.origin }, "Rejected /shutdown with Origin header");
+                    return;
+                }
                 res.writeHead(200, { "Content-Type": "text/plain" });
                 res.end("shutting down\n");
-                logger.info("Received /shutdown request from new bridge instance — stopping gracefully");
-                console.error("\n⚠️  Received shutdown request from new F-MCP bridge instance. Stopping…\n");
-                setTimeout(() => this.stop(), 500);
+                logger.info("Received /shutdown request — stopping gracefully");
+                console.error("\n⚠️  Received shutdown request. Stopping…\n");
+                setTimeout(() => {
+                    this.stop();
+                    // v1.9.15: previously only the bridge stopped and the host process lived on as a
+                    // zombie holding stdio. Let the host decide (it normally exits).
+                    try {
+                        this.onShutdownRequested?.();
+                    }
+                    catch { /* ignore */ }
+                }, 500);
                 return;
             }
-            // Health check endpoint — used by new instances to decide coexistence vs takeover
+            // Health check endpoint — used by new instances to decide coexistence vs takeover,
+            // and by `fmcp status` / `fmcp doctor` (v1.9.15: extended fields).
             if (req.method === "GET" && req.url === "/status") {
                 const body = JSON.stringify({
                     clients: this.connectedClientCount(),
                     uptime: Math.round(process.uptime()),
                     version: FMCP_VERSION,
+                    pid: process.pid,
+                    port: this.port,
+                    preferredPort: this.preferredPort,
+                    installPath: this.installPath,
+                    mcpClient: this.clientName,
+                    standalone: this.standalone,
+                    startedAt: this.startedAt,
+                    files: this.listConnectedFiles().map((f) => ({
+                        fileKey: f.fileKey,
+                        fileName: f.fileName,
+                        pluginVersion: f.pluginVersion,
+                        connectedAt: f.connectedAt,
+                    })),
                 });
                 res.writeHead(200, {
                     "Content-Type": "application/json",

@@ -25,8 +25,9 @@ import { discoveryCounter } from "./core/discovery-counter.js";
 import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
 import { bootstrapInjector } from "./core/bootstrap-injector.js";
 import { writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { resolveDevice, DEVICE_PRESETS } from "./core/device-presets.js";
 import { closeAuditLog } from "./core/audit-log.js";
 import { FMCP_VERSION } from "./core/version.js";
@@ -275,7 +276,33 @@ export async function main() {
 	const port = config.local?.pluginBridgePort ?? 5454;
 	const auditLogPath = config.local?.auditLogPath;
 
-	const bridge = new PluginBridgeServer(port, { auditLogPath });
+	/**
+	 * v1.9.15 lifecycle:
+	 * - Normal mode: one MCP client (Claude/Cursor) owns this process over stdio. When the
+	 *   client closes the pipe we exit, so no zombie bridge keeps a port and the plugin
+	 *   never talks to a server nobody is listening to.
+	 * - Standalone mode (`fmcp start`, FMCP_STANDALONE=1): no stdio client; the WebSocket
+	 *   bridge runs on its own for diagnostics and stays up until `fmcp stop` / SIGTERM.
+	 */
+	const standalone = process.env.FMCP_STANDALONE === "1";
+	const installPath = resolveInstallPath();
+
+	let shuttingDown = false;
+	const shutdown = (reason: string) => {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		logger.info({ reason }, "Shutting down plugin-only MCP server...");
+		closeAuditLog();
+		try { bridge.stop(); } catch { /* ignore */ }
+		process.exit(0);
+	};
+
+	const bridge = new PluginBridgeServer(port, {
+		auditLogPath,
+		installPath,
+		standalone,
+		onShutdownRequested: () => shutdown("POST /shutdown"),
+	});
 	bridge.start();
 
 	const cache = new ResponseCache();
@@ -3508,24 +3535,42 @@ export async function main() {
 		}
 	);
 
-	const shutdown = () => {
-		logger.info("Shutting down plugin-only MCP server...");
-		closeAuditLog();
-		try { bridge.stop(); } catch { /* ignore */ }
-		process.exit(0);
-	};
-	process.on("SIGINT", shutdown);
-	process.on("SIGTERM", shutdown);
+	process.on("SIGINT", () => shutdown("SIGINT"));
+	process.on("SIGTERM", () => shutdown("SIGTERM"));
+	process.on("SIGHUP", () => shutdown("SIGHUP"));
 
-	const transport = new StdioServerTransport();
-	await server.connect(transport);
 	const actualPort = bridge.getPort();
 	const autoInc = bridge.getPreferredPort() !== actualPort;
+
+	if (standalone) {
+		logger.info(
+			{ port: actualPort, preferredPort: bridge.getPreferredPort(), autoIncremented: autoInc, pid: process.pid },
+			"F-MCP ATezer Bridge running STANDALONE (no MCP stdio client); WebSocket on port %s. Stop with `fmcp stop`.",
+			actualPort,
+		);
+		return;
+	}
+
+	const transport = new StdioServerTransport();
+	// The MCP client owns our lifetime: pipe closed → exit (no zombie bridge, no orphan port).
+	transport.onclose = () => shutdown("stdio transport closed");
+	process.stdin.on("end", () => shutdown("stdin end"));
+	process.stdin.on("close", () => shutdown("stdin close"));
+	await server.connect(transport);
 	logger.info(
 		{ port: actualPort, preferredPort: bridge.getPreferredPort(), autoIncremented: autoInc },
 		"F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s%s",
 		actualPort, autoInc ? ` (auto-incremented from ${bridge.getPreferredPort()})` : "",
 	);
+}
+
+/** Install root (the directory containing dist/), reported on /status for duplicate-install detection. */
+function resolveInstallPath(): string {
+	try {
+		return resolve(dirname(fileURLToPath(import.meta.url)), "..");
+	} catch {
+		return process.cwd();
+	}
 }
 
 main().catch((err) => {

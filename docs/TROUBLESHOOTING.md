@@ -1,5 +1,23 @@
 # Troubleshooting Guide
 
+## İlk adım (v1.9.15+): `fmcp doctor`
+
+```bash
+npx fmcp doctor                 # npm kurulumu
+node dist/cli/fmcp.js doctor    # repo klonu
+```
+
+10 kontrol: Node sürümü, build çıktısı, bağımlılıklar, ortam (bulut/uzak oturum mu), 5454–5470 portları ve sahipleri, plugin bağlantısı + bağlı dosyalar + plugin/sunucu sürüm farkı, zombie FMCP süreçleri, Claude Code / Claude Desktop / Cursor config yolları (başka makinenin yolu, eski giriş noktası, ikinci kurulum), sürüm tutarlılığı, bayat pid dosyası. Her bulgunun altında tek satır çözüm vardır; `fmcp fix` güvenli olanları uygular.
+
+| Belirti | Komut |
+|---|---|
+| Plugin sarı, "auto-connect" | `fmcp status` — dinleyen bridge yoksa AI aracınızı açın; test için `fmcp start` |
+| İkinci Claude/Cursor 5455'e kaçıyor, eski bridge ölmüyor | `fmcp fix` (bayat bridge'e düzgün kapanma isteği, gerekirse SIGTERM) |
+| "Connection closed" (bulut oturumu / başka makine) | v1.9.15+ sunucu degraded moda düşer ve `figma_get_status` nedenini söyler; config eski mutlak yolu gösteriyorsa `fmcp doctor` yakalar |
+| "Plugin version mismatch" uyarısı | `fmcp versions` — plugin `ui.html` sürümü sunucudan farklıysa Figma'da plugin'i yeniden import edin |
+
+Sunucu davranışı (v1.9.15+): MCP istemcisi (Claude/Cursor) kapanınca sunucu **kendini kapatır** — port serbest kalır, plugin sarıya döner ve bir sonraki istemci açılınca otomatik yeniden bağlanır. `POST /shutdown` artık süreci gerçekten sonlandırır ve tarayıcıdan (Origin başlıklı) gelen istekleri reddeder.
+
 ## Common Issues and Solutions
 
 ### "Yeni araçlar entegre değil" / Araçlar listesinde görünmüyor
@@ -10,12 +28,12 @@ Aşağıdaki araçlar **sadece plugin-only giriş noktasında** tanımlıdır:
 **Olası nedenler ve çözümler:**
 
 1. **Yanlış MCP giriş noktası**  
-   Claude config’te **mutlaka** `dist/local-plugin-only.js` kullanılmalı (tam mod için kullanılan `dist/local.js` değil).  
+   Claude config’te `dist/cli/fmcp.js serve` (v1.9.15+) veya `dist/local-plugin-only.js` kullanılmalı (`dist/local.js` kaldırılmış eski tam mod, çalışmaz).  
    Örnek:
    ```json
    "figma-mcp-bridge": {
      "command": "node",
-     "args": ["<PROJE-YOLU>/dist/local-plugin-only.js"]
+     "args": ["<PROJE-YOLU>/dist/cli/fmcp.js", "serve"]
    }
    ```
    `<PROJE-YOLU>` yerine FMCP klasörünün tam yolunu yazın (örn. `/Users/.../FMCP`).

@@ -12,6 +12,59 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.15] — 2026-09-16 — `fmcp` CLI, zombie-siz yaşam döngüsü, degraded mod
+
+Hedef: plugin bağlantısının **sorunsuz, hızlı ve kolay** olması. Mimari değişmedi (plugin'e dokunulmadı, 63 aracın adı/şeması aynı); bağlantı yaşam döngüsü sertleştirildi ve teşhis tek komuta indirildi.
+
+### Added — `fmcp` komut satırı (`dist/cli/fmcp.js`, `bin: fmcp`)
+
+- **`fmcp doctor [--fix] [--json]`** — 10 kontrol, her bulguya tek satır çözüm: Node sürümü; `dist/` var mı; `node_modules` bağımlılıkları (`@modelcontextprotocol/sdk`, `ws`, `zod`, `pino`); ortam (bulut/uzak oturum tespiti: `CLAUDE_CODE_REMOTE`, Codespaces, Gitpod); 5454–5470 portları — hangi port FMCP, hangisi yabancı, hangisi cevap vermiyor; plugin bağlantısı, bağlı dosyalar ve plugin/sunucu sürüm farkı; zombie FMCP süreçleri (port dinlemeyen süreçler + 30 sn'den uzun plugin'siz bayat bridge'ler); Claude Code `.mcp.json`, Cursor ve Claude Desktop config'lerindeki FMCP girdileri — başka makinenin mutlak yolu, eski `fmcp-plugin-host.js` girişi, ikinci kurulum, `${VAR}`/npx girdileri; 7 dosyada sürüm tutarlılığı; bayat pid dosyası. `--fix` yalnızca güvenli düzeltmeleri uygular (zombie süreçlere SIGTERM→SIGKILL, bayat bridge'lere `/shutdown`, bayat pid dosyasını sil). Çıkış kodu: hata varsa 1.
+- **`fmcp fix`** — `doctor --fix` kısayolu. `scripts/cleanup-ports.sh` yerine geçer (script kaldı, uyarı basar).
+- **`fmcp status [--json]`** — aralıktaki her bridge için sürüm, sahibi (Claude / Cursor / standalone), PID, bağlı plugin sayısı ve dosya adları, uptime. `scripts/check-ports.sh` yerine geçer.
+- **`fmcp start [--port N] [--foreground]` / `fmcp stop [--all|--port N]` / `fmcp restart`** — plugin'i Claude olmadan test etmek için arka planda **standalone** bridge (`FMCP_STANDALONE=1`; log `~/.fmcp/bridge.log`, pid `~/.fmcp/bridge.pid`). `stop` önce `POST /shutdown` ile düzgün kapatır, 3 sn'de kapanmazsa SIGTERM/SIGKILL.
+- **`fmcp versions [--check]`** — package.json, `src/core/version.ts`, `dist/core/version.js`, `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `manifest.json`, `f-mcp-plugin/ui.html` sürümlerini karşılaştırır. `npm run check:versions` ve CI bu komutu kullanır.
+- **`fmcp serve`** — MCP sunucu girişi. Tam sunucuyu (`dist/local-plugin-only.js`) yükler; yükleyemezse **degraded** moda düşer.
+- `src/cli/` tamamı **bağımlılıksız** (yalnız Node builtins) — `node_modules` olmayan bir klonda bile çalışır.
+
+### Added — Degraded mod (bulut oturumu / eksik bağımlılık)
+
+- Bulut/uzak oturumda (`CLAUDE_CODE_REMOTE` vb.) veya `node_modules` eksikken `fmcp serve`, MCP SDK'sız küçük bir stdio JSON-RPC sunucusu başlatır: `initialize`, `tools/list`, `tools/call`, `ping`, `resources/list`, `prompts/list`. Tek araç **`figma_get_status`**: `mode: "degraded"`, neden, kullanıcıya iletilecek çözüm adımları. Diğer `figma_*` çağrıları aynı açıklamayla `isError: true` döner. Eski davranış: süreç anında çöker, istemci "Connection closed" görür.
+- `initialize.instructions` alanı AI istemcisine "yalnızca figma_get_status var, diğer araçları deneme" der.
+
+### Changed — Bağlantı yaşam döngüsü (`src/local-plugin-only.ts`, `src/core/plugin-bridge-server.ts`)
+
+- **İstemci kapanınca sunucu kapanır:** `transport.onclose`, `stdin end/close` ve `SIGHUP` → temiz çıkış. Önceden yalnız SIGINT/SIGTERM dinleniyordu; Claude/Cursor kapansa da süreç portu tutup zombie kalabiliyordu (ikinci istemcinin 5455'e kaçmasının ve `cleanup-ports.sh` ihtiyacının kök nedeni).
+- **`POST /shutdown` süreci gerçekten sonlandırır.** Önceden yalnız `bridge.stop()` çağrılır, süreç yaşamaya devam ederdi. Yeni `onShutdownRequested` callback'i ile ana süreç `closeAuditLog()` + `process.exit(0)` yapar.
+- **`POST /shutdown` CSRF koruması:** `Origin` başlığı taşıyan istekler 403 alır (tarayıcılar cross-site POST'ta her zaman Origin gönderir; bridge-to-bridge devralma ve CLI göndermez). Kötü niyetli bir web sayfası artık yerel bridge'i kapatamaz.
+- **`GET /status` genişletildi:** `pid`, `port`, `preferredPort`, `installPath`, `mcpClient` (Claude Code / Cursor / …), `standalone`, `startedAt`, `files[] {fileKey, fileName, pluginVersion, connectedAt}`. Eski alanlar (`clients`, `uptime`, `version`) aynen korunur; eski sunucularla uyumlu.
+- **Standalone mod:** `FMCP_STANDALONE=1` ile stdio transport bağlanmaz; WebSocket bridge tek başına çalışır (`fmcp start` bunu kullanır).
+- Kapanma nedeni log'a yazılır (`reason: "stdin end" | "POST /shutdown" | "SIGTERM" …`).
+
+### Changed — Kurulum ve config
+
+- **`.mcp.json` göreli yol:** `node dist/cli/fmcp.js serve`. Önceki `/Users/abdussamed.tezer/FCM/dist/local-plugin-only.js` mutlak yolu başka makinede ve bulut oturumunda "Connection closed" üretiyordu.
+- `install/claude-desktop/claude_desktop_config.json`, `install/cursor/.cursor/mcp.json`, `install/*/README.md`, `docs/SETUP.md`, `docs/TROUBLESHOOTING.md`, `KURULUM.md`: var olmayan `fmcp-plugin-host.js` ve `npm run build:local` referansları düzeltildi; yeni giriş `dist/cli/fmcp.js serve`. Eski giriş `dist/local-plugin-only.js` ve `figma-mcp-bridge-plugin` bin adı **çalışmaya devam eder**.
+- `manifest.json` (MCPB): giriş noktası `dist/cli/fmcp.js serve`.
+- `package.json`: `bin.fmcp`, `files` içine `dist/cli`, `check:versions` / `doctor` scriptleri; `check-ports` artık `fmcp status`; `prepublishOnly` sürüm kontrolü içerir.
+
+### Fixed — Sürüm tutarsızlığı
+
+- `.claude-plugin/plugin.json` ve `.cursor-plugin/plugin.json` **1.7.28**'de, `manifest.json` **1.1.2**'de kalmıştı ("46 araç", "33 tools"); hepsi 1.9.15 ve "63 araç / 28 skill / 11 komut" olarak eşitlendi. CI'daki tek dosyalık grep kontrolü `fmcp versions --check` ile 7 dosyaya genişletildi.
+
+### Tests
+
+- 25 yeni test (toplam 157): `tests/cli/versions.test.ts`, `tests/cli/configs.test.ts`, `tests/cli/degraded-server.test.ts`, `tests/cli/probe.test.ts` (gerçek HTTP sunucusuyla port sınıflandırma, `/status`, `/shutdown`), `tests/core/plugin-bridge-server.test.ts` (canlı bridge: genişletilmiş `/status`, Origin'li `/shutdown` → 403 ve bridge açık kalır, Origin'siz → 200 + callback). CI'ya degraded `serve` duman testi eklendi.
+
+### Docs
+
+- README: "`fmcp` komut satırı" bölümü, sorun tablosunun ilk satırı `fmcp doctor`, "yeni chat öncesi" önerisi `fmcp doctor/fix`. `docs/TROUBLESHOOTING.md` başına "İlk adım: fmcp doctor" bölümü.
+
+### Bilinen sınırlar (bu sürümde kapsam dışı)
+
+- Bridge hâlâ istemci başına bir süreçtir ve yalnızca localhost'ta çalışır; bulut oturumu / claude.ai web'den gerçek Figma erişimi için ayrı bir mimari adım (tek daemon + isteğe bağlı Uplink) gerekir — mimari öneri dokümanında.
+- Plugin (`f-mcp-plugin/`) yalnızca sürüm numarası değişti; WS kimlik doğrulaması (SECURITY_AUDIT K4) plugin v2'ye kaldı.
+- Windows'ta `fmcp doctor` port sahibi tespiti `netstat` ile best-effort; zombie süreç taraması yalnız macOS/Linux.
+
 ## [1.9.14] — 2026-07-31 — Contract Extractor: Component Set → design contract JSON spec
 
 ### Added — `figma_extract_contract` aracı + `extract-contract` skill'i

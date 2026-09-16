@@ -34,7 +34,7 @@ Template (`install/claude-desktop/claude_desktop_config.json`) içeriğini mevcu
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/FMCP/dist/cli/fmcp.js", "serve"],
       "env": { "FMCP_PORT": "5454" }
     }
   }

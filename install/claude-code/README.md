@@ -20,7 +20,7 @@ Bu rehber Claude Code CLI üzerinde FCM orkestratör sisteminin kurulumunu ve do
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/absolute/path/to/fmcp-plugin-host.js"],
+      "args": ["/absolute/path/to/FMCP/dist/cli/fmcp.js", "serve"],
       "env": { "FMCP_PORT": "5454" }
     }
   }

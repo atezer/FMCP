@@ -1,11 +1,11 @@
 {
-  "_comment": "FCM figma-mcp-bridge Cursor config template. Kullanmadan önce 'args' içindeki path'i kendi mutlak yolunla değiştir.",
+  "_comment": "F-MCP Bridge Cursor config şablonu. Proje kökünde .cursor/mcp.json olarak kullanılıyorsa göreli yol yeterlidir; global ~/.cursor/mcp.json için <CLONE-KÖKÜ> yerine mutlak yol yazın. Kontrol: node dist/cli/fmcp.js doctor",
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "args": ["dist/cli/fmcp.js", "serve"],
       "env": {
-        "FMCP_PORT": "5454"
+        "FIGMA_PLUGIN_BRIDGE_PORT": "5454"
       }
     }
   }

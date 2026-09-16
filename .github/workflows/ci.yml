@@ -37,12 +37,14 @@ jobs:
       - name: Validate Cursor skill figma_* refs vs registerTool
         run: npm run validate:fmcp-skills
 
-      - name: Version consistency check
+      - name: Version consistency check (package.json, version.ts, plugin.json ×2, manifest.json, ui.html)
+        run: npm run check:versions
+
+      - name: fmcp CLI smoke (degraded serve answers initialize without node_modules deps)
         run: |
-          PKG_VER=$(node -p "require('./package.json').version")
-          echo "package.json version: $PKG_VER"
-          grep -q "FMCP_VERSION = \"$PKG_VER\"" src/core/version.ts || (echo "FAIL: FMCP_VERSION mismatch in src/core/version.ts" && exit 1)
-          echo "All version strings match $PKG_VER"
+          node dist/cli/fmcp.js version
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            | FMCP_FORCE_DEGRADED=1 timeout 10 node dist/cli/fmcp.js serve | grep -q '"serverInfo"'
 
       - name: Security audit
         run: npm audit --omit=dev || true

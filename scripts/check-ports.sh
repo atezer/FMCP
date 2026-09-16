@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+echo "NOT: v1.9.15+ ile bu scriptin yerine 'node dist/cli/fmcp.js status' kullanın (daha güvenli, platform bağımsız)." >&2
+
 PORT_MIN=5454
 PORT_MAX=5470
 FOUND=0

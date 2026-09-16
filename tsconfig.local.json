@@ -8,6 +8,6 @@
 		"declarationMap": true,
 		"sourceMap": true
 	},
-	"include": ["src/local-plugin-only.ts", "src/core/**/*.ts"],
+	"include": ["src/local-plugin-only.ts", "src/core/**/*.ts", "src/cli/**/*.ts"],
 	"exclude": ["node_modules", "dist"]
 }

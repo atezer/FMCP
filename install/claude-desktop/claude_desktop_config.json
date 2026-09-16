@@ -1,9 +1,9 @@
 {
-  "_comment": "FCM figma-mcp-bridge Claude Desktop config template. Kullanmadan önce 'args' içindeki path'i kendi mutlak yolunla değiştir. Mevcut claude_desktop_config.json dosyanda başka mcpServers varsa bu bloğu üzerine yazma, merge et.",
+  "_comment": "F-MCP Bridge Claude Desktop config şablonu. 'args' içindeki <CLONE-KÖKÜ> kısmını repoyu klonladığınız klasörün MUTLAK yoluyla değiştirin (örn. /Users/ad/FCM). Mevcut claude_desktop_config.json içinde başka mcpServers varsa bu bloğu üzerine yazmayın, birleştirin. Kontrol: node <CLONE-KÖKÜ>/dist/cli/fmcp.js doctor",
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "args": ["<CLONE-KÖKÜ>/dist/cli/fmcp.js", "serve"],
       "env": {
         "FIGMA_PLUGIN_BRIDGE_PORT": "5454"
       }

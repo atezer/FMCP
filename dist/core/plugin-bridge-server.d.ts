@@ -70,8 +70,18 @@ export declare class PluginBridgeServer {
     private clientName;
     /** User/config preferred port (before clamp and fallback). */
     private readonly preferredPort;
+    /** v1.9.15: called after a POST /shutdown has been honoured (host process should exit). */
+    private readonly onShutdownRequested?;
+    /** v1.9.15: install root reported on /status so `fmcp doctor` can detect duplicate installs. */
+    private readonly installPath;
+    /** v1.9.15: true when started by `fmcp start` (no MCP stdio client attached). */
+    private readonly standalone;
+    private readonly startedAt;
     constructor(port: number, options?: {
         auditLogPath?: string;
+        onShutdownRequested?: () => void;
+        installPath?: string;
+        standalone?: boolean;
     });
     /** Detect AI client name from env vars (instant, no I/O). */
     private detectClientNameSync;

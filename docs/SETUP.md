@@ -78,11 +78,11 @@ Local mode offers two options: **Plugin-only** (no debug port, no token) or **Fu
 ### Option A: Plugin-Only (recommended – no debug port, no token)
 
 1. **Install and build** (same as below): clone repo, `npm install`, `npm run build:local`.
-2. **Configure Claude** with **`dist/local-plugin-only.js`** (no `FIGMA_ACCESS_TOKEN`):
+2. **Configure Claude** with **`dist/cli/fmcp.js serve`** (v1.9.15+; `dist/local-plugin-only.js` still works) — no `FIGMA_ACCESS_TOKEN`:
    ```json
    "figma-mcp-bridge": {
      "command": "node",
-     "args": ["/absolute/path/to/figma-mcp-bridge/dist/local-plugin-only.js"]
+     "args": ["/absolute/path/to/figma-mcp-bridge/dist/cli/fmcp.js", "serve"]
    }
    ```
 3. **Open Figma normally** (no special launch). Run **Plugins → Development → F-MCP ATezer Bridge**; wait until the plugin shows "ready" / "Bridge active".
@@ -134,7 +134,7 @@ npm run build:local
      "mcpServers": {
        "figma-mcp-bridge-local": {
          "command": "node",
-         "args": ["/absolute/path/to/figma-mcp-bridge/dist/local-plugin-only.js"]
+         "args": ["/absolute/path/to/figma-mcp-bridge/dist/cli/fmcp.js", "serve"]
        }
      }
    }

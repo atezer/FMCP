@@ -5,6 +5,8 @@
 
 set -euo pipefail
 
+echo "NOT: v1.9.15+ ile bu scriptin yerine 'node dist/cli/fmcp.js fix' kullanın (daha güvenli, platform bağımsız)." >&2
+
 PORTS=(5454 5455 5456 5457 5458 5459 5460 5461 5462 5463 5464 5465 5466 5467 5468 5469 5470)
 KILLED=0
 SKIPPED=0

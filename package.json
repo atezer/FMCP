@@ -1,11 +1,12 @@
 {
 	"name": "@atezer/figma-mcp-bridge",
-	"version": "1.9.14",
+	"version": "1.9.15",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
 	"main": "dist/local-plugin-only.js",
 	"types": "dist/local-plugin-only.d.ts",
 	"bin": {
+		"fmcp": "./dist/cli/fmcp.js",
 		"figma-mcp-bridge-plugin": "./dist/local-plugin-only.js"
 	},
 	"files": [
@@ -14,6 +15,7 @@
 		"dist/local-plugin-only.d.ts",
 		"dist/local-plugin-only.d.ts.map",
 		"dist/core",
+		"dist/cli",
 		"f-mcp-plugin",
 		"skills",
 		"commands",
@@ -27,7 +29,7 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"prepublishOnly": "npm run generate:embedded-skills && npm run build && npm run validate:fmcp-skills",
+		"prepublishOnly": "npm run generate:embedded-skills && npm run build && npm run validate:fmcp-skills && npm run check:versions",
 		"generate:embedded-skills": "node scripts/generate-embedded-skills.mjs",
 		"dev": "node dist/local-plugin-only.js",
 		"build:run": "npm run build && node dist/local-plugin-only.js",
@@ -39,7 +41,9 @@
 		"lint:fix": "biome lint --fix",
 		"type-check": "tsc --noEmit",
 		"validate:fmcp-skills": "node scripts/validate-fmcp-skills-tools.mjs",
-		"check-ports": "bash scripts/check-ports.sh"
+		"check:versions": "node dist/cli/fmcp.js versions --check",
+		"doctor": "node dist/cli/fmcp.js doctor",
+		"check-ports": "node dist/cli/fmcp.js status"
 	},
 	"keywords": [
 		"mcp",
