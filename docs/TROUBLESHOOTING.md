@@ -23,13 +23,13 @@ Aşağıdaki araçlar **sadece plugin-only giriş noktasında** tanımlıdır:
 2. **Eski build**  
    Araçlar eklendikten sonra build alınmamış olabilir. Proje kökünde:
    ```bash
-   npm run build:local
+   npm run build
    ```
    Ardından Claude Desktop’u **tamamen kapatıp** tekrar açın.
 
 3. **Claude eski tool listesini kullanıyor**  
    MCP sunucusu Claude açıldığında başlar; sunucu yeniden başlamazsa tool listesi güncellenmez.  
-   **Çözüm:** Claude Desktop’u tamamen kapatın, tekrar açın (ve gerekirse önce `npm run build:local` yapın).
+   **Çözüm:** Claude Desktop’u tamamen kapatın, tekrar açın (ve gerekirse önce `npm run build` yapın).
 
 **Kontrol:** Claude’a “Figma MCP’de hangi araçlar var?” veya “figma_get_status çağır” dediğinizde bağlantı geliyorsa, aynı config’teki sunucu çalışıyordur. Araç listesinde yukarıdaki isimler yoksa config’te `local-plugin-only.js` kullanıldığını ve build’in güncel olduğunu tekrar kontrol edin.
 

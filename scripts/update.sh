@@ -72,7 +72,7 @@ npm install --loglevel=warn
 # 8. Build
 echo ""
 echo "🔨 Build alınıyor..."
-npm run build:local
+npm run build
 echo "✓ Build tamamlandı"
 
 # 9. Stash geri al

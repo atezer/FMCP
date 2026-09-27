@@ -19,13 +19,13 @@ Bu klasör, F-MCP ATezer Bridge plugin'inin Figma açıldığında otomatik çal
 
 ```bash
 # Figma Desktop → Plugins → Development → Import plugin from manifest
-# Dosya: /Users/abdussamed.tezer/FCM/f-mcp-plugin/manifest.json
+# Dosya: <FMCP klasörü>/f-mcp-plugin/manifest.json
 ```
 
 ### 2. Autorun'ı Kurun
 
 ```bash
-cd /Users/abdussamed.tezer/FCM/scripts
+cd <FMCP klasörü>/scripts
 ./install-autorun.sh
 ```
 
@@ -91,7 +91,7 @@ osascript autorun-bridge.applescript
 1. Test scripti çalıştırın: `./test-autorun.sh`
 2. Logları kontrol edin: `tail -f ~/Library/Logs/figma-bridge-autorun.log`
 3. Plugin'in Figma'da kurulu olduğundan emin olun
-4. Figma'yı remote debugging ile başlatın: `--remote-debugging-port=9222`
+4. Figma'yı tamamen kapatıp yeniden açın
 
 ### Problem: "Operation not permitted" hatası
 **Çözüm:**

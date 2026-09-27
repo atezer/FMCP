@@ -47,7 +47,7 @@ Repo’yu indirip kendi makinenizde build etmek isterseniz (ör. ağ kısıtlı 
 |---|------|------------|
 | 1 | **Plugin’i yükle** | Figma’da F-MCP Bridge plugin’ini ekle (organization listesinden veya manifest ile) |
 | 2 | **Node.js kur** | Bilgisayarda Node.js (LTS) yüklü olsun |
-| 3 | **MCP server’ı başlat** | Projeyi clone edip `npm run build:local` + config’te tam yol ile sunucuyu çalıştır |
+| 3 | **MCP server’ı başlat** | Projeyi clone edip `npm run build` + config’te tam yol ile sunucuyu çalıştır |
 | 4 | **Config’i ayarla** | Cursor/Claude config’e `figma-mcp-bridge` ekle (node + tam yol veya npx) |
 
 ---
@@ -108,7 +108,7 @@ Claude’u açtığınızda MCP sunucusu otomatik başlar (Claude config’te `n
 2. Bağımlılıkları yükleyip bir kez build edin:
    ```bash
    npm install
-   npm run build:local
+   npm run build
    ```
 3. **4. adımda** Claude config’te bu klasörün **tam yolu** ile `dist/local-plugin-only.js` çalıştırılacak; böylece Claude her açılışta MCP server’ı kendisi başlatır.
 
@@ -178,7 +178,7 @@ Kısa özet: [KURULUM.md — Sürüm takibi](../KURULUM.md#sürüm-takibi-ve-gü
 
 - [ ] Figma’da F-MCP Bridge plugin’i yüklü ve **Plugins** menüsünden çalıştırıldı.
 - [ ] Node.js yüklü (`node -v` çalışıyor).
-- [ ] FMCP projesi clone edildi, `npm install` ve `npm run build:local` çalıştırıldı.
+- [ ] FMCP projesi clone edildi, `npm install` ve `npm run build` çalıştırıldı.
 - [ ] Claude config’e `figma-mcp-bridge` eklendi; `<PROJE-YOLU>` kendi bilgisayarınızdaki FMCP yolu ile değiştirildi.
 - [ ] Cursor veya Claude yeniden başlatıldı.
 - [ ] Figma’da plugin penceresinde **yeşil nokta + “ready”** görünüyor.
@@ -192,7 +192,7 @@ Kısa özet: [KURULUM.md — Sürüm takibi](../KURULUM.md#sürüm-takibi-ve-gü
 |-------|--------|
 | Plugin “no server” / kırmızı | MCP sunucusu çalışmıyor. Claude’u açın (plugin-only kullanıyorsanız Claude sunucuyu açar) veya terminalde `npm run dev:local` çalıştırın. |
 | Port 5454 kullanımda | `lsof -i :5454` ile işlemi bulun, `kill <PID>` ile kapatın veya [docs/PORT-5454-KAPALI.md](PORT-5454-KAPALI.md) rehberine bakın. |
-| Claude “Server disconnected” | Config’teki yolun doğru olduğundan ve `npm run build:local` yapıldığından emin olun; gerekirse `bash -c` ile çalıştırma kullanın. |
+| Claude “Server disconnected” | Config’teki yolun doğru olduğundan ve `npm run build` yapıldığından emin olun; gerekirse `bash -c` ile çalıştırma kullanın. |
 | Permission denied | Config’te `bash -c` ile `cd <PROJE-YOLU> && exec node dist/local-plugin-only.js` kullanın. |
 
 Daha fazla sorun giderme: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

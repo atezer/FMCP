@@ -77,7 +77,7 @@ Local mode offers two options: **Plugin-only** (no debug port, no token) or **Fu
 
 ### Option A: Plugin-Only (recommended – no debug port, no token)
 
-1. **Install and build** (same as below): clone repo, `npm install`, `npm run build:local`.
+1. **Install and build** (same as below): clone repo, `npm install`, `npm run build`.
 2. **Configure Claude** with **`dist/local-plugin-only.js`** (no `FIGMA_ACCESS_TOKEN`):
    ```json
    "figma-mcp-bridge": {
@@ -111,7 +111,7 @@ cd FMCP
 npm install
 
 # Build local mode
-npm run build:local
+npm run build
 ```
 
 #### 2. Figma Personal Access Token (optional for plugin-only)
@@ -235,7 +235,7 @@ cmd /c "%LOCALAPPDATA%\Figma\Figma.exe" --remote-debugging-port=9222
 
 **"Module not found" errors:**
 - ✅ Run `npm install` in the figma-mcp-bridge directory
-- ✅ Run `npm run build:local` again
+- ✅ Run `npm run build` again
 - ✅ Check that `dist/local.js` file exists
 
 **"Port 9222 already in use":**

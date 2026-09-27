@@ -73,7 +73,6 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 
 Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Desktop'ta yoktur**:
 
-- Hook'lar (PreToolUse, SessionStart) — çalışmaz
 - Sub-agent spawn — Task tool mevcut değil
 - Slash command'lar (`/ds-sync` vb.) — desteklenmez
 - `plugin.json` auto-discovery — yüklenmez
@@ -199,7 +198,7 @@ Detay: [UPDATE.md](docs/UPDATE.md)
 |-------|-------|
 | Plugin "no server" diyor | Önce AI aracını (Claude Desktop / Cursor / Claude Code) açın, sonra Figma'da plugin'i çalıştırın |
 | Plugin sarı "auto-connect :54xx" durumunda kalıyor, yeşil olmuyor | Bilgisayarınızda dinleyen bir bridge yok. Claude'u **claude.ai/code (web/mobil)** üzerinden açtıysanız oturum bulutta çalışır ve plugin'e ulaşamaz — Claude Desktop'ı veya terminalden Claude Code'u kullanın. Doğrulamak için: `lsof -iTCP:5454-5470 -sTCP:LISTEN` boş dönüyorsa bridge çalışmıyor demektir. Hızlı test: Terminal'de `cd <clone-kökü> && node dist/local-plugin-only.js` çalıştırın; plugin birkaç saniyede yeşile dönmeli (bu yalnızca teşhis içindir — günlük kullanımda bridge'i Claude Desktop / Claude Code kendisi başlatır; testten sonra Ctrl+C ile kapatın) |
-| Bulut oturumunda / başka makinede `figma-mcp-bridge` "Connection closed" | `.mcp.json` içindeki `args` yolu (`/Users/<kullanıcı>/FCM/dist/local-plugin-only.js`) o makinede yok. Yerel kurulumda yolu kendi clone kökünüze göre düzenleyin; bulut oturumunda ise bu sunucu tasarım gereği çalışmaz (yukarıdaki "Temel kural") |
+| Başka makinede `figma-mcp-bridge` "Connection closed" | `.mcp.json` yereldir, git'e girmez (`scripts/setup.sh` o makinenin yoluyla yazar). `args` yolu o makinedeki `<clone-kökü>/dist/local-plugin-only.js` olmalı. Bulut oturumunda bu sunucu tasarım gereği çalışmaz (yukarıdaki "Temel kural") |
 | Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
 | Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
 | DevTools console'da WebSocket hataları | v1.9.1+ ile server-side probe ile giderildi. Plugin hâlâ eski kodu cache'liyorsa: Figma → Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest |

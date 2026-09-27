@@ -46,7 +46,7 @@ Bu dosyayı aç (yoksa oluştur). Mevcut `figma-mcp-bridge` entry'sine `env` blo
 }
 ```
 
-> `<user>` yerine kullanıcı adını yaz (örn. `abdussamed.tezer`).
+> `<user>` yerine kullanıcı adını yaz (örn. `ada.lovelace`).
 > Token'ı tırnak içinde yapıştır. Satır başında/sonunda boşluk olmasın.
 
 ## Adım 3 — Claude Desktop restart
