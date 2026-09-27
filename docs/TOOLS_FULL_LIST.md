@@ -73,6 +73,6 @@ Config’te **`dist/local-plugin-only.js`** kullanıldığında aşağıdaki ara
 **Toplam: 63 araç.** (Plugin-only `registerTool` ile uyumlu.)
 Claude’un gördüğü liste bu sayıdan azsa, [TROUBLESHOOTING.md](TROUBLESHOOTING.md) içindeki “Yeni araçlar entegre değil” bölümüne bakın.
 
-**Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 45:4602 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
+**Design context / token tasarrufu:** Kullanıcı "bu frame'deki metin", "node 12:345 için context" veya Figma'nın `get_design_context` benzeri bir istekte bulunursa, **`figma_get_design_context`** (veya `figma_get_file_data` ile `verbosity: standard`/`full`) kullanın. Yapı + metin **Figma token tüketmeden** ve **düşük context token** ile alınır; screenshot dahil edilmez.
 
 **Detaylı kullanım (parametreler, örnekler):** [TOOLS.md](TOOLS.md)

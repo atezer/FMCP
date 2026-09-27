@@ -95,8 +95,8 @@ Claude her iki durumda da:
 
 ```
 "Ana-DS button ile kart yap"
-→ Claude sui/_meta.md okur (durum kontrolü)
-→ Claude sui/components.md okur
+→ Claude ana-ds/_meta.md okur (durum kontrolü)
+→ Claude ana-ds/components.md okur
 → Figma'ya gitmeden kart üretir
 ```
 
@@ -105,9 +105,9 @@ Claude her iki durumda da:
 ```
 "Ana-DS'yi güncelle"
 veya
-/ds-sync sui
+/ds-sync ana-ds
 veya
-/ds-sync sui components   (sadece bileşenler)
+/ds-sync ana-ds components   (sadece bileşenler)
 ```
 
 ### 4. Kaldırma
@@ -115,7 +115,7 @@ veya
 ```
 "Ana-DS'yi sil"
 → Claude onay sorar
-→ sui/ klasörü silinir
+→ ana-ds/ klasörü silinir
 → project-context.md'den kural kaldırılır
 ```
 
@@ -164,7 +164,7 @@ Claude yeni bir Figma linki aldığında şu 4 kontrolü sırayla yapar:
 |---------|---------|----------|
 | 1 | **File key eşleşmesi** (kesin) | Aynı dosya zaten kayıtlı → "Güncelleyeyim mi?" |
 | 2 | **İsim eşleşmesi** (tam) | Aynı isimde kütüphane var → "Değiştir / yeniden isimlendir" |
-| 3 | **Fuzzy isim eşleşmesi** | Benzer isim var (ör: "sui" vs "sui-mobile") → "Kaynak eklensin mi?" |
+| 3 | **Fuzzy isim eşleşmesi** | Benzer isim var (ör: "ana-ds" vs "ana-ds-mobil") → "Kaynak eklensin mi?" |
 | 4 | **Yeni** | Hiçbir eşleşme yok → yeni kütüphane olarak ekle |
 
 ---

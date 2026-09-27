@@ -345,7 +345,7 @@ Kullanıcı şu paternlerle **negatif/dışlayıcı** talimat verebilir — bunl
 Kullanıcı: "Ana-DS Alt 3'e bakma, sıfırdan yeni bir Anasayfa tasarla"
 
 PARSE:
-  - exclude_references: ["Ana-DS Alt 3", "241:11896"]  (Ana-DS Alt 3 frame ID'si de dahil)
+  - exclude_references: ["Ana-DS Alt 3", "12:400"]  (Ana-DS Alt 3 frame ID'si de dahil)
   - start_fresh: true
   - target_screen: "Anasayfa"
   - DS: active-ds.md'den çek
@@ -363,7 +363,7 @@ SONUÇ:
 **Örnek — generate-figma-screen:**
 
 ```
-Kullanıcı: "sui ile ekran yap"
+Kullanıcı: "Ana-DS ile ekran yap"
 
 State okuma:
   - active-ds.md → "❖ Ana-DS" ✓ (design_system sorulmaz)
@@ -393,7 +393,7 @@ Tüm input'lar toplandıktan sonra Claude **AYRI** bir `AskUserQuestion` çağr�
  🎯 Skill: generate-figma-screen
  📱 Device: iPhone 17 (402×874)
  🎨 DS: ❖ Ana-DS
- 📋 Reference: 139:3407 (Vadesiz TL Hesabı)
+ 📋 Reference: 12:345 (Vadesiz TL Hesabı)
  🧩 Yaklaşım: clone-to-device with Ana-DS token binding
  📊 Çıktı: 1 ekran 'Vadesiz TL - iPhone 17'
  ⏱️ Tahmini süre: 20 saniye
@@ -447,11 +447,11 @@ generate-figma-screen
 ## Inputs
 - device: iPhone 17
 - design_system: ❖ Ana-DS
-- reference_benchmark: 139:3407
+- reference_benchmark: 12:345
 - (other inputs)
 
 ## Result
-- output_node: 173:12130
+- output_node: 12:500
 - validation_score: 95/100
 - duration: 18s
 - status: ✅ Success
@@ -466,17 +466,17 @@ generate-figma-screen
 
 ### Fast Path 1 — Detaylı Talep
 
-Kullanıcı talebi zaten tüm input'ları içeriyorsa (örn. "139:3407'yi iPhone 17'ye Ana-DS ile klonla"), Adım 5 atlanır. Direkt Adım 6 (onay) → Adım 7 (execute).
+Kullanıcı talebi zaten tüm input'ları içeriyorsa (örn. "12:345'yi iPhone 17'ye Ana-DS ile klonla"), Adım 5 atlanır. Direkt Adım 6 (onay) → Adım 7 (execute).
 
 **Örnek:**
 ```
-Kullanıcı: "139:3407'yi iPhone 17'ye Ana-DS ile klonla"
+Kullanıcı: "12:345'yi iPhone 17'ye Ana-DS ile klonla"
 
 Parse:
   - skill: generate-figma-screen (klonla keyword)
   - device: iPhone 17 (explicit)
   - ds: Ana-DS (explicit + active-ds.md confirm)
-  - reference: 139:3407 (explicit)
+  - reference: 12:345 (explicit)
   - variants: single (default)
 
 → Direkt Adım 6: onay sor
@@ -582,8 +582,8 @@ Her başarısız write-tool denemesi sonrası Claude cleanup protokolünü çal�
 4. Kullanıcıya listele:
    ```
    ⚠️ Timeout sonrası şu orphan node'ları buldum:
-    1. 175:12172 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 4)
-    2. 175:12302 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 8)
+    1. 12:600 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 4)
+    2. 12:601 "Hesaplarım — Hero Card — iPhone 17" (yarım, child count: 8)
    
    Silmemi ister misin?
    [✅ Sil] [👁️ Önce screenshot göster] [❌ Kalsın]

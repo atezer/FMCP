@@ -109,7 +109,7 @@ Task(
 ```
 Task(
   subagent_type: "ds-auditor",
-  prompt: "bu ekranın kontrastını kontrol et: nodeId 139:3407"
+  prompt: "bu ekranın kontrastını kontrol et: nodeId 12:345"
 )
 ```
 

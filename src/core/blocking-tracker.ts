@@ -152,7 +152,7 @@ export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; 
 	if (dsViol?.violations) {
 		for (const v of dsViol.violations) {
 			if (v.category) categories.push(v.category);
-			// Regex: extract node IDs like "241:11896" from message text
+			// Regex: extract node IDs like "12:400" from message text
 			if (v.message) {
 				const matches = v.message.match(/\d+:\d+/g);
 				if (matches) nodeIds.push(...matches);

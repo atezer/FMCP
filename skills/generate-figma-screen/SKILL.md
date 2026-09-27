@@ -220,7 +220,7 @@ Bu tabloyu uyguladıktan sonra `device`, `primary_binding`, `font_pattern` **cev
 | tablet / iPad | dashboard / list / detail | iPad Pro 11 (834×1194) | `<DS>/semantic/background/lvl0` | `<DS>/text/body/M` |
 | desktop / web / (platform yok) | dashboard / list | Desktop (1440×1024) | `<DS>/primary/default` | `<DS>/text/body/M` |
 
-**`<DS>` =** `active-ds.md`'deki `Library Name` slug'ı (örn. `❖ Ana-DS` → `sui`, `Material` → `material`). Token isimleri DS convention'una göre değişebilir — eşleşme yoksa DS cache'inden (`.claude/design-systems/<DS>/tokens.md`) benzer token ara.
+**`<DS>` =** `active-ds.md`'deki `Library Name` slug'ı (örn. `❖ Ana-DS` → `ana-ds`, `Material` → `material`). Token isimleri DS convention'una göre değişebilir — eşleşme yoksa DS cache'inden (`.claude/design-systems/<DS>/tokens.md`) benzer token ara.
 
 **Algoritma:**
 1. User prompt'undan platform keyword parse et (iOS/iPhone/mobil/Android/Pixel/tablet/iPad/desktop/web).

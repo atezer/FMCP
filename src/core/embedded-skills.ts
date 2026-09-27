@@ -7,7 +7,7 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Total estimated tokens: 13923
+ * Total estimated tokens: 13992
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3126 tokens) -->
@@ -214,7 +214,7 @@ Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL 
 
 ---
 
-<!-- fmcp-screen-orchestrator (4356 tokens) -->
+<!-- fmcp-screen-orchestrator (4423 tokens) -->
 ### Ortak Protokol
 
 1. **Skill Registry** açık — tahmin yasak, sezgisel Read() yasak
@@ -393,7 +393,7 @@ YASAK:
 
 **2. Dark variant — VARSAYILAN: TEK FRAME, Figma toggle ile preview**
 
-Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve tüm bound variable'larla) oluşturulduğunda, kullanıcı Figma'da \`Semantic Colors (S Theme)\` dropdown'undan **Auto/Light/Dark** arasında **preview** eder. İki ayrı frame YAYGIN OLARAK GEREKMEZ.
+Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve tüm bound variable'larla) oluşturulduğunda, kullanıcı Figma'da \`Semantic Colors\` dropdown'undan **Auto/Light/Dark** arasında **preview** eder. İki ayrı frame YAYGIN OLARAK GEREKMEZ.
 
 **Kural:**
 - **Default (kullanıcı sadece "ekran yap" dedi):** Tek frame üret, Light mode'da bıraj. Kullanıcı Dark'ı Figma UI'dan görebilir.
@@ -403,13 +403,16 @@ Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve t�
 
 **Clone gerektiğinde uygulama:**
 \`\`\`js
-// tokens.md "Collection Info" — cache'ten hazır:
-// Semantic Colors collectionKey: 6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1
-// Light modeId: 3015:2  |  Dark modeId: 3019:3
+// Collection OBJECT'i kütüphane zinciriyle al — string ID çalışmaz (figma-canvas-ops Kural 20)
+const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+const sem = colls.find(c => c.name.indexOf("Semantic Colors") !== -1);
+const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(sem.key);
+const first = await figma.variables.importVariableByKeyAsync(vars[0].key);
+const coll = await figma.variables.getVariableCollectionByIdAsync(first.variableCollectionId);
+const darkMode = coll.modes.find(m => m.name === "Dark");
 
-const coll = await figma.variables.importVariableCollectionByKeyAsync("6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1");
 const darkFrame = lightFrame.clone();
-darkFrame.setExplicitVariableModeForCollection(coll.id, "3019:3");
+darkFrame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
 // fill rebind YOK, variable swap YOK, ayrı component import YOK.
 \`\`\`
 
@@ -741,7 +744,7 @@ active-ds.md \`❌\` ise: "Hangi DS? (Ana-DS / Material / HIG / Kendi / Hiçbiri
 
 ---
 
-<!-- fmcp-screen-recipes (2127 tokens) -->
+<!-- fmcp-screen-recipes (2129 tokens) -->
 ---
 name: fmcp-screen-recipes
 description: Fast path cookbook — standart ekran tipleri (login/payment/profile/list/detail/form/onboarding/dashboard/settings) için 5 mega-adımlı recipe. Max 15 op/execute, cache-first discovery, her adımda Türkçe micro-report.
@@ -843,7 +846,7 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ Ana-DS\` → \`sui\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce \`.claude/design-systems/<active-ds>/tokens.md\` oku (\`<active-ds>\` = \`active-ds.md\`'den \`Library Name\`'in slug hali — \`❖ Ana-DS\` → \`ana-ds\`, \`Material\` → \`material\`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
 Token name matching: DS nested path formatı (örn. \`"Spacing/spacing-100"\`). \`endsWith\` match kullan:
 \`\`\`js
@@ -861,7 +864,7 @@ function findColl(keywords) {
   });
 }
 const sizeColl = findColl(["semantic size", "semantic sizes", "size"]);
-const colorsColl = findColl(["semantic color", "s theme"]);
+const colorsColl = findColl(["semantic color", "theme color"]);
 const result = { availableColls: colls.map(c => ({name: c.name, key: c.key})), spacingTokenKeys: {}, collectionInfo: { colors: null, size: null }, surfaceKey: null };
 
 if (sizeColl) {
@@ -1062,4 +1065,4 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13923;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13992;

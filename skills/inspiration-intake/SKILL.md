@@ -15,7 +15,7 @@ required_inputs:
     description: "Kaynak tipi. image_uploaded: kullanıcı sohbete görseli yüklemiş. image_url: internet URL'i. figma_node: Figma nodeId. figma_url: tam Figma linki."
   - name: source_ref
     type: string
-    description: "image_uploaded için sohbete yüklenen görsel referansı (Claude zaten görüyor); image_url için URL; figma_node için nodeId (örn. '139:3407'); figma_url için tam Figma linki."
+    description: "image_uploaded için sohbete yüklenen görsel referansı (Claude zaten görüyor); image_url için URL; figma_node için nodeId (örn. '12:345'); figma_url için tam Figma linki."
 outputs:
   - name: structural_intent_json
     type: object
@@ -183,13 +183,13 @@ Semantik kabul edilenler: `primary`, `secondary`, `hero`, `cta`, `dense`, `airy`
 
 ### Örnek 2 — Figma benchmark
 
-**Kullanıcı:** "figma.com/file/abc/xyz?node-id=139-3407 bu ekrandan 3 alternatif üret"
+**Kullanıcı:** "figma.com/file/abc/xyz?node-id=12-345 bu ekrandan 3 alternatif üret"
 
 **Caller (screen-builder):**
 1. Mode tespit: `figma_url`
 2. `Read("skills/inspiration-intake/SKILL.md")`
 3. Skill workflow:
-   - Adım 0: nodeId parse `139:3407`, `figma_get_design_context(nodeId="139:3407", depth=1, verbosity="summary")`
+   - Adım 0: nodeId parse `12:345`, `figma_get_design_context(nodeId="12:345", depth=1, verbosity="summary")`
    - Adım 1: sections listesini çıkar (değer yok)
    - Adım 2: guard PASS
    - Adım 3: JSON döner
