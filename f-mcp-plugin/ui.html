@@ -362,6 +362,16 @@
         <span id="port-label" style="font-size:12px;color:var(--fmcp-text-tertiary);flex:1;text-align:center;">—</span>
         <button type="button" id="port-next" onclick="switchActivePort(1)" style="font-size:12px;padding:1px 5px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-secondary);cursor:pointer;">▶</button>
       </div>
+      <div class="pairing-section" style="margin-top:8px;border-top:1px solid var(--fmcp-border-subtle);padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="fmcp-pairing" style="font-size:13px;color:var(--fmcp-text-secondary);white-space:nowrap;">Eşleştirme</label>
+          <input type="password" id="fmcp-pairing" placeholder="eşleştirme kodu" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;font-size:13px;padding:3px 6px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:4px;color:var(--fmcp-text-input);outline:none;" aria-label="Köprü eşleştirme kodu" />
+          <button type="button" id="save-pairing" style="font-size:12px;padding:2px 6px;background:var(--fmcp-bg-subtle);border:1px solid var(--fmcp-border-light);border-radius:3px;color:var(--fmcp-text-secondary);cursor:pointer;" title="Kodu kaydet ve bağlan">Kaydet</button>
+          <button type="button" id="clear-pairing" style="font-size:12px;padding:2px 6px;background:var(--fmcp-clear-bg);border:1px solid var(--fmcp-clear-border);border-radius:3px;color:var(--fmcp-clear-text);cursor:pointer;" title="Eşleştirme kodunu sil">x</button>
+        </div>
+        <div id="fmcp-pairing-status" style="font-size:12px;color:var(--fmcp-text-muted);margin-top:3px;display:none;"></div>
+        <div style="font-size:10px;color:var(--fmcp-text-ghost);margin-top:2px;line-height:1.5;">Bir kez gir. Kod: <code>~/.config/fmcp/pairing</code> dosyasında ya da terminalde <code>npx -y @atezer/figma-mcp-bridge@latest --print-pairing</code></div>
+      </div>
       <div class="api-token-section" style="margin-top:8px;border-top:1px solid var(--fmcp-border-subtle);padding-top:8px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <label for="figma-token" style="font-size:13px;color:var(--fmcp-text-secondary);white-space:nowrap;">API Token</label>
@@ -859,7 +869,8 @@
               type: 'ready',
               fileKey: window.__figmaFileKey,
               fileName: window.__figmaFileName,
-              pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
+              pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0'),
+              pairing: window.__fmcpPairing || null
             });
             if (mcpBridgeWs && mcpBridgeWs.readyState === 1) mcpBridgeWs.send(identityMsg);
             if (typeof mcpConnections !== 'undefined') {
@@ -895,6 +906,23 @@
           }
           break;
 
+        case 'RESTORE_PAIRING':
+          // Pairing code restored from figma.clientStorage (always sent, null when none is stored)
+          window.__fmcpPairing = msg.pairing || null;
+          var pairingEl = document.getElementById('fmcp-pairing');
+          if (pairingEl && msg.pairing) pairingEl.value = msg.pairing;
+          updatePairingUI(msg.pairing ? 'saved' : 'missing');
+          fmcpPairingRestored();
+          break;
+
+        case 'PAIRING_SAVED':
+          console.log('[F-MCP] Pairing code saved to clientStorage: ' + (msg.success ? 'OK' : 'FAIL'));
+          break;
+
+        case 'PAIRING_DELETED':
+          console.log('[F-MCP] Pairing code deleted from clientStorage');
+          break;
+
         case 'TOKEN_SAVED':
           console.log('[F-MCP] Token saved to clientStorage: ' + (msg.success ? 'OK' : 'FAIL'));
           break;
@@ -906,7 +934,8 @@
         case 'VARIABLES_DATA':
           window.__figmaVariablesData = msg.data;
           window.__figmaVariablesReady = true;
-          updateStatus('Ready', true, false);
+          // Variables loading must not hide a refused pairing (the bridge is not connected then).
+          if (!__fmcpPairingBlocked) updateStatus('Ready', true, false);
           console.log('[F-MCP ATezer Bridge] Active - ' + (msg.data.variables?.length || 0) + ' vars');
           break;
 
@@ -1342,6 +1371,91 @@
       }
     }
 
+    // ---- Bridge pairing (see src/core/pairing.ts) ----
+    // The bridge accepts a plugin only if its "ready" handshake carries the pairing code. The code is
+    // entered once, kept in figma.clientStorage (code.js) and sent with every handshake.
+    window.__fmcpPairing = null;
+    var __fmcpPairingBlocked = false;   // the bridge refused the last handshake for pairing — don't retry blindly
+    var __fmcpPairingRestored = false;  // clientStorage restore finished (RESTORE_PAIRING)
+    var __fmcpConnectDeferred = false;  // the first connect waits for the restore (at most 1.5 s)
+
+    function updatePairingUI(state) {
+      var st = document.getElementById('fmcp-pairing-status');
+      if (!st) return;
+      var text = {
+        saved: 'Eşleştirme kodu kayıtlı',
+        missing: 'Eşleştirme kodu gerekli — bir kez gir',
+        required: 'Köprü eşleştirme istiyor — kodu gir',
+        refused: 'Köprü bu kodu kabul etmedi — güncel kodu yapıştır'
+      }[state] || '';
+      st.textContent = text;
+      st.style.display = text ? 'block' : 'none';
+      st.style.color = state === 'saved' ? 'var(--fmcp-text-muted)' : 'var(--fmcp-clear-text)';
+    }
+
+    function openAdvancedPanel() {
+      var panel = document.querySelector('.advanced-panel');
+      if (panel && !panel.classList.contains('is-open')) {
+        var toggle = document.getElementById('advanced-toggle');
+        if (toggle) toggle.click();
+      }
+    }
+
+    // Called by the connection handlers when the bridge answers a handshake with a pairing error.
+    function onPairingRefused(code) {
+      __fmcpPairingBlocked = true;
+      updateStatus('eşleştirme gerekli', false, true);
+      updatePairingUI(code === 'pairing-mismatch' ? 'refused' : 'required');
+      openAdvancedPanel();
+    }
+
+    function isPairingError(msg) {
+      return msg && msg.type === 'error' && (msg.code === 'pairing-required' || msg.code === 'pairing-mismatch');
+    }
+
+    function fmcpPairingRestored() {
+      __fmcpPairingRestored = true;
+      if (__fmcpConnectDeferred) {
+        __fmcpConnectDeferred = false;
+        connectMcpBridge();
+      }
+    }
+
+    // First connection: wait for the stored pairing code so the first handshake already carries it.
+    function connectAfterPairingRestore() {
+      if (__fmcpPairingRestored) { connectMcpBridge(); return; }
+      __fmcpConnectDeferred = true;
+      setTimeout(function() {
+        if (__fmcpConnectDeferred) { __fmcpConnectDeferred = false; connectMcpBridge(); }
+      }, 1500);
+    }
+
+    function initPairingInput() {
+      var el = document.getElementById('fmcp-pairing');
+      var saveBtn = document.getElementById('save-pairing');
+      var clearBtn = document.getElementById('clear-pairing');
+      function save() {
+        var code = ((el && el.value) || '').trim();
+        if (!code) { updatePairingUI('missing'); return; }
+        window.__fmcpPairing = code;
+        parent.postMessage({ pluginMessage: { type: 'SAVE_PAIRING', pairing: code } }, '*');
+        updatePairingUI('saved');
+        __fmcpPairingBlocked = false;
+        // A refused connection was already closed by the bridge: open a new one with the code.
+        if (!(mcpBridgeWs && mcpBridgeWs.readyState === 1 && mcpHandshakeDone)) connectMcpBridge();
+      }
+      if (saveBtn) saveBtn.addEventListener('click', save);
+      if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') save(); });
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+          if (el) el.value = '';
+          window.__fmcpPairing = null;
+          parent.postMessage({ pluginMessage: { type: 'DELETE_PAIRING' } }, '*');
+          updatePairingUI('missing');
+        });
+      }
+    }
+
     function initAdvancedPanel() {
       var toggle = document.getElementById('advanced-toggle');
       var initial = false;
@@ -1465,6 +1579,9 @@
 
     function scheduleReconnect() {
       if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
+      // Refused for pairing: every bridge on this machine shares one code, so retrying cannot help —
+      // wait until the user saves a code (initPairingInput reconnects then).
+      if (__fmcpPairingBlocked) return;
       // Backoff tavana ulaştıysa bağlantı bir süredir kurulamıyor demektir —
       // welcome sonrası tek porta daraltılan listeyi tam tarama listesine
       // genişlet ki sunucu farklı bir portta yeniden açıldıysa bulunabilsin.
@@ -1520,7 +1637,8 @@
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
             fileName: window.__figmaFileName || null,
-            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
+            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0'),
+            pairing: window.__fmcpPairing || null
           }));
           startKeepAlive(currentWs);
           if (mcpHandshakeTimer) clearTimeout(mcpHandshakeTimer);
@@ -1534,6 +1652,12 @@
         mcpBridgeWs.onmessage = function(event) {
           try {
             var msg = JSON.parse(event.data);
+            if (isPairingError(msg)) {
+              if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
+              console.warn('[F-MCP ATezer Bridge] Bridge refused the handshake: ' + msg.code);
+              onPairingRefused(msg.code);
+              return;
+            }
             if (msg.type === 'welcome') {
               mcpHandshakeDone = true;
               if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
@@ -1829,6 +1953,11 @@
           mcpConnecting = false;
           mcpConnectedPort = null;
           if (mcpHandshakeTimer) { clearTimeout(mcpHandshakeTimer); mcpHandshakeTimer = null; }
+          if (__fmcpPairingBlocked) {
+            // The bridge closed a refused handshake: keep the pairing message, do not scan or retry.
+            updateStatus('eşleştirme gerekli', false, true);
+            return;
+          }
           if (autoPortProbeActive && candidatePortIndex < candidatePorts.length - 1) {
             candidatePortIndex += 1;
             updateStatus('auto-connect :' + candidatePorts[candidatePortIndex], false, false);
@@ -1877,7 +2006,8 @@
             type: 'ready',
             fileKey: window.__figmaFileKey || null,
             fileName: window.__figmaFileName || null,
-            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0')
+            pluginVersion: (typeof FMCP_PLUGIN_VERSION !== 'undefined' ? FMCP_PLUGIN_VERSION : '1.8.0'),
+            pairing: window.__fmcpPairing || null
           }));
           handshakeTimer = setTimeout(function() {
             if (!handshakeOk) { try { ws.close(); } catch(e) {} }
@@ -1887,6 +2017,13 @@
         ws.onmessage = function(event) {
           try {
             var msg = JSON.parse(event.data);
+
+            if (isPairingError(msg)) {
+              // An extra bridge refused the code (e.g. started with another FMCP_PAIRING_FILE): drop it quietly.
+              if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
+              try { ws.close(); } catch (e) {}
+              return;
+            }
 
             if (msg.type === 'welcome') {
               handshakeOk = true;
@@ -2134,6 +2271,7 @@
 
     if (typeof document !== 'undefined' && document.addEventListener) {
       document.addEventListener('visibilitychange', function() {
+        if (__fmcpPairingBlocked) return; // waiting for a pairing code; see scheduleReconnect
         if (!document.hidden && (!mcpBridgeWs || mcpBridgeWs.readyState > 1)) {
           mcpReconnectDelay = MCP_RECONNECT_MIN;
           connectMcpBridge();
@@ -2145,6 +2283,7 @@
       initMcpHostInput();
       initMcpPortInput();
       initTokenInput();
+      initPairingInput();
       initAdvancedPanel();
       try {
         var rememberedPort = parseInt(localStorage.getItem(MCP_BRIDGE_PORT_KEY) || '', 10);
@@ -2153,7 +2292,7 @@
         }
       } catch (e) {}
       candidatePorts = listCandidatePorts();
-      connectMcpBridge();
+      connectAfterPairingRestore();
       requestUiResize();
     }
   </script>

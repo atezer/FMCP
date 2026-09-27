@@ -45,13 +45,23 @@ Claude gerekli her şeyi (Node.js, build, ayarlar) otomatik yapar. Sizden sadece
 
 **3.** Claude "kurulum tamamlandı" deyince **Claude Code'u kapatıp tekrar açın**
 
-**4.** Figma'da **Plugins → F-MCP ATezer Bridge** açın → yeşil **"Ready"** görün
+**4.** Figma'da **Plugins → F-MCP ATezer Bridge** açın
 
-**5.** Hazırsınız! Claude'a Figma ile ilgili sorularınızı sorun.
+**5.** Plugin ilk açılışta **"eşleştirme gerekli"** der — bir kez eşleştirin: eşleştirme kodunu kopyalayın ve plugin'de **Advanced → Eşleştirme** alanına yapıştırıp **Kaydet**'e basın → yeşil **"Ready"** görün.
+
+```bash
+cat ~/.config/fmcp/pairing
+```
+
+Windows: `type %USERPROFILE%\.config\fmcp\pairing` · ya da her yerde: `npx -y @atezer/figma-mcp-bridge@latest --print-pairing`. Kod bu bilgisayardaki tüm bridge'lerde (5454–5470; Claude Desktop, Claude Code, Cursor) geçerlidir; plugin onu saklar, tekrar sormaz.
+
+**6.** Hazırsınız! Claude'a Figma ile ilgili sorularınızı sorun.
 
 > **Plugin'i ilk kez mi yüklüyorsunuz?** Figma → Plugins → Development → Import plugin from manifest → `f-mcp-plugin/manifest.json`
 >
 > **Kurumsal kullanım:** Plugin organizasyonda yayınlandıysa import gerekmez — Plugins menüsünden doğrudan çalıştırın.
+>
+> **Neden eşleştirme?** Bridge yalnızca `localhost`'ta dinler, ama tarayıcınızda açık herhangi bir web sayfası da `ws://localhost:5454`'e bağlanabilir. Eşleştirme kodu olmadan böyle bir sayfa kendini plugin gibi tanıtıp Figma'ya giden komutları alabilir, sahte Figma verisi döndürebilir ya da REST token'ını değiştirebilirdi. Kod yalnızca sizin bilgisayarınızda (`~/.config/fmcp/pairing`, yalnızca sizin okuyabileceğiniz izinlerle) durur ve hiçbir logda görünmez. Eşleştirmesi olmayan eski bir plugin'i güncelleyemediğiniz geçiş döneminde `FMCP_PAIRING=off` ile kapatılabilir; bridge o sürece her başlangıçta uyarır.
 
 ---
 
@@ -189,6 +199,8 @@ Claude Code'a şunu söyleyin:
 
 Claude gerisini halleder. Sonra Claude'u yeniden başlatın.
 
+> **Eşleştirmeli sürüme geçerken:** plugin dosyaları da değiştiği için Figma'da plugin'i yeniden import edin (Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest) ve eşleştirme kodunu bir kez girin (Kurulum, adım 5). Eski sürüm bridge'ler eşleştirme kodunu yok sayar; yeni plugin onlarla da çalışır.
+
 Detay: [UPDATE.md](docs/UPDATE.md)
 
 ---
@@ -201,6 +213,10 @@ Detay: [UPDATE.md](docs/UPDATE.md)
 | Plugin sarı "auto-connect :54xx" durumunda kalıyor, yeşil olmuyor | Bilgisayarınızda dinleyen bir bridge yok. Claude'u **claude.ai/code (web/mobil)** üzerinden açtıysanız oturum bulutta çalışır ve plugin'e ulaşamaz — Claude Desktop'ı veya terminalden Claude Code'u kullanın. Doğrulamak için: `lsof -iTCP:5454-5470 -sTCP:LISTEN` boş dönüyorsa bridge çalışmıyor demektir. Hızlı test: Terminal'de `cd <clone-kökü> && node dist/local-plugin-only.js` çalıştırın; plugin birkaç saniyede yeşile dönmeli (bu yalnızca teşhis içindir — günlük kullanımda bridge'i Claude Desktop / Claude Code kendisi başlatır; testten sonra Ctrl+C ile kapatın) |
 | Bulut oturumunda / başka makinede `figma-mcp-bridge` "Connection closed" | `.mcp.json` içindeki `args` yolu (`/Users/<kullanıcı>/FCM/dist/local-plugin-only.js`) o makinede yok. Yerel kurulumda yolu kendi clone kökünüze göre düzenleyin; bulut oturumunda ise bu sunucu tasarım gereği çalışmaz (yukarıdaki "Temel kural") |
 | Plugin "connecting..." diyor | Bekleyin, otomatik bağlanır |
+| Plugin **"eşleştirme gerekli"** diyor | Kodu `~/.config/fmcp/pairing` dosyasından (ya da `npx -y @atezer/figma-mcp-bridge@latest --print-pairing`) kopyalayıp plugin'de **Advanced → Eşleştirme** alanına yapıştırın |
+| Plugin **"Köprü bu kodu kabul etmedi"** diyor | Kod değişmiş (dosya silinip yeniden oluşmuş). Güncel kodu aynı yerden kopyalayıp yeniden yapıştırın |
+| Araçlar "plugin not connected … refused" diyor, plugin ise sürekli yeniden bağlanıyor | Eşleştirmeyi bilmeyen **eski bir plugin** açık. Plugin'i yeniden import edin (aşağıdaki satır), sonra kodu bir kez girin |
+| Bridge başlamıyor: *"could not create the pairing file"* | Bridge ev dizinine yazamayan bir ortamda (ör. sandbox'lı bir ajan kabuğu) ilk kez başlatıldı. Kodu bir kez normal bir terminalde oluşturun: `npx -y @atezer/figma-mcp-bridge@latest --print-pairing` — ya da `FMCP_PAIRING_FILE` ile yazılabilir bir dosya gösterin |
 | Yeni araçlar görünmüyor | AI aracını tamamen kapatıp tekrar açın |
 | DevTools console'da WebSocket hataları | v1.9.1+ ile server-side probe ile giderildi. Plugin hâlâ eski kodu cache'liyorsa: Figma → Plugins → Development → Manage plugins in development → Remove → Import plugin from manifest |
 

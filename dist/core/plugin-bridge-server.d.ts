@@ -16,6 +16,17 @@
  * - The Figma plugin scans all ports 5454–5470 automatically.
  */
 import { type WebSocket } from "ws";
+export type PairingRefusalCode = "pairing-required" | "pairing-mismatch";
+export interface PairingStatus {
+    /** False only under FMCP_PAIRING=off. */
+    required: boolean;
+    /** The last refused handshake within the last 10 minutes, if no plugin has paired since. */
+    lastRefusal: {
+        code: PairingRefusalCode;
+        secondsAgo: number;
+        pluginVersion: string | null;
+    } | null;
+}
 export interface BridgeRequest {
     id: string;
     method: string;
@@ -70,8 +81,22 @@ export declare class PluginBridgeServer {
     private clientName;
     /** User/config preferred port (before clamp and fallback). */
     private readonly preferredPort;
+    /**
+     * Pairing secret (src/core/pairing.ts). A plugin must present it in its "ready" handshake before it
+     * is registered, receives a request or may set the REST token; /shutdown requires it too. Never logged.
+     */
+    private readonly pairingSecret;
+    /** False only under FMCP_PAIRING=off (pairing.ts): plugins are then accepted without the code, as before pairing. */
+    private readonly requirePairing;
+    /** The last handshake refused for pairing (cleared when a plugin pairs). Feeds pairingStatus()/pairingHint(). */
+    private lastPairingRefusal;
+    /** How long a connection may stay unpaired before it is closed (PAIRING_TIMEOUT_MS; shorter in tests). */
+    private readonly pairingTimeoutMs;
     constructor(port: number, options?: {
         auditLogPath?: string;
+        pairingSecret?: string;
+        requirePairing?: boolean;
+        pairingTimeoutMs?: number;
     });
     /** Detect AI client name from env vars (instant, no I/O). */
     private detectClientNameSync;
@@ -139,7 +164,12 @@ export declare class PluginBridgeServer {
      * may have already exited and calls onAccepted.
      */
     private sendShutdownRequest;
-    /** Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints. */
+    /**
+     * Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints.
+     * None of them sends CORS headers: only other bridge instances (Node, no Origin) call them, and a
+     * web page must not be able to read the bridge's state. /shutdown needs the pairing secret and
+     * refuses any request that carries an Origin (every cross-site browser POST does).
+     */
     private createBridgeHttpServer;
     /**
      * Set up WebSocket server, heartbeat, client handling on a successfully bound HTTP server.
@@ -163,6 +193,14 @@ export declare class PluginBridgeServer {
      */
     request<T = unknown>(method: string, params?: Record<string, unknown>, fileKey?: string): Promise<T>;
     isConnected(fileKey?: string): boolean;
+    /** Pairing state for status tools: whether pairing is required and the last refused handshake (if recent). */
+    pairingStatus(): PairingStatus;
+    /**
+     * Appended to "plugin not connected" errors: when the plugin DID try to connect but was refused for
+     * pairing, say so — otherwise the caller (an agent, a pipeline script) only sees "not connected" and
+     * looks for the fault in Figma. Empty when there is nothing to add.
+     */
+    pairingHint(): string;
     listConnectedFiles(): ConnectedFileInfo[];
     connectedClientCount(): number;
     private rejectPendingForClient;
