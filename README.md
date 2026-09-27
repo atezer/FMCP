@@ -224,6 +224,6 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 |---|---|
 | Güncel sürüm | **1.9.15** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.15)) — DS Change Tracker (DS değişiklik takibi + iş taslağı) |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
-| Lisans | MIT — kişisel ve ticari kullanıma açık |
+| Lisans | MIT — kişisel ve ticari kullanıma açık. [Figma Console MCP](https://github.com/southleft/figma-console-mcp) (MIT) projesinden türetildi |
 
 **Sorun mu var?** [GitHub Issues](https://github.com/atezer/FMCP/issues)
