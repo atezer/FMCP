@@ -77,7 +77,7 @@ Hangisi?
 ```
 
 ### Kontrol 3: Fuzzy İsim Eşleşmesi
-Benzer isim var mı? (ör: "sui" vs "sui-mobile") Karşılaştırma: normalized isimde substring kontrolü.
+Benzer isim var mı? (ör: "ana-ds" vs "ana-ds-mobil") Karşılaştırma: normalized isimde substring kontrolü.
 
 **Varsa:**
 ```

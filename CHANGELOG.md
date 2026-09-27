@@ -93,7 +93,7 @@ Sağlık taramasında (%100 doğrulanmış, salt üretimden çağrılmayan) öl�
 
 ### Added
 
-- `figma_enumerate_library_components(libraryName|libraryFileKey)` — connected library file'da `figma.root.findAll(COMPONENT|COMPONENT_SET)` ile live scan. Her item: `{name, key, kind, props, pageName}`. Multi-library DS (Ana-DS + Ana-DS Mobil + S-Icons) için her biri için ayrı call.
+- `figma_enumerate_library_components(libraryName|libraryFileKey)` — connected library file'da `figma.root.findAll(COMPONENT|COMPONENT_SET)` ile live scan. Her item: `{name, key, kind, props, pageName}`. Multi-library DS (Ana-DS + Ana-DS Mobil + ikon kütüphanesi) için her biri için ayrı call.
 
 ### Changed
 
@@ -150,7 +150,7 @@ Cache hit + ödeme/login ekranı: **≤6 tool call**, 0 timeout, 0 sayfa scan, 0
 
 ### Fixed — matchLayers DirectionalTransition için ZORUNLU (canlı test bulgusu)
 
-v1.9.10 düzeltmesinden sonra 2. canlı test (<TEST_FILE_KEY> dosyasında 8 bağlantılı İlan Detayı akışı) yeni bir bug tespit etti:
+v1.9.10 düzeltmesinden sonra 2. canlı test (<TEST_FILE_KEY> dosyasında 8 bağlantılı Ürün Detayı akışı) yeni bir bug tespit etti:
 
 **BUG:** Figma schema'sı DirectionalTransition (SLIDE_IN/MOVE_IN/PUSH/SLIDE_OUT/MOVE_OUT) için `matchLayers` key'ini **zorunlu** istiyor. Değer `true` veya `false` olabilir ama key'in mutlaka olması gerekiyor.
 
@@ -167,7 +167,7 @@ v1.9.10 düzeltmesinden sonra 2. canlı test (<TEST_FILE_KEY> dosyasında 8 bağ
 - `action=BACK` parametresi: Figma `transition` param'ını IGNORE eder — önceki NAVIGATE'in yönünü otomatik ters uygular. Audit raporunda `transition: null` görünmesi normal davranış. Description'a not eklendi.
 
 ### Canlı test sonucu (v1.9.10 → v1.9.11)
-- ✅ 8/8 bağlantı + 1 flow starting point — İlan Detayı Akışı tam kuruldu
+- ✅ 8/8 bağlantı + 1 flow starting point — Ürün Detayı Akışı tam kuruldu
 - ✅ OVERLAY preflight hatasız geçti (Action Sheet zaten overlay olarak işaretli)
 - ✅ BACK geçişleri Present modda doğru animasyonla çalışıyor
 - ⚠️ Tek pürüz: ilk SLIDE_IN'de schema hatası (v1.9.11 ile çözüldü)
@@ -193,7 +193,7 @@ Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/<T
 - `action=OVERLAY` seçilip destination frame overlay olarak işaretlenmemişse Figma generic `"Reaction at index 0 was invalid"` veriyordu.
 - Yeni kod: Preflight kontrol — `dst.overlayPositionType === "NONE"` ise typed error:
   ```
-  OVERLAY_FRAME_NOT_CONFIGURED: destinationNodeId=8:701 Figma'da overlay olarak isaretli degil.
+  OVERLAY_FRAME_NOT_CONFIGURED: destinationNodeId=1:23 Figma'da overlay olarak isaretli degil.
   Cozum: frame'i sec -> Prototype tab -> Advanced -> 'Overlay' ac -> Position sec.
   Plugin API bu ayari yazamiyor (readonly).
   ```
@@ -201,7 +201,7 @@ Figma'da gerçek ekranlar üzerinde test edildi (https://www.figma.com/design/<T
 ### Canlı test sonuçları (v1.9.9 → v1.9.10 öncesi)
 - ✅ 5/6 bağlantı başarıyla kuruldu (Tab navigasyon, Smart Animate geçişleri, Back, Flow starting point)
 - ❌ 1/6 başarısız (overlay reaction — v1.9.10 ile düzeltildi)
-- İlk canlı kullanıcı testi (`<TEST_FILE_KEY>` dosyası): İlan Detayı akışı 5 reaction ile kuruldu, present modda çalıştı.
+- İlk canlı kullanıcı testi (`<TEST_FILE_KEY>` dosyası): Ürün Detayı akışı 5 reaction ile kuruldu, present modda çalıştı.
 
 ## [1.9.9] - 2026-04-19
 
@@ -310,7 +310,7 @@ Claude Desktop + Figma plugin yeniden aç. Console'da `[F-MCP v1.9.7]` gör.
 
 ### Post-Execute Scan + Negative Intent Detection
 
-Gerçek test raporunda (chat `eedf8ec8`, 14:39 Claude Desktop) gözlemlenen iki kritik regression'ı kapatır:
+Gerçek test raporunda (Claude Desktop oturumu) gözlemlenen iki kritik regression'ı kapatır:
 
 1. **"Ana-DS olmayan renkler kullandı, tasarım sistemi dışına çıktı"** — `figma_execute` statik kod analizi unbound fill'i yakalıyor ama sadece kod'da `.fills = [{type:"SOLID"}]` literal yazılınca. Değişkenle gelen unbound fill atlanıyordu. **v1.9.6 runtime post-execute scan** execute sonrası oluşturulan node'ları tarar.
 
@@ -441,7 +441,7 @@ Claude Desktop'ta (hook/sub-agent/slash command yok) token binding ve DS disipli
 
 - TypeScript: ✅ `npm run type-check` temiz
 - Build: ✅ `npm run build` temiz
-- Eski test ekranı (node 241:11896) ölçümü: padding %5, radius %3, text style %25 — bu sürümden önce sessizdi, şimdi SEVERE BLOCKING döner
+- Eski test ekranı (node 12:400) ölçümü: padding %5, radius %3, text style %25 — bu sürümden önce sessizdi, şimdi SEVERE BLOCKING döner
 - Yeni tool (`figma_scan_ds_compliance`) Claude Desktop restart sonrası register olur
 
 **Not:** Hook/sub-agent/slash command Claude Desktop'ta hâlâ yok (Anthropic platform sınırı). Bu sürüm mevcut platform kapasitesi içinde mümkün olan en güçlü enforcement'ı sağlar.
@@ -460,16 +460,16 @@ FCM açık kaynak MCP server/plugin dağıtımı — `@atezer/figma-mcp-bridge` 
 
 - `.claude/design-systems/README.md`: İki-katman mimari dokümante edildi (public template vs user-local cache), skill okuma sırası tanımlandı (user-local → repo template → runtime resolve)
 - `.claude/design-systems/active-ds.md`: Gerçek `file key` kaldırıldı, user-local pointer pattern'ine geçildi
-- `.claude/design-systems/sui/tokens.md`: Generic token isim paternleri (spacing/radius/surface/typography rol haritası) — variableKey yok
-- `.claude/design-systems/sui/components.md`: Generic component isim paternleri (Top usage-ranked) + eksik listesi + primitive fallback tablosu — componentKey yok
+- `.claude/design-systems/ana-ds/tokens.md`: Generic token isim paternleri (spacing/radius/surface/typography rol haritası) — variableKey yok
+- `.claude/design-systems/ana-ds/components.md`: Generic component isim paternleri (Top usage-ranked) + eksik listesi + primitive fallback tablosu — componentKey yok
 - `.claude/design-systems/<ds>/CHEATSHEET.md` (yeni, kullanıcı-lokal): 10 bölümlük workflow rehberi (karar ağacı, 9 recipe index, 5-tab IA, custom dashboard pattern, 3 mutlak kural, anti-pattern listesi, hedef metrikleri, sorun giderme)
 - `.gitignore`: DS cache güvenlik katmanı eklendi (`.claude/design-systems/*/_meta.md`, `*.cache.md`, `*.local.md`)
 - `CHANGELOG.md`: v1.7.30 entry'sinden `<EXAMPLE_FILE_KEY>` file key redact
-- `install/TOKEN-BUDGET.md`: Text style import key redact (`fb3591835c86d00580e1f0cea2343d033107dc67`)
+- `install/TOKEN-BUDGET.md`: Text style import key redact (`<TEXT_STYLE_KEY>`)
 
 **Kullanıcı için ne değişir:**
 
-- İlk kurulum: `/ds-sync sui` (veya "Ana-DS cache oluştur") komutu ile kendi makinenizde user-local cache oluşur; repo'ya girmez
+- İlk kurulum: `/ds-sync ana-ds` (veya "Ana-DS cache oluştur") komutu ile kendi makinenizde user-local cache oluşur; repo'ya girmez
 - `fmcp-screen-recipes` cache-first mantığı değişmez ama artık önce user-local'e bakar, yoksa repo template'ine düşer, yoksa runtime resolve yapar
 - Mevcut cache'i olan kullanıcılar: `.claude/design-systems/<lib>/` altında gerçek key varsa manuel olarak `~/.claude/data/fcm-ds/<file-key>/` altına taşıyın
 
@@ -575,12 +575,12 @@ Plugin DevTools console'unda görülen 22+ `WebSocket connection to ws://localho
 
 **Collection Keyword Match Düzeltmesi:**
 
-- `skills/fmcp-screen-recipes/SKILL.md:Adım 1.5 Execute 1` — `findColl(["semantic color", "s theme", "theme"])` içindeki jenerik `"theme"` fallback keyword'ü kaldırıldı. Ana-DS dışı DS collection'larının yanlışlıkla match edip her testte 1 ek düzeltme execute'u harcamasına neden oluyordu. `"s theme"` Ana-DS'nin "S Theme Colors" collection'ını zaten tam olarak yakalar.
+- `skills/fmcp-screen-recipes/SKILL.md:Adım 1.5 Execute 1` — `findColl([...])` içindeki jenerik `"theme"` fallback keyword'ü kaldırıldı. Ana-DS dışı DS collection'larının yanlışlıkla match edip her testte 1 ek düzeltme execute'u harcamasına neden oluyordu.
 
 **Ana-DS Component Key Cache Altyapısı (yeni):**
 
-- `.claude/design-systems/sui/components.md` (yeni) — component key cache şablonu. NavigationTopBar, Button, Divider_H, TextField, Card, Avatar, ListItem, SearchBar, Chip, BottomNavBar için slot'lar. Recipes Adım 6 bu dosyayı önce okur; cache varsa (< 7 gün) `figma_search_assets` çağrısını atlar, direkt `importComponentByKeyAsync(key)` kullanır.
-- `.claude/design-systems/sui/tokens.md` (yeni) — spacing token'ları, collection info (S Theme Colors, Semantic Sizes), surface background için cache şablonu. Recipes Adım 1.5 bu cache'i önce okur, fresh ise token discovery'yi komple atlar.
+- `.claude/design-systems/ana-ds/components.md` (yeni) — component key cache şablonu. NavigationTopBar, Button, Divider_H, TextField, Card, Avatar, ListItem, SearchBar, Chip, BottomNavBar için slot'lar. Recipes Adım 6 bu dosyayı önce okur; cache varsa (< 7 gün) `figma_search_assets` çağrısını atlar, direkt `importComponentByKeyAsync(key)` kullanır.
+- `.claude/design-systems/ana-ds/tokens.md` (yeni) — spacing token'ları, collection info (renk ve boyut koleksiyonları), surface background için cache şablonu. Recipes Adım 1.5 bu cache'i önce okur, fresh ise token discovery'yi komple atlar.
 
 **Beklenen Etkiler:**
 
@@ -606,7 +606,7 @@ Hotfix for v1.8.1 live test findings. The root cause of "Claude produces 3 ident
 - User requested "3 alternatives" (Hero Card / Liste Odaklı / Dark Header)
 - Claude used `figma_clone_screen_to_device` as shortcut → cloned benchmark 3 times → renamed → "done"
 - All 3 "alternatives" turned out **byte-for-byte identical** (same 14 children, same 3 Ana-DS instances, zero layout variation)
-- Claude picked the **wrong benchmark** (139:3678 "Hesaplarım" draft with 14 children + `_childrenTruncated: 9`) instead of the ready-to-use `169:1917 v10 Hero Card` (4 clean children)
+- Claude picked the **wrong benchmark** (12:350 "Hesaplarım" draft with 14 children + `_childrenTruncated: 9`) instead of the ready-to-use `12:360 v10 Hero Card` (4 clean children)
 - Clone timed out repeatedly (30s too short), leaving **7 orphan duplicates** in the file
 - `getNodeById` sync call hit dynamic-page error (Claude had no warning)
 - Validate timed out too (30s + serial `await getMainComponentAsync` on every instance)
@@ -690,8 +690,8 @@ v1.8.2 bu tool'un kullanımını **4 katmanda** sertleştirdi:
 **Phase 14G — Orphan Cleanup (canlı dosya):**
 
 v1.8.1 test session'ından dosyada kalan **7 orphan node silindi**:
-- 6 duplicate "Hesaplarım — Hero Card — iPhone 17" frame (`175:12172`, `175:12302`, `176:12751`, `176:13011`, `176:13510`, `176:13511`)
-- 1 orphan "iOS & Android Status Bars" instance (`176:13512`)
+- 6 duplicate "Hesaplarım — Hero Card — iPhone 17" frame (`12:600`, `12:601`, `12:602`, `12:603`, `12:604`, `12:605`)
+- 1 orphan "iOS & Android Status Bars" instance (`12:606`)
 
 Cleanup `figma_execute` ile yapıldı, tümü başarılı: `removed: 7/7, failed: 0`.
 
@@ -767,7 +767,7 @@ Root cause fix for "Claude ignores Ana-DS tokens and builds screens from scratch
 - New `src/core/device-presets.ts` with 22 built-in presets (iPhone 17, iPhone 16 Pro Max, Android Compact, iPad Pro, MacBook Pro, Apple Watch, etc.) + custom "WxH" dimension support
 - Auto-layout resize fix: switch `primaryAxisSizingMode`/`counterAxisSizingMode` from AUTO to FIXED before `resize()` to prevent hug-content no-op
 - Clone counts preserved elements (totalNodes, instanceCount, libraryInstanceCount, boundVariableCount) and returns them in result for Claude to verify
-- Example: `figma_clone_screen_to_device({ sourceNodeId: "139:3407", targetDevice: "iPhone 17" })` → new node with all Ana-DS instances preserved, root resized to 402×874, auto-layout intact
+- Example: `figma_clone_screen_to_device({ sourceNodeId: "12:345", targetDevice: "iPhone 17" })` → new node with all Ana-DS instances preserved, root resized to 402×874, auto-layout intact
 
 **Phase 12D — `figma_validate_screen` tool:**
 - Post-creation audit. Iterative (stack-safe, max 5000 nodes) tree walker computes 3 DS compliance metrics:
@@ -1168,8 +1168,8 @@ Canlı Figma testi sırasında tespit edilen 4 araç sorunu düzeltildi. Plugin 
 - **B12** `implement-design`: Gesture platform mapping tablosu (iOS/Android/Web)
 
 **Canlı Figma Testi (feedback için):**
-- Test dosyası: [Figma Design](https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1) — 20 sayfa, her skill için görsel doğrulama
-- FigJam testi: [Design System JIRA Backlog Süreci](https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1) — `figjam-diagram-builder` swimlane testi
+- Test dosyası: [Figma Design](https://www.figma.com/design/<TEST_FILE_KEY>) — 20 sayfa, her skill için görsel doğrulama
+- FigJam testi: [FigJam test panosu](https://www.figma.com/board/<FIGJAM_TEST_KEY>) — `figjam-diagram-builder` swimlane testi
 - 6/7 bug gerçek Figma dosyasında düzeltildi (Button touch target, placeholder kontrast, variable bağlama, Türkçe karakter)
 
 **Versiyon tutarlılığı düzeltmesi:**

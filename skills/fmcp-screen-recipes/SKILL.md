@@ -99,7 +99,7 @@ Hiçbir figma_execute çağırma. Doğrula: active-ds.md ✅, screen_type geçer
 
 ### Adım 1.5 — Unified Pre-Flight Discovery
 
-**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/tokens.md` oku (`<active-ds>` = `active-ds.md`'den `Library Name`'in slug hali — `❖ Ana-DS` → `sui`, `Material` → `material`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
+**Cache-First (v3.0+):** Önce `.claude/design-systems/<active-ds>/tokens.md` oku (`<active-ds>` = `active-ds.md`'den `Library Name`'in slug hali — `❖ Ana-DS` → `ana-ds`, `Material` → `material`, vb.). Cache varsa ve <7 gün → token discovery ATLA, cache'ten kullan. Yoksa aşağıdaki execute'ları çalıştır, sonra cache'i güncelle.
 
 Token name matching: DS nested path formatı (örn. `"Spacing/spacing-100"`). `endsWith` match kullan:
 ```js
@@ -117,7 +117,7 @@ function findColl(keywords) {
   });
 }
 const sizeColl = findColl(["semantic size", "semantic sizes", "size"]);
-const colorsColl = findColl(["semantic color", "s theme"]);
+const colorsColl = findColl(["semantic color", "theme color"]);
 const result = { availableColls: colls.map(c => ({name: c.name, key: c.key})), spacingTokenKeys: {}, collectionInfo: { colors: null, size: null }, surfaceKey: null };
 
 if (sizeColl) {

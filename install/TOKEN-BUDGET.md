@@ -252,7 +252,7 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 
 **Skill-side mitigation (Part 4):** `skills/figma-canvas-ops/SKILL.md` Rule 26 — text style discovery strategy: instance scan → library search → kabul et, en büyük mevcut style'ı kullan + recipe'de `characters` property ile büyük metin. `HARDCODED_FONT_SIZE` violation kabul edilir (minimum violation, üretim kullanılabilir, kullanıcıya açıkça raporlanır).
 
-**Ana-DS-side roadmap:** Ana-DS library'sine `display` / `heading-large` text style yayınlanması (DS team işi, FCM scope dışı). FCM rapor kanalı üzerinden Ana-DS ekibine iletilecek.
+**Ana-DS-side roadmap:** Ana-DS library'sine `display` / `heading-large` text style yayınlanması (DS ekibinin işi, FMCP kapsamı dışında).
 
 **v1.9.5 Fix J revizesi:** `skills/fmcp-screen-recipes/SKILL.md` Adım 1.6 Text Style Resolution Verification eklendi. Recipe başında dosyadaki çalışan text style'lar taranıyor, `roleMap` üretiliyor, display rolü için en büyük mevcut style fallback'i kullanılıyor. Amount Display artık `section-title` (18px) + `characters` field'ında büyük metin ile render ediliyor — **HARDCODED_FONT_SIZE sıfır**, Rule 19 ihlali yok. Ana-DS'nin display style publish'i gelene kadar bu workaround yeterli.
 
@@ -263,7 +263,7 @@ Plugin fix'e gerek kalmadan recipe tamamlanabiliyor. Recipe "başarısız" sayı
 **Açıklama:** Example Brand Playground (2000+ instance'lı file) üzerinde `figma_capture_screenshot` çağrıları ara ara `{}` empty object dönüyor — hata yok, image content yok, sadece boş obje. FP-1-R-v2 gözlemleri:
 
 1. **Referans node screenshot'ı (benchmark için)** → empty object
-2. **Node-id format çevirisi** (`135-6499` → `135:6499`) Claude tarafında manuel yapıldı, tool internal çevirisi belki eksik
+2. **Node-id format çevirisi** (`12-345` → `12:345`) Claude tarafında manuel yapıldı, tool internal çevirisi belki eksik
 3. Test final QA aşamasında (üretilen Light/Dark frame screenshot'ı) → empty object
 4. Claude workaround: `figma_get_file_data` + `figma_get_component_for_development` ile yapı/metadata üzerinden ilerledi → recipe akışı kesilmedi ama **görsel QA manuel oldu**
 
