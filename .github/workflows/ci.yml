@@ -42,6 +42,11 @@ jobs:
           PKG_VER=$(node -p "require('./package.json').version")
           echo "package.json version: $PKG_VER"
           grep -q "FMCP_VERSION = \"$PKG_VER\"" src/core/version.ts || (echo "FAIL: FMCP_VERSION mismatch in src/core/version.ts" && exit 1)
+          # Eklenti sürümü sabitleyicidir: değişmezse Claude Code kullanıcıları yeni skill/komutları almaz.
+          for f in .claude-plugin/plugin.json .cursor-plugin/plugin.json; do
+            V=$(node -p "require('./$f').version")
+            [ "$V" = "$PKG_VER" ] || (echo "FAIL: $f version $V != $PKG_VER" && exit 1)
+          done
           echo "All version strings match $PKG_VER"
 
       - name: Security audit

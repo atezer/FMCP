@@ -233,6 +233,12 @@ docs/analysis/
 .claude/agents
 .claude/skills
 .claude/settings.json
+.claude/commands
+
+# Yerel MCP / IDE ayarları — scripts/setup.sh bunları makinenin mutlak yoluyla yazar; repoya girmez
+.mcp.json
+.cursor/mcp.json
+.cursor/skills/
 
 # AI-Ready — gerçek component-key manifest'leri lokal kalır, repoya yalnız örnek girer
 ai-ready/manifests/*.json

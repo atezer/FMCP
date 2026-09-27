@@ -22,9 +22,13 @@ chmod +x "$SCRIPT_DIR/autorun-bridge.sh"
 echo "✅ Scripts are executable"
 echo ""
 
-# Copy plist file
+# Copy plist file, then write this machine's paths into it (template holds placeholders)
 echo "📋 Installing Launch Agent..."
 cp "$PLIST_SOURCE" "$PLIST_DEST"
+plutil -replace ProgramArguments.1 -string "$SCRIPT_DIR/autorun-bridge.sh" "$PLIST_DEST"
+plutil -replace StandardOutPath -string "$HOME/Library/Logs/figma-bridge-stdout.log" "$PLIST_DEST"
+plutil -replace StandardErrorPath -string "$HOME/Library/Logs/figma-bridge-stderr.log" "$PLIST_DEST"
+plutil -lint "$PLIST_DEST" >/dev/null
 echo "✅ Launch Agent installed at: $PLIST_DEST"
 echo ""
 

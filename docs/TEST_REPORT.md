@@ -317,6 +317,8 @@ Tüm katmanlarda Türkçe özel karakter (ş, ı, ö, ü, ç, ğ, İ, Ş, Ç, Ğ
 
 ## 5. Üretilen Dosyalar
 
+> Bu test sırasında üretilen örnek çıktılar (`test-output/`) depoda tutulmuyor; tablo o koşunun kaydıdır.
+
 | Dosya | Tip | Açıklama |
 |-------|-----|----------|
 | `test-output/tokens.css` | CSS Custom Properties | 91 satır, semantic + primitive |

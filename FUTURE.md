@@ -850,13 +850,13 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
 - Doğrulama: `["ALL_FILLS", "TEXT_FILL"]` → net hata, `["ALL_FILLS"]` tek başına → başarılı
 
 #### C3. FigJam shapeWithText varsayılan font Inter Medium dokümantasyonu
-- [x] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu ekle
-- [x] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Step 2'ye FigJam Font Kuralı bölümü ekle
+- [x] `skills/figma-canvas-ops/SKILL.md` Kural 8'e FigJam özel durumu ekle
+- [x] `skills/figjam-diagram-builder/SKILL.md` Step 2'ye FigJam Font Kuralı bölümü ekle
 - [x] Kural: `createShapeWithText()` → "Inter Medium" (Regular DEĞİL), `loadFontAsync(shape.text.fontName)` önerisi
 
 #### C4. FigJam timeout limiti dokümantasyonu
-- [x] `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması ekle
-- [x] `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü ekle
+- [x] `skills/figma-canvas-ops/SKILL.md` Kural 5'e timeout yapılandırması ekle
+- [x] `skills/figjam-diagram-builder/SKILL.md` Common Issues'a timeout bölümü ekle
 - [x] Güvenli limitler: 1-6 node → 5000ms | 7-12 → 10000ms | 13+ → böl veya 15000-30000ms
 - [x] Font optimizasyonu: Tek seferde yükle, sonra tüm node'ları oluştur
 
@@ -864,13 +864,13 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
 1. **C1** (en yüksek — araç tamamen kırık)
 2. **C2** (kriptik hata mesajı)
 3. **C3 + C4 birlikte** (doküman değişiklikleri)
-4. **Son:** `npm run build:local` + `npm test` + `npm run validate:fmcp-skills` + canlı Figma doğrulama
+4. **Son:** `npm run build` + `npm test` + `npm run validate:fmcp-skills` + canlı Figma doğrulama
 
 #### Değişecek Dosyalar
 - `f-mcp-plugin/code.js` (C1 + C2 plugin tarafı)
-- `src/core/plugin-bridge-connector.ts` (C2 sunucu tarafı → `npm run build:local` gerekli)
-- `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` (C3 + C4)
-- `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` (C3 + C4)
+- `src/core/plugin-bridge-connector.ts` (C2 sunucu tarafı → `npm run build` gerekli)
+- `skills/figma-canvas-ops/SKILL.md` (C3 + C4)
+- `skills/figjam-diagram-builder/SKILL.md` (C3 + C4)
 
 ---
 
@@ -904,27 +904,27 @@ Aşağıdakiler repoda **mevcut**; upstream `atezer/FMCP` ile çalışıyorsanı
 
 ### Skills
 
-Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde: `archive/skills-root-duplicate/`).
+Kaynak tek klasör: **`skills/`** (eski `skills/` sembolik bağı kaldırıldı).
 
 | Dosya | Durum |
 |-------|--------|
-| `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/generate-figma-screen/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/generate-figma-library/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/audit-figma-design-system/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/fix-figma-design-system-finding/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/apply-figma-design-system/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/design-token-pipeline/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/code-design-mapper/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/design-system-rules/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/ai-handoff-export/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/implement-design/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/design-drift-detector/SKILL.md` | Mevcut |
-| `.cursor/skills/f-mcp/visual-qa-compare/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/figma-a11y-audit/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/figma-screen-analyzer/SKILL.md` | Mevcut (yeni) |
-| `.cursor/skills/f-mcp/ds-impact-analysis/SKILL.md` | Mevcut (yeni) |
+| `skills/figma-canvas-ops/SKILL.md` | Mevcut (yeni) |
+| `skills/generate-figma-screen/SKILL.md` | Mevcut (yeni) |
+| `skills/generate-figma-library/SKILL.md` | Mevcut (yeni) |
+| `skills/figjam-diagram-builder/SKILL.md` | Mevcut |
+| `skills/audit-figma-design-system/SKILL.md` | Mevcut |
+| `skills/fix-figma-design-system-finding/SKILL.md` | Mevcut |
+| `skills/apply-figma-design-system/SKILL.md` | Mevcut |
+| `skills/design-token-pipeline/SKILL.md` | Mevcut |
+| `skills/code-design-mapper/SKILL.md` | Mevcut |
+| `skills/design-system-rules/SKILL.md` | Mevcut |
+| `skills/ai-handoff-export/SKILL.md` | Mevcut |
+| `skills/implement-design/SKILL.md` | Mevcut |
+| `skills/design-drift-detector/SKILL.md` | Mevcut |
+| `skills/visual-qa-compare/SKILL.md` | Mevcut (yeni) |
+| `skills/figma-a11y-audit/SKILL.md` | Mevcut (yeni) |
+| `skills/figma-screen-analyzer/SKILL.md` | Mevcut (yeni) |
+| `skills/ds-impact-analysis/SKILL.md` | Mevcut (yeni) |
 
 ### Dokümanlar
 
@@ -955,7 +955,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 | Dosya | Durum |
 |-------|--------|
-| `.mcp.json` | Mevcut (kök) |
+| `.mcp.json` | Yerel, git'e girmez (`scripts/setup.sh` yazar) |
 | `.cursor-plugin/plugin.json` | Mevcut; sürüm **1.7.0**, açıklama `docs/TOOLS.md` referanslı |
 
 ---
@@ -972,7 +972,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 4. Cursor Plugin Dağıtımı
 
-**Kontrol:** `.cursor-plugin/plugin.json` geçerli JSON; `skills` -> `.cursor/skills/f-mcp/`, `mcpServers` NPX tanımı mevcut -- Cursor sürümüne göre resmi şema doğrulaması elle/marketplace rehberi ile yapılmalı.
+**Kontrol:** `.cursor-plugin/plugin.json` geçerli JSON; `skills` -> `skills/`, `mcpServers` NPX tanımı mevcut -- Cursor sürümüne göre resmi şema doğrulaması elle/marketplace rehberi ile yapılmalı.
 
 - [ ] Cursor Plugin API / şema ile biçim doğrulaması (resmi dokümantasyon)
 - [ ] Skills yollarının IDE'de yüklendiği manuel test
@@ -992,7 +992,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 6. .mcpb Dosya Dağıtımı
 
-**Kontrol:** Depoda `*.mcpb` dosyası yok; dağıtım maddeleri hala geçerli.
+**Kontrol:** Depoda `*.mcpb` dosyası yok; dağıtım maddeleri hala geçerli. Kökteki eski `manifest.json` (1.1.2 şablonu, "33 araç") kaldırıldı; `.mcpb` işi başladığında güncel şemayla yeniden yazılır.
 
 - [ ] `figma-mcp-bridge.mcpb` (büyük paket) -- GitHub tek dosya limiti dışında kalıyorsa
 - [ ] Alternatif: GitHub Releases asset veya ayrı hosting
@@ -1014,7 +1014,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 **Kontrol:** `.github/workflows/` mevcut (validate:fmcp-skills CI); ek test/build CI eklenmedi.
 
-- [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
+- [ ] GitHub Actions: `npm run build`, `npm test` / lint
 - [ ] NPM publish workflow (tag -> `npm publish`)
 - [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
 - [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [S10](#10-güvenlik-denetimi-security-audit))
@@ -1025,7 +1025,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 ## 9. İleri Seviye (Uzun Vadeli)
 
-- [ ] Cloudflare Worker -- `wrangler.jsonc` + `src/index.ts` (Durable Objects, OAuth KV) mevcut; **production deploy / operasyon** ve dokümantasyon netleştirilmeli
+- [x] ~~Cloudflare Worker~~ -- bulut kipi v1.7.23'te kaldırıldı (`wrangler.jsonc`, `src/index.ts`, `dist/cloudflare/` artık yok)
 - [ ] OAuth -- Worker tarafında token/refresh kodu var; **çoklu kullanıcı / oturum modeli** ve güvenlik gözden geçirmesi açık ([S10](#10-güvenlik-denetimi-security-audit) Y1/O3 ile ilişkili)
 - [ ] Python bridge -- `python-bridge/` mevcut; Node **1.2.0** ile protokol/feature parity testi
 - [x] Multi-instance -- `docs/MULTI_INSTANCE.md` sabit port ve paralel görevler dokümantasyonu tamamlandı; `check-ports.sh` teşhis scripti eklendi

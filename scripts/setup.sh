@@ -98,7 +98,7 @@ npm install --loglevel=warn
 # 6. Build
 echo ""
 echo "🔨 Build alınıyor..."
-npm run build:local
+npm run build
 echo "✓ Build tamamlandı"
 
 # 7. MCP config ayarı — TÜM bulunan AI araçlarına otomatik ekle

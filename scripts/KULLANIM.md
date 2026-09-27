@@ -5,11 +5,10 @@
 **Şart:** **Figma Bridge Launcher** uygulamasına **Accessibility** izni verilmiş olmalı.
 
 1. **System Settings** → **Privacy & Security** → **Privacy** → **Accessibility**
-2. **+** → Git: `/Users/abdussamed.tezer/FCM/scripts`
+2. **+** → Git: `<FMCP klasörü>/scripts`
 3. **Figma Bridge Launcher.app** seç → Aç
 4. Listede **Figma Bridge Launcher** yanındaki kutu **işaretli** olsun
-5. Figma’yı kapatıp tekrar aç:  
-   `open -a "Figma" --args --remote-debugging-port=9222`
+5. Figma’yı kapatıp tekrar aç
 6. **En az 25–30 saniye** bekle (Figma yüklensin + script çalışsın)
 
 ---
@@ -19,7 +18,7 @@
 Figma **zaten açıkken**:
 
 1. Finder’da şu dosyaya **çift tıkla**:  
-   `FCM/scripts/Plugin Ac.command`
+   `<FMCP klasörü>/scripts/Plugin Ac.command`
 2. Terminal açılır, script çalışır, plugin açılır.
 
 **İlk seferde:** macOS “Terminal bu uygulamayı kontrol etmek istiyor” derse **Aç** de.  

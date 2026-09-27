@@ -17,7 +17,7 @@ Plugin’in Figma açıldığında otomatik çalışması için macOS’ta **eri
 3. Altta **+** ile uygulama ekleyin
 4. Şu konuma gidin ve **“Figma Bridge Launcher”** uygulamasını seçin:
    ```
-   /Users/abdussamed.tezer/FCM/scripts/Figma Bridge Launcher.app
+   <FMCP klasörü>/scripts/Figma Bridge Launcher.app
    ```
 5. Listede **Figma Bridge Launcher**’ın yanındaki kutu **işaretli** olsun
 
@@ -30,10 +30,7 @@ Plugin’in Figma açıldığında otomatik çalışması için macOS’ta **eri
 ## 3. Test
 
 1. Figma’yı kapatın
-2. Figma’yı tekrar açın (tercihen remote debugging ile):
-   ```bash
-   open -a "Figma" --args --remote-debugging-port=9222
-   ```
+2. Figma’yı tekrar açın
 3. **15–20 saniye** bekleyin (Figma yüklensin + autorun tetiklensin)
 4. Figma’da **F-MCP ATezer Bridge** plugin’inin otomatik açıldığını kontrol edin
 
@@ -53,7 +50,7 @@ Plugin’i elle açmak için:
 1. **Figma’yı** açın ve bir dosyayı açın
 2. Terminal’de:
    ```bash
-   open "/Users/abdussamed.tezer/FCM/scripts/Figma Bridge Launcher.app"
+   open "<FMCP klasörü>/scripts/Figma Bridge Launcher.app"
    ```
 3. İzin penceresi çıkarsa **Allow** deyin
 4. Birkaç saniye içinde plugin Figma’da açılmalı
