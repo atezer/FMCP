@@ -8,6 +8,8 @@ Aynı makinede veya farklı makinelerde **birden fazla kişi** aynı anda F-MCP 
 
 **Çoğu kullanıcı için ikinci bir MCP süreci başlatmaya gerek yoktur.** Farklı portlara ihtiyaç yalnızca birden fazla *kişi* veya birden fazla *izole AI oturumu* istendiğinde doğar.
 
+> **Eşleştirme kodu:** Aynı makinedeki tüm bridge'ler (her port, Node ve Python) aynı eşleştirme dosyasını (`~/.config/fmcp/pairing`) okur; plugin kodu bir kez saklar ve hepsine gönderir. Başka bir makinedeki bridge'e (`FIGMA_BRIDGE_HOST`) bağlanıyorsanız o makinenin kodunu girin — plugin tek kod saklar; birden fazla makine kullanıyorsanız aynı dosyayı her makineye kopyalayın ya da `FMCP_PAIRING_FILE` ile aynı içeriği gösterin.
+
 ## Nasıl çalışır?
 
 - **Tek kullanıcı:** Varsayılan port **5454**. Claude'u açar, Figma'da plugin'i açar; plugin 5454'e bağlanır. Birden fazla Figma/FigJam penceresi aynı porta bağlanır.

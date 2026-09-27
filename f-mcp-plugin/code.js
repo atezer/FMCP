@@ -242,6 +242,19 @@ var IDENTITY_RETRY_DELAYS = [1000, 3000, 8000, 20000, 60000];
   }
 })();
 
+// Restore the bridge pairing code (sent with every "ready" handshake). Always answers — with null when
+// nothing is stored — so the UI knows the restore finished before it opens the first connection.
+(async () => {
+  var pairing = null;
+  try {
+    var savedPairing = await figma.clientStorage.getAsync('fmcpPairing');
+    if (typeof savedPairing === 'string' && savedPairing) pairing = savedPairing;
+  } catch (e) {
+    console.warn('🌉 [F-MCP] Could not restore pairing code:', e && e.message ? e.message : String(e));
+  }
+  figma.ui.postMessage({ type: 'RESTORE_PAIRING', pairing: pairing });
+})();
+
 // Immediately fetch and send variables data to UI
 (async () => {
   try {
@@ -407,6 +420,25 @@ figma.ui.onmessage = async (msg) => {
       console.log('🌉 [F-MCP] Token deleted from clientStorage');
     } catch (e) {
       figma.ui.postMessage({ type: 'TOKEN_DELETED', success: false });
+    }
+    return;
+  }
+  // Bridge pairing code (see src/core/pairing.ts): stored per user, never sent anywhere but the local bridge.
+  if (msg.type === 'SAVE_PAIRING') {
+    try {
+      await figma.clientStorage.setAsync('fmcpPairing', String(msg.pairing || ''));
+      figma.ui.postMessage({ type: 'PAIRING_SAVED', success: true });
+    } catch (e) {
+      figma.ui.postMessage({ type: 'PAIRING_SAVED', success: false, error: String(e) });
+    }
+    return;
+  }
+  if (msg.type === 'DELETE_PAIRING') {
+    try {
+      await figma.clientStorage.deleteAsync('fmcpPairing');
+      figma.ui.postMessage({ type: 'PAIRING_DELETED', success: true });
+    } catch (e) {
+      figma.ui.postMessage({ type: 'PAIRING_DELETED', success: false });
     }
     return;
   }
