@@ -590,7 +590,7 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 | L1 | `figma_get_status` sonrası plugin versiyonu | PASS — 1.9.8 raporlandı |
 | L2 | `figma_get_code_connect scanCurrentPage=true maxNodes=20` | PASS — 20 node tarandı, INSTANCE tree döndü |
 | L3 | INSTANCE node için componentKey davranışı | PASS — beklendiği gibi boş (plugin handler sadece COMPONENT/COMPONENT_SET için doldurur) |
-| L4 | `figma_use intent=design_context nodeId="1212:858" query="color"` | PASS — 3 alt sonuç (component + codeConnect + tokens), `partial=false` |
+| L4 | `figma_use intent=design_context nodeId="1:234" query="color"` | PASS — 3 alt sonuç (component + codeConnect + tokens), `partial=false` |
 | L5 | Orchestrator INSTANCE → main component resolve | PASS — NavigationTopBar detayları + alt node'lar geldi |
 | L6 | Token filtresi doğruluğu | PASS — 25 renk token'ı (13 semantic + 12 primitive), query uyumlu |
 | L7 | Validation hatası: intent=component ama nodeId yok | PASS — `isError: true`, anlamlı hata mesajı |
@@ -629,7 +629,7 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 
 ### 13.2 Canlı Test Turu #1 — v1.9.9 → v1.9.10 Patch
 
-**Dosya:** https://www.figma.com/design/<TEST_FILE_KEY> (e-ticaret ilan detayı akışı)
+**Dosya:** https://www.figma.com/design/<TEST_FILE_KEY> (e-ticaret ürün detayı akışı)
 
 | # | Senaryo | Sonuç |
 |---|---------|-------|
@@ -654,8 +654,8 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 
 | # | Senaryo | Sonuç |
 |---|---------|-------|
-| T2-1 | Aynı dosyada 8 bağlantılı İlan Detayı akışı | PASS — 8/8 bağlantı kuruldu |
-| T2-2 | Flow starting point `12:1176` → "İlan Detay Akışı" | PASS |
+| T2-1 | Aynı dosyada 8 bağlantılı Ürün Detayı akışı | PASS — 8/8 bağlantı kuruldu |
+| T2-2 | Flow starting point `2:10` → "Ürün Detay Akışı" | PASS |
 | T2-3 | Audit: 8 connection + 1 FSP doğrulandı | PASS |
 | T2-4 | OVERLAY preflight: Action Sheet önceden overlay işaretli → geçti | PASS |
 | T2-5 | SMART_ANIMATE variant geçişleri (hover, press) | PASS |
@@ -676,14 +676,14 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 
 | # | Kaynak | Trigger | Action | Hedef | Transition |
 |---|---|---|---|---|---|
-| 1 | Satıcı Profili Section (12:1256) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
-| 2 | dots button (12:1141) | ON_CLICK | **OVERLAY** | Action Sheet | DISSOLVE 200ms |
-| 3 | S Tab bar - İlan Detay (12:1191) | ON_CLICK | NAVIGATE | Konum | INSTANT |
-| 4 | S Tab bar - Konum (12:1367) | ON_CLICK | NAVIGATE | İlan Detay | INSTANT |
-| 5 | arrow_left (12:1138) | ON_CLICK | BACK | — | Figma auto-reverse |
-| 6 | Header Konum (12:1361) | ON_CLICK | BACK | — | Figma auto-reverse |
-| 7 | "Satıcı Profili" text (12:1719) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
-| 8 | "Vazgeç" (12:1712) | ON_CLICK | CLOSE | — | DISSOLVE 150ms |
+| 1 | Satıcı Profili Section (2:11) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
+| 2 | dots button (2:12) | ON_CLICK | **OVERLAY** | Action Sheet | DISSOLVE 200ms |
+| 3 | Tab bar - Ürün Detay (2:13) | ON_CLICK | NAVIGATE | Konum | INSTANT |
+| 4 | Tab bar - Konum (2:14) | ON_CLICK | NAVIGATE | Ürün Detay | INSTANT |
+| 5 | arrow_left (2:15) | ON_CLICK | BACK | — | Figma auto-reverse |
+| 6 | Header Konum (2:16) | ON_CLICK | BACK | — | Figma auto-reverse |
+| 7 | "Satıcı Profili" text (2:17) | ON_CLICK | NAVIGATE | Satıcı Profili | SLIDE_IN / RIGHT 300ms |
+| 8 | "Vazgeç" (2:18) | ON_CLICK | CLOSE | — | DISSOLVE 150ms |
 
 ### 13.5 Sonraki İş Kalemleri (v1.9.11 canlı test → v1.9.12 hedefi)
 

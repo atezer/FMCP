@@ -194,7 +194,7 @@ Sync tamamlandıktan (veya yarım kaldıktan) sonra `_meta.md`'yi güncelle:
 - **Son başarılı sync:** 2026-04-09T12:30:00Z
 - **Durum:** ⚠️ KISMI BAŞARI
 - **Başarısız öğeler:** Custom Button (timeout), Slot (invalid type)
-- **Devam komutu:** `/ds-sync sui components`
+- **Devam komutu:** `/ds-sync ana-ds components`
 ```
 
 ### Yarım Kaldı:
@@ -203,7 +203,7 @@ Sync tamamlandıktan (veya yarım kaldıktan) sonra `_meta.md`'yi güncelle:
 - **Son başarılı sync:** (önceki) 2026-04-05T10:00:00Z
 - **Durum:** ⚠️ YARIM KALDI (components: 87/163)
 - **Eksik section'lar:** components
-- **Devam komutu:** `/ds-sync sui components`
+- **Devam komutu:** `/ds-sync ana-ds components`
 ```
 
 İstatistikleri de güncelle:
@@ -248,7 +248,7 @@ Sync geçmişine yeni satır ekle:
    • Custom Button (timeout)
    • Slot (invalid type)
    • .Stepper_2 (permission)
-💡 Tekrar denemek için: /ds-sync sui components
+💡 Tekrar denemek için: /ds-sync ana-ds components
 ```
 
 ### Tam Başarısızlık (hiçbir şey alınamadı):
@@ -283,10 +283,10 @@ Sync sırasında kullanıcıya düzenli olarak bildirim ver:
 
 ## Resume Senaryosu Detay
 
-**Senaryo:** Kullanıcı dün `/ds-sync sui` çalıştırdı, 87/163 bileşende crash oldu. Bugün tekrar çalıştırıyor.
+**Senaryo:** Kullanıcı dün `/ds-sync ana-ds` çalıştırdı, 87/163 bileşende crash oldu. Bugün tekrar çalıştırıyor.
 
 ```
-Kullanıcı: /ds-sync sui
+Kullanıcı: /ds-sync ana-ds
 Claude: [_meta.md oku]
 Claude: "📋 Son sync yarım kalmış: components 87/163
          Kaldığı yerden devam edeyim mi? (evet/sıfırdan/iptal)"
@@ -308,7 +308,7 @@ Claude: "✅ Ana-DS sync tamamlandı."
 ## Doğal Dil Desteği
 
 Slash command olmadan da aynı mantığı uygula:
-- "Ana-DS'yi güncelle" → `/ds-sync sui`
-- "Sadece Ana-DS bileşenlerini güncelle" → `/ds-sync sui components`
-- "Yarım kalan Ana-DS sync'i devam ettir" → `/ds-sync sui` (resume otomatik)
+- "Ana-DS'yi güncelle" → `/ds-sync ana-ds`
+- "Sadece Ana-DS bileşenlerini güncelle" → `/ds-sync ana-ds components`
+- "Yarım kalan Ana-DS sync'i devam ettir" → `/ds-sync ana-ds` (resume otomatik)
 - "devam et" (önceki sync'ten sonra) → resume

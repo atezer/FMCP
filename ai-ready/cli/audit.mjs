@@ -48,7 +48,7 @@ if (args.manifests && existsSync(args.manifests)) {
   }
 }
 const manifestFor = (slug) => manifests.find((m) => m.name.toLowerCase().includes(slug));
-const iconManifest = manifestFor("s-icons") || manifestFor("icon");
+const iconManifest = manifestFor("icon");
 const anyManifest = manifests.length > 0;
 const keyInAnyManifest = (key) => manifests.some((m) => m.keySet.has(key));
 
@@ -272,7 +272,7 @@ function walk(node, parent, insideInstance) {
 const CATEGORY_NAMES = {
   1: "Katman İsimlendirme", 2: "Hiyerarşi ve Yapı", 3: "Auto-Layout",
   4: "Design Token ve Stil", 5: "Component ve Detach", 6: "Gizli/Gereksiz Katmanlar",
-  7: "Metin İçerik", 8: "İkon Kütüphane (S-Icons)", 9: "Asset Kütüphane (Assets)",
+  7: "Metin İçerik", 8: "İkon Kütüphanesi", 9: "Asset Kütüphane (Assets)",
 };
 
 (async () => {

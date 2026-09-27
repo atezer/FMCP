@@ -201,7 +201,7 @@ YASAK:
 
 **2. Dark variant — VARSAYILAN: TEK FRAME, Figma toggle ile preview**
 
-Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve tüm bound variable'larla) oluşturulduğunda, kullanıcı Figma'da `Semantic Colors (S Theme)` dropdown'undan **Auto/Light/Dark** arasında **preview** eder. İki ayrı frame YAYGIN OLARAK GEREKMEZ.
+Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve tüm bound variable'larla) oluşturulduğunda, kullanıcı Figma'da `Semantic Colors` dropdown'undan **Auto/Light/Dark** arasında **preview** eder. İki ayrı frame YAYGIN OLARAK GEREKMEZ.
 
 **Kural:**
 - **Default (kullanıcı sadece "ekran yap" dedi):** Tek frame üret, Light mode'da bıraj. Kullanıcı Dark'ı Figma UI'dan görebilir.
@@ -211,13 +211,16 @@ Semantic Colors collection zaten **mode-aware**. Frame Light fill'leriyle (ve t�
 
 **Clone gerektiğinde uygulama:**
 ```js
-// tokens.md "Collection Info" — cache'ten hazır:
-// Semantic Colors collectionKey: 6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1
-// Light modeId: 3015:2  |  Dark modeId: 3019:3
+// Collection OBJECT'i kütüphane zinciriyle al — string ID çalışmaz (figma-canvas-ops Kural 20)
+const colls = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+const sem = colls.find(c => c.name.indexOf("Semantic Colors") !== -1);
+const vars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(sem.key);
+const first = await figma.variables.importVariableByKeyAsync(vars[0].key);
+const coll = await figma.variables.getVariableCollectionByIdAsync(first.variableCollectionId);
+const darkMode = coll.modes.find(m => m.name === "Dark");
 
-const coll = await figma.variables.importVariableCollectionByKeyAsync("6041ac29aa893c975d9e5da4a5f4cf5a3e5d65e1");
 const darkFrame = lightFrame.clone();
-darkFrame.setExplicitVariableModeForCollection(coll.id, "3019:3");
+darkFrame.setExplicitVariableModeForCollection(coll, darkMode.modeId);
 // fill rebind YOK, variable swap YOK, ayrı component import YOK.
 ```
 

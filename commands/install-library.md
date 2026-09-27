@@ -5,7 +5,7 @@ Kullanıcı "kütüphane kur", "library kur", "library install", "kütüphane y�
 ## Kullanım
 
 ```
-/install-library /Users/isim/Downloads/sui.md
+/install-library /Users/isim/Downloads/ana-ds.md
 ```
 
 ## Akış
@@ -13,7 +13,7 @@ Kullanıcı "kütüphane kur", "library kur", "library install", "kütüphane y�
 ### Adım 1 — Dosyayı bul
 
 Kullanıcı bir dosya yolu verdiyse onu kullan. Vermediyse sor:
-> "Kütüphane dosyasının yolunu verin (örn: ~/Downloads/sui.md)"
+> "Kütüphane dosyasının yolunu verin (örn: ~/Downloads/ana-ds.md)"
 
 Dosyanın varlığını kontrol et. Yoksa: "Bu dosya bulunamadı. Yolu kontrol edin."
 
