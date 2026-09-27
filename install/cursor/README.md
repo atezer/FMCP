@@ -80,7 +80,7 @@ Cursor main context'e orchestrator yüklenir (~5K token), sonra common case sub-
 Aynı pattern, farklı orchestrator:
 
 ```
-skills/fmcp-ds-audit-orchestrator/SKILL.md'yi uygula: node 139:3407 için a11y audit
+skills/fmcp-ds-audit-orchestrator/SKILL.md'yi uygula: node 12:345 için a11y audit
 ```
 
 ```

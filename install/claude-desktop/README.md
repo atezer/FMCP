@@ -107,7 +107,7 @@ Project knowledge'daki fmcp-screen-orchestrator.md'yi uygula. Görev: fitness tr
 
 **DS audit:**
 ```
-Project knowledge'daki fmcp-ds-audit-orchestrator.md'yi uygula. Görev: node 139:3407 için a11y (WCAG AA) denetimi.
+Project knowledge'daki fmcp-ds-audit-orchestrator.md'yi uygula. Görev: node 12:345 için a11y (WCAG AA) denetimi.
 ```
 
 **Token sync:**

@@ -177,7 +177,7 @@ Script 5454-5470 aralığındaki zombie FMCP process'lerini güvenle kill eder (
 Kurulumun doğru çalıştığını test etmek için:
 
 ```
-Ana-DS Alt 3 sayfasına iPhone 17 boyutunda basit bir test frame ekle:
+Ana-DS test sayfasına iPhone 17 boyutunda basit bir test frame ekle:
 - 1 NavigationTopBar instance (başlık: "Test")
 - 1 Button instance (label: "Devam")
 - 1 Card (primitive frame: 200x100, corner radius 12, background level-1)

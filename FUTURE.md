@@ -303,7 +303,7 @@ Forgot Password:
 
 #### Madde C — Önceden Var Olan Flow Starting Point Çakışması
 
-**Şimdi:** `figma_set_flow_starting_point` çağrıldığında sayfada zaten başka bir flow starting point varsa (örn. "Flow 1"), kullanıcıya sorulmadan ikinci bir tane ekleniyor. Canlı testte kullanıcı Action Sheet'in `8:701` için önceden "Flow 1" varmış, yeni skill "İlan Detayı Akışı" ekledi → Figma'da 2 başlangıç noktası görünüyor, Present modda hangisinden başlayacağı belirsiz.
+**Şimdi:** `figma_set_flow_starting_point` çağrıldığında sayfada zaten başka bir flow starting point varsa (örn. "Flow 1"), kullanıcıya sorulmadan ikinci bir tane ekleniyor. Canlı testte kullanıcı Action Sheet'in `1:23` için önceden "Flow 1" varmış, yeni skill "Ürün Detayı Akışı" ekledi → Figma'da 2 başlangıç noktası görünüyor, Present modda hangisinden başlayacağı belirsiz.
 
 **Etki:** Kullanıcı deneyimi kırık. Otonom mod bile bu durumda sormalı veya mevcut flow'u bilgilendirmeli.
 
