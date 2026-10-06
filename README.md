@@ -6,15 +6,15 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
-  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.14"><img src="https://img.shields.io/badge/sürüm-v1.9.14-success" alt="version"></a>
+  <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.15"><img src="https://img.shields.io/badge/sürüm-v1.9.15-success" alt="version"></a>
   <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
   <img src="https://img.shields.io/badge/skill-29-blue" alt="29 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
-> **Yeni — v1.9.14 Contract Extractor:** Bir Component Set'i seçin, `figma_extract_contract` deyin — props, anatomy token binding'leri, variant override diff'leri, mode bazlı resolved token'lar, WCAG kontrast denetimi ve base spec'ler tek design contract JSON'unda. Design-to-code handoff'un tek doğruluk kaynağı. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14) · [extract-contract SKILL](skills/extract-contract/SKILL.md).
+> **Yeni — v1.9.15 DS Change Tracker:** `/track-ds-changes <figma-url>` ile design system dosyalarınızda bileşen, varyant, token ve ikon değişikliklerini takip edin — snapshot karşılaştırması (token + bileşen) ve REST sürüm geçmişi (bileşen/yapı), "eski → yeni" rapor ve onaylı iş taslağı. Zamanlanmış görev olarak da çalışır. Detay: [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.15) · [ds-change-tracker SKILL](skills/ds-change-tracker/SKILL.md) · [Kurulum rehberi](docs/DS_CHANGE_TRACKING.md).
 >
-> **Son sürüm — v1.9.14 (31 Temmuz 2026):** Contract Extractor — Component Set → design contract JSON spec (63 tool, 132/132 test). Önceki öne çıkanlar: v1.9.13 sıfır-kurulum DS oto-uyumlanma, v1.9.11 Prototype Connections + Animations ([figma-prototype-flow](skills/figma-prototype-flow/SKILL.md)). Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.14)
+> **Son sürüm — v1.9.15 (6 Ekim 2026):** DS Change Tracker — DS değişiklik takibi + iş taslağı (63 tool, 29 skill, 132/132 test). Önceki öne çıkanlar: v1.9.14 Contract Extractor ([extract-contract](skills/extract-contract/SKILL.md)), v1.9.13 sıfır-kurulum DS oto-uyumlanma. Detay: [CHANGELOG](CHANGELOG.md) · [Release notes](https://github.com/atezer/FMCP/releases/tag/v1.9.15)
 
 Figma tasarımlarınızı AI'a bağlar. AI'a *"Bu ekrandaki renkleri çıkar"* veya *"Yeni bir login sayfası oluştur"* dersiniz — AI Figma'daki tasarımınızla doğrudan çalışır.
 
@@ -222,7 +222,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 | | |
 |---|---|
-| Güncel sürüm | **1.9.14** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.14)) — Contract Extractor (Component Set → design contract JSON) |
+| Güncel sürüm | **1.9.15** ([CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/atezer/FMCP/releases/tag/v1.9.15)) — DS Change Tracker (DS değişiklik takibi + iş taslağı) |
 | npm | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) |
 | Lisans | MIT — kişisel ve ticari kullanıma açık |
 

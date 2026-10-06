@@ -12,11 +12,11 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
-## [Unreleased]
+## [1.9.15] — 2026-10-06 — DS Change Tracker: DS değişiklik takibi
 
 ### Added — `ds-change-tracker` skill'i + `/track-ds-changes` komutu
 
-- **`ds-change-tracker` skill'i** (29. skill): Figma DS dosyalarındaki bileşen/varyant/token/ikon değişikliklerini tespit eder, "eski → yeni" raporlar, onaylı iş taslağı (Jira vb.) önerir. İki yöntem: snapshot karşılaştırması (token + bileşen; snapshot'lar kullanıcı-yerel `~/.claude/data/fcm-ds/<fileKey>/change-snapshots/`, repoya yazılmaz) ve REST sürüm geçmişi (yalnızca bileşen/yapı — Figma REST variable değerlerini sürüm bazında vermediği için geçmişe dönük token farkı yok; skill bunu açıkça belirtir). Salt okunur.
+- **`ds-change-tracker` skill'i** (29. skill): Figma DS dosyalarındaki bileşen/varyant/token/ikon değişikliklerini tespit eder, "eski → yeni" raporlar, onaylı iş taslağı (Jira vb.) önerir. İki yöntem: snapshot karşılaştırması (token + bileşen; snapshot'lar kullanıcı-yerel `~/.claude/data/fcm-ds/<fileKey>/change-snapshots/`, repoya yazılmaz) ve REST sürüm geçmişi (yalnızca bileşen/yapı — Figma REST variable değerlerini sürüm bazında vermediği için geçmişe dönük token farkı yok; skill bunu açıkça belirtir). Salt okunur. **Deneysel:** REST sürüm geçmişi yolu henüz canlı bir dosyada uçtan uca doğrulanmadı.
 - **`/track-ds-changes` komutu** ve **[docs/DS_CHANGE_TRACKING.md](docs/DS_CHANGE_TRACKING.md)** zamanlanmış görev rehberi.
 - `fmcp-intent-router` routing tablosu ve `SKILL_INDEX` güncellendi.
 
