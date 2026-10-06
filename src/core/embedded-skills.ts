@@ -7,10 +7,10 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Total estimated tokens: 13923
+ * Total estimated tokens: 13954
  */
 
-export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3126 tokens) -->
+export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3157 tokens) -->
 ---
 name: fmcp-intent-router
 description: F-MCP ile ilgili herhangi bir kullanıcı talebinin ilk giriş noktası. Kullanıcının niyetini analiz eder, hangi hedef SKILL'in çalıştırılacağına karar verir, o SKILL için gereken eksik input'ları tek turda toplar, özet+onay alır ve ondan sonra hedef SKILL'i çalıştırır. "figma", "ekran oluştur", "tasarım yap", "component üret", "DS denetle", "token sync", "kod üret", "design system" gibi her F-MCP-tetiklemesiyle aktive olur. Claude hiçbir figma_* yazma tool'u çalıştırmadan ÖNCE bu protokolü uygulamak zorundadır.
@@ -110,6 +110,7 @@ Kullanıcı talebini oku. Anahtar kelimeleri tara:
 | "ekran özeti", "analiz et", "ne içeriyor" | \`figma-screen-analyzer\` |
 | "accessibility", "a11y", "WCAG", "contrast check" | \`figma-a11y-audit\` |
 | "drift", "kod/tasarım sapması", "out of sync" | \`design-drift-detector\` |
+| "DS'de ne değişti", "değişiklik takibi", "token ne değişti", "sürümler arası fark", "değişiklik raporu" | \`ds-change-tracker\` |
 | "UX copy", "microcopy", "buton metni", "empty state" | \`ux-copy-guidance\` |
 | "bu görselden ilham al", "şu resim gibi", "link'teki tasarımdan", "dribbble/behance", "benchmark'tan varyasyon" | \`inspiration-intake\` → \`generate-figma-screen\` |
 | "prototip bağla", "ekranları bağla", "prototype connections", "flow oluştur", "navigasyon kur", "animasyon ekle", "interaction ekle", "geçiş animasyonu", "scroll behavior" | \`figma-prototype-flow\` |
@@ -209,8 +210,6 @@ Tablodan seç, Adım 6 özetine direkt yaz (örn. "Yaklaşım: build-from-scratc
 Adım 1'deki keyword eşleşmesi + Adım 2'deki state bilgisi → tek bir SKILL seç.
 
 **Karar mantığı:**
-
-\`\`\`
 
 ---
 
@@ -1062,4 +1061,4 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13923;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13954;

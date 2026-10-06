@@ -8,7 +8,7 @@
   <a href="https://www.npmjs.com/package/@atezer/figma-mcp-bridge"><img src="https://img.shields.io/npm/v/@atezer/figma-mcp-bridge?label=npm&color=0A7CFF" alt="npm"></a>
   <a href="https://github.com/atezer/FMCP/releases/tag/v1.9.14"><img src="https://img.shields.io/badge/sürüm-v1.9.14-success" alt="version"></a>
   <img src="https://img.shields.io/badge/araç-63-blue" alt="63 tools">
-  <img src="https://img.shields.io/badge/skill-28-blue" alt="28 skills">
+  <img src="https://img.shields.io/badge/skill-29-blue" alt="29 skills">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-güncel-brightgreen" alt="changelog"></a>
 </p>
 
@@ -216,7 +216,7 @@ Daha fazla: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 - **3 orkestratör** — DS denetimi, token senkronizasyonu, ekran üretimi için hazır uçtan uca akışlar ([skill dizini](skills/SKILL_INDEX.md))
 - **Figma** — Masaüstü ve tarayıcı, birden fazla AI aynı dosyaya aynı anda bağlanabilir
 - **Gizlilik** — Veriler bilgisayarınızdan çıkmaz, internet bağlantısı olmadan da kullanılabilir
-- **Detay** — [63 araç](docs/TOOLS_FULL_LIST.md) · [28 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
+- **Detay** — [63 araç](docs/TOOLS_FULL_LIST.md) · [29 skill](skills/SKILL_INDEX.md) · [Mimari](docs/ARCHITECTURE.md) · [Kurumsal kullanım](docs/ENTERPRISE.md) · [Katkı rehberi](CONTRIBUTING.md)
 
 ---
 

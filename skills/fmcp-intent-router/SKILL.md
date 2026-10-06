@@ -97,6 +97,7 @@ Kullanıcı talebini oku. Anahtar kelimeleri tara:
 | "ekran özeti", "analiz et", "ne içeriyor" | `figma-screen-analyzer` |
 | "accessibility", "a11y", "WCAG", "contrast check" | `figma-a11y-audit` |
 | "drift", "kod/tasarım sapması", "out of sync" | `design-drift-detector` |
+| "DS'de ne değişti", "değişiklik takibi", "token ne değişti", "sürümler arası fark", "değişiklik raporu" | `ds-change-tracker` |
 | "UX copy", "microcopy", "buton metni", "empty state" | `ux-copy-guidance` |
 | "bu görselden ilham al", "şu resim gibi", "link'teki tasarımdan", "dribbble/behance", "benchmark'tan varyasyon" | `inspiration-intake` → `generate-figma-screen` |
 | "prototip bağla", "ekranları bağla", "prototype connections", "flow oluştur", "navigasyon kur", "animasyon ekle", "interaction ekle", "geçiş animasyonu", "scroll behavior" | `figma-prototype-flow` |

@@ -108,6 +108,7 @@ Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (
 | `figma-a11y-audit` | [figma-a11y-audit/SKILL.md](figma-a11y-audit/SKILL.md) | designops, uidev, designer | Erişilebilirlik denetimi (WCAG, VoiceOver, TalkBack, ARIA) |
 | `figma-screen-analyzer` | [figma-screen-analyzer/SKILL.md](figma-screen-analyzer/SKILL.md) | po, designer | PO/PM/SEM için UI analiz raporu |
 | `ds-impact-analysis` | [ds-impact-analysis/SKILL.md](ds-impact-analysis/SKILL.md) | designops, po | DS değişiklik etki analizi ve risk skoru |
+| `ds-change-tracker` | [ds-change-tracker/SKILL.md](ds-change-tracker/SKILL.md) | designops, designer, uidev | DS değişiklik takibi — snapshot (token + bileşen) ve REST sürüm geçmişi (bileşen) karşılaştırması, "eski → yeni" rapor, iş taslağı (`/track-ds-changes`) |
 
 ## Persona Bazlı Önerilen Akışlar
 
@@ -129,6 +130,7 @@ Agent orkestrasyon mantığını tek kaynaktan 4 platforma taşıyan skill'ler (
 ```
 1. audit-figma-design-system (DS sağlık kontrolü — DS eksiksizlik çerçevesi: token kategorileri, bileşen durumları, pattern kapsamı)
 2. ds-impact-analysis (değişiklik öncesi etki analizi)
+   + ds-change-tracker (düzenli değişiklik takibi — "ne değişti?" raporu + iş taslağı)
 3. apply-figma-design-system (DS hizalama)
 4. design-token-pipeline (token senkronu — motion token'lar dahil)
 5. design-system-rules (kural üretimi — DS prensipleri ve pattern katmanı dahil)
