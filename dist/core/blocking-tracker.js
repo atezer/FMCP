@@ -63,7 +63,7 @@ export class BlockingTracker {
         // Scan code for tracked nodeIds
         const matched = [];
         for (const id of this.lastBlockingNodeIds) {
-            if (executeCode.includes(id))
+            if (containsNodeId(executeCode, id))
                 matched.push(id);
         }
         if (matched.length === 0)
@@ -149,4 +149,11 @@ export function extractBlockingNodeIds(response) {
 }
 /** Singleton for server process lifetime */
 export const blockingTracker = new BlockingTracker();
+/**
+ * Whole-ID match: "1:2" must not match inside "11:23" or "I1:2;3:4" (v1.9.16).
+ */
+export function containsNodeId(code, id) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?<![\\w:;])${escaped}(?![\\d])`).test(code);
+}
 //# sourceMappingURL=blocking-tracker.js.map

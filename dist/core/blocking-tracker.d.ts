@@ -65,4 +65,8 @@ export declare function extractBlockingNodeIds(response: unknown): {
 };
 /** Singleton for server process lifetime */
 export declare const blockingTracker: BlockingTracker;
+/**
+ * Whole-ID match: "1:2" must not match inside "11:23" or "I1:2;3:4" (v1.9.16).
+ */
+export declare function containsNodeId(code: string, id: string): boolean;
 //# sourceMappingURL=blocking-tracker.d.ts.map
