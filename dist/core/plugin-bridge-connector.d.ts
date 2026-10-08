@@ -7,6 +7,10 @@
  */
 import type { PluginBridgeServer } from "./plugin-bridge-server.js";
 import type { PluginVariablesPayload, PluginStylesPayload, PluginComponentPayload, PluginDocumentStructure, PluginScreenshotPayload, PluginCrudResult } from "./types/figma.js";
+/** Bridge errors raised before the request was sent to any plugin (safe to retry). */
+export declare function isNotSentError(msg: string): boolean;
+/** Bridge errors raised after the request was sent (outcome unknown — never auto-retry). */
+export declare function isSentButLostError(msg: string): boolean;
 export declare class PluginBridgeConnector {
     private bridge;
     private fileKey?;

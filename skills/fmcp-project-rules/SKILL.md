@@ -52,6 +52,14 @@ Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, �
 
 ---
 
+## Hedef Dosya Kuralı (v1.10.0+)
+
+Birden fazla Figma dosyası bağlıyken **yazma yapan her çağrıya** (`figma_execute` mutation, `figma_create_frame` / `figma_create_text` gibi oluşturma araçları, variable CRUD, prototip araçları) `fileKey` (veya `figmaUrl`) ver. Hedefsiz yazma `TARGET_REQUIRED` hatası döner; hata mesajındaki dosya listesinden doğru `fileKey`'i seçip tekrar çağır. Hangi dosya olduğu belirsizse kullanıcıya sor — kütüphane dosyalarına (DS, ikon, asset) yanlışlıkla yazma.
+
+`EXECUTION_STATE_UNKNOWN` veya `TIMEOUT` dönerse kodu körlemesine tekrar çalıştırma: önce ilgili node'ları okuyup değişikliğin uygulanıp uygulanmadığını doğrula.
+
+---
+
 ## Design System Kütüphaneleri
 
 Kullanıcı lokal olarak design system kütüphaneleri kaydedebilir. Kayıtlı kütüphaneler `.claude/libraries/` dizininde bulunur.

@@ -16,6 +16,15 @@
  * - The Figma plugin scans all ports 5454–5470 automatically.
  */
 import { type WebSocket } from "ws";
+/**
+ * v1.10.0: Which WebSocket/HTTP origins may talk to the bridge.
+ * - undefined: non-browser clients (sibling bridges, Node tools)
+ * - "null": sandboxed iframes — the Figma plugin UI sends exactly this (verified live)
+ * - https://*.figma.com: in case Figma ever serves plugin UIs from its own origin
+ * Any other browser origin (a regular web page) is rejected, unless
+ * FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1 is set as an escape hatch.
+ */
+export declare function isAllowedOrigin(origin: string | undefined): boolean;
 export interface BridgeRequest {
     id: string;
     method: string;
@@ -80,6 +89,17 @@ export declare class PluginBridgeServer {
     private port;
     /** Last error message when bridge could not bind (port conflict, etc.) */
     private startError;
+    /**
+     * v1.10.0: Bumped by stop(). Async bind/retry chains capture it and abandon
+     * themselves when it changes, so a restart can't race an older chain.
+     */
+    private generation;
+    private retryTimers;
+    private relocateTimer;
+    /** When the connected-client count last changed (for /status idleSeconds). */
+    private lastClientChangeAt;
+    /** setTimeout tracked for cancellation by stop(). */
+    private later;
     start(): void;
     /** Get last startup error (null if running fine). */
     getStartError(): string | null;
@@ -102,7 +122,17 @@ export declare class PluginBridgeServer {
     private generateClientId;
     private findClientByFileKey;
     private getDefaultClient;
+    /**
+     * v1.10.0: strict — when a fileKey is given, only that file's client is returned.
+     * The old fallback to the most recent client could send writes to the wrong file.
+     */
     private resolveClient;
+    /**
+     * v1.10.0: For mutating tools without an explicit target. Returns an error
+     * message when more than one distinct file is connected (ambiguous target),
+     * otherwise null. Disable with FMCP_REQUIRE_TARGET=0.
+     */
+    getAmbiguousTargetError(): string | null;
     /**
      * Wait for a client to become ready (fileKey populated via "ready" message).
      * Polls at 200ms intervals. Used to handle the race between plugin connection

@@ -12,6 +12,42 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.10.0] — 2026-10-08 — Güvenlik ve doğru dosyaya yazma
+
+### Changed — davranış değişikliği
+
+- **Birden fazla dosya bağlıyken hedefsiz yazma artık hata veriyor.** Yazma yapan araçlar `fileKey` (veya `figmaUrl`) belirtilmezse `TARGET_REQUIRED` hatası döndürüyor; hata mesajında bağlı dosyaların listesi var. Daha önce bu çağrılar en son bağlanan dosyaya gidiyordu.
+  - Kapsam: variable CRUD, `create_*`, `instantiate_component`, prototip araçları ve kodu belgeyi değiştiren `figma_execute` çağrıları.
+  - Tek dosya bağlıyken davranış aynı. Okuma araçları en son bağlanan dosyaya düşmeye devam ediyor.
+  - Kapatmak için: `FMCP_REQUIRE_TARGET=0`.
+- **Bilinmeyen bir `fileKey` başka dosyaya yönlendirilmiyor.** Artık hata veriyor.
+- Routing almayan 28 aracın tamamına `fileKey` / `figmaUrl` parametreleri eklendi.
+
+### Security
+
+- **Bridge yalnızca Figma plugin'ini kabul ediyor.**
+  - WebSocket origin kontrolü eklendi. Kabul edilenler: `null` (Figma plugin iframe'i, canlı ölçüldü), origin'siz Node istemcileri ve `*.figma.com`. Web sayfaları reddediliyor.
+  - Kaçış ayarı: `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1`.
+- **`/shutdown` tarayıcıdan gelen istekleri reddediyor** (403). CORS `*` başlıkları kaldırıldı.
+- **Bir isteğe yalnızca isteğin gönderildiği istemci yanıt verebiliyor.** `setToken` ve `clearToken` yalnızca el sıkışmayı tamamlamış istemciden kabul ediliyor.
+- **`figma_rest_api` token'ı yalnızca `https://api.figma.com` adresine gönderiyor.** POST, PUT ve DELETE ağ hatasından sonra yeniden denenmiyor.
+- `FIGMA_BRIDGE_HOST=0.0.0.0` kullanıldığında uyarı veriliyor.
+
+### Fixed
+
+- **`figma_execute` çift çalışmıyor.** Kod plugin'e ulaştıktan sonra bağlantı koparsa artık yeniden gönderilmiyor. Bunun yerine `EXECUTION_STATE_UNKNOWN` hatası ve "önce oku, sonra tekrar dene" ipucu dönüyor. Zaman aşımı ipucu da aynı uyarıyı içeriyor, ve yanlış yazılan üst sınır düzeltildi (30000ms).
+- **Sahipsiz süreçler kalmıyor.**
+  - MCP host'u kapanınca (stdin veya transport kapanınca) süreç çıkıyor.
+  - "Bayat bridge" kararı süreç ömrüne göre değil, istemcisiz geçen süreye göre veriliyor (`/status` içinde `idleSeconds`).
+  - `/shutdown` alan bridge zombi kalmıyor, başka bir porta taşınıyor.
+- **`restart()` yarış durumu giderildi.** Eski deneme zincirleri ve zamanlayıcılar iptal ediliyor. Çalışan bir sunucunun üzerine yazılmıyor. EADDRINUSE dışı bind hataları 30 sn beklemeden hemen bildiriliyor.
+- **Kapanışta audit log kaybolmuyor.** Önce bridge durduruluyor, sonra log boşaltılıp çıkılıyor.
+
+### Added
+
+- `src/core/mutation-detect.ts`, `src/core/rest-url.ts` ve 36 yeni test (186/186).
+- `fmcp-project-rules` skill'ine "Hedef Dosya Kuralı" eklendi.
+
 ## [1.9.16] — 2026-10-08 — Sessizce bozuk özelliklerin düzeltilmesi
 
 ### Fixed
