@@ -798,7 +798,7 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
 
 **Test dosyaları (feedback ve görsel doğrulama için):**
 
-- **Figma Design (Skill Test):** [https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1](https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1)
+- **Figma Design (Skill Test):** `https://www.figma.com/design/<TEST_FILE_KEY>`
   - 20 sayfa: `0. Test Ana Sayfa` + 19 skill (her skill kendi sayfasında)
   - Her sayfada skill'in step notları, kullanılan araçlar, sonuç özeti
   - Login ekranı (390×844 mobil, `generate-figma-screen` testi)
@@ -806,7 +806,7 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
   - DS token'ları: 4 collection, 24 variable, 3 effect style
   - Bug fix doğrulama + WCAG 2.1/2.2 AA a11y denetim raporu
 
-- **FigJam Board (Diyagram Test):** [https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1](https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1)
+- **FigJam Board (Diyagram Test):** `https://www.figma.com/board/<TEST_BOARD_KEY>`
   - `figjam-diagram-builder` testi: 3 swim lane + 13 skill kartı + 10 connector
   - 3 fazlı üretim doğrulaması (Zemin → Node'lar → Connector'lar)
   - Güvenli execute kuralları (<500 karakter dönüş, deterministik koordinat)

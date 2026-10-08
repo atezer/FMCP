@@ -1176,8 +1176,8 @@ Canlı Figma testi sırasında tespit edilen 4 araç sorunu düzeltildi. Plugin 
 - **B12** `implement-design`: Gesture platform mapping tablosu (iOS/Android/Web)
 
 **Canlı Figma Testi (feedback için):**
-- Test dosyası: [Figma Design](https://www.figma.com/design/QNtXuQ5PshxcbkiyMc0YlA/Untitled?node-id=0-1) — 20 sayfa, her skill için görsel doğrulama
-- FigJam testi: [Design System JIRA Backlog Süreci](https://www.figma.com/board/roQjK1YgnJBHOTLbtjqFck/Design-System-JIRA-backlog-süreci?node-id=0-1) — `figjam-diagram-builder` swimlane testi
+- Test dosyası: Figma Design (`https://www.figma.com/design/<TEST_FILE_KEY>`) — 20 sayfa, her skill için görsel doğrulama
+- FigJam testi: FigJam test board (`https://www.figma.com/board/<TEST_BOARD_KEY>`) — `figjam-diagram-builder` swimlane testi
 - 6/7 bug gerçek Figma dosyasında düzeltildi (Button touch target, placeholder kontrast, variable bağlama, Türkçe karakter)
 
 **Versiyon tutarlılığı düzeltmesi:**
