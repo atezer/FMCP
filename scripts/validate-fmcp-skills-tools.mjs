@@ -24,6 +24,14 @@ const SOURCE_FILES = [
 
 const SKILLS_DIR = join(ROOT, "skills");
 
+/**
+ * v1.10.1: tool-name references are also checked outside skills/ (frontmatter checks stay
+ * skills-only). Historical records — CHANGELOG, docs/archived, docs/releases and the
+ * dated test report — are excluded on purpose.
+ */
+const EXTRA_DOC_PATHS = ["commands", "agents", "docs", "install", "README.md", "KURULUM.md"].map((p) => join(ROOT, p));
+const EXCLUDED_DOC_PATHS = ["docs/archived", "docs/releases", "docs/TEST_REPORT.md"].map((p) => join(ROOT, p));
+
 const REGISTER_RE = /registerTool\(\s*["'](figma_[a-z0-9_]+)["']/g;
 /** Skill/markdown içindeki araç adları: `figma_foo` veya figma_foo( */
 const SKILL_TOOL_RE = /\b(figma_[a-z][a-z0-9_]*)\b/g;
@@ -39,6 +47,7 @@ const IGNORE_TOOLS = new Set([
 	"figma_get_",           // wildcard prefix, gerçek tool değil
 	"figma_search_",        // wildcard prefix, gerçek tool değil
 	"figma_list_",          // wildcard prefix, gerçek tool değil
+	"figma_enumerate_",     // wildcard prefix, gerçek tool değil
 ]);
 
 function collectRegisteredTools() {
@@ -131,7 +140,13 @@ function validateSkillFrontmatter(files) {
 function main() {
 	const registered = collectRegisteredTools();
 	const mdFiles = walkMarkdownFiles(SKILLS_DIR);
-	const { byFile, all } = collectSkillToolRefs(mdFiles);
+	const docFiles = [];
+	for (const p of EXTRA_DOC_PATHS) {
+		if (p.endsWith(".md")) docFiles.push(p);
+		else walkMarkdownFiles(p, docFiles);
+	}
+	const refFiles = [...mdFiles, ...docFiles.filter((f) => !EXCLUDED_DOC_PATHS.some((x) => f === x || f.startsWith(x + "/")))];
+	const { byFile, all } = collectSkillToolRefs(refFiles);
 
 	const unknown = [...all].filter((t) => !registered.has(t)).sort();
 	const onlyInSource = [...registered].filter((t) => !all.has(t)).sort();

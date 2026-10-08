@@ -22,9 +22,10 @@ chmod +x "$SCRIPT_DIR/autorun-bridge.sh"
 echo "✅ Scripts are executable"
 echo ""
 
-# Copy plist file
+# Copy plist file, filling in this machine's paths (template uses __REPO__ / __HOME__)
 echo "📋 Installing Launch Agent..."
-cp "$PLIST_SOURCE" "$PLIST_DEST"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+sed -e "s#__REPO__#$REPO_DIR#g" -e "s#__HOME__#$HOME#g" "$PLIST_SOURCE" > "$PLIST_DEST"
 echo "✅ Launch Agent installed at: $PLIST_DEST"
 echo ""
 

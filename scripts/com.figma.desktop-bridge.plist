@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/abdussamed.tezer/FCM/scripts/autorun-bridge.sh</string>
+        <string>__REPO__/scripts/autorun-bridge.sh</string>
     </array>
     
     <key>RunAtLoad</key>
@@ -18,10 +18,10 @@
     <true/>
     
     <key>StandardOutPath</key>
-    <string>/Users/abdussamed.tezer/Library/Logs/figma-bridge-stdout.log</string>
+    <string>__HOME__/Library/Logs/figma-bridge-stdout.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/Users/abdussamed.tezer/Library/Logs/figma-bridge-stderr.log</string>
+    <string>__HOME__/Library/Logs/figma-bridge-stderr.log</string>
     
     <key>EnvironmentVariables</key>
     <dict>

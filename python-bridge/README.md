@@ -1,4 +1,6 @@
-# F-MCP Bridge — Python (Node.js olmadan)
+# F-MCP Bridge — Python (Node.js olmadan) · **Deneysel**
+
+> **Deneysel:** Python köprüsü yalnızca 10 aracı destekler ve Node sürümünün güvenlik/yönlendirme düzeltmelerini (v1.10.0+) içermez. Mümkünse Node sürümünü (`dist/local-plugin-only.js`, 63 araç) kullanın.
 
 Bu klasör, **Node.js kurulumu olmayan** ortamlarda (örn. Windows kurumsal bilgisayar) F-MCP Bridge kullanmak için Python ile yazılmış MCP sunucusudur. Plugin ile aynı WebSocket protokolünü (port 5454) kullanır; Figma plugin tarafında değişiklik gerekmez.
 
@@ -58,7 +60,7 @@ Port varsayılan **5454**; ortam değişkeni ile değiştirilebilir: `FIGMA_PLUG
 | `figma_get_metadata` | Node metadata (id, type, name, pozisyon, boyut) |
 | `figma_capture_screenshot` | Node screenshot (base64/URL) |
 
-Tam 33 araç için Node sürümünü kullanın (`dist/local-plugin-only.js`).
+Tam 63 araç için Node sürümünü kullanın (`dist/local-plugin-only.js`).
 
 ## Bağlantı sırası
 

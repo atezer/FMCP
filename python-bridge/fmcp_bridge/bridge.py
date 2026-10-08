@@ -130,7 +130,7 @@ def _check_port_conflict(port: int) -> None:
             f"\n❌ Port {port} is already used by another F-MCP bridge instance.\n"
             f"   Find it: {hint}\n"
             f"   Kill it and retry, or set FIGMA_PLUGIN_BRIDGE_PORT to a different port.\n"
-            f"   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev:local'.\n",
+            f"   ⚠️  Cursor/Claude starts the bridge automatically — do NOT also run 'npm run dev'.\n",
             file=sys.stderr,
         )
     else:

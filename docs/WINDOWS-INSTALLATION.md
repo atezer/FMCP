@@ -54,7 +54,7 @@ cd FMCP
 
 ```powershell
 npm install
-npm run build:local
+npm run build
 ```
 
 3. Proje klasörünün **tam yolunu** not edin (örn. `C:\Users\KullaniciAdi\FMCP`). Claude config’te bu yolu kullanacaksınız.
@@ -154,9 +154,9 @@ Detay: [MULTI_INSTANCE.md](MULTI_INSTANCE.md).
 
 | Sorun | Çözüm |
 |-------|--------|
-| Plugin “no server” / kırmızı | MCP sunucusu çalışmıyor. Claude’u açın (plugin-only’de Claude sunucuyu başlatır) veya PowerShell’de `npm run dev:local` çalıştırıp port 5454’ün açıldığını kontrol edin. |
+| Plugin “no server” / kırmızı | MCP sunucusu çalışmıyor. Claude’u açın (plugin-only’de Claude sunucuyu başlatır) veya PowerShell’de `npm run dev` çalıştırıp port 5454’ün açıldığını kontrol edin. |
 | Port 5454 kullanımda | Portu kullanan işlemi bulun: `netstat -ano | findstr :5454` — Son sütundaki PID’i not alıp **Görev Yöneticisi** → **Ayrıntılar** → ilgili PID’i sonlandırın. Veya [PORT-5454-KAPALI.md](PORT-5454-KAPALI.md). |
-| Claude “Server disconnected” | Config’teki yolun doğru olduğundan emin olun (`dist/local-plugin-only.js` var mı?); `npm run build:local` yapıldı mı? |
+| Claude “Server disconnected” | Config’teki yolun doğru olduğundan emin olun (`dist/local-plugin-only.js` var mı?); `npm run build` yapıldı mı? |
 | Permission denied | Config’te `cmd.exe /c` ile `cd /d <PROJE-YOLU> && node dist/local-plugin-only.js` kullanın. |
 
 Daha fazla: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
@@ -223,7 +223,7 @@ Python bridge, Node sürümüyle aynı protokolü kullanır; kritik araçlar des
 | Adım | Node yolu | Python yolu |
 |------|-----------|--------------|
 | 1 | Node.js LTS kur, `node -v` | Python 3.10+ kur |
-| 2 | FMCP clone, `npm install`, `npm run build:local` | FMCP clone, `python-bridge` içinde `pip install -r requirements.txt` |
+| 2 | FMCP clone, `npm install`, `npm run build` | FMCP clone, `python-bridge` içinde `pip install -r requirements.txt` |
 | 3 | Claude config: `node` + `dist/local-plugin-only.js` tam yolu | Claude config: `python` + `-m fmcp_bridge`, `cwd`: `python-bridge` |
 | 4 | Claude’u aç → Figma → Plugin (Port 5454) → “ready” | Aynı |
 

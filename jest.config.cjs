@@ -12,13 +12,6 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
-    '/src/core/figma-tools\\.ts',
-    '/src/core/figma-desktop-connector\\.ts',
-    '/src/core/console-monitor\\.ts',
-    '/src/core/enrichment/',
-    '/src/local\\.ts',
-    '/src/index\\.ts',
-    '/src/browser/',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

@@ -14,7 +14,7 @@ Kullanıcıya terminal komutu verme. Her şeyi sen yap:
 
 ## Hata durumunda
 
-- `scripts/update.sh` yoksa: `git pull origin main && npm install && npm run build:local` çalıştır
+- `scripts/update.sh` yoksa: `git pull origin main && npm install && npm run build` çalıştır
 - Node.js yoksa: `bash scripts/setup.sh` öner (bu da otomatik kurar)
 - Git conflict varsa: kullanıcıya bildir, `git stash` ile çöz
 

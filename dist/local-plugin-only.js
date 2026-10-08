@@ -254,6 +254,10 @@ export async function main() {
     const port = config.local?.pluginBridgePort ?? 5454;
     const auditLogPath = config.local?.auditLogPath;
     const bridge = new PluginBridgeServer(port, { auditLogPath });
+    // The documented FIGMA_REST_TOKEN env var (see /setup-rest-token) was never read — seed it here
+    const envRestToken = process.env.FIGMA_REST_TOKEN?.trim();
+    if (envRestToken)
+        bridge.setFigmaRestToken(envRestToken);
     bridge.start();
     const cache = new ResponseCache();
     /** Invalidate cache after any mutating operation. */

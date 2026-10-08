@@ -20,8 +20,8 @@ Bu rehber Claude Code CLI üzerinde FCM orkestratör sisteminin kurulumunu ve do
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/absolute/path/to/fmcp-plugin-host.js"],
-      "env": { "FMCP_PORT": "5454" }
+      "args": ["/absolute/path/to/FCM/dist/local-plugin-only.js"],
+      "env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5454" }
     }
   }
 }
@@ -139,7 +139,7 @@ Task(
 | Sorun | Çözüm |
 |---|---|
 | `Task` tool agent bulamıyor | `agents/` dizini cwd'de mi? `pwd` kontrol et. Worktree kullanıyorsan worktree'ye cd et. |
-| `figma_get_status()` timeout | Figma Desktop açık mı? F-MCP plugin aktif mi? Port çakışması yoksa `FMCP_PORT` değiştir. |
+| `figma_get_status()` timeout | Figma Desktop açık mı? F-MCP plugin aktif mi? Port çakışması yoksa `FIGMA_PLUGIN_BRIDGE_PORT` değiştir. |
 | Sub-agent `Read()` hata veriyor | `.claude/settings.local.json` içinde `Read(//Users/<user>/FCM/**)` izni var mı? |
 | `figma_validate_screen` hep <80 | Orchestrator Advanced bölümündeki Error Recovery Matrix'i izle. |
 

@@ -68,7 +68,7 @@ F-MCP Bridge, dış ağa çıkmadan (air-gapped) ortamda çalışacak şekilde k
 
 1. **Bağımlılıklar:** Projeyi veya paketi **dış ağa sahip** bir ortamda bir kez hazırlayın:
    - `npm install` (veya `npm ci`)
-   - `npm run build:local`
+   - `npm run build`
    - İsterseniz `node_modules` + `dist` (ve gerekirse `f-mcp-plugin`) klasörünü arşivleyip air-gap ortama taşıyın.
 2. **Air-gap ortam:** Arşivi açın; `node dist/local-plugin-only.js` (veya Claude config’te bu yolu kullanın). Ekstra `npm install` veya dış erişim gerekmez.
 3. **Plugin:** Figma’da plugin’i **manifest’ten** (Import plugin from manifest → `f-mcp-plugin/manifest.json`) veya **Organization private plugin** olarak yükleyin; dış plugin mağazasına ihtiyaç yoktur.

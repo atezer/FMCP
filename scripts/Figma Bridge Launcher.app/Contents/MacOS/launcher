@@ -9,8 +9,8 @@ APPLESCRIPT="$SCRIPT_DIR/autorun-bridge.applescript"
 if [ -f "$APPLESCRIPT" ]; then
     osascript "$APPLESCRIPT"
 else
-    # Fallback if run from different location
-    osascript "/Users/abdussamed.tezer/FCM/scripts/autorun-bridge.applescript"
+    echo "autorun-bridge.applescript not found next to the launcher ($SCRIPT_DIR)" >&2
+    exit 1
 fi
 
 # Exit immediately so Launch Agent doesn't think we're still running

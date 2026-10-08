@@ -163,7 +163,7 @@ Yeni surum numarasini gormelisiniz.
 ### Tek komut guncelleme
 
 ```bash
-cd /path/to/FMCP && git pull origin main && npm install && npm run build:local
+cd /path/to/FMCP && git pull origin main && npm install && npm run build
 ```
 
 `/path/to/FMCP` kismini kendi proje yolunuzla degistirin.
@@ -175,7 +175,7 @@ cd /path/to/FMCP
 git stash
 git pull origin main
 npm install
-npm run build:local
+npm run build
 git stash pop
 ```
 
@@ -286,13 +286,13 @@ Guncelleme sonrasi su adimlari uygulayin:
 | Sorun | Cozum |
 |-------|-------|
 | npx hala eski surumu cekiyor | `~/.npm/_npx` klasorunu silin (Windows: `%LOCALAPPDATA%\npm-cache\_npx`), AI aracini yeniden baslatin |
-| `MODULE_NOT_FOUND` | `npm install` tekrar calistirin, `npm run build:local` ile yeniden derleyin |
+| `MODULE_NOT_FOUND` | `npm install` tekrar calistirin, `npm run build` ile yeniden derleyin |
 | `git pull` conflict | `git stash` > `git pull origin main` > `git stash pop` |
 | nvm: `node: command not found` | Bash wrapper script kullanin ([Senaryo B](#nvm-kullananlar-icin)'ye bakin) |
 | Plugin "no server" | AI aracini yeniden baslatin, portu kontrol edin: `lsof -i :5454` (macOS/Linux) |
 | Windows'ta path hatasi | Config'te forward slash (`/`) veya cift backslash (`\\`) kullanin |
 | Yeni araclar gorunmuyor | AI aracini tamamen kapatip acin (sadece yeniden baslatma yetmeyebilir) |
-| Build hatasi | `rm -rf dist && npm run build:local` |
+| Build hatasi | `rm -rf dist && npm run build` |
 
 Daha fazla sorun giderme: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
@@ -313,7 +313,7 @@ npx cache'i temizleyin ve AI aracini yeniden baslatin.
 ### Local clone kullanicilar
 
 ```bash
-git checkout v1.7.0 && npm install && npm run build:local
+git checkout v1.7.0 && npm install && npm run build
 ```
 
 AI aracini yeniden baslatin.

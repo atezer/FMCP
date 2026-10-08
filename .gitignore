@@ -240,3 +240,6 @@ ai-ready/manifests/*.json
 
 # F-MCP: test çıktıları (yerelde kalır)
 test-output/
+
+# F-MCP: kişisel MCP ayarı (şablon: .mcp.json.example)
+.mcp.json
