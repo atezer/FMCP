@@ -124,9 +124,15 @@ export class DiscoveryCounter {
 	/**
 	 * Classify a tool call as "discovery", "build", or "neutral" (not counted).
 	 */
-	private classify(toolName: string, executeCode?: string): "discovery" | "build" | "neutral" {
+	private classify(
+		toolName: string,
+		executeCode?: string,
+	): "discovery" | "build" | "neutral" {
 		// Validate/scan are post-build audits — neutral (don't count, don't reset)
-		if (toolName === "figma_validate_screen" || toolName === "figma_scan_ds_compliance") {
+		if (
+			toolName === "figma_validate_screen" ||
+			toolName === "figma_scan_ds_compliance"
+		) {
 			return "neutral";
 		}
 

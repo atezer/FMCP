@@ -52,7 +52,7 @@ export class PluginBridgeConnector {
                 // the mutation twice (or, after a reconnect, in another file).
                 if (isNotSentError(msg) && attempt < MAX_RETRIES) {
                     logger.warn({ attempt, error: msg }, "figma_execute: request not delivered, retrying after 1s");
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise((r) => setTimeout(r, 1000));
                     continue;
                 }
                 if (isSentButLostError(msg)) {
@@ -70,8 +70,15 @@ export class PluginBridgeConnector {
     async createVariable(name, collectionId, resolvedType, options) {
         // Validate mutually exclusive scope combinations early (defense in depth)
         if (options?.scopes) {
-            const fillScopes = ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "FILL_COLOR"];
-            if (options.scopes.includes("ALL_FILLS") && options.scopes.some(s => fillScopes.includes(s))) {
+            const fillScopes = [
+                "FRAME_FILL",
+                "SHAPE_FILL",
+                "STROKE_COLOR",
+                "TEXT_FILL",
+                "FILL_COLOR",
+            ];
+            if (options.scopes.includes("ALL_FILLS") &&
+                options.scopes.some((s) => fillScopes.includes(s))) {
                 throw new Error("Scope conflict: ALL_FILLS cannot be combined with specific fill scopes. Use ALL_FILLS alone or use specific scopes (FRAME_FILL, SHAPE_FILL, TEXT_FILL, etc.).");
             }
         }
@@ -220,7 +227,10 @@ export class PluginBridgeConnector {
         return this.bridge.request("setInstanceProperties", { nodeId, properties }, this.fileKey);
     }
     async getDocumentStructure(depth, verbosity, opts) {
-        const params = { depth: depth ?? 1, verbosity: verbosity ?? "summary" };
+        const params = {
+            depth: depth ?? 1,
+            verbosity: verbosity ?? "summary",
+        };
         if (opts?.excludeScreenshot !== undefined)
             params.excludeScreenshot = opts.excludeScreenshot;
         if (opts?.includeLayout !== undefined)
@@ -296,7 +306,10 @@ export class PluginBridgeConnector {
     async arrangeComponentSet(nodeIds) {
         const res = (await this.bridge.request("arrangeComponentSet", { nodeIds }, this.fileKey));
         const data = res?.data;
-        return data ?? { nodeId: res?.nodeId ?? "", name: res?.name ?? "" };
+        return (data ?? {
+            nodeId: res?.nodeId ?? "",
+            name: res?.name ?? "",
+        });
     }
     async dispose() {
         logger.info("Plugin bridge connector disposed");

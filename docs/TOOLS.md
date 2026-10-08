@@ -5,7 +5,7 @@ Kaynak: `dist/local-plugin-only.js` içindeki `registerTool("figma_*")` çağrı
 ## Mimari
 
 F-MCP yalnızca **plugin-only** modunu destekler:
-- **Giriş:** `dist/local-plugin-only.js` (46 araç)
+- **Giriş:** `dist/local-plugin-only.js` (63 araç)
 - **Bağlantı:** WebSocket plugin bridge (port 5454)
 - **Gereksinim:** F-MCP ATezer Bridge plugin Figma’da çalışıyor olmalı
 - **REST token:** Zorunlu değil (opsiyonel `figma_set_rest_token` ile ayarlanabilir)
@@ -13,11 +13,14 @@ F-MCP yalnızca **plugin-only** modunu destekler:
 ## `local-plugin-only.js` — Tüm `figma_*` araçları
 
 - **Bağlantı / durum:** `figma_list_connected_files`, `figma_get_status`, `figma_plugin_diagnostics`, `figma_set_port`
-- **Dosya / yapı:** `figma_get_file_data`, `figma_get_design_context`
-- **Bileşenler:** `figma_get_component`, `figma_get_component_image`, `figma_get_component_for_development`, `figma_search_components`, `figma_search_assets`, `figma_instantiate_component`, `figma_arrange_component_set`, `figma_set_instance_properties`, `figma_set_description`
-- **Değişkenler:** `figma_get_variables`, `figma_create_variable`, `figma_create_variable_collection`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_get_token_browser`
+- **Dosya / yapı:** `figma_get_file_data`, `figma_get_design_context`, `figma_get_design_system_summary`
+- **Bileşenler:** `figma_get_component`, `figma_get_component_image`, `figma_get_component_for_development`, `figma_search_components`, `figma_search_assets`, `figma_instantiate_component`, `figma_arrange_component_set`, `figma_set_instance_properties`, `figma_set_description`, `figma_extract_contract`
+- **Kütüphaneler:** `figma_enumerate_library_components`, `figma_enumerate_published_components`, `figma_get_library_variables`, `figma_import_style`, `figma_use`, `figma_get_code_connect`
+- **Değişkenler:** `figma_get_variables`, `figma_create_variable`, `figma_create_variable_collection`, `figma_update_variable`, `figma_delete_variable`, `figma_delete_variable_collection`, `figma_rename_variable`, `figma_add_mode`, `figma_rename_mode`, `figma_refresh_variables`, `figma_batch_create_variables`, `figma_batch_update_variables`, `figma_setup_design_tokens`, `figma_get_token_browser`, `figma_bind_variable`
 - **Stiller:** `figma_get_styles`
-- **Tasarım oluşturma:** `figma_execute`, `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group`
+- **Tasarım oluşturma:** `figma_execute`, `figma_create_frame`, `figma_create_text`, `figma_create_rectangle`, `figma_create_group`, `figma_create_mini_ds`, `figma_clone_screen_to_device`
+- **DS denetimi:** `figma_validate_screen`, `figma_scan_ds_compliance`
+- **Prototip:** `figma_create_prototype_connection`, `figma_get_prototype_connections`, `figma_set_flow_starting_point`, `figma_create_interaction`, `figma_set_scroll_behavior`
 - **Konsol:** `figma_get_console_logs`, `figma_watch_console`, `figma_clear_console`
 - **Export / görsel:** `figma_capture_screenshot`, `figma_export_nodes`
 - **Parity:** `figma_check_design_parity`
@@ -34,7 +37,7 @@ Tam liste: [TOOLS_FULL_LIST.md](./TOOLS_FULL_LIST.md).
 
 # Available Tools - Detailed Documentation
 
-Bu rehber her araç için **detaylı kullanım** (parametreler, örnekler, best practice) içerir. **Kısa liste (46 araç, tek sayfa):** [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
+Bu rehber her araç için **detaylı kullanım** (parametreler, örnekler, best practice) içerir. **Kısa liste (tek sayfa):** [TOOLS_FULL_LIST.md](TOOLS_FULL_LIST.md).
 
 ## Çalışma modu
 

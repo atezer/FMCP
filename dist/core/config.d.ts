@@ -1,7 +1,7 @@
 /**
  * Configuration management for F-MCP ATezer (Figma MCP Bridge) server
  */
-import type { ServerConfig } from './types/index.js';
+import type { ServerConfig } from "./types/index.js";
 /**
  * Load configuration from file or use defaults
  */

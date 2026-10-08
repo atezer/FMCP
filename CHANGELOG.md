@@ -12,6 +12,42 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.10.1] — 2026-10-08 — Repo düzeni, CI kontrolleri, bağımlılık güvenliği
+
+### Fixed
+
+- **`FIGMA_REST_TOKEN` ortam değişkeni artık okunuyor.** `/setup-rest-token` ve dokümanlar token'ı MCP ayarına bu değişkenle eklemeyi anlatıyordu, ama sunucu değişkeni hiç okumuyordu.
+- **Kurulum ve güncelleme betikleri.** `scripts/setup.sh`, `scripts/update.sh` ve `/update` olmayan `npm run build:local` komutunu çağırıyordu; artık `npm run build` kullanılıyor (dokümanlarda da).
+- **`install/` şablonları** var olmayan `fmcp-plugin-host.js` dosyasını ve kodun okumadığı `FMCP_PORT` değişkenini kullanıyordu. Artık `dist/local-plugin-only.js` ve `FIGMA_PLUGIN_BRIDGE_PORT` kullanılıyor.
+- **Kırık sembolik bağlantılar düzeltildi:** `.claude/commands` ve `.cursor/skills/f-mcp`.
+- **Autorun:** LaunchAgent `.plist` dosyası yer tutuculu bir şablon oldu; `install-autorun.sh` yolları kurulum sırasında dolduruyor. Launcher'daki sabit kişisel yol kaldırıldı.
+
+### Security
+
+- **Üretim bağımlılıklarında yüksek ve kritik seviyeli açık kalmadı.**
+  - `npm audit fix` uygulandı.
+  - `@modelcontextprotocol/sdk` ^1.32.1'e yükseltildi (GHSA-345p-7cg4-v4c7, GHSA-6qxp-vccf-f47h).
+  - `ws` 8.22.0'a güncellendi.
+
+### Changed
+
+- **`.mcp.json` artık repoda takip edilmiyor.** Yerine şablon olarak `.mcp.json.example` geldi; `.mcp.json` `.gitignore`'a eklendi. Kişisel yollar dokümanlardan da kaldırıldı.
+- **`scripts/sync-version.mjs`** (`npm run sync-version` / `check:versions`): 9 dosyadaki sürüm damgalarını ve araç, skill, komut sayılarını `package.json` ile eşitliyor. Düzeltilenler: `manifest.json` 1.1.2 / 33 araç, `.claude-plugin/plugin.json` 1.7.28 / 46 araç, 19 skill, 8 komut.
+- **Dokümanlar.**
+  - `docs/SETUP.md` ve `docs/ARCHITECTURE.md` güncel mimariyle yeniden yazıldı; eski mimari `docs/archived/` altına taşındı.
+  - `docs/TROUBLESHOOTING.md`'den eski tarayıcı ve CDP bölümleri çıkarıldı.
+  - `docs/TOOLS.md`'ye eksik 17 araç eklendi.
+  - Python köprüsü "deneysel" olarak işaretlendi.
+- **Araç adı doğrulayıcısı** artık `commands/`, `agents/`, `docs/`, `install/`, `README.md` ve `KURULUM.md` dosyalarını da tarıyor.
+- **CI.**
+  - Biçim ve lint kontrolü eklendi.
+  - Commit'li `dist/` ve embedded-skills dosyalarının kaynakla aynı olması kontrol ediliyor.
+  - Sürüm damgaları kontrol ediliyor.
+  - Üretim bağımlılıkları için gerçek audit kapısı var (`|| true` kaldırıldı).
+  - Testler Node 18, 20 ve 22 üzerinde çalışıyor.
+- **Tek seferlik biome biçimlendirmesi** yapıldı (`.git-blame-ignore-revs` dosyasında kayıtlı).
+- **Silinenler:** `.eslintrc.json`, `.prettierrc`, `tests/basic.test.ts`, `dist/cloudflare/`, kullanılmayan `tsx` bağımlılığı, `jest.config` içindeki ölü yollar, `tsconfig` içindeki `jsx` ayarı.
+
 ## [1.10.0] — 2026-10-08 — Güvenlik ve doğru dosyaya yazma
 
 ### Changed — davranış değişikliği

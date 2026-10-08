@@ -82,9 +82,10 @@ export class BlockingTracker {
 		if (matched.length === 0) return {};
 
 		const preview = matched.slice(0, 3).join(", ");
-		const categoryHint = this.lastBlockingCategories.length > 0
-			? ` Onceki BLOCKING kategorileri: ${this.lastBlockingCategories.slice(0, 3).join(", ")}.`
-			: "";
+		const categoryHint =
+			this.lastBlockingCategories.length > 0
+				? ` Onceki BLOCKING kategorileri: ${this.lastBlockingCategories.slice(0, 3).join(", ")}.`
+				: "";
 
 		return {
 			matchedNodeIds: matched,
@@ -123,14 +124,19 @@ export class BlockingTracker {
  * Extract nodeIds from figma_execute response (for recordBlocking).
  * Checks _postExecuteScan.violations and _designSystemViolations.
  */
-export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; categories: string[] } {
+export function extractBlockingNodeIds(response: unknown): {
+	nodeIds: string[];
+	categories: string[];
+} {
 	const nodeIds: string[] = [];
 	const categories: string[] = [];
 	if (!response || typeof response !== "object") return { nodeIds, categories };
 	const r = response as Record<string, unknown>;
 
 	// v1.9.6 _postExecuteScan.violations
-	const scan = r._postExecuteScan as { violations?: Array<{ nodeId?: string; category?: string }> } | undefined;
+	const scan = r._postExecuteScan as
+		| { violations?: Array<{ nodeId?: string; category?: string }> }
+		| undefined;
 	if (scan?.violations) {
 		for (const v of scan.violations) {
 			if (v.nodeId) nodeIds.push(v.nodeId);
@@ -139,7 +145,9 @@ export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; 
 	}
 
 	// Also _postExecuteViolations (server-side wrapper, v1.9.6)
-	const postViol = r._postExecuteViolations as { violations?: Array<{ nodeId?: string; category?: string }> } | undefined;
+	const postViol = r._postExecuteViolations as
+		| { violations?: Array<{ nodeId?: string; category?: string }> }
+		| undefined;
 	if (postViol?.violations) {
 		for (const v of postViol.violations) {
 			if (v.nodeId) nodeIds.push(v.nodeId);
@@ -148,7 +156,9 @@ export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; 
 	}
 
 	// v1.8.1 _designSystemViolations (static code analysis; node IDs usually embedded in messages)
-	const dsViol = r._designSystemViolations as { violations?: Array<{ category?: string; message?: string }> } | undefined;
+	const dsViol = r._designSystemViolations as
+		| { violations?: Array<{ category?: string; message?: string }> }
+		| undefined;
 	if (dsViol?.violations) {
 		for (const v of dsViol.violations) {
 			if (v.category) categories.push(v.category);
@@ -160,7 +170,10 @@ export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; 
 		}
 	}
 
-	return { nodeIds: Array.from(new Set(nodeIds)), categories: Array.from(new Set(categories)) };
+	return {
+		nodeIds: Array.from(new Set(nodeIds)),
+		categories: Array.from(new Set(categories)),
+	};
 }
 
 /** Singleton for server process lifetime */

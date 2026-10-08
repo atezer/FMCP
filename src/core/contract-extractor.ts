@@ -531,7 +531,10 @@ return JSON.stringify({ ok: true, tokens: out });
 
 /** "Icon (R)#12:34" → "Icon (R)" — property key'den hash'i düşür. */
 export function stripPropHash(key: string): string {
-	return key.replace(/#[^#]*$/, "").replace(/^[↳→›»\s]+/, "").trim();
+	return key
+		.replace(/#[^#]*$/, "")
+		.replace(/^[↳→›»\s]+/, "")
+		.trim();
 }
 
 function words(s: string): string[] {
@@ -544,29 +547,40 @@ function words(s: string): string[] {
 }
 
 export function toKebabCase(s: string): string {
-	return words(s).map((w) => w.toLowerCase()).join("-");
+	return words(s)
+		.map((w) => w.toLowerCase())
+		.join("-");
 }
 
 export function toCamelCase(s: string): string {
 	const w = words(s).map((x) => x.toLowerCase());
-	return w.map((x, i) => (i === 0 ? x : x[0].toUpperCase() + x.slice(1))).join("");
+	return w
+		.map((x, i) => (i === 0 ? x : x[0].toUpperCase() + x.slice(1)))
+		.join("");
 }
 
 export function toPascalCase(s: string): string {
-	return words(s).map((x) => x[0].toUpperCase() + x.slice(1).toLowerCase()).join("");
+	return words(s)
+		.map((x) => x[0].toUpperCase() + x.slice(1).toLowerCase())
+		.join("");
 }
 
 /** Variant seçenekleri tam olarak True/False mu? (boolean-like variant tespiti) */
-export function isBooleanLikeOptions(options: string[] | null | undefined): boolean {
+export function isBooleanLikeOptions(
+	options: string[] | null | undefined,
+): boolean {
 	if (!options || options.length !== 2) return false;
 	const lower = options.map((o) => o.toLowerCase()).sort();
 	return lower[0] === "false" && lower[1] === "true";
 }
 
-const GENERIC_NAME = /^(frame|group|rectangle|ellipse|line|vector|text|component|union|subtract|intersect|exclude)\s*\d*$/i;
+const GENERIC_NAME =
+	/^(frame|group|rectangle|ellipse|line|vector|text|component|union|subtract|intersect|exclude)\s*\d*$/i;
 
 /** Generic Figma adlarını (Frame 1, Group 2…) bağlama göre anlamlı ada çevirir. */
-export function semanticPartName(node: Pick<RawNode, "name" | "type" | "w" | "h" | "mainComponent">): string {
+export function semanticPartName(
+	node: Pick<RawNode, "name" | "type" | "w" | "h" | "mainComponent">,
+): string {
 	const raw = node.name.trim();
 	if (node.type === "INSTANCE" && node.mainComponent) {
 		// Variant adı ("version=v2") yerine set adını tercih et
@@ -577,8 +591,14 @@ export function semanticPartName(node: Pick<RawNode, "name" | "type" | "w" | "h"
 	if (node.type === "TEXT") return "label";
 	const w = node.w ?? 0;
 	const h = node.h ?? 0;
-	if ((node.type === "RECTANGLE" || node.type === "LINE") && (h <= 2 || w <= 2)) return "divider";
-	if (node.type === "RECTANGLE" || node.type === "ELLIPSE" || node.type === "VECTOR") return "shape";
+	if ((node.type === "RECTANGLE" || node.type === "LINE") && (h <= 2 || w <= 2))
+		return "divider";
+	if (
+		node.type === "RECTANGLE" ||
+		node.type === "ELLIPSE" ||
+		node.type === "VECTOR"
+	)
+		return "shape";
 	return "content";
 }
 
@@ -623,7 +643,8 @@ const FIELD_TO_CSS: Record<string, string> = {
 
 /** Bound alan adını CSS property'e çevirir (fills node tipine göre ayrışır). */
 export function fieldToCss(field: string, nodeType: string): string | null {
-	if (field === "fills") return nodeType === "TEXT" ? "color" : "background-color";
+	if (field === "fills")
+		return nodeType === "TEXT" ? "color" : "background-color";
 	return FIELD_TO_CSS[field] ?? null;
 }
 
@@ -636,13 +657,19 @@ export function tokenRef(variableName: string): string {
 // Kontrast (WCAG 2.1)
 // ============================================================================
 
-export interface ParsedColor { r: number; g: number; b: number; a: number }
+export interface ParsedColor {
+	r: number;
+	g: number;
+	b: number;
+	a: number;
+}
 
 /** #rgb | #rrggbb | #rrggbbaa hex'i 0-1 aralığında RGBA'ya çevirir. */
 export function parseHexColor(hex: string): ParsedColor | null {
 	if (typeof hex !== "string") return null;
 	const m = hex.trim().replace(/^#/, "");
-	if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{8}$/.test(m)) return null;
+	if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{8}$/.test(m))
+		return null;
 	if (m.length === 3) {
 		return {
 			r: parseInt(m[0] + m[0], 16) / 255,
@@ -675,7 +702,9 @@ function linearize(c: number): number {
 }
 
 export function relativeLuminance(c: ParsedColor): number {
-	return 0.2126 * linearize(c.r) + 0.7152 * linearize(c.g) + 0.0722 * linearize(c.b);
+	return (
+		0.2126 * linearize(c.r) + 0.7152 * linearize(c.g) + 0.0722 * linearize(c.b)
+	);
 }
 
 /**
@@ -687,7 +716,10 @@ export function relativeLuminance(c: ParsedColor): number {
  * Koyu zeminli kullanımlarda gerçek oran bundan sapabilir — bu bilinçli bir
  * yaklaşıklıktır (fg için zemin bellidir: bileşenin kendi bg'si).
  */
-export function computeContrastRatio(fgHex: string, bgHex: string): number | null {
+export function computeContrastRatio(
+	fgHex: string,
+	bgHex: string,
+): number | null {
 	const fg = parseHexColor(fgHex);
 	const bg = parseHexColor(bgHex);
 	if (!fg || !bg) return null;
@@ -776,22 +808,36 @@ interface IndexedNode {
 }
 
 /** Default variant ağacını dolaşıp path → görünen ad eşlemesi + part listesi üretir. */
-function indexTree(tree: RawNode): { byPath: Map<string, IndexedNode>; partsOrder: IndexedNode[] } {
+function indexTree(tree: RawNode): {
+	byPath: Map<string, IndexedNode>;
+	partsOrder: IndexedNode[];
+} {
 	const byPath = new Map<string, IndexedNode>();
 	const partsOrder: IndexedNode[] = [];
 	const usedNames = new Set<string>();
 
 	byPath.set("", { node: tree, path: "", displayPath: "" });
 
-	function walk(node: RawNode, path: string, displayPrefix: string, usedAtLevel: Set<string>, isTopLevel: boolean) {
+	function walk(
+		node: RawNode,
+		path: string,
+		displayPrefix: string,
+		usedAtLevel: Set<string>,
+		isTopLevel: boolean,
+	) {
 		const children = node.children ?? [];
 		for (let i = 0; i < children.length; i++) {
 			const child = children[i];
 			const childPath = path === "" ? String(i) : `${path}/${i}`;
 			const base = semanticPartName(child);
 			const name = dedupeName(base, isTopLevel ? usedNames : usedAtLevel);
-			const displayPath = displayPrefix === "" ? name : `${displayPrefix}/${name}`;
-			const indexed: IndexedNode = { node: child, path: childPath, displayPath };
+			const displayPath =
+				displayPrefix === "" ? name : `${displayPrefix}/${name}`;
+			const indexed: IndexedNode = {
+				node: child,
+				path: childPath,
+				displayPath,
+			};
 			byPath.set(childPath, indexed);
 			if (isTopLevel) partsOrder.push(indexed);
 			// INSTANCE altına inen path'ler override eşlemesi için gerekir;
@@ -803,7 +849,10 @@ function indexTree(tree: RawNode): { byPath: Map<string, IndexedNode>; partsOrde
 	return { byPath, partsOrder };
 }
 
-function boundTokensToCss(node: RawNode, tokensById: Record<string, RawTokenEntry>): Record<string, string> {
+function boundTokensToCss(
+	node: RawNode,
+	tokensById: Record<string, RawTokenEntry>,
+): Record<string, string> {
 	const out: Record<string, string> = {};
 	const bound = node.bound ?? {};
 	for (const field of Object.keys(bound)) {
@@ -812,19 +861,33 @@ function boundTokensToCss(node: RawNode, tokensById: Record<string, RawTokenEntr
 		const entry = tokensById[bound[field]];
 		out[css] = entry ? tokenRef(entry.name) : `{unresolved:${bound[field]}}`;
 	}
-	if (node.type === "TEXT" && node.textStyleName) out["text-style"] = node.textStyleName;
+	if (node.type === "TEXT" && node.textStyleName)
+		out["text-style"] = node.textStyleName;
 	return out;
 }
 
 function layoutOf(node: RawNode): Record<string, string> {
-	const dirMap: Record<string, string> = { HORIZONTAL: "row", VERTICAL: "column", GRID: "grid" };
-	const alignMap: Record<string, string> = {
-		MIN: "start", CENTER: "center", MAX: "end", SPACE_BETWEEN: "space-between", BASELINE: "baseline",
+	const dirMap: Record<string, string> = {
+		HORIZONTAL: "row",
+		VERTICAL: "column",
+		GRID: "grid",
 	};
-	const out: Record<string, string> = { display: node.layoutMode === "GRID" ? "grid" : "flex" };
-	if (node.layoutMode && dirMap[node.layoutMode]) out.direction = dirMap[node.layoutMode];
-	if (node.counterAxisAlignItems && alignMap[node.counterAxisAlignItems]) out.align = alignMap[node.counterAxisAlignItems];
-	if (node.primaryAxisAlignItems && alignMap[node.primaryAxisAlignItems]) out.justify = alignMap[node.primaryAxisAlignItems];
+	const alignMap: Record<string, string> = {
+		MIN: "start",
+		CENTER: "center",
+		MAX: "end",
+		SPACE_BETWEEN: "space-between",
+		BASELINE: "baseline",
+	};
+	const out: Record<string, string> = {
+		display: node.layoutMode === "GRID" ? "grid" : "flex",
+	};
+	if (node.layoutMode && dirMap[node.layoutMode])
+		out.direction = dirMap[node.layoutMode];
+	if (node.counterAxisAlignItems && alignMap[node.counterAxisAlignItems])
+		out.align = alignMap[node.counterAxisAlignItems];
+	if (node.primaryAxisAlignItems && alignMap[node.primaryAxisAlignItems])
+		out.justify = alignMap[node.primaryAxisAlignItems];
 	return out;
 }
 
@@ -841,7 +904,8 @@ export function normalizeProps(
 
 	function codeName(base: string, isBool: boolean): string {
 		let name = base;
-		if (usedCodeNames.has(name)) name = isBool ? `show${toPascalCase(base)}` : `${base}2`;
+		if (usedCodeNames.has(name))
+			name = isBool ? `show${toPascalCase(base)}` : `${base}2`;
 		let i = 2;
 		while (usedCodeNames.has(name)) name = `${base}${++i}`;
 		usedCodeNames.add(name);
@@ -864,20 +928,27 @@ export function normalizeProps(
 
 			if (isBooleanLikeOptions(options)) {
 				const name = codeName(`is${toPascalCase(cleanName)}`, true);
-				const defRaw = defaultCombo[cleanName] ?? String(raw.defaultValue ?? "");
+				const defRaw =
+					defaultCombo[cleanName] ?? String(raw.defaultValue ?? "");
 				// values gerçek variant string'lerinden türetilir ("true"/"False"/"TRUE"…):
 				// Figma setProperties case-sensitive olduğundan sabit "True"/"False"
 				// yazmak küçük harfli set'lerde geri-yazmayı kırar. isBooleanLikeOptions
 				// guard'ı sayesinde iki find de garantili eşleşir.
-				const trueOpt = options.find((o) => o.toLowerCase() === "true") ?? "True";
-				const falseOpt = options.find((o) => o.toLowerCase() === "false") ?? "False";
+				const trueOpt =
+					options.find((o) => o.toLowerCase() === "true") ?? "True";
+				const falseOpt =
+					options.find((o) => o.toLowerCase() === "false") ?? "False";
 				props.push({
 					name,
 					description: cleanName,
 					type: "boolean",
 					default: defRaw.toLowerCase() === "true",
 					bindings: {
-						figma: { kind: "VARIANT", property: raw.key, values: { true: trueOpt, false: falseOpt } },
+						figma: {
+							kind: "VARIANT",
+							property: raw.key,
+							values: { true: trueOpt, false: falseOpt },
+						},
 						code: { prop: name },
 					},
 				});
@@ -887,7 +958,8 @@ export function normalizeProps(
 			const name = codeName(toCamelCase(cleanName), false);
 			const values: Record<string, string> = {};
 			for (const opt of options) values[toKebabCase(opt)] = opt;
-			const defRaw = defaultCombo[cleanName] ?? String(raw.defaultValue ?? options[0] ?? "");
+			const defRaw =
+				defaultCombo[cleanName] ?? String(raw.defaultValue ?? options[0] ?? "");
 			props.push({
 				name,
 				description: `${cleanName} of the component`,
@@ -950,7 +1022,9 @@ export function normalizeProps(
 				figma: {
 					kind: "INSTANCE_SWAP",
 					property: raw.key,
-					...(raw.defaultComponentId ? { defaultComponentId: raw.defaultComponentId } : {}),
+					...(raw.defaultComponentId
+						? { defaultComponentId: raw.defaultComponentId }
+						: {}),
 				},
 				code: { prop: name },
 			},
@@ -986,7 +1060,10 @@ function collectReferencedKeys(tree: RawNode | undefined): Set<string> {
 }
 
 /** structure + overrides içinde geçen tüm variable id'lerini toplar (aşama 3 girdisi). */
-export function collectVariableIds(structure: RawStructure, overrides: RawOverrides): string[] {
+export function collectVariableIds(
+	structure: RawStructure,
+	overrides: RawOverrides,
+): string[] {
 	const ids = new Set<string>();
 	function walkTree(n: RawNode | undefined) {
 		if (!n) return;
@@ -1066,15 +1143,22 @@ function formatOverrides(
 					// ham adlardan kebab yol üretilir; bu yol dedupeName soneklerinden
 					// (-2, -3) habersizdir, aynı adlı kardeşlerde çakışma riski taşır.
 					// Normal set'lerde byPath her zaman bulunur, fallback nadirdir.
-					const displayPath = indexed?.displayPath
-						?? entry.n.split("/").map((s) => toKebabCase(s)).join("/");
+					const displayPath =
+						indexed?.displayPath ??
+						entry.n
+							.split("/")
+							.map((s) => toKebabCase(s))
+							.join("/");
 					childTokens[`${displayPath}/${css}`] = formatted;
 				}
 			}
 			const valueEntry: FormattedOverrides[string][string] = {};
-			if (Object.keys(rootTokens).length > 0) valueEntry.root = { tokens: rootTokens };
-			if (Object.keys(childTokens).length > 0) valueEntry.children = { tokens: childTokens };
-			if (Object.keys(valueEntry).length > 0) formattedGroup[toKebabCase(value)] = valueEntry;
+			if (Object.keys(rootTokens).length > 0)
+				valueEntry.root = { tokens: rootTokens };
+			if (Object.keys(childTokens).length > 0)
+				valueEntry.children = { tokens: childTokens };
+			if (Object.keys(valueEntry).length > 0)
+				formattedGroup[toKebabCase(value)] = valueEntry;
 		}
 		if (Object.keys(formattedGroup).length > 0) out[groupKey] = formattedGroup;
 	}
@@ -1094,7 +1178,9 @@ function buildParts(
 					name: key,
 					acceptsMode: "open",
 					figmaName: node.name,
-					...(node.mainComponent?.id ? { defaultComponentId: node.mainComponent.id } : {}),
+					...(node.mainComponent?.id
+						? { defaultComponentId: node.mainComponent.id }
+						: {}),
 				},
 			};
 			continue;
@@ -1107,13 +1193,20 @@ function buildParts(
 	return parts;
 }
 
-function buildBaseSpecs(tree: RawNode, partsOrder: IndexedNode[]): Record<string, unknown> {
+function buildBaseSpecs(
+	tree: RawNode,
+	partsOrder: IndexedNode[],
+): Record<string, unknown> {
 	// Figma'da primary axis layoutMode'u izler: VERTICAL'de primary = height,
 	// counter = width. hug/fixed eşlemesi bu yüzden eksene göre seçilmeli —
 	// aksi halde dikey bileşenlerde width/height ters raporlanır.
 	const vertical = tree.layoutMode === "VERTICAL";
-	const widthMode = vertical ? tree.counterAxisSizingMode : tree.primaryAxisSizingMode;
-	const heightMode = vertical ? tree.primaryAxisSizingMode : tree.counterAxisSizingMode;
+	const widthMode = vertical
+		? tree.counterAxisSizingMode
+		: tree.primaryAxisSizingMode;
+	const heightMode = vertical
+		? tree.primaryAxisSizingMode
+		: tree.counterAxisSizingMode;
 	const root: Record<string, unknown> = {
 		layoutMode: tree.layoutMode ?? "NONE",
 		primaryAxisAlign: tree.primaryAxisAlignItems ?? null,
@@ -1195,7 +1288,8 @@ function buildA11y(
 ): A11yPair[] {
 	// Token ref → entry ters eşlemesi
 	const byRef = new Map<string, RawTokenEntry>();
-	for (const entry of Object.values(tokensById)) byRef.set(tokenRef(entry.name), entry);
+	for (const entry of Object.values(tokensById))
+		byRef.set(tokenRef(entry.name), entry);
 
 	const textParts = partsOrder.filter((p) => p.node.type === "TEXT");
 	if (textParts.length === 0) return [];
@@ -1213,13 +1307,15 @@ function buildA11y(
 	const groupTouchesColor = (key: string): boolean => {
 		const group = formattedOverrides[key];
 		if (!group) return false;
-		return Object.values(group).some((v) =>
-			Object.keys(v.root?.tokens ?? {}).includes("background-color") ||
-			Object.keys(v.children?.tokens ?? {}).some((k) => k.endsWith("/color")),
+		return Object.values(group).some(
+			(v) =>
+				Object.keys(v.root?.tokens ?? {}).includes("background-color") ||
+				Object.keys(v.children?.tokens ?? {}).some((k) => k.endsWith("/color")),
 		);
 	};
-	const candidates = Object.keys(structure.variantGroupProperties ?? {})
-		.filter((prop) => !STATE_PROP_NAMES.has(prop.toLowerCase()));
+	const candidates = Object.keys(structure.variantGroupProperties ?? {}).filter(
+		(prop) => !STATE_PROP_NAMES.has(prop.toLowerCase()),
+	);
 	const byNamePriority = [
 		...candidates.filter((p) => /style|variant|tone|type|color/i.test(p)),
 		...candidates.filter((p) => !/style|variant|tone|type|color/i.test(p)),
@@ -1235,7 +1331,11 @@ function buildA11y(
 
 	const pairs: A11yPair[] = [];
 
-	function pushPair(styleLabel: string, fgRef: string | undefined, bgRef: string | undefined) {
+	function pushPair(
+		styleLabel: string,
+		fgRef: string | undefined,
+		bgRef: string | undefined,
+	) {
 		if (!fgRef || !bgRef) return;
 		const fg = byRef.get(fgRef);
 		const bg = byRef.get(bgRef);
@@ -1265,13 +1365,16 @@ function buildA11y(
 		const group = formattedOverrides[styleGroupKey];
 		for (const [valueKey, override] of Object.entries(group)) {
 			const bgRef = override.root?.tokens?.["background-color"] ?? defaultBgRef;
-			const fgRef = override.children?.tokens?.[`${textPart.displayPath}/color`] ?? defaultFgRef;
+			const fgRef =
+				override.children?.tokens?.[`${textPart.displayPath}/color`] ??
+				defaultFgRef;
 			if (bgRef === "(none)") continue; // şeffaf zemin — kontrast bağlama bağlı
 			pushPair(valueKey, fgRef, bgRef);
 		}
 		// Default stilin kendi çifti (override listesinde yoktur)
 		const defaultStyleValue = defaultCombo[stylePropName];
-		if (defaultStyleValue) pushPair(toKebabCase(defaultStyleValue), defaultFgRef, defaultBgRef);
+		if (defaultStyleValue)
+			pushPair(toKebabCase(defaultStyleValue), defaultFgRef, defaultBgRef);
 	} else {
 		pushPair("default", defaultFgRef, defaultBgRef);
 	}
@@ -1286,8 +1389,15 @@ export function assembleContract(
 	tokens: RawTokens,
 	opts?: AssembleOptions,
 ): { contract: Record<string, unknown>; report: ContractReport } {
-	if (!structure.ok || !structure.set || !structure.tree || !structure.defaultVariant) {
-		throw new Error(`Invalid structure payload: ${structure.error ?? "missing fields"}`);
+	if (
+		!structure.ok ||
+		!structure.set ||
+		!structure.tree ||
+		!structure.defaultVariant
+	) {
+		throw new Error(
+			`Invalid structure payload: ${structure.error ?? "missing fields"}`,
+		);
 	}
 	const tokensById = tokens.tokens ?? {};
 	const setName = structure.set.name;
@@ -1297,7 +1407,11 @@ export function assembleContract(
 
 	const { byPath, partsOrder } = indexTree(structure.tree);
 	const referencedKeys = collectReferencedKeys(structure.tree);
-	const { props, states, orphans } = normalizeProps(structure.props ?? [], referencedKeys, defaultCombo);
+	const { props, states, orphans } = normalizeProps(
+		structure.props ?? [],
+		referencedKeys,
+		defaultCombo,
+	);
 
 	const anatomyRootTokens = boundTokensToCss(structure.tree, tokensById);
 	const formattedOverrides = formatOverrides(overrides, byPath, tokensById);
@@ -1312,7 +1426,14 @@ export function assembleContract(
 		};
 	}
 
-	const a11yPairs = buildA11y(structure, formattedOverrides, anatomyRootTokens, partsOrder, tokensById, defaultCombo);
+	const a11yPairs = buildA11y(
+		structure,
+		formattedOverrides,
+		anatomyRootTokens,
+		partsOrder,
+		tokensById,
+		defaultCombo,
+	);
 
 	const contract: Record<string, unknown> = {
 		$schema: "./contract.schema.json",
@@ -1339,19 +1460,23 @@ export function assembleContract(
 				nodeId: structure.set.id,
 			},
 			code: {
-				importPath: (opts?.importPathTemplate ?? "@ds/components/{Name}").replace("{Name}", pascalName),
+				importPath: (
+					opts?.importPathTemplate ?? "@ds/components/{Name}"
+				).replace("{Name}", pascalName),
 				export: pascalName,
 			},
 		},
-		...(Object.keys(formattedOverrides).length > 0 ? { variantOverrides: formattedOverrides } : {}),
+		...(Object.keys(formattedOverrides).length > 0
+			? { variantOverrides: formattedOverrides }
+			: {}),
 	};
 
 	const a11yFailCount = a11yPairs.filter((p) => !p.wcagAA).length;
-	const notes = [
-		"Status: draft — anchors.code needs manual verification",
-	];
+	const notes = ["Status: draft — anchors.code needs manual verification"];
 	if (orphans.length > 0) {
-		notes.push(`Orphan property uyarısı: ${orphans.length} prop'un backing layer'ı default variant'ta bulunamadı: ${orphans.join(", ")}`);
+		notes.push(
+			`Orphan property uyarısı: ${orphans.length} prop'un backing layer'ı default variant'ta bulunamadı: ${orphans.join(", ")}`,
+		);
 	}
 
 	const report: ContractReport = {
@@ -1374,11 +1499,15 @@ export function assembleContract(
  */
 export function parseScriptResult<T>(execResult: unknown, stage: string): T {
 	if (execResult === null || typeof execResult !== "object") {
-		throw new Error(`${stage}: unexpected execute result (${typeof execResult})`);
+		throw new Error(
+			`${stage}: unexpected execute result (${typeof execResult})`,
+		);
 	}
 	const rec = execResult as Record<string, unknown>;
 	if (rec.success === false) {
-		throw new Error(`${stage}: ${String(rec.error ?? "plugin execution failed")}`);
+		throw new Error(
+			`${stage}: ${String(rec.error ?? "plugin execution failed")}`,
+		);
 	}
 	const raw = rec.result;
 	if (typeof raw === "string") {

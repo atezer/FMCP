@@ -110,7 +110,7 @@ The plugin will:
 
 ### Connecting Claude App (plugin-only, no token)
 
-1. **Build** (once): `npm run build:local` (depo kökünde)
+1. **Build** (once): `npm run build` (depo kökünde)
 2. **Claude config** (macOS): `~/Library/Application Support/Claude/claude_desktop_config.json`:
    ```json
    {

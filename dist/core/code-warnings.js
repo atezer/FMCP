@@ -69,9 +69,18 @@ export function analyzeCodeForWarnings(code) {
         // v1.8.2: dynamic-page mode fixes
         { sync: "figma.getNodeById(", async: "figma.getNodeByIdAsync(" },
         { sync: "figma.getStyleById(", async: "figma.getStyleByIdAsync(" },
-        { sync: "figma.variables.getVariableById(", async: "figma.variables.getVariableByIdAsync(" },
-        { sync: "figma.variables.getVariableCollectionById(", async: "figma.variables.getVariableCollectionByIdAsync(" },
-        { sync: "figma.importComponentByKey(", async: "figma.importComponentByKeyAsync(" },
+        {
+            sync: "figma.variables.getVariableById(",
+            async: "figma.variables.getVariableByIdAsync(",
+        },
+        {
+            sync: "figma.variables.getVariableCollectionById(",
+            async: "figma.variables.getVariableCollectionByIdAsync(",
+        },
+        {
+            sync: "figma.importComponentByKey(",
+            async: "figma.importComponentByKeyAsync(",
+        },
     ];
     for (const api of syncApis) {
         if (code.includes(api.sync) && !code.includes(api.async)) {
@@ -83,7 +92,9 @@ export function analyzeCodeForWarnings(code) {
         }
     }
     // 1d. Font not loaded before text modification
-    if ((/\.characters\s*=/.test(code) || code.includes(".insertCharacters") || code.includes(".deleteCharacters")) &&
+    if ((/\.characters\s*=/.test(code) ||
+        code.includes(".insertCharacters") ||
+        code.includes(".deleteCharacters")) &&
         !code.includes("loadFontAsync")) {
         warnings.push({
             severity: "ADVISORY",
@@ -93,7 +104,8 @@ export function analyzeCodeForWarnings(code) {
         });
     }
     // 1e. Sync page assignment — does not work
-    if (/figma\.currentPage\s*=/.test(code) && !code.includes("setCurrentPageAsync")) {
+    if (/figma\.currentPage\s*=/.test(code) &&
+        !code.includes("setCurrentPageAsync")) {
         warnings.push({
             severity: "ADVISORY",
             category: "SYNC_API",
@@ -132,9 +144,11 @@ export function analyzeCodeForWarnings(code) {
         code.includes("createInstance()") ||
         code.includes(".createInstance(") ||
         code.includes("importComponentSetByKeyAsync");
-    const setBoundVariableCount = (code.match(/setBoundVariable\s*\(/g) || []).length;
+    const setBoundVariableCount = (code.match(/setBoundVariable\s*\(/g) || [])
+        .length;
     const setBoundVariableForPaintCount = (code.match(/setBoundVariableForPaint\s*\(/g) || []).length;
-    const setTextStyleCount = (code.match(/setTextStyleIdAsync\s*\(/g) || []).length;
+    const setTextStyleCount = (code.match(/setTextStyleIdAsync\s*\(/g) || [])
+        .length;
     const totalBindings = setBoundVariableCount + setBoundVariableForPaintCount + setTextStyleCount;
     const isTokenBoundPrimitive = createFrameCount > 0 && totalBindings >= createFrameCount;
     if (createFrameCount >= 3 && !hasInstanceCreation && !isTokenBoundPrimitive) {
@@ -150,7 +164,9 @@ export function analyzeCodeForWarnings(code) {
                 "24.3 token-bound primitives (her createFrame icin setBoundVariable + setTextStyleIdAsync).",
         });
     }
-    else if (createFrameCount >= 3 && !hasInstanceCreation && isTokenBoundPrimitive) {
+    else if (createFrameCount >= 3 &&
+        !hasInstanceCreation &&
+        isTokenBoundPrimitive) {
         warnings.push({
             severity: "ADVISORY",
             category: "TOKEN_BOUND_PRIMITIVE_FALLBACK",
@@ -161,7 +177,8 @@ export function analyzeCodeForWarnings(code) {
         });
     }
     // 2c. Hardcoded fontSize without setTextStyleIdAsync
-    if (/\.fontSize\s*=\s*\d/.test(code) && !code.includes("setTextStyleIdAsync")) {
+    if (/\.fontSize\s*=\s*\d/.test(code) &&
+        !code.includes("setTextStyleIdAsync")) {
         warnings.push({
             severity: "SEVERE",
             category: "HARDCODED_FONT_SIZE",
@@ -187,7 +204,9 @@ export function analyzeCodeForWarnings(code) {
     }
     // 2e. Rectangle as separator without DS reference (often indicates hand-built dividers)
     const rectCount = (code.match(/figma\.createRectangle\(\)/g) || []).length;
-    if (rectCount >= 2 && !hasInstanceCreation && !code.includes("setBoundVariableForPaint")) {
+    if (rectCount >= 2 &&
+        !hasInstanceCreation &&
+        !code.includes("setBoundVariableForPaint")) {
         warnings.push({
             severity: "SEVERE",
             category: "HAND_BUILT_SEPARATORS",

@@ -95,7 +95,9 @@ export class PluginBridgeServer {
         try {
             let pid = process.ppid;
             for (let i = 0; i < 5 && pid > 1; i++) {
-                const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
+                const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 })
+                    .toString()
+                    .trim();
                 const comm = line.replace(/^\s*\d+\s+/, "");
                 const ppidMatch = line.match(/^\s*(\d+)/);
                 if (/[Cc]ursor/i.test(comm)) {
@@ -113,7 +115,9 @@ export class PluginBridgeServer {
                 pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
             }
         }
-        catch { /* ignore */ }
+        catch {
+            /* ignore */
+        }
     }
     /** setTimeout tracked for cancellation by stop(). */
     later(fn, ms) {
@@ -152,7 +156,11 @@ export class PluginBridgeServer {
             const TIMEOUT_MS = 30000;
             const timer = setTimeout(() => {
                 this._listenResolve = null;
-                resolve({ success: false, port, error: this.startError || `Port bind timeout (${TIMEOUT_MS}ms)` });
+                resolve({
+                    success: false,
+                    port,
+                    error: this.startError || `Port bind timeout (${TIMEOUT_MS}ms)`,
+                });
             }, TIMEOUT_MS);
             // Store callback so tryListenWithAutoIncrement/setupBridgeOnServer can notify us
             this._listenResolve = (success) => {
@@ -161,7 +169,11 @@ export class PluginBridgeServer {
                     resolve({ success: true, port: this.port });
                 }
                 else {
-                    resolve({ success: false, port, error: this.startError || "Port bind failed" });
+                    resolve({
+                        success: false,
+                        port,
+                        error: this.startError || "Port bind failed",
+                    });
                 }
             };
             this.tryListenWithAutoIncrement(port);
@@ -224,7 +236,9 @@ export class PluginBridgeServer {
         const distinct = new Set(files.map((f) => f.fileKey));
         if (distinct.size <= 1)
             return null;
-        const list = files.map((f) => `"${f.fileName || "?"}" (fileKey: ${f.fileKey || "?"})`).join(", ");
+        const list = files
+            .map((f) => `"${f.fileName || "?"}" (fileKey: ${f.fileKey || "?"})`)
+            .join(", ");
         return (`Birden fazla Figma dosyası bağlı; hangi dosyaya yazılacağı belirsiz. ` +
             `Bağlı dosyalar: ${list}. Aracı fileKey (veya figmaUrl) parametresiyle tekrar çağır.`);
     }
@@ -241,7 +255,7 @@ export class PluginBridgeServer {
                 if (!fileKey || client.fileKey === fileKey)
                     return client;
             }
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 200));
         }
         return this.resolveClient(fileKey);
     }
@@ -264,13 +278,18 @@ export class PluginBridgeServer {
         return new Promise((resolve) => {
             const req = httpGet({ hostname: host, port, path: "/", timeout: 2000 }, (res) => {
                 let body = "";
-                res.on("data", (chunk) => { body += chunk; });
+                res.on("data", (chunk) => {
+                    body += chunk;
+                });
                 res.on("end", () => {
                     resolve(body.includes("F-MCP") ? "fmcp" : "other");
                 });
             });
             req.on("error", () => resolve("dead"));
-            req.on("timeout", () => { req.destroy(); resolve("dead"); });
+            req.on("timeout", () => {
+                req.destroy();
+                resolve("dead");
+            });
         });
     }
     /**
@@ -282,7 +301,9 @@ export class PluginBridgeServer {
         return new Promise((resolve) => {
             const req = httpGet({ hostname: host, port, path: "/status", timeout: 1000 }, (res) => {
                 let body = "";
-                res.on("data", (chunk) => { body += chunk; });
+                res.on("data", (chunk) => {
+                    body += chunk;
+                });
                 res.on("end", () => {
                     try {
                         const data = JSON.parse(body);
@@ -290,7 +311,9 @@ export class PluginBridgeServer {
                             clients: typeof data.clients === "number" ? data.clients : -1,
                             uptime: typeof data.uptime === "number" ? data.uptime : -1,
                             // v1.10.0+ bridges report idle time; older ones don't (undefined → fall back to uptime)
-                            idleSeconds: typeof data.idleSeconds === "number" ? data.idleSeconds : undefined,
+                            idleSeconds: typeof data.idleSeconds === "number"
+                                ? data.idleSeconds
+                                : undefined,
                         });
                     }
                     catch {
@@ -299,7 +322,10 @@ export class PluginBridgeServer {
                 });
             });
             req.on("error", () => resolve({ clients: -1, uptime: -1 }));
-            req.on("timeout", () => { req.destroy(); resolve({ clients: -1, uptime: -1 }); });
+            req.on("timeout", () => {
+                req.destroy();
+                resolve({ clients: -1, uptime: -1 });
+            });
         });
     }
     /**
@@ -323,7 +349,9 @@ export class PluginBridgeServer {
                     if (status.uptime >= 0)
                         discovered.push(p);
                 }
-                catch { /* silent */ }
+                catch {
+                    /* silent */
+                }
             })());
         }
         await Promise.all(probes);
@@ -334,13 +362,18 @@ export class PluginBridgeServer {
      * Used when periodic probe detects a new sibling (or one disappears).
      */
     broadcastSiblingUpdate() {
-        const msg = JSON.stringify({ type: "activeBridgesUpdate", activeBridges: this.knownSiblings });
+        const msg = JSON.stringify({
+            type: "activeBridgesUpdate",
+            activeBridges: this.knownSiblings,
+        });
         for (const client of this.clients.values()) {
             if (client.ws.readyState === 1) {
                 try {
                     client.ws.send(msg);
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
         }
     }
@@ -351,9 +384,17 @@ export class PluginBridgeServer {
      */
     sendShutdownRequest(port, host, onAccepted, onRefused) {
         console.error(`   Sending shutdown request to old F-MCP bridge on port ${port}…\n`);
-        const req = httpRequest({ hostname: host, port, path: "/shutdown", method: "POST", timeout: 3000 }, (res) => {
+        const req = httpRequest({
+            hostname: host,
+            port,
+            path: "/shutdown",
+            method: "POST",
+            timeout: 3000,
+        }, (res) => {
             let body = "";
-            res.on("data", (chunk) => { body += chunk; });
+            res.on("data", (chunk) => {
+                body += chunk;
+            });
             res.on("end", () => {
                 if (res.statusCode === 200) {
                     console.error(`   Old bridge accepted shutdown. Retaking port ${port} in ${SHUTDOWN_TAKEOVER_DELAY_MS}ms…\n`);
@@ -388,7 +429,8 @@ export class PluginBridgeServer {
             // v1.10.0: browsers always attach an Origin header to cross-site POSTs; sibling
             // bridges (Node http) never do — so any request with an Origin is a web page. Reject it.
             if (req.method === "POST" && req.url === "/shutdown") {
-                if (req.headers.origin !== undefined || req.headers["sec-fetch-site"] !== undefined) {
+                if (req.headers.origin !== undefined ||
+                    req.headers["sec-fetch-site"] !== undefined) {
                     logger.warn({ origin: req.headers.origin }, "Rejected /shutdown from a browser origin");
                     res.writeHead(403, { "Content-Type": "text/plain" });
                     res.end("forbidden\n");
@@ -418,7 +460,9 @@ export class PluginBridgeServer {
                     uptime: Math.round(process.uptime()),
                     // v1.10.0: seconds with zero clients (0 while any client is connected) —
                     // takeover decisions use this instead of process uptime
-                    idleSeconds: clients > 0 ? 0 : Math.round((Date.now() - this.lastClientChangeAt) / 1000),
+                    idleSeconds: clients > 0
+                        ? 0
+                        : Math.round((Date.now() - this.lastClientChangeAt) / 1000),
                     version: FMCP_VERSION,
                 });
                 res.writeHead(200, { "Content-Type": "application/json" });
@@ -441,7 +485,9 @@ export class PluginBridgeServer {
             try {
                 server.close();
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
             return;
         }
         this.port = port;
@@ -493,19 +539,30 @@ export class PluginBridgeServer {
                         if (incomingFileKey) {
                             const existing = this.findClientByFileKey(incomingFileKey);
                             if (existing && existing.clientId !== clientId) {
-                                logger.info({ oldClientId: existing.clientId, newClientId: clientId, fileKey: incomingFileKey }, "Plugin bridge: replacing existing client for same fileKey");
+                                logger.info({
+                                    oldClientId: existing.clientId,
+                                    newClientId: clientId,
+                                    fileKey: incomingFileKey,
+                                }, "Plugin bridge: replacing existing client for same fileKey");
                                 this.removeClient(existing.clientId, "Replaced by new connection for same file");
                                 try {
                                     existing.ws.close();
                                 }
-                                catch { /* ignore */ }
+                                catch {
+                                    /* ignore */
+                                }
                             }
                         }
                         clientInfo.fileKey = incomingFileKey;
                         clientInfo.fileName = incomingFileName;
                         clientInfo.pluginVersion = incomingPluginVersion;
                         handshakeDone = true;
-                        logger.info({ clientId, fileKey: incomingFileKey, fileName: incomingFileName, pluginVersion: incomingPluginVersion }, "Plugin bridge: client registered (fileKey=%s, fileName=%s, pluginVersion=%s)", incomingFileKey, incomingFileName, incomingPluginVersion ?? "unknown");
+                        logger.info({
+                            clientId,
+                            fileKey: incomingFileKey,
+                            fileName: incomingFileName,
+                            pluginVersion: incomingPluginVersion,
+                        }, "Plugin bridge: client registered (fileKey=%s, fileName=%s, pluginVersion=%s)", incomingFileKey, incomingFileName, incomingPluginVersion ?? "unknown");
                         ws.send(JSON.stringify({
                             type: "welcome",
                             bridgeVersion: FMCP_VERSION,
@@ -521,12 +578,16 @@ export class PluginBridgeServer {
                         return;
                     }
                     // v1.10.0: token changes only from a client that completed the "ready" handshake
-                    if ((msg.type === "setToken" || msg.type === "clearToken") && !handshakeDone) {
+                    if ((msg.type === "setToken" || msg.type === "clearToken") &&
+                        !handshakeDone) {
                         logger.warn({ clientId, type: msg.type }, "Plugin bridge: ignored token message from unregistered client");
                         return;
                     }
-                    if (msg.type === "setToken" && typeof msg.token === "string") {
-                        const token = msg.token;
+                    if (msg.type === "setToken" &&
+                        typeof msg.token ===
+                            "string") {
+                        const token = msg
+                            .token;
                         if (token) {
                             this.setFigmaRestToken(token);
                             logger.info({ clientId }, "Plugin bridge: REST API token set via plugin UI");
@@ -585,7 +646,9 @@ export class PluginBridgeServer {
                     this.broadcastSiblingUpdate();
                 }
             }
-            catch { /* silent */ }
+            catch {
+                /* silent */
+            }
         })();
         // v1.9.1+ Periodic re-probe (30s) — detect new/disappeared siblings
         if (!this.siblingProbeInterval) {
@@ -600,7 +663,9 @@ export class PluginBridgeServer {
                             this.broadcastSiblingUpdate();
                         }
                     }
-                    catch { /* silent */ }
+                    catch {
+                        /* silent */
+                    }
                 })();
             }, 30000);
         }
@@ -617,7 +682,9 @@ export class PluginBridgeServer {
                         try {
                             info.ws.terminate();
                         }
-                        catch { /* ignore */ }
+                        catch {
+                            /* ignore */
+                        }
                         this.removeClient(cId, "Heartbeat timeout");
                         continue;
                     }
@@ -629,7 +696,9 @@ export class PluginBridgeServer {
                 try {
                     info.ws.send(JSON.stringify({ type: "ping" }));
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
             this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
         };
@@ -687,7 +756,8 @@ export class PluginBridgeServer {
         const server = this.createBridgeHttpServer();
         listenOn(server, () => {
             const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
-            this.probePort(port, probeHost).then(async (status) => {
+            this.probePort(port, probeHost)
+                .then(async (status) => {
                 if (gen !== this.generation)
                     return;
                 if (status === "fmcp") {
@@ -704,13 +774,16 @@ export class PluginBridgeServer {
                         console.error(`   Port ${port}: healthy bridge (${clients} client(s)), trying ${port + 1}…\n`);
                         next();
                     }
-                    else if (clients === 0 && idle >= 0 && idle < FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
+                    else if (clients === 0 &&
+                        idle >= 0 &&
+                        idle < FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
                         // Fresh / briefly idle bridge (no clients yet) — skip, don't takeover
                         logger.info({ port, idle }, "Port %d: F-MCP bridge idle only %ds, skipping to next port", port, idle);
                         console.error(`   Port ${port}: recently active bridge (${idle}s idle), trying ${port + 1}…\n`);
                         next();
                     }
-                    else if (clients === 0 && idle >= FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
+                    else if (clients === 0 &&
+                        idle >= FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
                         // STALE bridge (0 clients for ≥ 30s) — takeover
                         logger.info({ port, idle }, "Port %d: stale F-MCP bridge (0 clients, %ds idle), requesting shutdown", port, idle);
                         console.error(`\n⚠️  Port ${port}: stale bridge (0 clients, ${idle}s idle). Requesting shutdown…\n`);
@@ -749,7 +822,8 @@ export class PluginBridgeServer {
                     console.error(`   Port ${port}: non-F-MCP service, trying ${port + 1}…\n`);
                     next();
                 }
-            }).catch(() => {
+            })
+                .catch(() => {
                 // Probe failed — skip to next port
                 next();
             });
@@ -771,7 +845,7 @@ export class PluginBridgeServer {
             if (fileKey) {
                 const available = this.listConnectedFiles();
                 const fileList = available.length > 0
-                    ? ` Connected files: ${available.map(f => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
+                    ? ` Connected files: ${available.map((f) => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
                     : "";
                 throw new Error(`No plugin connected for fileKey "${fileKey}".${fileList} ` +
                     "Open the target file in Figma and run the F-MCP ATezer Bridge plugin.");
@@ -871,7 +945,9 @@ export class PluginBridgeServer {
                 try {
                     client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true }));
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
         }
     }
@@ -883,7 +959,9 @@ export class PluginBridgeServer {
                 try {
                     client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: false }));
                 }
-                catch { /* ignore */ }
+                catch {
+                    /* ignore */
+                }
             }
         }
     }
@@ -897,9 +975,15 @@ export class PluginBridgeServer {
             for (const client of this.clients.values()) {
                 if (client.ws.readyState === 1) {
                     try {
-                        client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true, rateLimit: { remaining, limit, resetAt } }));
+                        client.ws.send(JSON.stringify({
+                            type: "tokenStatus",
+                            hasToken: true,
+                            rateLimit: { remaining, limit, resetAt },
+                        }));
                     }
-                    catch { /* ignore */ }
+                    catch {
+                        /* ignore */
+                    }
                 }
             }
         }
@@ -927,7 +1011,9 @@ export class PluginBridgeServer {
             try {
                 client.ws.close();
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
         }
         this.clients.clear();
         if (this.wss) {

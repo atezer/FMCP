@@ -157,7 +157,11 @@ export function resolveDevice(
 	// Try custom dimension
 	const custom = parseCustomDimension(input);
 	if (custom) {
-		return { name: `Custom ${custom.width}×${custom.height}`, width: custom.width, height: custom.height };
+		return {
+			name: `Custom ${custom.width}×${custom.height}`,
+			width: custom.width,
+			height: custom.height,
+		};
 	}
 
 	return undefined;

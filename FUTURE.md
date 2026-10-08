@@ -864,11 +864,11 @@ P3.5 A1-A10 + B1-B12 uygulamasının ardından 19 skill canlı Figma dosyaların
 1. **C1** (en yüksek — araç tamamen kırık)
 2. **C2** (kriptik hata mesajı)
 3. **C3 + C4 birlikte** (doküman değişiklikleri)
-4. **Son:** `npm run build:local` + `npm test` + `npm run validate:fmcp-skills` + canlı Figma doğrulama
+4. **Son:** `npm run build` + `npm test` + `npm run validate:fmcp-skills` + canlı Figma doğrulama
 
 #### Değişecek Dosyalar
 - `f-mcp-plugin/code.js` (C1 + C2 plugin tarafı)
-- `src/core/plugin-bridge-connector.ts` (C2 sunucu tarafı → `npm run build:local` gerekli)
+- `src/core/plugin-bridge-connector.ts` (C2 sunucu tarafı → `npm run build` gerekli)
 - `.cursor/skills/f-mcp/figma-canvas-ops/SKILL.md` (C3 + C4)
 - `.cursor/skills/f-mcp/figjam-diagram-builder/SKILL.md` (C3 + C4)
 
@@ -1014,7 +1014,7 @@ Kaynak tek klasör: **`.cursor/skills/f-mcp/`** (köke kopya `skills/` arşivde:
 
 **Kontrol:** `.github/workflows/` mevcut (validate:fmcp-skills CI); ek test/build CI eklenmedi.
 
-- [ ] GitHub Actions: `npm run build:local`, `npm test` / lint
+- [ ] GitHub Actions: `npm run build`, `npm test` / lint
 - [ ] NPM publish workflow (tag -> `npm publish`)
 - [ ] Plugin bağlantısı smoke testi (isteğe bağlı)
 - [ ] Güvenlik düzeltmeleri sonrası regresyon: `figma_execute` limit, WS payload (bkz. [S10](#10-güvenlik-denetimi-security-audit))

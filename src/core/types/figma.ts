@@ -140,7 +140,14 @@ export interface PluginExecuteResult {
 	success: boolean;
 	result?: unknown;
 	error?: string;
-	errorCategory?: "TIMEOUT" | "SYNTAX" | "RUNTIME" | "CONNECTION" | "SERIALIZATION" | "FONT_NOT_LOADED" | "VALIDATION";
+	errorCategory?:
+		| "TIMEOUT"
+		| "SYNTAX"
+		| "RUNTIME"
+		| "CONNECTION"
+		| "SERIALIZATION"
+		| "FONT_NOT_LOADED"
+		| "VALIDATION";
 	hint?: string;
 	executionMs?: number;
 	resultAnalysis?: {
@@ -195,7 +202,11 @@ export interface PluginBatchExportPayload {
 // ---- Design system summary ----
 
 export interface DesignSystemSummary {
-	variableCollections?: Array<{ name: string; variableCount: number; modes: string[] }>;
+	variableCollections?: Array<{
+		name: string;
+		variableCount: number;
+		modes: string[];
+	}>;
 	componentCount?: number;
 	styleCount?: number;
 }
@@ -226,4 +237,13 @@ export type PluginIncomingMessage =
 	| PluginSetTokenMessage
 	| PluginClearTokenMessage
 	| PluginPongMessage
-	| { type?: string; id?: string; method?: string; result?: unknown; error?: string; fileKey?: string; fileName?: string; token?: string };
+	| {
+			type?: string;
+			id?: string;
+			method?: string;
+			result?: unknown;
+			error?: string;
+			fileKey?: string;
+			fileName?: string;
+			token?: string;
+	  };

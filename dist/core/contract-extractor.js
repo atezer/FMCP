@@ -426,7 +426,10 @@ return JSON.stringify({ ok: true, tokens: out });
 // ============================================================================
 /** "Icon (R)#12:34" → "Icon (R)" — property key'den hash'i düşür. */
 export function stripPropHash(key) {
-    return key.replace(/#[^#]*$/, "").replace(/^[↳→›»\s]+/, "").trim();
+    return key
+        .replace(/#[^#]*$/, "")
+        .replace(/^[↳→›»\s]+/, "")
+        .trim();
 }
 function words(s) {
     return s
@@ -437,14 +440,20 @@ function words(s) {
         .filter(Boolean);
 }
 export function toKebabCase(s) {
-    return words(s).map((w) => w.toLowerCase()).join("-");
+    return words(s)
+        .map((w) => w.toLowerCase())
+        .join("-");
 }
 export function toCamelCase(s) {
     const w = words(s).map((x) => x.toLowerCase());
-    return w.map((x, i) => (i === 0 ? x : x[0].toUpperCase() + x.slice(1))).join("");
+    return w
+        .map((x, i) => (i === 0 ? x : x[0].toUpperCase() + x.slice(1)))
+        .join("");
 }
 export function toPascalCase(s) {
-    return words(s).map((x) => x[0].toUpperCase() + x.slice(1).toLowerCase()).join("");
+    return words(s)
+        .map((x) => x[0].toUpperCase() + x.slice(1).toLowerCase())
+        .join("");
 }
 /** Variant seçenekleri tam olarak True/False mu? (boolean-like variant tespiti) */
 export function isBooleanLikeOptions(options) {
@@ -471,7 +480,9 @@ export function semanticPartName(node) {
     const h = node.h ?? 0;
     if ((node.type === "RECTANGLE" || node.type === "LINE") && (h <= 2 || w <= 2))
         return "divider";
-    if (node.type === "RECTANGLE" || node.type === "ELLIPSE" || node.type === "VECTOR")
+    if (node.type === "RECTANGLE" ||
+        node.type === "ELLIPSE" ||
+        node.type === "VECTOR")
         return "shape";
     return "content";
 }
@@ -558,7 +569,7 @@ function linearize(c) {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 }
 export function relativeLuminance(c) {
-    return 0.2126 * linearize(c.r) + 0.7152 * linearize(c.g) + 0.0722 * linearize(c.b);
+    return (0.2126 * linearize(c.r) + 0.7152 * linearize(c.g) + 0.0722 * linearize(c.b));
 }
 /**
  * WCAG kontrast oranı. Alpha'lı renkler blend edilir: bg → beyaz üzerine,
@@ -632,7 +643,11 @@ function indexTree(tree) {
             const base = semanticPartName(child);
             const name = dedupeName(base, isTopLevel ? usedNames : usedAtLevel);
             const displayPath = displayPrefix === "" ? name : `${displayPrefix}/${name}`;
-            const indexed = { node: child, path: childPath, displayPath };
+            const indexed = {
+                node: child,
+                path: childPath,
+                displayPath,
+            };
             byPath.set(childPath, indexed);
             if (isTopLevel)
                 partsOrder.push(indexed);
@@ -659,11 +674,21 @@ function boundTokensToCss(node, tokensById) {
     return out;
 }
 function layoutOf(node) {
-    const dirMap = { HORIZONTAL: "row", VERTICAL: "column", GRID: "grid" };
-    const alignMap = {
-        MIN: "start", CENTER: "center", MAX: "end", SPACE_BETWEEN: "space-between", BASELINE: "baseline",
+    const dirMap = {
+        HORIZONTAL: "row",
+        VERTICAL: "column",
+        GRID: "grid",
     };
-    const out = { display: node.layoutMode === "GRID" ? "grid" : "flex" };
+    const alignMap = {
+        MIN: "start",
+        CENTER: "center",
+        MAX: "end",
+        SPACE_BETWEEN: "space-between",
+        BASELINE: "baseline",
+    };
+    const out = {
+        display: node.layoutMode === "GRID" ? "grid" : "flex",
+    };
     if (node.layoutMode && dirMap[node.layoutMode])
         out.direction = dirMap[node.layoutMode];
     if (node.counterAxisAlignItems && alignMap[node.counterAxisAlignItems])
@@ -715,7 +740,11 @@ export function normalizeProps(rawProps, referencedKeys, defaultCombo) {
                     type: "boolean",
                     default: defRaw.toLowerCase() === "true",
                     bindings: {
-                        figma: { kind: "VARIANT", property: raw.key, values: { true: trueOpt, false: falseOpt } },
+                        figma: {
+                            kind: "VARIANT",
+                            property: raw.key,
+                            values: { true: trueOpt, false: falseOpt },
+                        },
                         code: { prop: name },
                     },
                 });
@@ -785,7 +814,9 @@ export function normalizeProps(rawProps, referencedKeys, defaultCombo) {
                 figma: {
                     kind: "INSTANCE_SWAP",
                     property: raw.key,
-                    ...(raw.defaultComponentId ? { defaultComponentId: raw.defaultComponentId } : {}),
+                    ...(raw.defaultComponentId
+                        ? { defaultComponentId: raw.defaultComponentId }
+                        : {}),
                 },
                 code: { prop: name },
             },
@@ -897,8 +928,11 @@ function formatOverrides(rawOverrides, byPath, tokensById) {
                     // ham adlardan kebab yol üretilir; bu yol dedupeName soneklerinden
                     // (-2, -3) habersizdir, aynı adlı kardeşlerde çakışma riski taşır.
                     // Normal set'lerde byPath her zaman bulunur, fallback nadirdir.
-                    const displayPath = indexed?.displayPath
-                        ?? entry.n.split("/").map((s) => toKebabCase(s)).join("/");
+                    const displayPath = indexed?.displayPath ??
+                        entry.n
+                            .split("/")
+                            .map((s) => toKebabCase(s))
+                            .join("/");
                     childTokens[`${displayPath}/${css}`] = formatted;
                 }
             }
@@ -925,7 +959,9 @@ function buildParts(partsOrder, tokensById) {
                     name: key,
                     acceptsMode: "open",
                     figmaName: node.name,
-                    ...(node.mainComponent?.id ? { defaultComponentId: node.mainComponent.id } : {}),
+                    ...(node.mainComponent?.id
+                        ? { defaultComponentId: node.mainComponent.id }
+                        : {}),
                 },
             };
             continue;
@@ -943,8 +979,12 @@ function buildBaseSpecs(tree, partsOrder) {
     // counter = width. hug/fixed eşlemesi bu yüzden eksene göre seçilmeli —
     // aksi halde dikey bileşenlerde width/height ters raporlanır.
     const vertical = tree.layoutMode === "VERTICAL";
-    const widthMode = vertical ? tree.counterAxisSizingMode : tree.primaryAxisSizingMode;
-    const heightMode = vertical ? tree.primaryAxisSizingMode : tree.counterAxisSizingMode;
+    const widthMode = vertical
+        ? tree.counterAxisSizingMode
+        : tree.primaryAxisSizingMode;
+    const heightMode = vertical
+        ? tree.primaryAxisSizingMode
+        : tree.counterAxisSizingMode;
     const root = {
         layoutMode: tree.layoutMode ?? "NONE",
         primaryAxisAlign: tree.primaryAxisAlignItems ?? null,
@@ -1031,8 +1071,7 @@ function buildA11y(structure, formattedOverrides, anatomyRootTokens, partsOrder,
         return Object.values(group).some((v) => Object.keys(v.root?.tokens ?? {}).includes("background-color") ||
             Object.keys(v.children?.tokens ?? {}).some((k) => k.endsWith("/color")));
     };
-    const candidates = Object.keys(structure.variantGroupProperties ?? {})
-        .filter((prop) => !STATE_PROP_NAMES.has(prop.toLowerCase()));
+    const candidates = Object.keys(structure.variantGroupProperties ?? {}).filter((prop) => !STATE_PROP_NAMES.has(prop.toLowerCase()));
     const byNamePriority = [
         ...candidates.filter((p) => /style|variant|tone|type|color/i.test(p)),
         ...candidates.filter((p) => !/style|variant|tone|type|color/i.test(p)),
@@ -1080,7 +1119,8 @@ function buildA11y(structure, formattedOverrides, anatomyRootTokens, partsOrder,
         const group = formattedOverrides[styleGroupKey];
         for (const [valueKey, override] of Object.entries(group)) {
             const bgRef = override.root?.tokens?.["background-color"] ?? defaultBgRef;
-            const fgRef = override.children?.tokens?.[`${textPart.displayPath}/color`] ?? defaultFgRef;
+            const fgRef = override.children?.tokens?.[`${textPart.displayPath}/color`] ??
+                defaultFgRef;
             if (bgRef === "(none)")
                 continue; // şeffaf zemin — kontrast bağlama bağlı
             pushPair(valueKey, fgRef, bgRef);
@@ -1097,7 +1137,10 @@ function buildA11y(structure, formattedOverrides, anatomyRootTokens, partsOrder,
 }
 /** Üç aşamanın ham çıktısını tam contract + rapora dönüştürür. */
 export function assembleContract(structure, overrides, tokens, opts) {
-    if (!structure.ok || !structure.set || !structure.tree || !structure.defaultVariant) {
+    if (!structure.ok ||
+        !structure.set ||
+        !structure.tree ||
+        !structure.defaultVariant) {
         throw new Error(`Invalid structure payload: ${structure.error ?? "missing fields"}`);
     }
     const tokensById = tokens.tokens ?? {};
@@ -1149,12 +1192,12 @@ export function assembleContract(structure, overrides, tokens, opts) {
                 export: pascalName,
             },
         },
-        ...(Object.keys(formattedOverrides).length > 0 ? { variantOverrides: formattedOverrides } : {}),
+        ...(Object.keys(formattedOverrides).length > 0
+            ? { variantOverrides: formattedOverrides }
+            : {}),
     };
     const a11yFailCount = a11yPairs.filter((p) => !p.wcagAA).length;
-    const notes = [
-        "Status: draft — anchors.code needs manual verification",
-    ];
+    const notes = ["Status: draft — anchors.code needs manual verification"];
     if (orphans.length > 0) {
         notes.push(`Orphan property uyarısı: ${orphans.length} prop'un backing layer'ı default variant'ta bulunamadı: ${orphans.join(", ")}`);
     }

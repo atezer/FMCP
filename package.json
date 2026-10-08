@@ -1,6 +1,6 @@
 {
 	"name": "@atezer/figma-mcp-bridge",
-	"version": "1.10.0",
+	"version": "1.10.1",
 	"description": "F-MCP ATezer: MCP server and Figma plugin bridge for Claude/Cursor. No REST token required.",
 	"type": "module",
 	"main": "dist/local-plugin-only.js",
@@ -39,6 +39,9 @@
 		"lint:fix": "biome lint --fix",
 		"type-check": "tsc --noEmit",
 		"validate:fmcp-skills": "node scripts/validate-fmcp-skills-tools.mjs",
+		"sync-version": "node scripts/sync-version.mjs",
+		"check:versions": "node scripts/sync-version.mjs --check",
+		"check:format": "biome ci src",
 		"check-ports": "bash scripts/check-ports.sh"
 	},
 	"keywords": [
@@ -66,7 +69,7 @@
 		"node": ">=18.0.0"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.25.3",
+		"@modelcontextprotocol/sdk": "^1.32.1",
 		"pino": "^9.5.0",
 		"pino-pretty": "^13.0.0",
 		"ws": "^8.19.0",
@@ -79,7 +82,6 @@
 		"@types/ws": "^8.18.1",
 		"jest": "^29.7.0",
 		"ts-jest": "^29.2.5",
-		"tsx": "^4.19.2",
 		"typescript": "5.9.3"
 	}
 }

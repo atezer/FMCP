@@ -3,7 +3,7 @@
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/fmcp-plugin-host.js"],
+      "args": ["/REPLACE/WITH/ABSOLUTE/PATH/TO/FCM/dist/local-plugin-only.js"],
       "env": {
         "FIGMA_PLUGIN_BRIDGE_PORT": "5454"
       }

@@ -17,13 +17,13 @@ import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
-import { truncateRestResponse, guardPluginPayload } from "./core/response-guard.js";
-import { hexToRgbLiteral, normalizeTokenValue, rgbaToHex } from "./core/color-utils.js";
+import { truncateRestResponse, guardPluginPayload, } from "./core/response-guard.js";
+import { hexToRgbLiteral, normalizeTokenValue, rgbaToHex, } from "./core/color-utils.js";
 import { looksMutating } from "./core/mutation-detect.js";
 import { resolveFigmaRestUrl, isRetryableMethod } from "./core/rest-url.js";
-import { analyzeCodeForWarnings } from "./core/code-warnings.js";
+import { analyzeCodeForWarnings, } from "./core/code-warnings.js";
 import { discoveryCounter } from "./core/discovery-counter.js";
-import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
+import { blockingTracker, extractBlockingNodeIds, } from "./core/blocking-tracker.js";
 import { bootstrapInjector } from "./core/bootstrap-injector.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -53,7 +53,9 @@ function ensureScreenshotDir() {
     try {
         mkdirSync(SCREENSHOT_DIR, { recursive: true });
     }
-    catch { /* ignore EEXIST */ }
+    catch {
+        /* ignore EEXIST */
+    }
     return SCREENSHOT_DIR;
 }
 /**
@@ -83,7 +85,9 @@ async function postProcessScreenshotResult(result, returnMode, format, nodeId) {
         return result;
     if (returnMode === "file") {
         // Plugin single-image response: { success, image: { base64, format, width, height } }
-        if (result.image && typeof result.image === "object" && typeof result.image.base64 === "string") {
+        if (result.image &&
+            typeof result.image === "object" &&
+            typeof result.image.base64 === "string") {
             try {
                 const { filePath, fileSize } = saveBase64ToFile(result.image.base64, format, nodeId);
                 const { base64, ...imageMetaRest } = result.image;
@@ -91,7 +95,10 @@ async function postProcessScreenshotResult(result, returnMode, format, nodeId) {
                     success: true,
                     filePath,
                     fileSize,
-                    dimensions: { width: result.image.width, height: result.image.height },
+                    dimensions: {
+                        width: result.image.width,
+                        height: result.image.height,
+                    },
                     format: result.image.format ?? format,
                     nodeId: nodeId ?? null,
                     imageMeta: imageMetaRest,
@@ -99,7 +106,10 @@ async function postProcessScreenshotResult(result, returnMode, format, nodeId) {
                 };
             }
             catch (err) {
-                return { ...result, _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}. Falling back to base64 mode.` };
+                return {
+                    ...result,
+                    _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}. Falling back to base64 mode.`,
+                };
             }
         }
     }
@@ -115,12 +125,18 @@ async function postProcessScreenshotResult(result, returnMode, format, nodeId) {
                         nodeId: region.nodeId,
                         filePath,
                         fileSize,
-                        dimensions: { width: region.image.width, height: region.image.height },
+                        dimensions: {
+                            width: region.image.width,
+                            height: region.image.height,
+                        },
                         imageMeta: imageMetaRest,
                     };
                 }
                 catch (err) {
-                    return { ...region, _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}` };
+                    return {
+                        ...region,
+                        _warning: `File save failed: ${err instanceof Error ? err.message : String(err)}`,
+                    };
                 }
             }
             return region;
@@ -176,31 +192,52 @@ function categorizeExecuteError(message, durationMs, timeoutMs) {
         return "STATE_UNKNOWN";
     if (msg.includes("birden fazla figma dosyası bağlı"))
         return "TARGET_REQUIRED";
-    if (msg.includes("timed out") || msg.includes("timeout") || (durationMs >= timeoutMs * 0.9))
+    if (msg.includes("timed out") ||
+        msg.includes("timeout") ||
+        durationMs >= timeoutMs * 0.9)
         return "TIMEOUT";
-    if (msg.includes("syntax error") || msg.includes("unexpected token") || msg.includes("unexpected identifier"))
+    if (msg.includes("syntax error") ||
+        msg.includes("unexpected token") ||
+        msg.includes("unexpected identifier"))
         return "SYNTAX";
-    if (msg.includes("not connected") || msg.includes("plugin bridge") || msg.includes("websocket") || msg.includes("bridge active"))
+    if (msg.includes("not connected") ||
+        msg.includes("plugin bridge") ||
+        msg.includes("websocket") ||
+        msg.includes("bridge active"))
         return "CONNECTION";
-    if (msg.includes("serialization") || msg.includes("could not be serialized") || msg.includes("circular"))
+    if (msg.includes("serialization") ||
+        msg.includes("could not be serialized") ||
+        msg.includes("circular"))
         return "SERIALIZATION";
-    if (msg.includes("font") && (msg.includes("not loaded") || msg.includes("loadfontasync")))
+    if (msg.includes("font") &&
+        (msg.includes("not loaded") || msg.includes("loadfontasync")))
         return "FONT_NOT_LOADED";
-    if (msg.includes("cannot read") || msg.includes("is not a function") || msg.includes("undefined"))
+    if (msg.includes("cannot read") ||
+        msg.includes("is not a function") ||
+        msg.includes("undefined"))
         return "RUNTIME";
     return "RUNTIME";
 }
 function getErrorHint(category) {
     switch (category) {
-        case "TIMEOUT": return "Islem cok uzun surdu. Kod Figma'da hala calisiyor olabilir — tekrar calistirmadan once sonucu oku (kopya olusmasin). Sonra timeout parametresini artir (max 30000ms) veya islemi daha kucuk parcalara bol.";
-        case "STATE_UNKNOWN": return "Baglanti yanit gelmeden koptu; degisiklik uygulanmis olabilir. Kodu tekrar calistirmadan once ilgili node'lari okuyup durumu dogrula.";
-        case "TARGET_REQUIRED": return "Birden fazla dosya bagli. figma_list_connected_files ile dosyalari gor, cagriyi fileKey ile tekrarla.";
-        case "SYNTAX": return "JavaScript syntax hatasi. Kaçis karakterleri, eksik parantez veya reserved word kontrol et.";
-        case "CONNECTION": return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula.";
-        case "SERIALIZATION": return "Sonuc JSON serialize edilemedi. Figma node objesi degil, plain object don: { id: node.id, name: node.name }";
-        case "FONT_NOT_LOADED": return "Font yuklenmemis. Kodun basina await figma.loadFontAsync({family, style}) ekle.";
-        case "RUNTIME": return "Kod calisma hatasi. Yaygin: yanlis sayfa (setCurrentPageAsync eksik), null node, undefined property.";
-        default: return "Hata mesajini kontrol et.";
+        case "TIMEOUT":
+            return "Islem cok uzun surdu. Kod Figma'da hala calisiyor olabilir — tekrar calistirmadan once sonucu oku (kopya olusmasin). Sonra timeout parametresini artir (max 30000ms) veya islemi daha kucuk parcalara bol.";
+        case "STATE_UNKNOWN":
+            return "Baglanti yanit gelmeden koptu; degisiklik uygulanmis olabilir. Kodu tekrar calistirmadan once ilgili node'lari okuyup durumu dogrula.";
+        case "TARGET_REQUIRED":
+            return "Birden fazla dosya bagli. figma_list_connected_files ile dosyalari gor, cagriyi fileKey ile tekrarla.";
+        case "SYNTAX":
+            return "JavaScript syntax hatasi. Kaçis karakterleri, eksik parantez veya reserved word kontrol et.";
+        case "CONNECTION":
+            return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula.";
+        case "SERIALIZATION":
+            return "Sonuc JSON serialize edilemedi. Figma node objesi degil, plain object don: { id: node.id, name: node.name }";
+        case "FONT_NOT_LOADED":
+            return "Font yuklenmemis. Kodun basina await figma.loadFontAsync({family, style}) ekle.";
+        case "RUNTIME":
+            return "Kod calisma hatasi. Yaygin: yanlis sayfa (setCurrentPageAsync eksik), null node, undefined property.";
+        default:
+            return "Hata mesajini kontrol et.";
     }
 }
 // analyzeCodeForWarnings + CodeWarning type moved to ./core/code-warnings.ts (v1.8.1)
@@ -214,7 +251,12 @@ function safeToolHandler(handler) {
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: msg }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -222,8 +264,14 @@ function safeToolHandler(handler) {
 }
 /** v1.10.0: shared routing params — every bridge tool can target a specific connected file. */
 const TARGET_FILE_SCHEMA = {
-    figmaUrl: z.string().optional().describe("Figma file URL; routes the call to that connected file."),
-    fileKey: z.string().optional().describe("Target a specific connected file (required for writes when several files are connected)."),
+    figmaUrl: z
+        .string()
+        .optional()
+        .describe("Figma file URL; routes the call to that connected file."),
+    fileKey: z
+        .string()
+        .optional()
+        .describe("Target a specific connected file (required for writes when several files are connected)."),
 };
 /**
  * Resolve a connector for the target file.
@@ -240,7 +288,7 @@ function getConnector(bridge, fileKey, opts) {
         if (fileKey) {
             const connected = bridge.listConnectedFiles();
             const fileList = connected.length > 0
-                ? ` Connected files: ${connected.map(f => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
+                ? ` Connected files: ${connected.map((f) => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
                 : "";
             throw new Error(`No plugin connected for fileKey "${fileKey}".${fileList} ` +
                 "Open the target file in Figma and run the F-MCP ATezer Bridge plugin.");
@@ -254,10 +302,16 @@ export async function main() {
     const port = config.local?.pluginBridgePort ?? 5454;
     const auditLogPath = config.local?.auditLogPath;
     const bridge = new PluginBridgeServer(port, { auditLogPath });
+    // The documented FIGMA_REST_TOKEN env var (see /setup-rest-token) was never read — seed it here
+    const envRestToken = process.env.FIGMA_REST_TOKEN?.trim();
+    if (envRestToken)
+        bridge.setFigmaRestToken(envRestToken);
     bridge.start();
     const cache = new ResponseCache();
     /** Invalidate cache after any mutating operation. */
-    function invalidateCache() { cache.invalidate(); }
+    function invalidateCache() {
+        cache.invalidate();
+    }
     /**
      * Build a stable cache key from tool name + params. Sort keys for determinism.
      * fileKey is included to avoid cross-file leakage in multi-file sessions.
@@ -291,7 +345,12 @@ export async function main() {
     /** Helper for error responses with consistent shape. */
     function errorResult(msg) {
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: false, error: msg }),
+                },
+            ],
             isError: true,
         };
     }
@@ -307,7 +366,8 @@ export async function main() {
     }, async () => {
         const files = bridge.listConnectedFiles();
         return {
-            content: [{
+            content: [
+                {
                     type: "text",
                     text: JSON.stringify({
                         success: true,
@@ -317,7 +377,8 @@ export async function main() {
                             ? "No plugins connected. Open Figma and run the F-MCP ATezer Bridge plugin."
                             : `${files.length} plugin(s) connected. Use fileKey parameter in other tools to target a specific file.`,
                     }),
-                }],
+                },
+            ],
         };
     });
     // ---- figma_get_file_data_plugin (no REST, no token) ----
@@ -325,19 +386,31 @@ export async function main() {
     server.registerTool("figma_get_file_data", {
         description: "Get file structure and document tree from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected. Defaults to depth=1, verbosity='summary'. Cached 60s per session.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey is extracted from the link for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL; fileKey is extracted from the link for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file. Use figma_list_connected_files to see available files."),
             depth: z.number().min(0).max(3).optional().default(1),
-            verbosity: z.enum(["summary", "standard", "full"]).optional().default("summary"),
+            verbosity: z
+                .enum(["summary", "standard", "full"])
+                .optional()
+                .default("summary"),
             includeLayout: z.boolean().optional(),
             includeVisual: z.boolean().optional(),
             includeTypography: z.boolean().optional(),
             includeCodeReady: z.boolean().optional(),
             outputHint: z.enum(["react", "tailwind"]).optional(),
-            debug: z.boolean().optional().describe("Bypass cache and include _responseGuard fields."),
+            debug: z
+                .boolean()
+                .optional()
+                .describe("Bypass cache and include _responseGuard fields."),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug }) => {
+    }, async ({ figmaUrl, fileKey, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug, }) => {
         try {
             const resolvedKey = resolveFileKey(figmaUrl, fileKey);
             if (figmaUrl && !resolvedKey) {
@@ -349,10 +422,21 @@ export async function main() {
                 includeTypography !== undefined ||
                 includeCodeReady !== undefined ||
                 outputHint !== undefined
-                ? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+                ? {
+                    includeLayout,
+                    includeVisual,
+                    includeTypography,
+                    includeCodeReady,
+                    outputHint,
+                }
                 : undefined;
             // Cache stores the GUARDED payload so cache hits stay size-safe (v1.9.16)
-            const cacheK = makeCacheKey("figma_get_file_data", { resolvedKey, depth, verbosity, opts });
+            const cacheK = makeCacheKey("figma_get_file_data", {
+                resolvedKey,
+                depth,
+                verbosity,
+                opts,
+            });
             const cached = debug ? null : cache.get(cacheK, 60_000);
             if (cached)
                 return toolResult(cached, "figma_get_file_data", { skipGuard: true });
@@ -367,7 +451,12 @@ export async function main() {
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: msg }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -378,26 +467,54 @@ export async function main() {
     server.registerTool("figma_get_design_context", {
         description: "Design context for a node or whole file: structure + text, layout/visual/typography. Defaults to depth=1, verbosity='summary' for context safety. Pass depth/verbosity explicitly for deeper data. Cached 60s per session.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL; fileKey and optional node-id are extracted for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL; fileKey and optional node-id are extracted for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string().optional(),
-            depth: z.number().min(0).max(3).optional().default(LEGACY_DEFAULTS ? 2 : 1),
-            verbosity: z.enum(["summary", "standard", "full"]).optional().default(LEGACY_DEFAULTS ? "standard" : "summary"),
-            excludeScreenshot: z.boolean().optional().describe("Reserved for future use; plugin currently does not embed screenshots in design_context."),
+            depth: z
+                .number()
+                .min(0)
+                .max(3)
+                .optional()
+                .default(LEGACY_DEFAULTS ? 2 : 1),
+            verbosity: z
+                .enum(["summary", "standard", "full"])
+                .optional()
+                .default(LEGACY_DEFAULTS ? "standard" : "summary"),
+            excludeScreenshot: z
+                .boolean()
+                .optional()
+                .describe("Reserved for future use; plugin currently does not embed screenshots in design_context."),
             includeLayout: z.boolean().optional(),
             includeVisual: z.boolean().optional(),
             includeTypography: z.boolean().optional(),
             includeCodeReady: z.boolean().optional(),
             outputHint: z.enum(["react", "tailwind"]).optional(),
-            debug: z.boolean().optional().describe("Bypass cache and include _responseGuard/_metrics fields."),
+            debug: z
+                .boolean()
+                .optional()
+                .describe("Bypass cache and include _responseGuard/_metrics fields."),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug }) => {
+    }, async ({ figmaUrl, fileKey, nodeId, depth, verbosity, excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint, debug, }) => {
         try {
             const { fileKey: resolvedKey, nodeId: resolvedNodeId } = resolveDesignContextParams({ figmaUrl, fileKey, nodeId });
             if (figmaUrl && !resolvedKey) {
                 return {
-                    content: [{ type: "text", text: JSON.stringify({ success: false, error: "Invalid Figma/FigJam URL: could not extract file key." }) }],
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
+                                success: false,
+                                error: "Invalid Figma/FigJam URL: could not extract file key.",
+                            }),
+                        },
+                    ],
                     isError: true,
                 };
             }
@@ -408,14 +525,29 @@ export async function main() {
                 includeTypography !== undefined ||
                 includeCodeReady !== undefined ||
                 outputHint !== undefined
-                ? { excludeScreenshot, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
+                ? {
+                    excludeScreenshot,
+                    includeLayout,
+                    includeVisual,
+                    includeTypography,
+                    includeCodeReady,
+                    outputHint,
+                }
                 : undefined;
             const effectiveNodeId = resolvedNodeId ?? nodeId?.trim();
             // Cache lookup (60s TTL) — bypassed when debug=true
-            const cacheK = makeCacheKey("figma_get_design_context", { resolvedKey, effectiveNodeId, depth, verbosity, opts });
+            const cacheK = makeCacheKey("figma_get_design_context", {
+                resolvedKey,
+                effectiveNodeId,
+                depth,
+                verbosity,
+                opts,
+            });
             const cached = debug ? null : cache.get(cacheK, 60_000);
             if (cached)
-                return toolResult(cached, "figma_get_design_context", { skipGuard: true });
+                return toolResult(cached, "figma_get_design_context", {
+                    skipGuard: true,
+                });
             const data = effectiveNodeId
                 ? await conn.getNodeContext(effectiveNodeId, depth, verbosity, opts)
                 : await conn.getDocumentStructure(depth, verbosity, opts);
@@ -424,12 +556,19 @@ export async function main() {
             const guarded = guardPluginPayload(data, "figma_get_design_context", debug);
             if (!debug)
                 cache.set(cacheK, guarded);
-            return toolResult(guarded, "figma_get_design_context", { skipGuard: true });
+            return toolResult(guarded, "figma_get_design_context", {
+                skipGuard: true,
+            });
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: msg }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -438,16 +577,35 @@ export async function main() {
     server.registerTool("figma_get_variables", {
         description: "Get design tokens and variables from the open Figma file. No REST API or token. Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            verbosity: z.enum(["inventory", "summary", "standard", "full"]).optional().default("summary"),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            verbosity: z
+                .enum(["inventory", "summary", "standard", "full"])
+                .optional()
+                .default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const raw = await conn.getVariablesFromPluginUI();
         if (!raw || !raw.variables) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "Variables not loaded" }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: "Variables not loaded",
+                        }),
+                    },
+                ],
+            };
         }
         const out = {
             success: true,
@@ -456,7 +614,10 @@ export async function main() {
             variableCollections: raw.variableCollections || [],
         };
         if (verbosity === "inventory") {
-            out.variables = raw.variables.map((v) => ({ id: v.id, name: v.name }));
+            out.variables = raw.variables.map((v) => ({
+                id: v.id,
+                name: v.name,
+            }));
             out.variableCollections = (raw.variableCollections || []).map((c) => ({ id: c.id, name: c.name }));
         }
         else if (verbosity === "summary") {
@@ -475,35 +636,55 @@ export async function main() {
                 out._truncated = `${slim.length - SUMMARY_CAP} variable gösterilmedi — filtre için figma_get_library_variables(query) veya verbosity:'inventory'/'full' kullanın`;
             }
         }
-        return { content: [{ type: "text", text: JSON.stringify(out) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+        };
     }));
     // ---- figma_get_component ----
     server.registerTool("figma_get_component", {
         description: "Get component metadata by node ID from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string(),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.getComponentFromPluginUI(nodeId);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- figma_get_styles (plugin only) ----
     server.registerTool("figma_get_styles", {
         description: "Get local paint, text, and effect styles from the open Figma file. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             verbosity: z.enum(["summary", "full"]).optional().default("summary"),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, verbosity, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const data = await conn.getLocalStyles(verbosity);
-        return { content: [{ type: "text", text: JSON.stringify(data || {}) }] };
+        return {
+            content: [
+                { type: "text", text: JSON.stringify(data || {}) },
+            ],
+        };
     }));
     // ---- figma_execute ----
     server.registerTool("figma_execute", {
@@ -516,16 +697,31 @@ export async function main() {
             "plugin oluşturulan node'ları otomatik tarar, unbound fill/padding/radius/text-style varsa response'a `_POST_EXECUTE_SCAN_BLOCKING: true` ve " +
             "`_postExecuteViolations` alanı ekler. Bu flag varsa execute geçersiz sayılır — kodu düzelt (setBoundVariable/setTextStyleIdAsync ekle) ve tekrar çalıştır.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             code: z.string(),
             timeout: z.number().optional().default(15000),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, code, timeout }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, code, timeout, }) => {
         if (code.length > 50000) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, errorCategory: "VALIDATION", error: "Code too long (max 50,000 characters). Break into smaller pieces." }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            errorCategory: "VALIDATION",
+                            error: "Code too long (max 50,000 characters). Break into smaller pieces.",
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -535,14 +731,19 @@ export async function main() {
         const suppression = blockingTracker.checkSuppression(code);
         if (suppression.error) {
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             success: false,
                             error: suppression.error,
                             errorCategory: "BLOCKING_SUPPRESSION",
                             _BLOCKING_SUPPRESSION_DETECTED: true,
                             matchedNodeIds: suppression.matchedNodeIds,
                             hint: "Kok nedeni cozdukten sonra tekrar dene. Veya kullanici onayi ile kod basina '// FORCE_OVERRIDE' comment ekle.",
-                        }) }],
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -561,7 +762,10 @@ export async function main() {
                     count: severeWarnings.length,
                     severity: "BLOCKING",
                     message: "❌ DESIGN SYSTEM DISIPLIN IHLALI — BLOCKING. Bu kod KABUL EDILMEZ. Execute sonucu gecersizdir.",
-                    violations: severeWarnings.map((w) => ({ category: w.category, message: w.message })),
+                    violations: severeWarnings.map((w) => ({
+                        category: w.category,
+                        message: w.message,
+                    })),
                     action: "❌ BLOCKING: Bu kodu simdi duzelt ve tekrar calistir. Skip edemezsin. Her SOLID fill icin setBoundVariableForPaint zorunlu; her padding/itemSpacing/cornerRadius icin setBoundVariable zorunlu; her TEXT icin setTextStyleIdAsync zorunlu. Detay: figma-canvas-ops SKILL Kural 10, fmcp-screen-recipes SKILL Adim 9.",
                     retry_required: true,
                 },
@@ -572,30 +776,38 @@ export async function main() {
             ...advisoryWarnings.map((w) => w.message),
             ...(budget.warnings ?? []),
         ];
-        const warningsField = combinedWarnings.length > 0
-            ? { _warnings: combinedWarnings }
-            : {};
+        const warningsField = combinedWarnings.length > 0 ? { _warnings: combinedWarnings } : {};
         const budgetBlockingField = budget._DISCOVERY_BUDGET_EXCEEDED_BLOCKING
             ? { _DISCOVERY_BUDGET_EXCEEDED_BLOCKING: true }
             : {};
         const startTime = Date.now();
         try {
             // v1.10.0: writes need an explicit target when several files are connected
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: looksMutating(code) });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: looksMutating(code),
+            });
             const result = await conn.executeCodeViaUI(code, clampedTimeout);
             const durationMs = Date.now() - startTime;
             // Plugin may return { success: false, error: "..." } without throwing
-            if (typeof result === "object" && result !== null && result.success === false) {
-                const pluginError = String(result.error || "Unknown plugin error");
+            if (typeof result === "object" &&
+                result !== null &&
+                result.success === false) {
+                const pluginError = String(result.error ||
+                    "Unknown plugin error");
                 let category = "RUNTIME";
                 let hint = "Hata mesajini kontrol et.";
                 try {
                     category = categorizeExecuteError(pluginError, durationMs, clampedTimeout);
                     hint = getErrorHint(category);
                 }
-                catch { /* safe fallback */ }
+                catch {
+                    /* safe fallback */
+                }
                 return {
-                    content: [{ type: "text", text: JSON.stringify({
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
                                 ...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
                                 ...dsViolations, // v1.8.1: SEVERE warnings FIRST, before anything else
                                 ...result,
@@ -603,7 +815,9 @@ export async function main() {
                                 _metrics: { durationMs, timeoutMs: clampedTimeout },
                                 hint,
                                 ...warningsField,
-                            }) }],
+                            }),
+                        },
+                    ],
                     isError: true,
                 };
             }
@@ -616,10 +830,14 @@ export async function main() {
             // FMCP_POST_SCAN_MODE=block restores the v1.9.6 BLOCKING + suppression behaviour.
             const postScanBlockMode = process.env.FMCP_POST_SCAN_MODE === "block";
             const postScanBlocking = {};
-            if (postScan && typeof postScan.violationCount === "number" && postScan.violationCount > 0) {
+            if (postScan &&
+                typeof postScan.violationCount === "number" &&
+                postScan.violationCount > 0) {
                 const violations = {
                     violations: (postScan.violations ?? []).slice(0, 50),
-                    ...((postScan.violations?.length ?? 0) > 50 ? { violationsOmitted: (postScan.violations?.length ?? 0) - 50 } : {}),
+                    ...((postScan.violations?.length ?? 0) > 50
+                        ? { violationsOmitted: (postScan.violations?.length ?? 0) - 50 }
+                        : {}),
                 };
                 if (postScanBlockMode) {
                     postScanBlocking._POST_EXECUTE_SCAN_BLOCKING = true;
@@ -627,7 +845,9 @@ export async function main() {
                         count: postScan.violationCount,
                         totalChecked: postScan.totalChecked ?? 0,
                         severity: "BLOCKING",
-                        message: "❌ v1.9.6 POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " unbound tespit edildi. Kodu duzelt — her unbound icin setBoundVariable veya setTextStyleIdAsync cagrisi ekle.",
+                        message: "❌ v1.9.6 POST-EXECUTE SCAN: Olusturulan node'larda " +
+                            postScan.violationCount +
+                            " unbound tespit edildi. Kodu duzelt — her unbound icin setBoundVariable veya setTextStyleIdAsync cagrisi ekle.",
                         ...violations,
                         action: "❌ BLOCKING: Execute sonucu KABUL EDILMEZ. Listelenen nodeId'lerdeki unbound node'lari bagla ve kodu tekrar calistir. Skip edemezsin.",
                         retry_required: true,
@@ -639,7 +859,9 @@ export async function main() {
                         count: postScan.violationCount,
                         totalChecked: postScan.totalChecked ?? 0,
                         severity: "WARNING",
-                        message: "⚠️ POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " token'a bagli olmayan deger var. DS kullaniliyorsa setBoundVariable / setTextStyleIdAsync ile bagla.",
+                        message: "⚠️ POST-EXECUTE SCAN: Olusturulan node'larda " +
+                            postScan.violationCount +
+                            " token'a bagli olmayan deger var. DS kullaniliyorsa setBoundVariable / setTextStyleIdAsync ile bagla.",
                         ...violations,
                     };
                 }
@@ -649,8 +871,13 @@ export async function main() {
                 severeWarnings.length > 0;
             if (hadBlocking) {
                 const extracted = extractBlockingNodeIds({
-                    _postExecuteScan: postScanBlockMode ? result?._postExecuteScan : undefined,
-                    _postExecuteViolations: postScanBlockMode ? postScanBlocking._postExecuteViolations : undefined,
+                    _postExecuteScan: postScanBlockMode
+                        ? result
+                            ?._postExecuteScan
+                        : undefined,
+                    _postExecuteViolations: postScanBlockMode
+                        ? postScanBlocking._postExecuteViolations
+                        : undefined,
                     _designSystemViolations: dsViolations._designSystemViolations,
                 });
                 if (extracted.nodeIds.length > 0) {
@@ -666,26 +893,39 @@ export async function main() {
             });
             let enriched;
             try {
-                enriched = typeof result === "object" && result !== null
-                    ? {
-                        ...postScanBlocking, // v1.9.6: post-execute BLOCKING top
-                        ...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
-                        ...dsViolations, // v1.8.1: SEVERE warnings at top level
-                        ...result,
-                        // warn mode: raw scan (with its "❌ fix it" hint) is summarized in _postExecuteViolations
-                        ...(!postScanBlockMode && { _postExecuteScan: undefined }),
-                        _metrics: { durationMs, timeoutMs: clampedTimeout },
-                        ...warningsField,
-                        ...(nextStep && { _nextStep: nextStep }),
-                    }
-                    : severeWarnings.length > 0 || advisoryWarnings.length > 0 || combinedWarnings.length > 0
-                        ? { ...budgetBlockingField, ...dsViolations, result, ...warningsField, ...(nextStep && { _nextStep: nextStep }) }
-                        : result;
+                enriched =
+                    typeof result === "object" && result !== null
+                        ? {
+                            ...postScanBlocking, // v1.9.6: post-execute BLOCKING top
+                            ...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
+                            ...dsViolations, // v1.8.1: SEVERE warnings at top level
+                            ...result,
+                            // warn mode: raw scan (with its "❌ fix it" hint) is summarized in _postExecuteViolations
+                            ...(!postScanBlockMode && { _postExecuteScan: undefined }),
+                            _metrics: { durationMs, timeoutMs: clampedTimeout },
+                            ...warningsField,
+                            ...(nextStep && { _nextStep: nextStep }),
+                        }
+                        : severeWarnings.length > 0 ||
+                            advisoryWarnings.length > 0 ||
+                            combinedWarnings.length > 0
+                            ? {
+                                ...budgetBlockingField,
+                                ...dsViolations,
+                                result,
+                                ...warningsField,
+                                ...(nextStep && { _nextStep: nextStep }),
+                            }
+                            : result;
             }
             catch {
                 enriched = result;
             }
-            return { content: [{ type: "text", text: JSON.stringify(enriched) }] };
+            return {
+                content: [
+                    { type: "text", text: JSON.stringify(enriched) },
+                ],
+            };
         }
         catch (err) {
             const durationMs = Date.now() - startTime;
@@ -696,17 +936,24 @@ export async function main() {
                 category = categorizeExecuteError(msg, durationMs, clampedTimeout);
                 hint = getErrorHint(category);
             }
-            catch { /* safe fallback */ }
+            catch {
+                /* safe fallback */
+            }
             logger.warn({ errorCategory: category, durationMs, timeout: clampedTimeout }, "figma_execute failed: %s", msg);
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             success: false,
                             errorCategory: category,
                             error: msg,
                             _metrics: { durationMs, timeoutMs: clampedTimeout },
                             hint,
                             ...warningsField,
-                        }) }],
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -740,11 +987,24 @@ export async function main() {
             "and more. Custom: 'WxH' format.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            sourceNodeId: z.string().describe("Node ID of the source screen to clone (e.g. '139:3407')"),
-            targetDevice: z.string().describe("Device preset name (e.g. 'iPhone 17', 'Android Compact') or custom 'WxH' (e.g. '1200x800')"),
-            newName: z.string().optional().describe("Name for the cloned screen (default: source name + device suffix)"),
-            targetParentId: z.string().optional().describe("Parent node to place the clone under (default: current page)"),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            sourceNodeId: z
+                .string()
+                .describe("Node ID of the source screen to clone (e.g. '139:3407')"),
+            targetDevice: z
+                .string()
+                .describe("Device preset name (e.g. 'iPhone 17', 'Android Compact') or custom 'WxH' (e.g. '1200x800')"),
+            newName: z
+                .string()
+                .optional()
+                .describe("Name for the cloned screen (default: source name + device suffix)"),
+            targetParentId: z
+                .string()
+                .optional()
+                .describe("Parent node to place the clone under (default: current page)"),
             position: z
                 .object({ x: z.number(), y: z.number() })
                 .optional()
@@ -758,7 +1018,9 @@ export async function main() {
             return errorResult(`Unknown device preset '${targetDevice}'. Supported presets: ${DEVICE_PRESETS.map((p) => p.name).join(", ")}. For custom, use 'WxH' format (e.g. '1200x800').`);
         }
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const result = await conn.cloneScreenToDevice({
             sourceNodeId,
             targetWidth: resolved.width,
@@ -784,15 +1046,31 @@ export async function main() {
             "Read-only — never mutates the file.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string().describe("Node ID of the screen to validate"),
-            expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ My-DS') for library match scoring"),
-            minScore: z.number().min(0).max(100).optional().default(80).describe("Minimum acceptable score (0-100). Below this, the screen is considered non-compliant."),
+            expectedDs: z
+                .string()
+                .optional()
+                .describe("Expected DS library name (e.g. '❖ My-DS') for library match scoring"),
+            minScore: z
+                .number()
+                .min(0)
+                .max(100)
+                .optional()
+                .default(80)
+                .describe("Minimum acceptable score (0-100). Below this, the screen is considered non-compliant."),
         },
         annotations: { readOnlyHint: true },
     }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, expectedDs, minScore, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-        const result = await conn.validateScreen({ nodeId, expectedDs, minScore });
+        const result = await conn.validateScreen({
+            nodeId,
+            expectedDs,
+            minScore,
+        });
         return toolResult(result, "figma_validate_screen");
     }));
     // ---- figma_scan_ds_compliance (v1.9.4) ----
@@ -813,15 +1091,31 @@ export async function main() {
             "Read-only — never mutates the file.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string().describe("Node ID of the completed screen to audit"),
-            threshold: z.number().min(0).max(100).optional().default(85).describe("Pass threshold (0-100). Default 85. Below this, screen is non-compliant and must be fixed."),
-            expectedDs: z.string().optional().describe("Expected DS library name (e.g. '❖ My-DS')"),
+            threshold: z
+                .number()
+                .min(0)
+                .max(100)
+                .optional()
+                .default(85)
+                .describe("Pass threshold (0-100). Default 85. Below this, screen is non-compliant and must be fixed."),
+            expectedDs: z
+                .string()
+                .optional()
+                .describe("Expected DS library name (e.g. '❖ My-DS')"),
         },
         annotations: { readOnlyHint: true },
     }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, threshold, expectedDs, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-        const result = await conn.scanDsCompliance({ nodeId, threshold, expectedDs });
+        const result = await conn.scanDsCompliance({
+            nodeId,
+            threshold,
+            expectedDs,
+        });
         return toolResult(result, "figma_scan_ds_compliance");
     }));
     // ---- figma_create_mini_ds (v1.9.7) ----
@@ -835,17 +1129,43 @@ export async function main() {
             "Sonuç: { success, dsName, variableCollectionIds, textStyleIds, componentIds, summary } — sonrasında figma_execute ile ekran kurulabilir.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            primaryColor: z.string().optional().default("#1464FF").describe("Primary brand color (hex). Default mavi."),
-            fontFamily: z.string().optional().default("Inter").describe("Font family for text styles. Default Inter."),
-            name: z.string().optional().default("Mini DS").describe("DS name prefix."),
-            includeComponents: z.boolean().optional().default(true).describe("Button/Input/Card component'lerini dahil et."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            primaryColor: z
+                .string()
+                .optional()
+                .default("#1464FF")
+                .describe("Primary brand color (hex). Default mavi."),
+            fontFamily: z
+                .string()
+                .optional()
+                .default("Inter")
+                .describe("Font family for text styles. Default Inter."),
+            name: z
+                .string()
+                .optional()
+                .default("Mini DS")
+                .describe("DS name prefix."),
+            includeComponents: z
+                .boolean()
+                .optional()
+                .default(true)
+                .describe("Button/Input/Card component'lerini dahil et."),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, primaryColor, fontFamily, name, includeComponents }) => {
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+    }, safeToolHandler(async ({ figmaUrl, fileKey, primaryColor, fontFamily, name, includeComponents, }) => {
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         invalidateCache();
-        const result = await conn.createMiniDs({ primaryColor, fontFamily, name, includeComponents });
+        const result = await conn.createMiniDs({
+            primaryColor,
+            fontFamily,
+            name,
+            includeComponents,
+        });
         const nextStep = bootstrapInjector.injectNextStep("figma_create_mini_ds", result);
         const enriched = nextStep && typeof result === "object" && result !== null
             ? { ...result, _nextStep: nextStep }
@@ -865,12 +1185,30 @@ export async function main() {
             "Context-aware fallback: >%80 context kullanımında base64/file → summary'ye otomatik düşer. " +
             "Karar ağacı: planlama→summary, teslimat→file, scroll'lu ekran→regions, son çare→base64.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string().optional(),
-            format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
-            scale: z.number().optional().default(LEGACY_DEFAULTS ? 2 : 1),
-            jpegQuality: z.number().min(30).max(100).optional().default(70).describe("JPEG quality 30-100. Ignored when format=PNG."),
+            format: z
+                .enum(["PNG", "JPG"])
+                .optional()
+                .default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+            scale: z
+                .number()
+                .optional()
+                .default(LEGACY_DEFAULTS ? 2 : 1),
+            jpegQuality: z
+                .number()
+                .min(30)
+                .max(100)
+                .optional()
+                .default(70)
+                .describe("JPEG quality 30-100. Ignored when format=PNG."),
             returnMode: z
                 .enum(["file", "base64", "summary", "regions"])
                 .optional()
@@ -882,9 +1220,24 @@ export async function main() {
                 .optional()
                 .default("children")
                 .describe("returnMode='regions' için: 'children' = node'un top-level child'ları ayrı ayrı, 'slices' = dikey slice'lar."),
-            maxRegions: z.number().min(1).max(20).optional().default(8).describe("returnMode='regions' için: maks region sayısı."),
-            sliceHeight: z.number().min(200).max(2000).optional().default(600).describe("regionStrategy='slices' için slice yüksekliği (px)."),
-            requestedSlices: z.array(z.number()).optional().describe("regionStrategy='slices' için spesifik slice index'leri (örn: [0,2] → sadece 1. ve 3. slice)."),
+            maxRegions: z
+                .number()
+                .min(1)
+                .max(20)
+                .optional()
+                .default(8)
+                .describe("returnMode='regions' için: maks region sayısı."),
+            sliceHeight: z
+                .number()
+                .min(200)
+                .max(2000)
+                .optional()
+                .default(600)
+                .describe("regionStrategy='slices' için slice yüksekliği (px)."),
+            requestedSlices: z
+                .array(z.number())
+                .optional()
+                .describe("regionStrategy='slices' için spesifik slice index'leri (örn: [0,2] → sadece 1. ve 3. slice)."),
         },
         annotations: { readOnlyHint: true },
     }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, format, scale, jpegQuality, returnMode, regionStrategy, maxRegions, sliceHeight, requestedSlices, }) => {
@@ -906,7 +1259,10 @@ export async function main() {
         // Budget warning injection
         const budgetFields = {};
         if (budget.warnings && budget.warnings.length > 0) {
-            budgetFields._warnings = [...(processed._warnings ?? []), ...budget.warnings];
+            budgetFields._warnings = [
+                ...(processed._warnings ?? []),
+                ...budget.warnings,
+            ];
         }
         if (budget._DISCOVERY_BUDGET_EXCEEDED_BLOCKING) {
             budgetFields._DISCOVERY_BUDGET_EXCEEDED_BLOCKING = true;
@@ -915,28 +1271,41 @@ export async function main() {
             ? { ...processed, ...budgetFields }
             : processed;
         // skipGuard: true — base64 intact kalır (legacy mode için gerekli)
-        return toolResult(enriched, "figma_capture_screenshot", { skipGuard: true });
+        return toolResult(enriched, "figma_capture_screenshot", {
+            skipGuard: true,
+        });
     }));
     // ---- figma_set_instance_properties ----
     server.registerTool("figma_set_instance_properties", {
         description: "Set component instance properties (TEXT, BOOLEAN, VARIANT, etc.). Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string(),
             properties: z.record(z.union([z.string(), z.boolean()])),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, properties }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, properties, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const result = await conn.setInstanceProperties(nodeId, properties);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- Variable CRUD ----
     server.registerTool("figma_update_variable", {
         description: "Update a variable value in a mode. Get IDs from figma_get_variables.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             variableId: z.string(),
             modeId: z.string(),
             value: z.union([z.string(), z.number(), z.boolean()]),
@@ -946,11 +1315,14 @@ export async function main() {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.updateVariable(p.variableId, p.modeId, p.value);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_create_variable", {
         description: "Create a variable in a collection. Get collectionId from figma_get_variables.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             name: z.string(),
             collectionId: z.string(),
             resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
@@ -961,17 +1333,25 @@ export async function main() {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.createVariable(p.name, p.collectionId, p.resolvedType, p.options);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_create_variable_collection", {
         description: "Create a variable collection.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, name: z.string(), options: z.record(z.any()).optional() },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            name: z.string(),
+            options: z.record(z.any()).optional(),
+        },
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.createVariableCollection(p.name, p.options);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_delete_variable", {
         description: "Delete a variable.",
@@ -979,9 +1359,13 @@ export async function main() {
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), {
+            mutating: true,
+        });
         const result = await conn.deleteVariable(p.variableId);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_delete_variable_collection", {
         description: "Delete a variable collection.",
@@ -989,51 +1373,80 @@ export async function main() {
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), {
+            mutating: true,
+        });
         const result = await conn.deleteVariableCollection(p.collectionId);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_rename_variable", {
         description: "Rename a variable.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, variableId: z.string(), newName: z.string() },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            variableId: z.string(),
+            newName: z.string(),
+        },
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.renameVariable(p.variableId, p.newName);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_add_mode", {
         description: "Add a mode to a collection.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, collectionId: z.string(), modeName: z.string() },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            collectionId: z.string(),
+            modeName: z.string(),
+        },
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.addMode(p.collectionId, p.modeName);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_rename_mode", {
         description: "Rename a mode in a collection.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, collectionId: z.string(), modeId: z.string(), newName: z.string() },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            collectionId: z.string(),
+            modeId: z.string(),
+            newName: z.string(),
+        },
         annotations: { destructiveHint: true },
     }, safeToolHandler(async (p) => {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.renameMode(p.collectionId, p.modeId, p.newName);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- Design system summary (minimal tokens) ----
     server.registerTool("figma_get_design_system_summary", {
         description: "Get a compact overview: variable collection names and component counts. Minimal tokens. Use fileKey or figmaUrl to target a specific file. PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read .claude/design-systems/active-ds.md + ~/.claude/data/fcm-ds/active.md first. If DS identity is already known from state, DO NOT call this tool on an empty target file just to 'check DS existence' — use the cache.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, currentPageOnly, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, currentPageOnly, limit, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const [vars, components] = await Promise.all([
             conn.getVariablesFromPluginUI(),
@@ -1044,35 +1457,60 @@ export async function main() {
             success: true,
             source: "plugin",
             currentPageOnly: currentPageOnly,
-            variableCollections: (vars?.variableCollections || []).map((c) => ({ id: c.id, name: c.name, variableCount: c.variableIds?.length || 0 })),
+            variableCollections: (vars?.variableCollections || []).map((c) => ({
+                id: c.id,
+                name: c.name,
+                variableCount: c.variableIds?.length || 0,
+            })),
             components: compData?.totalComponents ?? 0,
             componentSets: compData?.totalComponentSets ?? 0,
         };
         // v1.9.7: _nextStep hint — blank file detection drives Claude to 4-option dialog
         const nextStep = bootstrapInjector.injectNextStep("figma_get_design_system_summary", out);
         const enriched = nextStep ? { ...out, _nextStep: nextStep } : out;
-        return { content: [{ type: "text", text: JSON.stringify(enriched) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(enriched) }],
+        };
     }));
     // ---- figma_search_components ----
     server.registerTool("figma_search_components", {
         description: "Search local components by name. Returns nodeIds and names. No REST API. Use fileKey or figmaUrl to target a specific file.",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             query: z.string().optional(),
             currentPageOnly: z.boolean().optional().default(true),
             limit: z.number().min(0).optional(),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, query, currentPageOnly, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, query, currentPageOnly, limit, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         // limit SONUÇ sayısıdır, tarama sınırı değil: query varken taramaya limit
         // geçirilmez (aksi halde "ilk N component içinde ara" olur ve eşleşmeler kaçar).
         const hasQuery = Boolean(query && query.trim());
-        const result = (await conn.getLocalComponents({ currentPageOnly, limit: hasQuery ? undefined : limit }));
+        const result = (await conn.getLocalComponents({
+            currentPageOnly,
+            limit: hasQuery ? undefined : limit,
+        }));
         const data = result?.data;
         if (!data) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: "No component data" }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: "No component data",
+                        }),
+                    },
+                ],
+            };
         }
         let list = [...(data.components || []), ...(data.componentSets || [])];
         if (hasQuery) {
@@ -1082,15 +1520,28 @@ export async function main() {
         if (limit && limit > 0)
             list = list.slice(0, limit);
         // Plugin nodeId alanıyla gönderir — id eşlemesinde her ikisi de desteklenir
-        const summary = list.map((c) => ({ id: c.id ?? c.nodeId, name: c.name, key: c.key, type: c.type }));
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, components: summary }) }] };
+        const summary = list.map((c) => ({
+            id: c.id ?? c.nodeId,
+            name: c.name,
+            key: c.key,
+            type: c.type,
+        }));
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, components: summary }),
+                },
+            ],
+        };
     }));
     // ---- Node operations (short list) ----
     server.registerTool("figma_instantiate_component", {
         description: "Create a component instance. Use componentKey from figma_search_components, figma_search_assets, or REST API. " +
             "Supports library components (importComponentByKeyAsync) and local components (by nodeId). " +
             "After creation: use overrides with setProperties({...}) for component properties — do NOT use findAll(TEXT) to modify instance text.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             componentKey: z.string(),
             options: z
                 .object({
@@ -1106,16 +1557,20 @@ export async function main() {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.instantiateComponent(p.componentKey, p.options || {});
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_refresh_variables", {
         description: "Refresh variables from the file.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, },
+        inputSchema: { ...TARGET_FILE_SCHEMA },
         annotations: { readOnlyHint: false, destructiveHint: false },
     }, safeToolHandler(async ({ figmaUrl, fileKey }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.refreshVariables();
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- Console (plugin buffer, no CDP) ----
     server.registerTool("figma_get_console_logs", {
@@ -1123,19 +1578,32 @@ export async function main() {
         inputSchema: {
             limit: z.number().min(1).max(200).optional().default(50),
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ limit, figmaUrl, fileKey }) => {
+    }, safeToolHandler(async ({ limit, figmaUrl, fileKey, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const data = await conn.getConsoleLogs(limit);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...data }),
+                },
+            ],
+        };
     }));
     server.registerTool("figma_watch_console", {
         description: "Stream new plugin console logs until timeout. Polls the plugin buffer. Timeout default 30s.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, timeoutSeconds: z.number().min(1).max(120).optional().default(30) },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            timeoutSeconds: z.number().min(1).max(120).optional().default(30),
+        },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, timeoutSeconds }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, timeoutSeconds, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const deadline = Date.now() + timeoutSeconds * 1000;
         // Only stream logs newer than the call — don't replay the old buffer (v1.9.16)
@@ -1169,22 +1637,39 @@ export async function main() {
             await new Promise((r) => setTimeout(r, pollIntervalMs));
         }
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: true, stream, count: stream.length }) }],
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        stream,
+                        count: stream.length,
+                    }),
+                },
+            ],
         };
     }));
     server.registerTool("figma_clear_console", {
         description: "Clear the plugin console log buffer.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, },
+        inputSchema: { ...TARGET_FILE_SCHEMA },
         annotations: { destructiveHint: true },
     }, safeToolHandler(async ({ figmaUrl, fileKey }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         await conn.clearConsole();
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Console cleared" }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, message: "Console cleared" }),
+                },
+            ],
+        };
     }));
     // ---- set_description, get_component_image, get_component_for_development ----
     server.registerTool("figma_set_description", {
         description: "Set description on a component, component set, or style node. Supports markdown (descriptionMarkdown).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             nodeId: z.string(),
             description: z.string(),
             descriptionMarkdown: z.string().optional(),
@@ -1194,41 +1679,71 @@ export async function main() {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.setNodeDescription(p.nodeId, p.description, p.descriptionMarkdown);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_get_component_image", {
         description: "Get screenshot of a node (component/frame). Returns base64 image. Defaults to JPG@1x q70 (v1.8.0 context-safe). Use fileKey or figmaUrl to target a specific file when multiple plugins are connected.",
         inputSchema: {
             nodeId: z.string(),
-            scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
-            format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+            scale: z
+                .number()
+                .min(0.5)
+                .max(4)
+                .optional()
+                .default(LEGACY_DEFAULTS ? 2 : 1),
+            format: z
+                .enum(["PNG", "JPG"])
+                .optional()
+                .default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
             jpegQuality: z.number().min(30).max(100).optional().default(70),
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ nodeId, scale, format, jpegQuality, figmaUrl, fileKey }) => {
+    }, safeToolHandler(async ({ nodeId, scale, format, jpegQuality, figmaUrl, fileKey, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-        const result = await conn.captureScreenshot(nodeId, { scale, format, jpegQuality });
+        const result = await conn.captureScreenshot(nodeId, {
+            scale,
+            format,
+            jpegQuality,
+        });
         return toolResult(result, "figma_get_component_image");
     }));
     server.registerTool("figma_get_component_for_development", {
         description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows. Defaults to JPG@1x q70 (v1.8.0 context-safe).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             nodeId: z.string(),
-            scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
-            format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
+            scale: z
+                .number()
+                .min(0.5)
+                .max(4)
+                .optional()
+                .default(LEGACY_DEFAULTS ? 2 : 1),
+            format: z
+                .enum(["PNG", "JPG"])
+                .optional()
+                .default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
             jpegQuality: z.number().min(30).max(100).optional().default(70),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, scale, format, jpegQuality }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, scale, format, jpegQuality, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const [component, screenshot] = await Promise.all([
             conn.getComponentFromPluginUI(nodeId),
             conn.captureScreenshot(nodeId, { scale, format, jpegQuality }),
         ]);
         const comp = component?.component ?? component;
-        const out = { success: true, component: comp, image: screenshot?.image ?? screenshot?.data };
+        const out = {
+            success: true,
+            component: comp,
+            image: screenshot?.image ?? screenshot?.data,
+        };
         return toolResult(out, "figma_get_component_for_development");
     }));
     // ---- figma_extract_contract (v1.9.14) ----
@@ -1246,12 +1761,21 @@ export async function main() {
             "Use for design-to-code handoff, DS documentation, or as the source of truth for component codegen.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            nodeId: z.string().optional().describe("COMPONENT_SET / COMPONENT / INSTANCE node ID. Omit to use the current selection."),
-            importPathTemplate: z.string().optional().describe("anchors.code.importPath template; {Name} → PascalCase component name. Default '@ds/components/{Name}'."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            nodeId: z
+                .string()
+                .optional()
+                .describe("COMPONENT_SET / COMPONENT / INSTANCE node ID. Omit to use the current selection."),
+            importPathTemplate: z
+                .string()
+                .optional()
+                .describe("anchors.code.importPath template; {Name} → PascalCase component name. Default '@ds/components/{Name}'."),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, importPathTemplate }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, importPathTemplate, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         // Aşama 1 — structure (metadata + props + default variant ağacı)
         const structure = parseScriptResult(await conn.executeCodeViaUI(buildStructureScript(nodeId), 30000), "structure");
@@ -1259,11 +1783,13 @@ export async function main() {
             const e = structure.error ?? "unknown";
             let hint = "Hata mesajını kontrol et.";
             if (e === "NO_SELECTION")
-                hint = "Figma'da bir Component Set (veya içindeki variant/instance) seç, ya da nodeId parametresi ver.";
+                hint =
+                    "Figma'da bir Component Set (veya içindeki variant/instance) seç, ya da nodeId parametresi ver.";
             else if (e.startsWith("NOT_COMPONENT"))
                 hint = `Seçili node uygun değil (${e.split(":")[1] ?? "?"}). COMPONENT_SET, COMPONENT veya INSTANCE seçilmeli.`;
             else if (e.startsWith("NODE_NOT_FOUND"))
-                hint = "nodeId bu dosyada bulunamadı. figma_get_file_data ile doğru id'yi bul.";
+                hint =
+                    "nodeId bu dosyada bulunamadı. figma_get_file_data ile doğru id'yi bul.";
             return errorResult(`Contract extraction failed at structure stage: ${e}. ${hint}`);
         }
         // Aşama 2/3 hataları contract üretimini durdurmaz (kısmi çıktı > hiç çıktı)
@@ -1303,42 +1829,67 @@ export async function main() {
     // ---- Batch variables & setup_design_tokens & arrange_component_set ----
     server.registerTool("figma_batch_create_variables", {
         description: "Create up to 100 variables in one call. Each item: collectionId, name, resolvedType (COLOR/FLOAT/STRING/BOOLEAN), value, modeId. Returns created and failed lists.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            items: z.array(z.object({
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            items: z
+                .array(z.object({
                 collectionId: z.string(),
                 name: z.string(),
                 resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
                 value: z.unknown().optional(),
                 modeId: z.string().optional(),
                 valuesByMode: z.record(z.unknown()).optional(),
-            })).max(100),
+            }))
+                .max(100),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, items }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, items, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const result = await conn.batchCreateVariables(items);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...result }),
+                },
+            ],
+        };
     }));
     server.registerTool("figma_batch_update_variables", {
         description: "Update up to 100 variables. Each item: variableId, modeId, value. Returns updated and failed lists.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            items: z.array(z.object({
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            items: z
+                .array(z.object({
                 variableId: z.string(),
                 modeId: z.string(),
                 value: z.union([z.string(), z.number(), z.boolean()]),
-            })).max(100),
+            }))
+                .max(100),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, items }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, items, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const result = await conn.batchUpdateVariables(items);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...result }),
+                },
+            ],
+        };
     }));
     server.registerTool("figma_setup_design_tokens", {
         description: "Atomically create a variable collection + modes + variables. Rollback on any error. Params: collectionName, modes (array), tokens (array of { name, type?, value? or values? }).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             collectionName: z.string(),
             modes: z.array(z.string()).min(1),
             tokens: z.array(z.object({
@@ -1353,24 +1904,36 @@ export async function main() {
         invalidateCache();
         const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
         const result = await conn.setupDesignTokens(p);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     server.registerTool("figma_arrange_component_set", {
         description: "Combine multiple component nodes into one Figma component set (combineAsVariants). Params: nodeIds (array of at least 2 component node IDs). Returns new component set nodeId.",
-        inputSchema: { ...TARGET_FILE_SCHEMA, nodeIds: z.array(z.string()).min(2) },
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            nodeIds: z.array(z.string()).min(2),
+        },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeIds }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeIds, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const result = await conn.arrangeComponentSet(nodeIds);
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...result }),
+                },
+            ],
+        };
     }));
     // ---- figma_check_design_parity (design–code gap analysis) ----
     server.registerTool("figma_check_design_parity", {
-        description: "Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {\"primary\": \"#0066cc\", \"spacing.md\": 16} or {\"primary\": {\"value\": \"#0066cc\"}}.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            codeTokens: z.string().optional(),
-        },
+        description: 'Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {"primary": "#0066cc", "spacing.md": 16} or {"primary": {"value": "#0066cc"}}.',
+        inputSchema: { ...TARGET_FILE_SCHEMA, codeTokens: z.string().optional() },
         annotations: { readOnlyHint: true },
     }, async ({ figmaUrl, fileKey, codeTokens }) => {
         try {
@@ -1409,7 +1972,10 @@ export async function main() {
                 figmaMap.set(name, fontSize != null ? String(fontSize) : "");
             }
             if (!codeTokens || !codeTokens.trim()) {
-                const list = Array.from(figmaMap.entries()).map(([name, value]) => ({ name, value }));
+                const list = Array.from(figmaMap.entries()).map(([name, value]) => ({
+                    name,
+                    value,
+                }));
                 return {
                     content: [
                         {
@@ -1430,7 +1996,9 @@ export async function main() {
                 const parsed = JSON.parse(codeTokens);
                 codeMap = new Map();
                 for (const [k, v] of Object.entries(parsed)) {
-                    if (v != null && typeof v === "object" && "value" in v) {
+                    if (v != null &&
+                        typeof v === "object" &&
+                        "value" in v) {
                         codeMap.set(k, normalizeTokenValue(v.value, undefined));
                     }
                     else {
@@ -1443,7 +2011,10 @@ export async function main() {
                     content: [
                         {
                             type: "text",
-                            text: JSON.stringify({ success: false, error: "codeTokens must be valid JSON" }),
+                            text: JSON.stringify({
+                                success: false,
+                                error: "codeTokens must be valid JSON",
+                            }),
                         },
                     ],
                     isError: true,
@@ -1484,12 +2055,19 @@ export async function main() {
                 inFigmaOnly,
                 inCodeOnly,
             };
-            return { content: [{ type: "text", text: JSON.stringify(out) }] };
+            return {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+            };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: msg }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -1500,7 +2078,10 @@ export async function main() {
         inputSchema: {
             verbosity: z.enum(["summary", "full"]).optional().default("summary"),
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
         },
         annotations: { readOnlyHint: true },
     }, async ({ verbosity, figmaUrl, fileKey }) => {
@@ -1519,7 +2100,10 @@ export async function main() {
                 collectionById.set(c.id, {
                     id: c.id,
                     name: c.name,
-                    modes: (c.modes || []).map((m) => ({ id: m.id, name: m.name })),
+                    modes: (c.modes || []).map((m) => ({
+                        id: m.id,
+                        name: m.name,
+                    })),
                     variables: [],
                 });
             }
@@ -1541,7 +2125,10 @@ export async function main() {
                     // summary: only the first mode's value (same shape, far smaller) — v1.9.16
                     const modes = v.valuesByMode;
                     const firstMode = modes ? Object.keys(modes)[0] : undefined;
-                    entry.valuesByMode = firstMode !== undefined ? { [firstMode]: modes?.[firstMode] } : modes;
+                    entry.valuesByMode =
+                        firstMode !== undefined
+                            ? { [firstMode]: modes?.[firstMode] }
+                            : modes;
                 }
                 c.variables.push(entry);
             }
@@ -1555,15 +2142,27 @@ export async function main() {
                         : { id: s.id, name: s.name, paints: s.paints }),
                     textStyles: textStyles.map((s) => verbosity === "full"
                         ? s
-                        : { id: s.id, name: s.name, fontSize: s.fontSize ?? s.style?.fontSize, fontName: s.fontName ?? s.style?.fontName }),
+                        : {
+                            id: s.id,
+                            name: s.name,
+                            fontSize: s.fontSize ?? s.style?.fontSize,
+                            fontName: s.fontName ?? s.style?.fontName,
+                        }),
                 },
             };
-            return { content: [{ type: "text", text: JSON.stringify(out) }] };
+            return {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+            };
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: msg }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ success: false, error: msg }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -1581,9 +2180,10 @@ export async function main() {
         const currentPort = bridge.getPort();
         const startError = bridge.getStartError();
         // v1.8.0+: detect plugin/server version mismatch
-        const outdatedPlugins = connectedFiles.filter((f) => f.pluginVersion === null || (f.pluginVersion && f.pluginVersion !== FMCP_VERSION));
+        const outdatedPlugins = connectedFiles.filter((f) => f.pluginVersion === null ||
+            (f.pluginVersion && f.pluginVersion !== FMCP_VERSION));
         const versionWarning = outdatedPlugins.length > 0
-            ? `⚠️ Plugin version mismatch detected: ${outdatedPlugins.map(f => `${f.fileName || "?"} (plugin v${f.pluginVersion ?? "<1.8.0"}, server v${FMCP_VERSION})`).join(", ")}. Reinstall the plugin from f-mcp-plugin/ for full v1.8.0 context-safe defaults.`
+            ? `⚠️ Plugin version mismatch detected: ${outdatedPlugins.map((f) => `${f.fileName || "?"} (plugin v${f.pluginVersion ?? "<1.8.0"}, server v${FMCP_VERSION})`).join(", ")}. Reinstall the plugin from f-mcp-plugin/ for full v1.8.0 context-safe defaults.`
             : undefined;
         let msg;
         if (!listening) {
@@ -1609,9 +2209,12 @@ export async function main() {
                     : undefined;
         // v1.9.7: Bootstrap injection — zero-click enforcement
         const bootstrap = bootstrapInjector.getBootstrap();
-        const nextStep = bootstrapInjector.injectNextStep("figma_get_status", { pluginConnected: connected });
+        const nextStep = bootstrapInjector.injectNextStep("figma_get_status", {
+            pluginConnected: connected,
+        });
         return {
-            content: [{
+            content: [
+                {
                     type: "text",
                     text: JSON.stringify({
                         pluginConnected: connected,
@@ -1620,7 +2223,10 @@ export async function main() {
                         connectedFiles,
                         bridgePort: currentPort,
                         serverVersion: FMCP_VERSION,
-                        ...(autoIncremented && { preferredPort: bridge.getPreferredPort(), autoIncremented }),
+                        ...(autoIncremented && {
+                            preferredPort: bridge.getPreferredPort(),
+                            autoIncremented,
+                        }),
                         message: msg,
                         ...(startError && { startError }),
                         ...(portHint && { portHint }),
@@ -1629,7 +2235,8 @@ export async function main() {
                         _bootstrap: bootstrap,
                         ...(nextStep && { _nextStep: nextStep }),
                     }),
-                }],
+                },
+            ],
         };
     });
     // ---- Node Creation Tools ----
@@ -1640,41 +2247,93 @@ export async function main() {
         description: "Create a new frame node with optional auto-layout. Returns the created node ID. " +
             "v1.8.0: defaults to layoutMode='VERTICAL' with paddingTop/Bottom=16, paddingLeft/Right=16, itemSpacing=12, " +
             "primaryAxisSizingMode='AUTO', counterAxisSizingMode='AUTO'. Pass layoutMode='NONE' for legacy free-form frames.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             name: z.string().optional().default("Frame").describe("Frame name"),
-            x: z.number().optional().describe("X position. If omitted, auto-positions to the right of existing content"),
+            x: z
+                .number()
+                .optional()
+                .describe("X position. If omitted, auto-positions to the right of existing content"),
             y: z.number().optional().default(0),
             width: z.number().optional().default(200),
             height: z.number().optional().default(200),
-            fillColor: z.string().optional().describe("Hex color e.g. '#ffffff'. DEPRECATED — prefer fillVariableKey for DS token binding (v1.8.1+)."),
-            parentId: z.string().optional().describe("Parent node ID (default: current page)"),
+            fillColor: z
+                .string()
+                .optional()
+                .describe("Hex color e.g. '#ffffff'. DEPRECATED — prefer fillVariableKey for DS token binding (v1.8.1+)."),
+            parentId: z
+                .string()
+                .optional()
+                .describe("Parent node ID (default: current page)"),
             // Auto-layout parameters (v1.8.0)
-            layoutMode: z.enum(["NONE", "HORIZONTAL", "VERTICAL"]).optional().default("VERTICAL").describe("Auto-layout direction. VERTICAL by default; pass 'NONE' for free-form frames."),
+            layoutMode: z
+                .enum(["NONE", "HORIZONTAL", "VERTICAL"])
+                .optional()
+                .default("VERTICAL")
+                .describe("Auto-layout direction. VERTICAL by default; pass 'NONE' for free-form frames."),
             paddingTop: z.number().optional().default(16),
             paddingBottom: z.number().optional().default(16),
             paddingLeft: z.number().optional().default(16),
             paddingRight: z.number().optional().default(16),
-            itemSpacing: z.number().optional().default(12).describe("Gap between auto-layout children"),
-            primaryAxisSizingMode: z.enum(["FIXED", "AUTO"]).optional().default("AUTO").describe("AUTO = hug contents, FIXED = use width/height"),
-            counterAxisSizingMode: z.enum(["FIXED", "AUTO"]).optional().default("AUTO"),
-            primaryAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "SPACE_BETWEEN"]).optional().describe("Main-axis alignment (MIN=top/left, MAX=bottom/right)"),
-            counterAxisAlignItems: z.enum(["MIN", "CENTER", "MAX", "BASELINE"]).optional().describe("Cross-axis alignment"),
-            layoutWrap: z.enum(["NO_WRAP", "WRAP"]).optional().describe("Wrap children when they exceed primary axis"),
+            itemSpacing: z
+                .number()
+                .optional()
+                .default(12)
+                .describe("Gap between auto-layout children"),
+            primaryAxisSizingMode: z
+                .enum(["FIXED", "AUTO"])
+                .optional()
+                .default("AUTO")
+                .describe("AUTO = hug contents, FIXED = use width/height"),
+            counterAxisSizingMode: z
+                .enum(["FIXED", "AUTO"])
+                .optional()
+                .default("AUTO"),
+            primaryAxisAlignItems: z
+                .enum(["MIN", "CENTER", "MAX", "SPACE_BETWEEN"])
+                .optional()
+                .describe("Main-axis alignment (MIN=top/left, MAX=bottom/right)"),
+            counterAxisAlignItems: z
+                .enum(["MIN", "CENTER", "MAX", "BASELINE"])
+                .optional()
+                .describe("Cross-axis alignment"),
+            layoutWrap: z
+                .enum(["NO_WRAP", "WRAP"])
+                .optional()
+                .describe("Wrap children when they exceed primary axis"),
             // v1.8.1+: DS token binding params — PREFER over hardcoded fillColor / padding / radius
-            fillVariableKey: z.string().optional().describe("DS variable key for fill binding (from figma_get_library_variables). Takes precedence over fillColor."),
-            paddingVariableKey: z.string().optional().describe("DS spacing variable key — applies to all 4 paddings via setBoundVariable."),
-            itemSpacingVariableKey: z.string().optional().describe("DS spacing variable key for itemSpacing via setBoundVariable."),
-            cornerRadiusVariableKey: z.string().optional().describe("DS radius variable key for cornerRadius via setBoundVariable."),
-            cornerRadius: z.number().optional().describe("Hardcoded corner radius in px. DEPRECATED — prefer cornerRadiusVariableKey."),
+            fillVariableKey: z
+                .string()
+                .optional()
+                .describe("DS variable key for fill binding (from figma_get_library_variables). Takes precedence over fillColor."),
+            paddingVariableKey: z
+                .string()
+                .optional()
+                .describe("DS spacing variable key — applies to all 4 paddings via setBoundVariable."),
+            itemSpacingVariableKey: z
+                .string()
+                .optional()
+                .describe("DS spacing variable key for itemSpacing via setBoundVariable."),
+            cornerRadiusVariableKey: z
+                .string()
+                .optional()
+                .describe("DS radius variable key for cornerRadius via setBoundVariable."),
+            cornerRadius: z
+                .number()
+                .optional()
+                .describe("Hardcoded corner radius in px. DEPRECATED — prefer cornerRadiusVariableKey."),
         },
-    }, async ({ figmaUrl, fileKey, name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap, fillVariableKey, paddingVariableKey, itemSpacingVariableKey, cornerRadiusVariableKey, cornerRadius }) => {
+    }, async ({ figmaUrl, fileKey, name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap, fillVariableKey, paddingVariableKey, itemSpacingVariableKey, cornerRadiusVariableKey, cornerRadius, }) => {
         try {
             invalidateCache();
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             const autoPosition = x === undefined && !parentId;
             const useAutoLayout = layoutMode !== "NONE";
             const code = `
-					${autoPosition ? `
+					${autoPosition
+                ? `
 					let posX = 0;
 					const children = figma.currentPage.children;
 					if (children.length > 0) {
@@ -1685,12 +2344,14 @@ export async function main() {
 						});
 						posX = maxX + 100;
 					}
-					` : `let posX = ${x ?? 0};`}
+					`
+                : `let posX = ${x ?? 0};`}
 					const frame = figma.createFrame();
 					frame.name = ${JSON.stringify(name)};
 					frame.x = posX; frame.y = ${y};
 					frame.resize(${width}, ${height});
-					${useAutoLayout ? `
+					${useAutoLayout
+                ? `
 					frame.layoutMode = ${JSON.stringify(layoutMode)};
 					frame.paddingTop = ${paddingTop};
 					frame.paddingBottom = ${paddingBottom};
@@ -1702,10 +2363,12 @@ export async function main() {
 					${primaryAxisAlignItems ? `frame.primaryAxisAlignItems = ${JSON.stringify(primaryAxisAlignItems)};` : ""}
 					${counterAxisAlignItems ? `frame.counterAxisAlignItems = ${JSON.stringify(counterAxisAlignItems)};` : ""}
 					${layoutWrap ? `frame.layoutWrap = ${JSON.stringify(layoutWrap)};` : ""}
-					` : ""}
+					`
+                : ""}
 					${cornerRadius != null ? `frame.cornerRadius = ${cornerRadius};` : ""}
 					// v1.8.1: DS token binding takes precedence over hardcoded values
-					${fillVariableKey ? `
+					${fillVariableKey
+                ? `
 					try {
 						const fillVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(fillVariableKey)});
 						const baseFill = { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 };
@@ -1714,8 +2377,12 @@ export async function main() {
 					} catch (fillBindErr) {
 						console.warn('[figma_create_frame] fillVariableKey binding failed:', fillBindErr.message);
 					}
-					` : fillColor ? `frame.fills = [{ type: 'SOLID', color: ${hexToRgbLiteral(fillColor)} }];` : ""}
-					${paddingVariableKey ? `
+					`
+                : fillColor
+                    ? `frame.fills = [{ type: 'SOLID', color: ${hexToRgbLiteral(fillColor)} }];`
+                    : ""}
+					${paddingVariableKey
+                ? `
 					try {
 						const padVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(paddingVariableKey)});
 						frame.setBoundVariable('paddingTop', padVar);
@@ -1725,16 +2392,20 @@ export async function main() {
 					} catch (padBindErr) {
 						console.warn('[figma_create_frame] paddingVariableKey binding failed:', padBindErr.message);
 					}
-					` : ""}
-					${itemSpacingVariableKey ? `
+					`
+                : ""}
+					${itemSpacingVariableKey
+                ? `
 					try {
 						const gapVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(itemSpacingVariableKey)});
 						frame.setBoundVariable('itemSpacing', gapVar);
 					} catch (gapBindErr) {
 						console.warn('[figma_create_frame] itemSpacingVariableKey binding failed:', gapBindErr.message);
 					}
-					` : ""}
-					${cornerRadiusVariableKey ? `
+					`
+                : ""}
+					${cornerRadiusVariableKey
+                ? `
 					try {
 						const radVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(cornerRadiusVariableKey)});
 						frame.setBoundVariable('topLeftRadius', radVar);
@@ -1744,36 +2415,71 @@ export async function main() {
 					} catch (radBindErr) {
 						console.warn('[figma_create_frame] cornerRadiusVariableKey binding failed:', radBindErr.message);
 					}
-					` : ""}
+					`
+                : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(frame);` : ""}
 					const boundCount = frame.boundVariables ? Object.keys(frame.boundVariables).length : 0;
 					return { id: frame.id, name: frame.name, width: frame.width, height: frame.height, x: frame.x, y: frame.y, layoutMode: frame.layoutMode, boundVariableCount: boundCount };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_create_text", {
         description: "Create a new text node on the current page. Returns the created node ID. " +
             "IMPORTANT: fontFamily defaults to 'Inter' — if using a design system with a custom font (e.g. 'YourBrandFont'), specify the DS font from active-ds.md. " +
             "For DS text with proper token binding, prefer figma_execute with importStyleByKeyAsync + setTextStyleIdAsync instead.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             text: z.string().describe("Text content"),
             x: z.number().optional().default(0),
             y: z.number().optional().default(0),
-            name: z.string().optional().describe("Node name (default: text content)"),
+            name: z
+                .string()
+                .optional()
+                .describe("Node name (default: text content)"),
             fontSize: z.number().optional().default(16),
-            fontFamily: z.string().optional().default("Inter").describe("Font family — defaults to Inter. Specify DS font from active-ds.md if using a design system."),
+            fontFamily: z
+                .string()
+                .optional()
+                .default("Inter")
+                .describe("Font family — defaults to Inter. Specify DS font from active-ds.md if using a design system."),
             fontStyle: z.string().optional().default("Regular"),
-            fillColor: z.string().optional().describe("Text color hex e.g. '#000000'"),
+            fillColor: z
+                .string()
+                .optional()
+                .describe("Text color hex e.g. '#000000'"),
             parentId: z.string().optional().describe("Parent node ID"),
         },
-    }, async ({ figmaUrl, fileKey, text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId }) => {
+    }, async ({ figmaUrl, fileKey, text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId, }) => {
         try {
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             invalidateCache();
             const code = `
 					const node = figma.createText();
@@ -1787,27 +2493,55 @@ export async function main() {
 					return { id: node.id, name: node.name, characters: node.characters };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_create_rectangle", {
         description: "Create a new rectangle node on the current page.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             x: z.number().optional().default(0),
             y: z.number().optional().default(0),
             width: z.number().optional().default(100),
             height: z.number().optional().default(100),
             name: z.string().optional().default("Rectangle"),
-            fillColor: z.string().optional().default("#cccccc").describe("Hex color"),
+            fillColor: z
+                .string()
+                .optional()
+                .default("#cccccc")
+                .describe("Hex color"),
             cornerRadius: z.number().optional().describe("Corner radius"),
             parentId: z.string().optional(),
         },
-    }, async ({ figmaUrl, fileKey, x, y, width, height, name, fillColor, cornerRadius, parentId }) => {
+    }, async ({ figmaUrl, fileKey, x, y, width, height, name, fillColor, cornerRadius, parentId, }) => {
         try {
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             invalidateCache();
             const code = `
 					const rect = figma.createRectangle();
@@ -1820,21 +2554,48 @@ export async function main() {
 					return { id: rect.id, name: rect.name };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_create_group", {
         description: "Group existing nodes into a new group. Provide node IDs to group.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            nodeIds: z.array(z.string()).min(1).describe("Array of node IDs to group"),
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            nodeIds: z
+                .array(z.string())
+                .min(1)
+                .describe("Array of node IDs to group"),
             name: z.string().optional().default("Group"),
         },
     }, async ({ figmaUrl, fileKey, nodeIds, name }) => {
         try {
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             invalidateCache();
             const code = `
 					const nodes = [];
@@ -1848,10 +2609,31 @@ export async function main() {
 					return { id: group.id, name: group.name, childCount: group.children.length };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     // ---- figma_export_nodes (batch SVG/PNG/JPG/PDF export) ----
@@ -1860,14 +2642,35 @@ export async function main() {
             "Supports batch export (up to 50 nodes). No REST API token needed — uses plugin exportAsync. " +
             "SVG preserves vectors; PNG/JPG are rasterized at configurable scale. " +
             "v1.8.0: default scale=1 for context safety (was 2). Override for high-DPI exports.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            nodeIds: z.array(z.string()).min(1).max(50).describe("Node IDs to export (1-50)"),
-            format: z.enum(["PNG", "SVG", "JPG", "PDF"]).optional().default("PNG").describe("Export format"),
-            scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1).describe("Scale factor (0.5-4, default 1)"),
-            svgOutlineText: z.boolean().optional().describe("SVG: render text as outlines (default true)"),
-            svgIncludeId: z.boolean().optional().describe("SVG: include node IDs in attributes"),
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            nodeIds: z
+                .array(z.string())
+                .min(1)
+                .max(50)
+                .describe("Node IDs to export (1-50)"),
+            format: z
+                .enum(["PNG", "SVG", "JPG", "PDF"])
+                .optional()
+                .default("PNG")
+                .describe("Export format"),
+            scale: z
+                .number()
+                .min(0.5)
+                .max(4)
+                .optional()
+                .default(LEGACY_DEFAULTS ? 2 : 1)
+                .describe("Scale factor (0.5-4, default 1)"),
+            svgOutlineText: z
+                .boolean()
+                .optional()
+                .describe("SVG: render text as outlines (default true)"),
+            svgIncludeId: z
+                .boolean()
+                .optional()
+                .describe("SVG: include node IDs in attributes"),
         },
-    }, async ({ figmaUrl, fileKey, nodeIds, format, scale, svgOutlineText, svgIncludeId }) => {
+    }, async ({ figmaUrl, fileKey, nodeIds, format, scale, svgOutlineText, svgIncludeId, }) => {
         try {
             const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
             const result = await conn.batchExportNodes({
@@ -1911,7 +2714,15 @@ export async function main() {
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -1925,21 +2736,29 @@ export async function main() {
             "v3.2+ RECOMMENDED path — zero local cache dependency, always fresh as Figma updates. " +
             "For multi-library DS (e.g. main DS + mobile DS + icons), call once per library file.",
         inputSchema: {
-            libraryName: z.string().optional().describe("Match a connected file by name substring (case-insensitive, e.g. 'Mobil' matches '❖ My-DS Mobil')."),
-            libraryFileKey: z.string().optional().describe("Direct file key (e.g. from figma_list_connected_files). Takes precedence over libraryName."),
+            libraryName: z
+                .string()
+                .optional()
+                .describe("Match a connected file by name substring (case-insensitive, e.g. 'Mobil' matches '❖ My-DS Mobil')."),
+            libraryFileKey: z
+                .string()
+                .optional()
+                .describe("Direct file key (e.g. from figma_list_connected_files). Takes precedence over libraryName."),
         },
         annotations: { readOnlyHint: true, destructiveHint: false },
-    }, safeToolHandler(async ({ libraryName, libraryFileKey }) => {
+    }, safeToolHandler(async ({ libraryName, libraryFileKey, }) => {
         const files = bridge.listConnectedFiles();
         if (files.length === 0) {
             return {
-                content: [{
+                content: [
+                    {
                         type: "text",
                         text: JSON.stringify({
                             success: false,
                             error: "No plugin connected. Open the library file in Figma and run the FMCP plugin.",
                         }),
-                    }],
+                    },
+                ],
             };
         }
         let target;
@@ -1955,14 +2774,19 @@ export async function main() {
         }
         if (!target || !target.fileKey) {
             return {
-                content: [{
+                content: [
+                    {
                         type: "text",
                         text: JSON.stringify({
                             success: false,
                             error: `No connected file matches libraryName='${libraryName ?? ""}' / libraryFileKey='${libraryFileKey ?? ""}'. Provide one that matches a connected file.`,
-                            connectedFiles: files.map((f) => ({ fileKey: f.fileKey, fileName: f.fileName })),
+                            connectedFiles: files.map((f) => ({
+                                fileKey: f.fileKey,
+                                fileName: f.fileName,
+                            })),
                         }),
-                    }],
+                    },
+                ],
             };
         }
         const conn = getConnector(bridge, target.fileKey);
@@ -1996,7 +2820,8 @@ export async function main() {
         const items = Array.isArray(result.items) ? result.items : [];
         const setCount = items.filter((i) => i.kind === "COMPONENT_SET").length;
         return {
-            content: [{
+            content: [
+                {
                     type: "text",
                     text: JSON.stringify({
                         success: true,
@@ -2010,7 +2835,8 @@ export async function main() {
                             source: "live_plugin_scan",
                         },
                     }),
-                }],
+                },
+            ],
         };
     }));
     // ---- figma_enumerate_published_components (v3.2+ REST — library file KAPALI olsa bile çalışır) ----
@@ -2022,24 +2848,41 @@ export async function main() {
             "stripped to keep responses <10KB. Pass `filter` to search by name substring; large " +
             "libraries (1000+ components) REQUIRE filter to avoid context overflow.",
         inputSchema: {
-            libraryFileKey: z.string().describe("Library file key. Extract from URL: figma.com/design/<FILE_KEY>/..."),
-            filter: z.string().optional().describe("Substring filter on component name (case-insensitive). Use for libraries with many components (1000+): e.g. filter='button'."),
-            limit: z.number().min(1).max(500).optional().default(200).describe("Max items returned. Default 200. Hard cap 500 to prevent context overflow."),
-            includeDescription: z.boolean().optional().default(false).describe("Include component description text (can be very long — 10KB+ per item). Default false."),
+            libraryFileKey: z
+                .string()
+                .describe("Library file key. Extract from URL: figma.com/design/<FILE_KEY>/..."),
+            filter: z
+                .string()
+                .optional()
+                .describe("Substring filter on component name (case-insensitive). Use for libraries with many components (1000+): e.g. filter='button'."),
+            limit: z
+                .number()
+                .min(1)
+                .max(500)
+                .optional()
+                .default(200)
+                .describe("Max items returned. Default 200. Hard cap 500 to prevent context overflow."),
+            includeDescription: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Include component description text (can be very long — 10KB+ per item). Default false."),
         },
         annotations: { readOnlyHint: true, destructiveHint: false },
-    }, safeToolHandler(async ({ libraryFileKey, filter, limit, includeDescription }) => {
+    }, safeToolHandler(async ({ libraryFileKey, filter, limit, includeDescription, }) => {
         const tokenInfo = bridge.getFigmaRestToken();
         if (!tokenInfo) {
             return {
-                content: [{
+                content: [
+                    {
                         type: "text",
                         text: JSON.stringify({
                             success: false,
                             error: "No Figma REST token. Run figma_set_rest_token (or set one in the plugin Advanced panel) and retry.",
                             _hint: "The REST path is required when library files are not open in the plugin.",
                         }),
-                    }],
+                    },
+                ],
             };
         }
         const callRest = async (path) => {
@@ -2070,18 +2913,22 @@ export async function main() {
         }
         catch (err) {
             return {
-                content: [{
+                content: [
+                    {
                         type: "text",
                         text: JSON.stringify({
                             success: false,
                             error: err instanceof Error ? err.message : String(err),
                             _hint: "Library file key may be wrong, or token lacks access. Verify the URL and token scope.",
                         }),
-                    }],
+                    },
+                ],
             };
         }
-        const compsMeta = compsJson.meta?.components ?? [];
-        const setsMeta = setsJson.meta?.component_sets ?? [];
+        const compsMeta = compsJson.meta
+            ?.components ?? [];
+        const setsMeta = setsJson.meta
+            ?.component_sets ?? [];
         const itemsAll = [];
         for (const s of setsMeta) {
             if (s.name && s.key) {
@@ -2113,7 +2960,8 @@ export async function main() {
                 `Use a narrower \`filter\` or increase \`limit\` (max 500). Total in library: ${itemsAll.length}.`);
         }
         return {
-            content: [{
+            content: [
+                {
                     type: "text",
                     text: JSON.stringify({
                         success: true,
@@ -2123,15 +2971,18 @@ export async function main() {
                             returned: items.length,
                             matchedByFilter: filteredByName.length,
                             totalInLibrary: itemsAll.length,
-                            componentSets: items.filter((i) => i.kind === "COMPONENT_SET").length,
-                            singleComponents: items.filter((i) => i.kind === "COMPONENT").length,
+                            componentSets: items.filter((i) => i.kind === "COMPONENT_SET")
+                                .length,
+                            singleComponents: items.filter((i) => i.kind === "COMPONENT")
+                                .length,
                             source: "figma_rest_api",
                             filter: filter ?? null,
                             truncated,
                         },
                         ...(warnings.length > 0 && { _warnings: warnings }),
                     }),
-                }],
+                },
+            ],
         };
     }));
     // ---- figma_search_assets (team library search via plugin) ----
@@ -2146,15 +2997,32 @@ export async function main() {
             "Use the returned componentKey with figma_instantiate_component to place new instances. " +
             "Pass assetTypes to filter: ['variables'], ['components'], or both (default).",
         inputSchema: {
-            figmaUrl: z.string().optional().describe("Figma or FigJam file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            figmaUrl: z
+                .string()
+                .optional()
+                .describe("Figma or FigJam file URL for routing."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             query: z.string().optional().describe("Search query to filter by name"),
-            assetTypes: z.array(z.string()).optional().describe("Asset types to search: 'variables', 'components'. Default: both."),
-            limit: z.number().min(1).max(80).optional().describe("Max results per asset type (default 25, max 80)"),
-            currentPageOnly: z.boolean().optional().describe("For components: search current page only (default true)"),
+            assetTypes: z
+                .array(z.string())
+                .optional()
+                .describe("Asset types to search: 'variables', 'components'. Default: both."),
+            limit: z
+                .number()
+                .min(1)
+                .max(80)
+                .optional()
+                .describe("Max results per asset type (default 25, max 80)"),
+            currentPageOnly: z
+                .boolean()
+                .optional()
+                .describe("For components: search current page only (default true)"),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, query, assetTypes, limit, currentPageOnly }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, query, assetTypes, limit, currentPageOnly, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const result = await conn.searchLibraryAssets({
             query: query || undefined,
@@ -2163,7 +3031,14 @@ export async function main() {
             currentPageOnly,
         });
         const data = result;
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...data }),
+                },
+            ],
+        };
     }));
     // ---- figma_get_code_connect (Code Connect hints: documentationLinks + componentKey) ----
     server.registerTool("figma_get_code_connect", {
@@ -2173,17 +3048,42 @@ export async function main() {
             "Use Figma's official MCP get_code_connect_map for native repo paths.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            nodeIds: z.array(z.string()).optional().describe("Explicit node IDs to inspect."),
-            scanCurrentPage: z.boolean().optional().describe("Scan COMPONENT/COMPONENT_SET/INSTANCE on current page."),
-            maxNodes: z.number().min(1).max(120).optional().describe("Cap for current-page scan (default 40, max 120)."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            nodeIds: z
+                .array(z.string())
+                .optional()
+                .describe("Explicit node IDs to inspect."),
+            scanCurrentPage: z
+                .boolean()
+                .optional()
+                .describe("Scan COMPONENT/COMPONENT_SET/INSTANCE on current page."),
+            maxNodes: z
+                .number()
+                .min(1)
+                .max(120)
+                .optional()
+                .describe("Cap for current-page scan (default 40, max 120)."),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeIds, scanCurrentPage, maxNodes }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeIds, scanCurrentPage, maxNodes, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
-        const result = await conn.getCodeConnectHints({ nodeIds, scanCurrentPage, maxNodes });
+        const result = await conn.getCodeConnectHints({
+            nodeIds,
+            scanCurrentPage,
+            maxNodes,
+        });
         const data = result;
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, ...data }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, ...data }),
+                },
+            ],
+        };
     }));
     // ---- figma_use (high-level orchestrator: component + token + design_context) ----
     server.registerTool("figma_use", {
@@ -2194,24 +3094,53 @@ export async function main() {
             "Prefer this before implementing a design to collect all references in a single round-trip.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            intent: z.enum(["component", "token", "design_context"]).describe("Lookup mode."),
-            nodeId: z.string().optional().describe("Required for 'component' and 'design_context'."),
-            query: z.string().optional().describe("Token name filter for 'token' / 'design_context'."),
-            limit: z.number().min(1).max(80).optional().describe("Max variable results (default 25)."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            intent: z
+                .enum(["component", "token", "design_context"])
+                .describe("Lookup mode."),
+            nodeId: z
+                .string()
+                .optional()
+                .describe("Required for 'component' and 'design_context'."),
+            query: z
+                .string()
+                .optional()
+                .describe("Token name filter for 'token' / 'design_context'."),
+            limit: z
+                .number()
+                .min(1)
+                .max(80)
+                .optional()
+                .describe("Max variable results (default 25)."),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, intent, nodeId, query, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, intent, nodeId, query, limit, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const needsNode = intent === "component" || intent === "design_context";
         if (needsNode && !nodeId) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: `intent='${intent}' requires nodeId` }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: `intent='${intent}' requires nodeId`,
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
-        const safe = async (key, p) => p.then((value) => ({ key, ok: true, value }))
-            .catch((e) => ({ key, ok: false, error: e instanceof Error ? e.message : String(e) }));
+        const safe = async (key, p) => p
+            .then((value) => ({ key, ok: true, value }))
+            .catch((e) => ({
+            key,
+            ok: false,
+            error: e instanceof Error ? e.message : String(e),
+        }));
         const tasks = [];
         if (intent === "component" || intent === "design_context") {
             tasks.push(safe("component", conn.getComponentByNodeId(nodeId)));
@@ -2227,7 +3156,12 @@ export async function main() {
         const results = await Promise.all(tasks);
         const partial = results.some((r) => r.ok === false);
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: true, intent, partial, results }) }],
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, intent, partial, results }),
+                },
+            ],
         };
     }));
     // ---- figma_get_library_variables (team library variable discovery with import keys) ----
@@ -2239,14 +3173,31 @@ export async function main() {
             "PRE-FLIGHT (v1.9.8+ MUTLAK): BEFORE calling, read ~/.claude/data/fcm-ds/<file-key>/tokens.md cache first. If cache exists and <7 days old (per _meta.md), use cache directly — only call this tool on cache miss or stale.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            query: z.string().optional().describe("Filter variables by name (case-insensitive contains)"),
-            collectionName: z.string().optional().describe("Filter by collection name (exact match)"),
-            libraryName: z.string().optional().describe("Filter by library name (exact match, e.g. '❖ My-DS')"),
-            limit: z.number().min(1).max(500).optional().describe("Max results (default 100)"),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            query: z
+                .string()
+                .optional()
+                .describe("Filter variables by name (case-insensitive contains)"),
+            collectionName: z
+                .string()
+                .optional()
+                .describe("Filter by collection name (exact match)"),
+            libraryName: z
+                .string()
+                .optional()
+                .describe("Filter by library name (exact match, e.g. '❖ My-DS')"),
+            limit: z
+                .number()
+                .min(1)
+                .max(500)
+                .optional()
+                .describe("Max results (default 100)"),
         },
         annotations: { readOnlyHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, query, collectionName, libraryName, limit }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, query, collectionName, libraryName, limit, }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
         const maxResults = limit ?? 100;
         const q = query ? query.toLowerCase() : "";
@@ -2271,7 +3222,9 @@ export async function main() {
 				return { success: true, count: results.length, variables: results };
 			`;
         const result = await conn.executeCodeViaUI(code, 30000);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- figma_bind_variable (import variable and bind to node property) ----
     server.registerTool("figma_bind_variable", {
@@ -2282,23 +3235,51 @@ export async function main() {
             "The node's fill/spacing will dynamically update when the DS token changes.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
             nodeId: z.string().describe("Target node ID"),
-            variableKey: z.string().describe("Variable import key from figma_get_library_variables"),
-            property: z.enum([
-                "fills", "strokes",
-                "paddingLeft", "paddingRight", "paddingTop", "paddingBottom",
-                "itemSpacing", "counterAxisSpacing",
-                "topLeftRadius", "topRightRadius", "bottomLeftRadius", "bottomRightRadius", "cornerRadius",
-                "strokeWeight", "opacity",
-                "width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight",
-            ]).describe("Node property to bind the variable to"),
-            paintIndex: z.number().optional().default(0).describe("For fills/strokes: which paint index (default 0)"),
+            variableKey: z
+                .string()
+                .describe("Variable import key from figma_get_library_variables"),
+            property: z
+                .enum([
+                "fills",
+                "strokes",
+                "paddingLeft",
+                "paddingRight",
+                "paddingTop",
+                "paddingBottom",
+                "itemSpacing",
+                "counterAxisSpacing",
+                "topLeftRadius",
+                "topRightRadius",
+                "bottomLeftRadius",
+                "bottomRightRadius",
+                "cornerRadius",
+                "strokeWeight",
+                "opacity",
+                "width",
+                "height",
+                "minWidth",
+                "minHeight",
+                "maxWidth",
+                "maxHeight",
+            ])
+                .describe("Node property to bind the variable to"),
+            paintIndex: z
+                .number()
+                .optional()
+                .default(0)
+                .describe("For fills/strokes: which paint index (default 0)"),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, variableKey, property, paintIndex }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, nodeId, variableKey, property, paintIndex, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const idx = paintIndex ?? 0;
         const code = `
 				var variable = await figma.variables.importVariableByKeyAsync(${JSON.stringify(variableKey)});
@@ -2318,7 +3299,9 @@ export async function main() {
 				return { success: true, nodeId: ${JSON.stringify(nodeId)}, property: prop, variableName: variable.name, variableId: variable.id };
 			`;
         const result = await conn.executeCodeViaUI(code, 10000);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- figma_import_style (import text/paint/effect style from library) ----
     server.registerTool("figma_import_style", {
@@ -2330,14 +3313,24 @@ export async function main() {
             "For PAINT styles: applies via fillStyleId. For EFFECT styles: applies via effectStyleId.",
         inputSchema: {
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
-            styleKey: z.string().describe("Library style key (must be from a PUBLISHED team library, not a local style)"),
-            nodeId: z.string().optional().describe("Node ID to apply the style to (optional — omit to just import)"),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
+            styleKey: z
+                .string()
+                .describe("Library style key (must be from a PUBLISHED team library, not a local style)"),
+            nodeId: z
+                .string()
+                .optional()
+                .describe("Node ID to apply the style to (optional — omit to just import)"),
         },
         annotations: { destructiveHint: true },
-    }, safeToolHandler(async ({ figmaUrl, fileKey, styleKey, nodeId }) => {
+    }, safeToolHandler(async ({ figmaUrl, fileKey, styleKey, nodeId, }) => {
         invalidateCache();
-        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+        const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+            mutating: true,
+        });
         const code = `
 				var style;
 				try {
@@ -2353,7 +3346,8 @@ export async function main() {
 					);
 				}
 				var applied = false;
-				${nodeId ? `
+				${nodeId
+            ? `
 				var node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 				if (!node) throw new Error("Node not found: " + ${JSON.stringify(nodeId)});
 				if (style.type === "TEXT" && node.type === "TEXT") {
@@ -2366,11 +3360,14 @@ export async function main() {
 					node.effectStyleId = style.id;
 					applied = true;
 				}
-				` : ""}
+				`
+            : ""}
 				return { success: true, styleId: style.id, styleName: style.name, styleType: style.type, applied: applied };
 			`;
         const result = await conn.executeCodeViaUI(code, 10000);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+        };
     }));
     // ---- figma_plugin_diagnostics ----
     server.registerTool("figma_plugin_diagnostics", {
@@ -2383,7 +3380,8 @@ export async function main() {
         const tokenInfo = bridge.getFigmaRestToken();
         const mem = process.memoryUsage();
         return {
-            content: [{
+            content: [
+                {
                     type: "text",
                     text: JSON.stringify({
                         preferredPort: bridge.getPreferredPort(),
@@ -2391,7 +3389,10 @@ export async function main() {
                         autoIncremented: bridge.getPreferredPort() !== bridge.getPort(),
                         bridgeListening: bridge.isListening(),
                         connectedClients: bridge.connectedClientCount(),
-                        connectedFiles: clients.map((c) => ({ fileKey: c.fileKey, fileName: c.fileName })),
+                        connectedFiles: clients.map((c) => ({
+                            fileKey: c.fileKey,
+                            fileName: c.fileName,
+                        })),
                         uptime: Math.round(process.uptime()),
                         memoryMB: {
                             rss: Math.round(mem.rss / 1024 / 1024),
@@ -2402,7 +3403,8 @@ export async function main() {
                         rateLimit: tokenInfo?.rateLimit || null,
                         nodeVersion: process.version,
                     }),
-                }],
+                },
+            ],
         };
     });
     // ---- figma_set_port (runtime port change) ----
@@ -2413,18 +3415,24 @@ export async function main() {
             "After calling this, the Figma plugin must reconnect to the new port. " +
             "Valid range: 5454–5470.",
         inputSchema: {
-            port: z.number().min(5454).max(5470).describe("New WebSocket bridge port (5454–5470)"),
+            port: z
+                .number()
+                .min(5454)
+                .max(5470)
+                .describe("New WebSocket bridge port (5454–5470)"),
         },
     }, async ({ port: newPort }) => {
         if (portChangeInProgress) {
             return {
-                content: [{
+                content: [
+                    {
                         type: "text",
                         text: JSON.stringify({
                             success: false,
                             error: "Port değişikliği zaten devam ediyor. Lütfen tamamlanmasını bekleyin.",
                         }),
-                    }],
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2435,7 +3443,8 @@ export async function main() {
             const result = await bridge.restart(newPort);
             if (result.success) {
                 return {
-                    content: [{
+                    content: [
+                        {
                             type: "text",
                             text: JSON.stringify({
                                 success: true,
@@ -2443,12 +3452,14 @@ export async function main() {
                                 newPort: result.port,
                                 message: `Bridge restarted on port ${result.port}. Figma plugin'de Port: ${result.port} ayarlayın ve bağlanmasını bekleyin.`,
                             }),
-                        }],
+                        },
+                    ],
                 };
             }
             else {
                 return {
-                    content: [{
+                    content: [
+                        {
                             type: "text",
                             text: JSON.stringify({
                                 success: false,
@@ -2457,7 +3468,8 @@ export async function main() {
                                 error: result.error || "Port bind failed",
                                 message: `Port ${newPort} bağlanamadı. Başka bir port deneyin (5454–5470).`,
                             }),
-                        }],
+                        },
+                    ],
                     isError: true,
                 };
             }
@@ -2477,7 +3489,15 @@ export async function main() {
     }, async ({ token }) => {
         if (!token.startsWith("figd_")) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: "Token must start with 'figd_'" }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: "Token must start with 'figd_'",
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2492,11 +3512,19 @@ export async function main() {
             clearTimeout(timeout);
             if (!res.ok) {
                 return {
-                    content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation failed: ${res.status} ${res.statusText}` }) }],
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
+                                success: false,
+                                error: `Token validation failed: ${res.status} ${res.statusText}`,
+                            }),
+                        },
+                    ],
                     isError: true,
                 };
             }
-            const me = await res.json();
+            const me = (await res.json());
             bridge.setFigmaRestToken(token);
             // Read rate limit headers
             const remaining = parseInt(res.headers.get("x-ratelimit-remaining") || "0", 10);
@@ -2505,17 +3533,30 @@ export async function main() {
             if (limit > 0)
                 bridge.updateRateLimit(remaining, limit, resetAt);
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             success: true,
                             user: me.handle || me.email || "unknown",
                             message: "Token set. REST API tools are now available.",
                             rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                        }) }],
+                        }),
+                    },
+                ],
             };
         }
         catch (err) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: `Token validation error: ${err instanceof Error ? err.message : String(err)}` }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: `Token validation error: ${err instanceof Error ? err.message : String(err)}`,
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2525,7 +3566,14 @@ export async function main() {
         inputSchema: {},
     }, async () => {
         bridge.clearFigmaRestToken();
-        return { content: [{ type: "text", text: JSON.stringify({ success: true, message: "Token cleared." }) }] };
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ success: true, message: "Token cleared." }),
+                },
+            ],
+        };
     });
     server.registerTool("figma_rest_api", {
         description: "Call Figma REST API directly. Requires a token set via figma_set_rest_token. " +
@@ -2533,8 +3581,14 @@ export async function main() {
             "image fills, and anything not available through the plugin bridge. " +
             "Endpoint examples: GET /v1/files/:fileKey, GET /v1/images/:fileKey, GET /v1/files/:fileKey/comments",
         inputSchema: {
-            endpoint: z.string().describe("REST API path, e.g. '/v1/files/abc123' or '/v1/me'"),
-            method: z.enum(["GET", "POST", "PUT", "DELETE"]).optional().default("GET").describe("HTTP method"),
+            endpoint: z
+                .string()
+                .describe("REST API path, e.g. '/v1/files/abc123' or '/v1/me'"),
+            method: z
+                .enum(["GET", "POST", "PUT", "DELETE"])
+                .optional()
+                .default("GET")
+                .describe("HTTP method"),
             body: z.string().optional().describe("JSON body for POST/PUT requests"),
         },
         annotations: { readOnlyHint: false },
@@ -2542,10 +3596,15 @@ export async function main() {
         const tokenInfo = bridge.getFigmaRestToken();
         if (!tokenInfo) {
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             success: false,
                             error: "No Figma REST API token set. Use figma_set_rest_token first. Or enter token in Figma plugin Advanced panel.",
-                        }) }],
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2554,11 +3613,16 @@ export async function main() {
         if (rl && rl.remaining === 0) {
             const resetDate = new Date(rl.resetAt * 1000);
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             success: false,
                             error: `API rate limit exhausted (0/${rl.limit}). Resets at ${resetDate.toISOString()}. Wait and retry.`,
                             rateLimit: rl,
-                        }) }],
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2569,7 +3633,15 @@ export async function main() {
         }
         catch (e) {
             return {
-                content: [{ type: "text", text: JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }) }],
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: e instanceof Error ? e.message : String(e),
+                        }),
+                    },
+                ],
                 isError: true,
             };
         }
@@ -2604,15 +3676,23 @@ export async function main() {
                 // 429 Rate Limited — retry with backoff
                 if (res.status === 429 && attempt < MAX_RETRIES) {
                     const retryAfter = parseInt(res.headers.get("retry-after") || "0", 10);
-                    const delayMs = retryAfter > 0 ? retryAfter * 1000 : BACKOFF_BASE_MS * Math.pow(2, attempt);
+                    const delayMs = retryAfter > 0
+                        ? retryAfter * 1000
+                        : BACKOFF_BASE_MS * Math.pow(2, attempt);
                     const elapsed = Date.now() - startTime;
                     if (elapsed + delayMs > MAX_TOTAL_MS) {
                         return {
-                            content: [{ type: "text", text: JSON.stringify({
-                                        success: false, status: 429,
+                            content: [
+                                {
+                                    type: "text",
+                                    text: JSON.stringify({
+                                        success: false,
+                                        status: 429,
                                         error: `Rate limited. ${attempt + 1} attempts, total ${Math.round(elapsed / 1000)}s. Retry later.`,
                                         rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                                    }) }],
+                                    }),
+                                },
+                            ],
                             isError: true,
                         };
                     }
@@ -2630,11 +3710,18 @@ export async function main() {
                 }
                 if (!res.ok) {
                     return {
-                        content: [{ type: "text", text: JSON.stringify({
-                                    success: false, status: res.status, statusText: res.statusText,
+                        content: [
+                            {
+                                type: "text",
+                                text: JSON.stringify({
+                                    success: false,
+                                    status: res.status,
+                                    statusText: res.statusText,
                                     error: responseData,
                                     rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
-                                }) }],
+                                }),
+                            },
+                        ],
                         isError: true,
                     };
                 }
@@ -2657,9 +3744,15 @@ export async function main() {
                 contentBlocks.push({
                     type: "text",
                     text: JSON.stringify({
-                        success: true, status: res.status,
+                        success: true,
+                        status: res.status,
                         data: result.data,
-                        ...(result.wasTruncated && { _responseGuard: { originalSizeKB: Math.round(result.originalSizeKB), truncatedSizeKB: Math.round(result.truncatedSizeKB) } }),
+                        ...(result.wasTruncated && {
+                            _responseGuard: {
+                                originalSizeKB: Math.round(result.originalSizeKB),
+                                truncatedSizeKB: Math.round(result.truncatedSizeKB),
+                            },
+                        }),
                         rateLimit: limit > 0 ? { remaining, limit, resetAt } : undefined,
                     }),
                 });
@@ -2670,24 +3763,39 @@ export async function main() {
                     clearTimeout(timeout);
                 // v1.10.0: never re-send POST/PUT/DELETE after a network error — the first
                 // request may have been applied (e.g. duplicate comments)
-                if (isRetryableMethod(method) && attempt < MAX_RETRIES && (Date.now() - startTime) < MAX_TOTAL_MS) {
+                if (isRetryableMethod(method) &&
+                    attempt < MAX_RETRIES &&
+                    Date.now() - startTime < MAX_TOTAL_MS) {
                     const delayMs = BACKOFF_BASE_MS * Math.pow(2, attempt);
                     logger.warn({ attempt, err, endpoint }, "figma_rest_api: fetch error, retrying");
                     await new Promise((r) => setTimeout(r, delayMs));
                     continue;
                 }
                 return {
-                    content: [{ type: "text", text: JSON.stringify({
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
                                 success: false,
                                 error: `REST API call failed after ${attempt + 1} attempts: ${err instanceof Error ? err.message : String(err)}`,
-                            }) }],
+                            }),
+                        },
+                    ],
                     isError: true,
                 };
             }
         }
         // Should not reach here
         return {
-            content: [{ type: "text", text: JSON.stringify({ success: false, error: "Unexpected: all retries exhausted" }) }],
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({
+                        success: false,
+                        error: "Unexpected: all retries exhausted",
+                    }),
+                },
+            ],
             isError: true,
         };
     });
@@ -2701,37 +3809,144 @@ export async function main() {
             "Uses Figma Plugin API setReactionsAsync (reactions property is readonly in 2024+ API). " +
             "v1 scope: SET_VARIABLE, SET_VARIABLE_MODE, UPDATE_MEDIA_RUNTIME, CONDITIONAL actions are NOT included (future release). " +
             "Overlay background/close-on-outside are readonly in Plugin API — configure in Figma UI (Prototype tab -> Advanced -> Overlay).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            sourceNodeId: z.string().describe("Source node id (FRAME/INSTANCE/COMPONENT/GROUP etc.) that will receive the reaction."),
-            destinationNodeId: z.string().optional().describe("Destination FRAME id. Required for NAVIGATE/OVERLAY/SWAP/SCROLL_TO/CHANGE_TO; omitted for BACK/CLOSE/URL."),
-            trigger: z.enum(["ON_CLICK", "ON_HOVER", "ON_PRESS", "ON_DRAG", "AFTER_TIMEOUT", "MOUSE_ENTER", "MOUSE_LEAVE", "MOUSE_UP", "MOUSE_DOWN", "ON_KEY_DOWN"]).optional().default("ON_CLICK"),
-            timeout: z.number().optional().describe("Milliseconds — required when trigger=AFTER_TIMEOUT (default 1000)."),
-            mouseDelay: z.number().optional().describe("Seconds — optional hold-delay for MOUSE_* triggers (e.g. 0.3 = 300ms hover before firing)."),
-            keyCodes: z.array(z.number()).optional().describe("Required when trigger=ON_KEY_DOWN (e.g. [13]=Enter, [27]=Escape, [32]=Space)."),
-            device: z.enum(["KEYBOARD", "XBOX_ONE", "PS4", "SWITCH_PRO", "UNKNOWN_CONTROLLER"]).optional().default("KEYBOARD").describe("Input device for ON_KEY_DOWN."),
-            action: z.enum(["NAVIGATE", "OVERLAY", "SWAP", "BACK", "CLOSE", "SCROLL_TO", "CHANGE_TO", "URL"]).optional().default("NAVIGATE").describe("BACK action: Figma transition param'ını IGNORE eder ve önceki NAVIGATE'in yönünü otomatik ters uygular (audit'te transition: null görünür, Present modda doğru animasyon oynar)."),
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            sourceNodeId: z
+                .string()
+                .describe("Source node id (FRAME/INSTANCE/COMPONENT/GROUP etc.) that will receive the reaction."),
+            destinationNodeId: z
+                .string()
+                .optional()
+                .describe("Destination FRAME id. Required for NAVIGATE/OVERLAY/SWAP/SCROLL_TO/CHANGE_TO; omitted for BACK/CLOSE/URL."),
+            trigger: z
+                .enum([
+                "ON_CLICK",
+                "ON_HOVER",
+                "ON_PRESS",
+                "ON_DRAG",
+                "AFTER_TIMEOUT",
+                "MOUSE_ENTER",
+                "MOUSE_LEAVE",
+                "MOUSE_UP",
+                "MOUSE_DOWN",
+                "ON_KEY_DOWN",
+            ])
+                .optional()
+                .default("ON_CLICK"),
+            timeout: z
+                .number()
+                .optional()
+                .describe("Milliseconds — required when trigger=AFTER_TIMEOUT (default 1000)."),
+            mouseDelay: z
+                .number()
+                .optional()
+                .describe("Seconds — optional hold-delay for MOUSE_* triggers (e.g. 0.3 = 300ms hover before firing)."),
+            keyCodes: z
+                .array(z.number())
+                .optional()
+                .describe("Required when trigger=ON_KEY_DOWN (e.g. [13]=Enter, [27]=Escape, [32]=Space)."),
+            device: z
+                .enum([
+                "KEYBOARD",
+                "XBOX_ONE",
+                "PS4",
+                "SWITCH_PRO",
+                "UNKNOWN_CONTROLLER",
+            ])
+                .optional()
+                .default("KEYBOARD")
+                .describe("Input device for ON_KEY_DOWN."),
+            action: z
+                .enum([
+                "NAVIGATE",
+                "OVERLAY",
+                "SWAP",
+                "BACK",
+                "CLOSE",
+                "SCROLL_TO",
+                "CHANGE_TO",
+                "URL",
+            ])
+                .optional()
+                .default("NAVIGATE")
+                .describe("BACK action: Figma transition param'ını IGNORE eder ve önceki NAVIGATE'in yönünü otomatik ters uygular (audit'te transition: null görünür, Present modda doğru animasyon oynar)."),
             url: z.string().optional().describe("Required when action=URL."),
-            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE", "SCROLL_ANIMATE", "MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"]).optional().default("INSTANT").describe("INSTANT -> transition: null (no Figma INSTANT type). Directional types (MOVE_IN/OUT, PUSH, SLIDE_IN/OUT) require 'direction'."),
-            direction: z.enum(["LEFT", "RIGHT", "TOP", "BOTTOM"]).optional().describe("Required for MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT transitions."),
-            matchLayers: z.boolean().optional().default(false).describe("DirectionalTransition only (SLIDE_IN/MOVE_IN/PUSH/...) — key is REQUIRED by Figma schema (always injected, value from this param). true = smart layer morph on top of directional transition. INVALID for SMART_ANIMATE (SimpleTransition rejects it)."),
-            duration: z.number().optional().default(300).describe("Transition duration in ms; converted to seconds for Plugin API."),
-            easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW", "EASE_IN_BACK", "EASE_OUT_BACK", "EASE_IN_AND_OUT_BACK"]).optional().default("EASE_OUT"),
+            transitionType: z
+                .enum([
+                "INSTANT",
+                "DISSOLVE",
+                "SMART_ANIMATE",
+                "SCROLL_ANIMATE",
+                "MOVE_IN",
+                "MOVE_OUT",
+                "PUSH",
+                "SLIDE_IN",
+                "SLIDE_OUT",
+            ])
+                .optional()
+                .default("INSTANT")
+                .describe("INSTANT -> transition: null (no Figma INSTANT type). Directional types (MOVE_IN/OUT, PUSH, SLIDE_IN/OUT) require 'direction'."),
+            direction: z
+                .enum(["LEFT", "RIGHT", "TOP", "BOTTOM"])
+                .optional()
+                .describe("Required for MOVE_IN/MOVE_OUT/PUSH/SLIDE_IN/SLIDE_OUT transitions."),
+            matchLayers: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("DirectionalTransition only (SLIDE_IN/MOVE_IN/PUSH/...) — key is REQUIRED by Figma schema (always injected, value from this param). true = smart layer morph on top of directional transition. INVALID for SMART_ANIMATE (SimpleTransition rejects it)."),
+            duration: z
+                .number()
+                .optional()
+                .default(300)
+                .describe("Transition duration in ms; converted to seconds for Plugin API."),
+            easing: z
+                .enum([
+                "EASE_IN",
+                "EASE_OUT",
+                "EASE_IN_AND_OUT",
+                "LINEAR",
+                "GENTLE",
+                "QUICK",
+                "BOUNCY",
+                "SLOW",
+                "EASE_IN_BACK",
+                "EASE_OUT_BACK",
+                "EASE_IN_AND_OUT_BACK",
+            ])
+                .optional()
+                .default("EASE_OUT"),
             preserveScrollPosition: z.boolean().optional().default(false),
-            overlayRelativePosition: z.object({ x: z.number(), y: z.number() }).optional().describe("OVERLAY action only — free overlay position. Requires destination frame's overlayPositionType=MANUAL (set in Figma UI)."),
-            replace: z.boolean().optional().default(false).describe("true: replace reactions array; false (default): append."),
+            overlayRelativePosition: z
+                .object({ x: z.number(), y: z.number() })
+                .optional()
+                .describe("OVERLAY action only — free overlay position. Requires destination frame's overlayPositionType=MANUAL (set in Figma UI)."),
+            replace: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("true: replace reactions array; false (default): append."),
         },
-    }, async ({ figmaUrl, fileKey, sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, replace }) => {
+    }, async ({ figmaUrl, fileKey, sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, replace, }) => {
         try {
             invalidateCache();
             // TS-side param validation (fail fast, before hitting the plugin)
             if (trigger === "ON_KEY_DOWN" && (!keyCodes || keyCodes.length === 0)) {
                 throw new Error("KEYCODES_REQUIRED: trigger=ON_KEY_DOWN için keyCodes (en az 1 tuş kodu) gerekli");
             }
-            const directionalTypes = ["MOVE_IN", "MOVE_OUT", "PUSH", "SLIDE_IN", "SLIDE_OUT"];
+            const directionalTypes = [
+                "MOVE_IN",
+                "MOVE_OUT",
+                "PUSH",
+                "SLIDE_IN",
+                "SLIDE_OUT",
+            ];
             if (directionalTypes.includes(transitionType) && !direction) {
                 throw new Error(`DIRECTION_REQUIRED: transitionType=${transitionType} için direction (LEFT/RIGHT/TOP/BOTTOM) gerekli`);
             }
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             // Trigger extras (inject into the generated JS as an object literal fragment)
             let triggerExtras = "";
             if (trigger === "AFTER_TIMEOUT") {
@@ -2740,7 +3955,8 @@ export async function main() {
             else if (trigger === "ON_KEY_DOWN") {
                 triggerExtras = `, device: ${JSON.stringify(device)}, keyCodes: ${JSON.stringify(keyCodes ?? [])}`;
             }
-            else if (["MOUSE_UP", "MOUSE_DOWN", "MOUSE_ENTER", "MOUSE_LEAVE"].includes(trigger) && mouseDelay !== undefined) {
+            else if (["MOUSE_UP", "MOUSE_DOWN", "MOUSE_ENTER", "MOUSE_LEAVE"].includes(trigger) &&
+                mouseDelay !== undefined) {
                 triggerExtras = `, delay: ${mouseDelay}`;
             }
             const code = `
@@ -2808,10 +4024,31 @@ export async function main() {
 					return { id: src.id, reactionsCount: after.length, trigger: triggerObj.type, action: actionObj.type, destinationId: destId, transitionType: ${JSON.stringify(transitionType)}, direction: ${JSON.stringify(direction || null)} };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_get_prototype_connections", {
@@ -2820,14 +4057,24 @@ export async function main() {
             "Uses getReactionsAsync if available, falls back to node.reactions getter. " +
             "At least one of nodeId or pageScope=true must be provided.",
         inputSchema: {
-            nodeId: z.string().optional().describe("Scans this node and its descendants."),
-            pageScope: z.boolean().optional().default(false).describe("true: scan the entire current page. Either nodeId or pageScope is required."),
+            nodeId: z
+                .string()
+                .optional()
+                .describe("Scans this node and its descendants."),
+            pageScope: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("true: scan the entire current page. Either nodeId or pageScope is required."),
             includeFlowStartingPoints: z.boolean().optional().default(true),
             figmaUrl: z.string().optional().describe("Figma file URL for routing."),
-            fileKey: z.string().optional().describe("Target a specific connected file."),
+            fileKey: z
+                .string()
+                .optional()
+                .describe("Target a specific connected file."),
         },
         annotations: { readOnlyHint: true },
-    }, async ({ nodeId, pageScope, includeFlowStartingPoints, figmaUrl, fileKey }) => {
+    }, async ({ nodeId, pageScope, includeFlowStartingPoints, figmaUrl, fileKey, }) => {
         try {
             const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
             const code = `
@@ -2885,23 +4132,45 @@ export async function main() {
             return toolResult(result, "figma_get_prototype_connections");
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_set_flow_starting_point", {
         description: "Mark a FRAME as a prototype flow starting point (shown in Figma Prototype panel). " +
             "Uses page.setFlowStartingPointsAsync if available (future API), falls back to direct assignment. " +
             "Description is stored via pluginData (Figma FlowStartingPoint shape is { nodeId, name } only).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            nodeId: z.string().describe("FRAME node id to mark as a starting point."),
-            name: z.string().describe("Flow name shown in Prototype panel (e.g. 'Login Akışı')."),
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            nodeId: z
+                .string()
+                .describe("FRAME node id to mark as a starting point."),
+            name: z
+                .string()
+                .describe("Flow name shown in Prototype panel (e.g. 'Login Akışı')."),
             description: z.string().optional().default(""),
-            replace: z.boolean().optional().default(false).describe("true: replace entire array; false (default): append or update same nodeId."),
+            replace: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("true: replace entire array; false (default): append or update same nodeId."),
         },
     }, async ({ figmaUrl, fileKey, nodeId, name, description, replace }) => {
         try {
             invalidateCache();
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
@@ -2924,10 +4193,31 @@ export async function main() {
 					return { id: node.id, name: ${JSON.stringify(name)}, total: (page.flowStartingPoints || []).length };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_create_interaction", {
@@ -2935,19 +4225,52 @@ export async function main() {
             "Uses reactions API with navigation: CHANGE_TO. Target variant resolved by id or name within the same COMPONENT_SET. " +
             "Uses getMainComponentAsync for deprecation-safe main component access. " +
             "v1 supports INSTANT/DISSOLVE/SMART_ANIMATE transitions (DirectionalTransition not applicable to variants).",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
             nodeId: z.string().describe("INSTANCE or variant node id."),
-            trigger: z.enum(["ON_HOVER", "ON_PRESS", "MOUSE_ENTER", "MOUSE_LEAVE", "MOUSE_DOWN", "MOUSE_UP", "ON_CLICK"]).optional().default("ON_HOVER"),
+            trigger: z
+                .enum([
+                "ON_HOVER",
+                "ON_PRESS",
+                "MOUSE_ENTER",
+                "MOUSE_LEAVE",
+                "MOUSE_DOWN",
+                "MOUSE_UP",
+                "ON_CLICK",
+            ])
+                .optional()
+                .default("ON_HOVER"),
             targetVariantId: z.string().optional(),
-            targetVariantName: z.string().optional().describe("Variant name (e.g. 'State=Hover') — resolved within the source's COMPONENT_SET."),
-            transitionType: z.enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE"]).optional().default("SMART_ANIMATE").describe("SMART_ANIMATE inherently matches layers — no explicit matchLayers param needed (Figma schema rejects it)."),
+            targetVariantName: z
+                .string()
+                .optional()
+                .describe("Variant name (e.g. 'State=Hover') — resolved within the source's COMPONENT_SET."),
+            transitionType: z
+                .enum(["INSTANT", "DISSOLVE", "SMART_ANIMATE"])
+                .optional()
+                .default("SMART_ANIMATE")
+                .describe("SMART_ANIMATE inherently matches layers — no explicit matchLayers param needed (Figma schema rejects it)."),
             duration: z.number().optional().default(150),
-            easing: z.enum(["EASE_IN", "EASE_OUT", "EASE_IN_AND_OUT", "LINEAR", "GENTLE", "QUICK", "BOUNCY", "SLOW"]).optional().default("EASE_IN"),
+            easing: z
+                .enum([
+                "EASE_IN",
+                "EASE_OUT",
+                "EASE_IN_AND_OUT",
+                "LINEAR",
+                "GENTLE",
+                "QUICK",
+                "BOUNCY",
+                "SLOW",
+            ])
+                .optional()
+                .default("EASE_IN"),
         },
-    }, async ({ figmaUrl, fileKey, nodeId, trigger, targetVariantId, targetVariantName, transitionType, duration, easing }) => {
+    }, async ({ figmaUrl, fileKey, nodeId, trigger, targetVariantId, targetVariantName, transitionType, duration, easing, }) => {
         try {
             invalidateCache();
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
@@ -2986,10 +4309,31 @@ export async function main() {
 					return { id: node.id, targetVariantId: targetId, reactionsCount: after.length };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_set_scroll_behavior", {
@@ -2997,41 +4341,75 @@ export async function main() {
             "overflowDirection (FrameNode): NONE/HORIZONTAL/VERTICAL/BOTH — defines prototype scroll axis. " +
             "scrollBehavior (SceneNode): SCROLLS/FIXED/STICKY_SCROLLS — FIXED = sticky header, STICKY_SCROLLS = becomes sticky after scrolling past. " +
             "At least one of overflowDirection or scrollBehavior must be provided.",
-        inputSchema: { ...TARGET_FILE_SCHEMA,
-            nodeId: z.string().describe("Target node id (FRAME/COMPONENT/COMPONENT_SET/INSTANCE for overflowDirection; any SceneNode for scrollBehavior)."),
-            overflowDirection: z.enum(["NONE", "HORIZONTAL", "VERTICAL", "BOTH"]).optional(),
-            scrollBehavior: z.enum(["SCROLLS", "FIXED", "STICKY_SCROLLS"]).optional(),
+        inputSchema: {
+            ...TARGET_FILE_SCHEMA,
+            nodeId: z
+                .string()
+                .describe("Target node id (FRAME/COMPONENT/COMPONENT_SET/INSTANCE for overflowDirection; any SceneNode for scrollBehavior)."),
+            overflowDirection: z
+                .enum(["NONE", "HORIZONTAL", "VERTICAL", "BOTH"])
+                .optional(),
+            scrollBehavior: z
+                .enum(["SCROLLS", "FIXED", "STICKY_SCROLLS"])
+                .optional(),
         },
-    }, async ({ figmaUrl, fileKey, nodeId, overflowDirection, scrollBehavior }) => {
+    }, async ({ figmaUrl, fileKey, nodeId, overflowDirection, scrollBehavior, }) => {
         try {
             if (!overflowDirection && !scrollBehavior) {
                 throw new Error("MISSING_PARAM: overflowDirection veya scrollBehavior'dan en az biri verilmeli");
             }
             invalidateCache();
-            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
+            const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), {
+                mutating: true,
+            });
             const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
 					const results = {};
-					${overflowDirection ? `
+					${overflowDirection
+                ? `
 					if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "COMPONENT_SET" && node.type !== "INSTANCE") {
 						throw new Error("OVERFLOW_REQUIRES_FRAME_LIKE: " + node.type);
 					}
 					node.overflowDirection = ${JSON.stringify(overflowDirection)};
 					results.overflowDirection = node.overflowDirection;
-					` : ""}
-					${scrollBehavior ? `
+					`
+                : ""}
+					${scrollBehavior
+                ? `
 					if (!("scrollBehavior" in node)) throw new Error("SCROLL_BEHAVIOR_UNSUPPORTED: " + node.type);
 					node.scrollBehavior = ${JSON.stringify(scrollBehavior)};
 					results.scrollBehavior = node.scrollBehavior;
-					` : ""}
+					`
+                : ""}
 					return { id: node.id, ...results };
 				`;
             const result = await conn.executeCodeViaUI(code, 10000);
-            return { content: [{ type: "text", text: JSON.stringify({ success: true, ...result }) }] };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: true,
+                            ...result,
+                        }),
+                    },
+                ],
+            };
         }
         catch (err) {
-            return { content: [{ type: "text", text: JSON.stringify({ success: false, error: err instanceof Error ? err.message : String(err) }) }], isError: true };
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
+                            success: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        }),
+                    },
+                ],
+                isError: true,
+            };
         }
     });
     server.registerTool("figma_get_rest_token_status", {
@@ -3042,10 +4420,15 @@ export async function main() {
         const tokenInfo = bridge.getFigmaRestToken();
         if (!tokenInfo) {
             return {
-                content: [{ type: "text", text: JSON.stringify({
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({
                             hasToken: false,
                             message: "No token set. Use figma_set_rest_token to add one.",
-                        }) }],
+                        }),
+                    },
+                ],
             };
         }
         const rl = tokenInfo.rateLimit;
@@ -3060,13 +4443,18 @@ export async function main() {
             }
         }
         return {
-            content: [{ type: "text", text: JSON.stringify({
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({
                         hasToken: true,
                         setAt: new Date(tokenInfo.setAt).toISOString(),
                         rateLimit: rl || null,
                         ...(warning && { warning }),
                         message: warning || "Token is set. REST API tools are available.",
-                    }) }],
+                    }),
+                },
+            ],
         };
     });
     let shuttingDown = false;
@@ -3079,7 +4467,9 @@ export async function main() {
         try {
             bridge.stop();
         }
-        catch { /* ignore */ }
+        catch {
+            /* ignore */
+        }
         await closeAuditLog();
         process.exit(0);
     };
@@ -3094,7 +4484,11 @@ export async function main() {
     await server.connect(transport);
     const actualPort = bridge.getPort();
     const autoInc = bridge.getPreferredPort() !== actualPort;
-    logger.info({ port: actualPort, preferredPort: bridge.getPreferredPort(), autoIncremented: autoInc }, "F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s%s", actualPort, autoInc ? ` (auto-incremented from ${bridge.getPreferredPort()})` : "");
+    logger.info({
+        port: actualPort,
+        preferredPort: bridge.getPreferredPort(),
+        autoIncremented: autoInc,
+    }, "F-MCP ATezer Bridge (plugin-only) MCP server running on stdio; WebSocket on port %s%s", actualPort, autoInc ? ` (auto-incremented from ${bridge.getPreferredPort()})` : "");
 }
 main().catch((err) => {
     logger.error({ err }, "Fatal");

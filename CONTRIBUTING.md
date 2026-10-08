@@ -6,7 +6,7 @@
 git clone https://github.com/atezer/FMCP.git
 cd FMCP
 npm install
-npm run build:local
+npm run build
 npm test
 ```
 
@@ -14,7 +14,7 @@ npm test
 
 | Command | Purpose |
 |---------|---------|
-| `npm run build:local` | TypeScript derleme |
+| `npm run build` | TypeScript derleme |
 | `npm test` | Jest testleri calistir |
 | `npm run test:watch` | Test izleme modu |
 | `npm run validate:fmcp-skills` | Skill/tool isim eslesmesi |
@@ -43,7 +43,7 @@ tests/
 1. `src/local-plugin-only.ts` icinde `server.registerTool(...)` ekle
 2. `docs/TOOLS_FULL_LIST.md` tablosuna yeni araci ekle
 3. README.md arac sayisini guncelle
-4. `npm run build:local && npm test` ile dogrula
+4. `npm run build && npm test` ile dogrula
 5. `npm run validate:fmcp-skills` ile skill uyumunu kontrol et
 
 ## Version Bump Checklist
@@ -73,6 +73,6 @@ Test dosyalari: `tests/core/` altinda. Saf fonksiyonlar (response-guard, figma-u
 
 1. Yeni branch olustur
 2. Degisiklikleri yap
-3. `npm run build:local && npm test` basarili olsun
+3. `npm run build && npm test` basarili olsun
 4. CHANGELOG.md'ye not ekle
 5. PR olustur → CI otomatik calisir

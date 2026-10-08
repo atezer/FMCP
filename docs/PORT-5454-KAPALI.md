@@ -23,7 +23,7 @@ kill <PID>
 
 ## Neden olur?
 
-- Daha önce `npm run dev:local` çalıştırdıysanız ve terminali kapatmadan Claude/Cursor MCP’yi açtıysanız, 5454 zaten o process tarafından kullanılıyordur.
+- Daha önce `npm run dev` çalıştırdıysanız ve terminali kapatmadan Claude/Cursor MCP’yi açtıysanız, 5454 zaten o process tarafından kullanılıyordur.
 - Claude/Cursor MCP’yi birden fazla kez “reconnect” ettiğinizde bazen eski process hemen kapanmamış olabilir.
 
 ## Alternatif: Sabit farklı port (elle)

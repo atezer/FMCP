@@ -20,8 +20,8 @@ Repo root'una `.cursor/mcp.json` kopyala (template bu dizinde):
   "mcpServers": {
     "figma-mcp-bridge": {
       "command": "node",
-      "args": ["/absolute/path/to/fmcp-plugin-host.js"],
-      "env": { "FMCP_PORT": "5454" }
+      "args": ["/absolute/path/to/FCM/dist/local-plugin-only.js"],
+      "env": { "FIGMA_PLUGIN_BRIDGE_PORT": "5454" }
     }
   }
 }

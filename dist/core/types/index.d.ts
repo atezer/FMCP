@@ -5,7 +5,7 @@
  * Server configuration
  */
 export interface ServerConfig {
-    mode: 'local';
+    mode: "local";
     local?: LocalModeConfig;
 }
 /**
