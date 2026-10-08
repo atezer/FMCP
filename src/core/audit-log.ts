@@ -11,7 +11,14 @@ const noop = () => {};
 
 export interface AuditEntry {
 	ts: string; // ISO timestamp
-	event: "tool" | "plugin_connect" | "plugin_disconnect" | "error" | "cache_hit" | "cache_miss" | "cache_stale";
+	event:
+		| "tool"
+		| "plugin_connect"
+		| "plugin_disconnect"
+		| "error"
+		| "cache_hit"
+		| "cache_miss"
+		| "cache_stale";
 	method?: string;
 	success?: boolean;
 	error?: string;
@@ -51,7 +58,10 @@ function writeLine(path: string, line: string): void {
 /**
  * Log an audit entry. No-op if path not set or write fails.
  */
-export function auditLog(path: string | undefined, entry: Omit<AuditEntry, "ts">): void {
+export function auditLog(
+	path: string | undefined,
+	entry: Omit<AuditEntry, "ts">,
+): void {
 	if (!path || path === "") return;
 	const full: AuditEntry = { ...entry, ts: new Date().toISOString() };
 	try {
@@ -69,7 +79,7 @@ export function auditTool(
 	method: string,
 	success: boolean,
 	error?: string,
-	durationMs?: number
+	durationMs?: number,
 ): void {
 	auditLog(path, { event: "tool", method, success, error, durationMs });
 }
@@ -77,7 +87,10 @@ export function auditTool(
 /**
  * Log plugin connection / disconnection.
  */
-export function auditPlugin(path: string | undefined, event: "plugin_connect" | "plugin_disconnect"): void {
+export function auditPlugin(
+	path: string | undefined,
+	event: "plugin_connect" | "plugin_disconnect",
+): void {
 	auditLog(path, { event });
 }
 

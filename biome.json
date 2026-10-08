@@ -9,12 +9,16 @@
 		"enabled": true
 	},
 	"files": {
-		"includes": ["!worker-configuration.d.ts", "src/**/*"]
+		"includes": [
+			"!worker-configuration.d.ts",
+			"src/**/*"
+		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentWidth": 4,
-		"lineWidth": 100
+		"lineWidth": 100,
+		"indentStyle": "tab"
 	},
 	"linter": {
 		"enabled": true,

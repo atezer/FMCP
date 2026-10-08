@@ -1,11 +1,11 @@
 /**
  * Logging infrastructure using pino
  */
-import pino from 'pino';
+import pino from "pino";
 /**
  * Log levels
  */
-export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 /**
  * Create logger instance
  * Note: In Cloudflare Workers, console methods are automatically captured

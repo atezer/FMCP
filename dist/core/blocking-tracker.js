@@ -145,7 +145,10 @@ export function extractBlockingNodeIds(response) {
             }
         }
     }
-    return { nodeIds: Array.from(new Set(nodeIds)), categories: Array.from(new Set(categories)) };
+    return {
+        nodeIds: Array.from(new Set(nodeIds)),
+        categories: Array.from(new Set(categories)),
+    };
 }
 /** Singleton for server process lifetime */
 export const blockingTracker = new BlockingTracker();

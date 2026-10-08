@@ -14,7 +14,7 @@
  * - Her tool response'a `_nextStep` hint eklenir — Claude'u bir sonraki doğru
  *   adıma yönlendirir.
  */
-import { EMBEDDED_SKILLS_SUMMARY, EMBEDDED_SKILLS_TOKEN_ESTIMATE } from "./embedded-skills.js";
+import { EMBEDDED_SKILLS_SUMMARY, EMBEDDED_SKILLS_TOKEN_ESTIMATE, } from "./embedded-skills.js";
 import { FMCP_VERSION } from "./version.js";
 /** Critical rules (Katman 5 — 8 direktif) */
 const CRITICAL_RULES = [
@@ -92,7 +92,8 @@ export class BootstrapInjector {
                 return "load_components_and_variables_via_team_library_api";
             }
             case "figma_execute": {
-                if (r._POST_EXECUTE_SCAN_BLOCKING || r._DESIGN_SYSTEM_VIOLATIONS_BLOCKING) {
+                if (r._POST_EXECUTE_SCAN_BLOCKING ||
+                    r._DESIGN_SYSTEM_VIOLATIONS_BLOCKING) {
                     return "BLOCKING_detected — fix_unbound_nodes_and_retry — DO NOT rationalize or skip";
                 }
                 if (r._DISCOVERY_BUDGET_EXCEEDED_BLOCKING) {

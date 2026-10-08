@@ -15,7 +15,10 @@
  *   adıma yönlendirir.
  */
 
-import { EMBEDDED_SKILLS_SUMMARY, EMBEDDED_SKILLS_TOKEN_ESTIMATE } from "./embedded-skills.js";
+import {
+	EMBEDDED_SKILLS_SUMMARY,
+	EMBEDDED_SKILLS_TOKEN_ESTIMATE,
+} from "./embedded-skills.js";
 import { FMCP_VERSION } from "./version.js";
 
 /** Critical rules (Katman 5 — 8 direktif) */
@@ -98,20 +101,25 @@ export class BootstrapInjector {
 
 		switch (toolName) {
 			case "figma_get_status": {
-				if (r.pluginConnected) return "verify_ds_state_with_figma_get_design_system_summary";
+				if (r.pluginConnected)
+					return "verify_ds_state_with_figma_get_design_system_summary";
 				return "plugin_not_connected_ask_user_to_open_figma_plugin";
 			}
 			case "figma_get_design_system_summary": {
 				const comps = (r.components as number | undefined) ?? 0;
 				const sets = (r.componentSets as number | undefined) ?? 0;
-				const vars = (r.variableCollections as unknown[] | undefined)?.length ?? 0;
+				const vars =
+					(r.variableCollections as unknown[] | undefined)?.length ?? 0;
 				if (comps === 0 && sets === 0 && vars === 0) {
 					return "BLANK_FILE_DIALOG_REQUIRED: 4 secenek sun (a) library import (b) figma_create_mini_ds (c) template (d) linter-off — secim yapmadan createFrame YASAK";
 				}
 				return "load_components_and_variables_via_team_library_api";
 			}
 			case "figma_execute": {
-				if (r._POST_EXECUTE_SCAN_BLOCKING || r._DESIGN_SYSTEM_VIOLATIONS_BLOCKING) {
+				if (
+					r._POST_EXECUTE_SCAN_BLOCKING ||
+					r._DESIGN_SYSTEM_VIOLATIONS_BLOCKING
+				) {
 					return "BLOCKING_detected — fix_unbound_nodes_and_retry — DO NOT rationalize or skip";
 				}
 				if (r._DISCOVERY_BUDGET_EXCEEDED_BLOCKING) {

@@ -17,7 +17,13 @@ export function resolveFigmaRestUrl(endpoint: string): string {
 	} catch {
 		throw new Error(`Invalid REST endpoint "${endpoint}".`);
 	}
-	if (parsed.protocol !== "https:" || parsed.hostname !== FIGMA_API_HOST || parsed.username || parsed.password || parsed.port) {
+	if (
+		parsed.protocol !== "https:" ||
+		parsed.hostname !== FIGMA_API_HOST ||
+		parsed.username ||
+		parsed.password ||
+		parsed.port
+	) {
 		throw new Error(
 			`figma_rest_api only calls https://${FIGMA_API_HOST} (got "${parsed.protocol}//${parsed.host}"). ` +
 				"Pass a path like /v1/files/<key> instead of a full URL.",

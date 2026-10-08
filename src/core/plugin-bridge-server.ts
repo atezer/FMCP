@@ -73,7 +73,7 @@ export interface ClientInfo {
 	clientId: string;
 	fileKey: string | null;
 	fileName: string | null;
-	pluginVersion: string | null;  // v1.8.0+: reported in "ready" handshake
+	pluginVersion: string | null; // v1.8.0+: reported in "ready" handshake
 	alive: boolean;
 	missedHeartbeats: number;
 	connectedAt: number;
@@ -83,7 +83,7 @@ export interface ConnectedFileInfo {
 	clientId: string;
 	fileKey: string | null;
 	fileName: string | null;
-	pluginVersion: string | null;  // v1.8.0+: reported in handshake; null for older plugins
+	pluginVersion: string | null; // v1.8.0+: reported in handshake; null for older plugins
 	connectedAt: number;
 }
 
@@ -126,7 +126,8 @@ export class PluginBridgeServer {
 
 	/** Detect AI client name from env vars (instant, no I/O). */
 	private detectClientNameSync(): string {
-		if (process.env.FIGMA_MCP_CLIENT_NAME) return process.env.FIGMA_MCP_CLIENT_NAME;
+		if (process.env.FIGMA_MCP_CLIENT_NAME)
+			return process.env.FIGMA_MCP_CLIENT_NAME;
 		if (process.env.CLAUDECODE === "1") return "Claude Code";
 		if (process.env.CURSOR_TRACE_ID) return "Cursor";
 		return "MCP";
@@ -138,15 +139,28 @@ export class PluginBridgeServer {
 		try {
 			let pid = process.ppid;
 			for (let i = 0; i < 5 && pid > 1; i++) {
-				const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 }).toString().trim();
+				const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 })
+					.toString()
+					.trim();
 				const comm = line.replace(/^\s*\d+\s+/, "");
 				const ppidMatch = line.match(/^\s*(\d+)/);
-				if (/[Cc]ursor/i.test(comm)) { this.clientName = "Cursor"; return; }
-				if (/[Cc]laude/i.test(comm)) { this.clientName = "Claude"; return; }
-				if (/[Ww]indsurf/i.test(comm)) { this.clientName = "Windsurf"; return; }
+				if (/[Cc]ursor/i.test(comm)) {
+					this.clientName = "Cursor";
+					return;
+				}
+				if (/[Cc]laude/i.test(comm)) {
+					this.clientName = "Claude";
+					return;
+				}
+				if (/[Ww]indsurf/i.test(comm)) {
+					this.clientName = "Windsurf";
+					return;
+				}
 				pid = ppidMatch ? parseInt(ppidMatch[1], 10) : 0;
 			}
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 	private port: number;
 
@@ -188,7 +202,9 @@ export class PluginBridgeServer {
 	}
 
 	/** Stop current WebSocket server (if any) and restart on a new port. Returns when binding resolves or fails. Token is preserved across restart. */
-	async restart(newPort: number): Promise<{ success: boolean; port: number; error?: string }> {
+	async restart(
+		newPort: number,
+	): Promise<{ success: boolean; port: number; error?: string }> {
 		const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, newPort));
 		const savedToken = this.figmaRestToken; // Preserve token across restart
 		this.stop();
@@ -198,13 +214,19 @@ export class PluginBridgeServer {
 	}
 
 	/** Async listen attempt — resolves when port binds successfully or all ports exhausted. */
-	private tryListenAsync(port: number): Promise<{ success: boolean; port: number; error?: string }> {
+	private tryListenAsync(
+		port: number,
+	): Promise<{ success: boolean; port: number; error?: string }> {
 		return new Promise((resolve) => {
 			// 30s timeout covers worst case: 17 ports × ~2s probe each
 			const TIMEOUT_MS = 30000;
 			const timer = setTimeout(() => {
 				this._listenResolve = null;
-				resolve({ success: false, port, error: this.startError || `Port bind timeout (${TIMEOUT_MS}ms)` });
+				resolve({
+					success: false,
+					port,
+					error: this.startError || `Port bind timeout (${TIMEOUT_MS}ms)`,
+				});
 			}, TIMEOUT_MS);
 
 			// Store callback so tryListenWithAutoIncrement/setupBridgeOnServer can notify us
@@ -213,7 +235,11 @@ export class PluginBridgeServer {
 				if (success) {
 					resolve({ success: true, port: this.port });
 				} else {
-					resolve({ success: false, port, error: this.startError || "Port bind failed" });
+					resolve({
+						success: false,
+						port,
+						error: this.startError || "Port bind failed",
+					});
 				}
 			};
 
@@ -285,7 +311,9 @@ export class PluginBridgeServer {
 		const files = this.listConnectedFiles().filter((f) => !!f.fileKey);
 		const distinct = new Set(files.map((f) => f.fileKey));
 		if (distinct.size <= 1) return null;
-		const list = files.map((f) => `"${f.fileName || "?"}" (fileKey: ${f.fileKey || "?"})`).join(", ");
+		const list = files
+			.map((f) => `"${f.fileName || "?"}" (fileKey: ${f.fileKey || "?"})`)
+			.join(", ");
 		return (
 			`Birden fazla Figma dosyası bağlı; hangi dosyaya yazılacağı belirsiz. ` +
 			`Bağlı dosyalar: ${list}. Aracı fileKey (veya figmaUrl) parametresiyle tekrar çağır.`
@@ -297,14 +325,17 @@ export class PluginBridgeServer {
 	 * Polls at 200ms intervals. Used to handle the race between plugin connection
 	 * and the first incoming MCP request.
 	 */
-	async waitForClient(fileKey?: string, timeoutMs: number = 2000): Promise<ClientInfo | undefined> {
+	async waitForClient(
+		fileKey?: string,
+		timeoutMs: number = 2000,
+	): Promise<ClientInfo | undefined> {
 		const deadline = Date.now() + timeoutMs;
 		while (Date.now() < deadline) {
 			const client = this.resolveClient(fileKey);
 			if (client && client.ws.readyState === 1) {
 				if (!fileKey || client.fileKey === fileKey) return client;
 			}
-			await new Promise(r => setTimeout(r, 200));
+			await new Promise((r) => setTimeout(r, 200));
 		}
 		return this.resolveClient(fileKey);
 	}
@@ -316,7 +347,11 @@ export class PluginBridgeServer {
 		this.lastClientChangeAt = Date.now();
 		this.rejectPendingForClient(clientId, reason);
 		auditPlugin(this.auditLogPath, "plugin_disconnect");
-		logger.info({ clientId, fileKey: info.fileKey, fileName: info.fileName }, "Plugin bridge: client disconnected (%s)", reason);
+		logger.info(
+			{ clientId, fileKey: info.fileKey, fileName: info.fileName },
+			"Plugin bridge: client disconnected (%s)",
+			reason,
+		);
 	}
 
 	/**
@@ -324,17 +359,28 @@ export class PluginBridgeServer {
 	 * running or if the port is held by a stale/dead process.
 	 * Returns "fmcp" | "other" | "dead".
 	 */
-	private probePort(port: number, host: string): Promise<"fmcp" | "other" | "dead"> {
+	private probePort(
+		port: number,
+		host: string,
+	): Promise<"fmcp" | "other" | "dead"> {
 		return new Promise((resolve) => {
-			const req = httpGet({ hostname: host, port, path: "/", timeout: 2000 }, (res) => {
-				let body = "";
-				res.on("data", (chunk: Buffer | string) => { body += chunk; });
-				res.on("end", () => {
-					resolve(body.includes("F-MCP") ? "fmcp" : "other");
-				});
-			});
+			const req = httpGet(
+				{ hostname: host, port, path: "/", timeout: 2000 },
+				(res) => {
+					let body = "";
+					res.on("data", (chunk: Buffer | string) => {
+						body += chunk;
+					});
+					res.on("end", () => {
+						resolve(body.includes("F-MCP") ? "fmcp" : "other");
+					});
+				},
+			);
 			req.on("error", () => resolve("dead"));
-			req.on("timeout", () => { req.destroy(); resolve("dead"); });
+			req.on("timeout", () => {
+				req.destroy();
+				resolve("dead");
+			});
 		});
 	}
 
@@ -343,25 +389,41 @@ export class PluginBridgeServer {
 	 * Returns { clients, uptime } or { -1, -1 } if the endpoint is unavailable
 	 * (e.g. older bridge version without /status).
 	 */
-	private probeStatus(port: number, host: string): Promise<{ clients: number; uptime: number; idleSeconds?: number }> {
+	private probeStatus(
+		port: number,
+		host: string,
+	): Promise<{ clients: number; uptime: number; idleSeconds?: number }> {
 		return new Promise((resolve) => {
-			const req = httpGet({ hostname: host, port, path: "/status", timeout: 1000 }, (res) => {
-				let body = "";
-				res.on("data", (chunk: Buffer | string) => { body += chunk; });
-				res.on("end", () => {
-					try {
-						const data = JSON.parse(body);
-						resolve({
-							clients: typeof data.clients === "number" ? data.clients : -1,
-							uptime: typeof data.uptime === "number" ? data.uptime : -1,
-							// v1.10.0+ bridges report idle time; older ones don't (undefined → fall back to uptime)
-							idleSeconds: typeof data.idleSeconds === "number" ? data.idleSeconds : undefined,
-						});
-					} catch { resolve({ clients: -1, uptime: -1 }); }
-				});
-			});
+			const req = httpGet(
+				{ hostname: host, port, path: "/status", timeout: 1000 },
+				(res) => {
+					let body = "";
+					res.on("data", (chunk: Buffer | string) => {
+						body += chunk;
+					});
+					res.on("end", () => {
+						try {
+							const data = JSON.parse(body);
+							resolve({
+								clients: typeof data.clients === "number" ? data.clients : -1,
+								uptime: typeof data.uptime === "number" ? data.uptime : -1,
+								// v1.10.0+ bridges report idle time; older ones don't (undefined → fall back to uptime)
+								idleSeconds:
+									typeof data.idleSeconds === "number"
+										? data.idleSeconds
+										: undefined,
+							});
+						} catch {
+							resolve({ clients: -1, uptime: -1 });
+						}
+					});
+				},
+			);
 			req.on("error", () => resolve({ clients: -1, uptime: -1 }));
-			req.on("timeout", () => { req.destroy(); resolve({ clients: -1, uptime: -1 }); });
+			req.on("timeout", () => {
+				req.destroy();
+				resolve({ clients: -1, uptime: -1 });
+			});
 		});
 	}
 
@@ -376,14 +438,18 @@ export class PluginBridgeServer {
 		const probes: Promise<void>[] = [];
 		for (let p = MIN_PORT; p <= MAX_PORT; p++) {
 			if (p === this.port) continue;
-			probes.push((async () => {
-				try {
-					const kind = await this.probePort(p, host);
-					if (kind !== "fmcp") return;
-					const status = await this.probeStatus(p, host);
-					if (status.uptime >= 0) discovered.push(p);
-				} catch { /* silent */ }
-			})());
+			probes.push(
+				(async () => {
+					try {
+						const kind = await this.probePort(p, host);
+						if (kind !== "fmcp") return;
+						const status = await this.probeStatus(p, host);
+						if (status.uptime >= 0) discovered.push(p);
+					} catch {
+						/* silent */
+					}
+				})(),
+			);
 		}
 		await Promise.all(probes);
 		return discovered.sort((a, b) => a - b);
@@ -394,10 +460,17 @@ export class PluginBridgeServer {
 	 * Used when periodic probe detects a new sibling (or one disappears).
 	 */
 	private broadcastSiblingUpdate(): void {
-		const msg = JSON.stringify({ type: "activeBridgesUpdate", activeBridges: this.knownSiblings });
+		const msg = JSON.stringify({
+			type: "activeBridgesUpdate",
+			activeBridges: this.knownSiblings,
+		});
 		for (const client of this.clients.values()) {
 			if (client.ws.readyState === 1) {
-				try { client.ws.send(msg); } catch { /* ignore */ }
+				try {
+					client.ws.send(msg);
+				} catch {
+					/* ignore */
+				}
 			}
 		}
 	}
@@ -413,19 +486,36 @@ export class PluginBridgeServer {
 		onAccepted: () => void,
 		onRefused: () => void,
 	): void {
-		console.error(`   Sending shutdown request to old F-MCP bridge on port ${port}…\n`);
+		console.error(
+			`   Sending shutdown request to old F-MCP bridge on port ${port}…\n`,
+		);
 		const req = httpRequest(
-			{ hostname: host, port, path: "/shutdown", method: "POST", timeout: 3000 },
+			{
+				hostname: host,
+				port,
+				path: "/shutdown",
+				method: "POST",
+				timeout: 3000,
+			},
 			(res) => {
 				let body = "";
-				res.on("data", (chunk: Buffer | string) => { body += chunk; });
+				res.on("data", (chunk: Buffer | string) => {
+					body += chunk;
+				});
 				res.on("end", () => {
 					if (res.statusCode === 200) {
-						console.error(`   Old bridge accepted shutdown. Retaking port ${port} in ${SHUTDOWN_TAKEOVER_DELAY_MS}ms…\n`);
+						console.error(
+							`   Old bridge accepted shutdown. Retaking port ${port} in ${SHUTDOWN_TAKEOVER_DELAY_MS}ms…\n`,
+						);
 						onAccepted();
 					} else {
-						console.error(`\n⚠️  Old bridge refused shutdown (status ${res.statusCode}). Trying next port…\n`);
-						logger.warn({ port, statusCode: res.statusCode }, "Old bridge refused shutdown");
+						console.error(
+							`\n⚠️  Old bridge refused shutdown (status ${res.statusCode}). Trying next port…\n`,
+						);
+						logger.warn(
+							{ port, statusCode: res.statusCode },
+							"Old bridge refused shutdown",
+						);
 						onRefused();
 					}
 				});
@@ -433,7 +523,9 @@ export class PluginBridgeServer {
 		);
 		req.on("error", () => {
 			// Old bridge unreachable — might have already exited
-			console.error(`   Old bridge unreachable after shutdown request. Retrying port ${port}…\n`);
+			console.error(
+				`   Old bridge unreachable after shutdown request. Retrying port ${port}…\n`,
+			);
 			onAccepted();
 		});
 		req.on("timeout", () => {
@@ -455,16 +547,26 @@ export class PluginBridgeServer {
 			// v1.10.0: browsers always attach an Origin header to cross-site POSTs; sibling
 			// bridges (Node http) never do — so any request with an Origin is a web page. Reject it.
 			if (req.method === "POST" && req.url === "/shutdown") {
-				if (req.headers.origin !== undefined || req.headers["sec-fetch-site"] !== undefined) {
-					logger.warn({ origin: req.headers.origin }, "Rejected /shutdown from a browser origin");
+				if (
+					req.headers.origin !== undefined ||
+					req.headers["sec-fetch-site"] !== undefined
+				) {
+					logger.warn(
+						{ origin: req.headers.origin },
+						"Rejected /shutdown from a browser origin",
+					);
 					res.writeHead(403, { "Content-Type": "text/plain" });
 					res.end("forbidden\n");
 					return;
 				}
 				res.writeHead(200, { "Content-Type": "text/plain" });
 				res.end("shutting down\n");
-				logger.info("Received /shutdown request from new bridge instance — stopping gracefully");
-				console.error("\n⚠️  Received shutdown request from new F-MCP bridge instance. Stopping…\n");
+				logger.info(
+					"Received /shutdown request from new bridge instance — stopping gracefully",
+				);
+				console.error(
+					"\n⚠️  Received shutdown request from new F-MCP bridge instance. Stopping…\n",
+				);
 				setTimeout(() => {
 					this.stop();
 					// v1.10.0: don't stay a bridge-less zombie — this MCP session is still alive,
@@ -484,7 +586,10 @@ export class PluginBridgeServer {
 					uptime: Math.round(process.uptime()),
 					// v1.10.0: seconds with zero clients (0 while any client is connected) —
 					// takeover decisions use this instead of process uptime
-					idleSeconds: clients > 0 ? 0 : Math.round((Date.now() - this.lastClientChangeAt) / 1000),
+					idleSeconds:
+						clients > 0
+							? 0
+							: Math.round((Date.now() - this.lastClientChangeAt) / 1000),
 					version: FMCP_VERSION,
 				});
 				res.writeHead(200, { "Content-Type": "application/json" });
@@ -501,11 +606,22 @@ export class PluginBridgeServer {
 	 * Set up WebSocket server, heartbeat, client handling on a successfully bound HTTP server.
 	 * Called from both tryListenFixed and tryListenWithAutoIncrement on bind success.
 	 */
-	private setupBridgeOnServer(server: ReturnType<typeof createServer>, port: number, bindHost: string): void {
+	private setupBridgeOnServer(
+		server: ReturnType<typeof createServer>,
+		port: number,
+		bindHost: string,
+	): void {
 		// v1.10.0: a second chain must never overwrite a live server (would orphan its heartbeat)
 		if (this.wss) {
-			logger.warn({ port }, "Plugin bridge: already listening — closing duplicate server");
-			try { server.close(); } catch { /* ignore */ }
+			logger.warn(
+				{ port },
+				"Plugin bridge: already listening — closing duplicate server",
+			);
+			try {
+				server.close();
+			} catch {
+				/* ignore */
+			}
 			return;
 		}
 		this.port = port;
@@ -513,18 +629,28 @@ export class PluginBridgeServer {
 		process.env.FIGMA_MCP_BRIDGE_PORT = String(port);
 		console.error(`F-MCP bridge listening on ws://${bindHost}:${port}\n`);
 		if (bindHost === "0.0.0.0") {
-			logger.warn("FIGMA_BRIDGE_HOST=0.0.0.0 — the bridge is reachable from the local network");
-			console.error("⚠️  FIGMA_BRIDGE_HOST=0.0.0.0: bridge is reachable from the local network.\n");
+			logger.warn(
+				"FIGMA_BRIDGE_HOST=0.0.0.0 — the bridge is reachable from the local network",
+			);
+			console.error(
+				"⚠️  FIGMA_BRIDGE_HOST=0.0.0.0: bridge is reachable from the local network.\n",
+			);
 		}
 		this.httpServer = server;
 		this.wss = new WebSocketServer({
 			server,
 			maxPayload: MAX_WS_PAYLOAD_BYTES,
 			// v1.10.0: only the Figma plugin ("null" origin) and non-browser clients may connect
-			verifyClient: (info: { origin?: string; req: { headers: Record<string, string | string[] | undefined> } }) => {
+			verifyClient: (info: {
+				origin?: string;
+				req: { headers: Record<string, string | string[] | undefined> };
+			}) => {
 				const origin = info.req.headers.origin as string | undefined;
 				if (isAllowedOrigin(origin)) return true;
-				logger.warn({ origin }, "Plugin bridge: rejected WebSocket from disallowed origin");
+				logger.warn(
+					{ origin },
+					"Plugin bridge: rejected WebSocket from disallowed origin",
+				);
 				return false;
 			},
 		});
@@ -544,7 +670,10 @@ export class PluginBridgeServer {
 			};
 			this.clients.set(clientId, clientInfo);
 			let handshakeDone = false;
-			logger.info({ port: this.port, clientId, totalClients: this.clients.size }, "Plugin bridge: new plugin connected");
+			logger.info(
+				{ port: this.port, clientId, totalClients: this.clients.size },
+				"Plugin bridge: new plugin connected",
+			);
 			auditPlugin(this.auditLogPath, "plugin_connect");
 
 			ws.on("message", (data: Buffer | string) => {
@@ -566,11 +695,22 @@ export class PluginBridgeServer {
 							const existing = this.findClientByFileKey(incomingFileKey);
 							if (existing && existing.clientId !== clientId) {
 								logger.info(
-									{ oldClientId: existing.clientId, newClientId: clientId, fileKey: incomingFileKey },
-									"Plugin bridge: replacing existing client for same fileKey"
+									{
+										oldClientId: existing.clientId,
+										newClientId: clientId,
+										fileKey: incomingFileKey,
+									},
+									"Plugin bridge: replacing existing client for same fileKey",
 								);
-								this.removeClient(existing.clientId, "Replaced by new connection for same file");
-								try { existing.ws.close(); } catch { /* ignore */ }
+								this.removeClient(
+									existing.clientId,
+									"Replaced by new connection for same file",
+								);
+								try {
+									existing.ws.close();
+								} catch {
+									/* ignore */
+								}
 							}
 						}
 
@@ -579,20 +719,29 @@ export class PluginBridgeServer {
 						clientInfo.pluginVersion = incomingPluginVersion;
 						handshakeDone = true;
 						logger.info(
-							{ clientId, fileKey: incomingFileKey, fileName: incomingFileName, pluginVersion: incomingPluginVersion },
+							{
+								clientId,
+								fileKey: incomingFileKey,
+								fileName: incomingFileName,
+								pluginVersion: incomingPluginVersion,
+							},
 							"Plugin bridge: client registered (fileKey=%s, fileName=%s, pluginVersion=%s)",
-							incomingFileKey, incomingFileName, incomingPluginVersion ?? "unknown"
+							incomingFileKey,
+							incomingFileName,
+							incomingPluginVersion ?? "unknown",
 						);
 
-						ws.send(JSON.stringify({
-							type: "welcome",
-							bridgeVersion: FMCP_VERSION,
-							port: this.port,
-							clientId,
-							multiClient: true,
-							clientName: this.clientName,
-							activeBridges: this.knownSiblings, // v1.9.1+ — cache'ten, 0ms overhead
-						}));
+						ws.send(
+							JSON.stringify({
+								type: "welcome",
+								bridgeVersion: FMCP_VERSION,
+								port: this.port,
+								clientId,
+								multiClient: true,
+								clientName: this.clientName,
+								activeBridges: this.knownSiblings, // v1.9.1+ — cache'ten, 0ms overhead
+							}),
+						);
 						return;
 					}
 
@@ -601,23 +750,40 @@ export class PluginBridgeServer {
 					}
 
 					// v1.10.0: token changes only from a client that completed the "ready" handshake
-					if ((msg.type === "setToken" || msg.type === "clearToken") && !handshakeDone) {
-						logger.warn({ clientId, type: msg.type }, "Plugin bridge: ignored token message from unregistered client");
+					if (
+						(msg.type === "setToken" || msg.type === "clearToken") &&
+						!handshakeDone
+					) {
+						logger.warn(
+							{ clientId, type: msg.type },
+							"Plugin bridge: ignored token message from unregistered client",
+						);
 						return;
 					}
 
-					if (msg.type === "setToken" && typeof (msg as unknown as Record<string, unknown>).token === "string") {
-						const token = (msg as unknown as Record<string, unknown>).token as string;
+					if (
+						msg.type === "setToken" &&
+						typeof (msg as unknown as Record<string, unknown>).token ===
+							"string"
+					) {
+						const token = (msg as unknown as Record<string, unknown>)
+							.token as string;
 						if (token) {
 							this.setFigmaRestToken(token);
-							logger.info({ clientId }, "Plugin bridge: REST API token set via plugin UI");
+							logger.info(
+								{ clientId },
+								"Plugin bridge: REST API token set via plugin UI",
+							);
 						}
 						return;
 					}
 
 					if (msg.type === "clearToken") {
 						this.clearFigmaRestToken();
-						logger.info({ clientId }, "Plugin bridge: REST API token cleared via plugin UI");
+						logger.info(
+							{ clientId },
+							"Plugin bridge: REST API token cleared via plugin UI",
+						);
 						return;
 					}
 
@@ -625,20 +791,38 @@ export class PluginBridgeServer {
 						const p = this.pending.get(msg.id)!;
 						// v1.10.0: only the client the request was sent to may answer it
 						if (p.clientId !== clientId) {
-							logger.warn({ clientId, expected: p.clientId, method: p.method }, "Plugin bridge: ignored response from a different client");
+							logger.warn(
+								{ clientId, expected: p.clientId, method: p.method },
+								"Plugin bridge: ignored response from a different client",
+							);
 							return;
 						}
 						this.pending.delete(msg.id);
 						clearTimeout(p.timeout);
 						const durationMs = Date.now() - p.startTime;
 						if (msg.error) {
-							auditTool(this.auditLogPath, p.method, false, msg.error, durationMs);
+							auditTool(
+								this.auditLogPath,
+								p.method,
+								false,
+								msg.error,
+								durationMs,
+							);
 							p.reject(new Error(msg.error));
 						} else {
 							if (msg.result === undefined) {
-								logger.warn({ method: p.method, msgId: msg.id }, "Plugin bridge: response has no result and no error");
+								logger.warn(
+									{ method: p.method, msgId: msg.id },
+									"Plugin bridge: response has no result and no error",
+								);
 							}
-							auditTool(this.auditLogPath, p.method, true, undefined, durationMs);
+							auditTool(
+								this.auditLogPath,
+								p.method,
+								true,
+								undefined,
+								durationMs,
+							);
 							p.resolve(msg.result);
 						}
 					}
@@ -656,7 +840,12 @@ export class PluginBridgeServer {
 			});
 		});
 
-		logger.info({ port: this.port, host: bindHost }, "Plugin bridge server listening (ws://%s:%s) — multi-client enabled", bindHost, this.port);
+		logger.info(
+			{ port: this.port, host: bindHost },
+			"Plugin bridge server listening (ws://%s:%s) — multi-client enabled",
+			bindHost,
+			this.port,
+		);
 
 		// Notify async restart() / tryListenAsync() that binding succeeded
 		this._listenResolve?.(true);
@@ -667,10 +856,15 @@ export class PluginBridgeServer {
 			try {
 				this.knownSiblings = await this.probeSiblingBridges();
 				if (this.knownSiblings.length > 0) {
-					logger.info({ siblings: this.knownSiblings }, "Plugin bridge: sibling fmcp bridges discovered");
+					logger.info(
+						{ siblings: this.knownSiblings },
+						"Plugin bridge: sibling fmcp bridges discovered",
+					);
 					this.broadcastSiblingUpdate();
 				}
-			} catch { /* silent */ }
+			} catch {
+				/* silent */
+			}
 		})();
 
 		// v1.9.1+ Periodic re-probe (30s) — detect new/disappeared siblings
@@ -679,13 +873,19 @@ export class PluginBridgeServer {
 				void (async () => {
 					try {
 						const fresh = await this.probeSiblingBridges();
-						const changed = JSON.stringify(fresh) !== JSON.stringify(this.knownSiblings);
+						const changed =
+							JSON.stringify(fresh) !== JSON.stringify(this.knownSiblings);
 						if (changed) {
 							this.knownSiblings = fresh;
-							logger.info({ siblings: fresh }, "Plugin bridge: sibling list updated");
+							logger.info(
+								{ siblings: fresh },
+								"Plugin bridge: sibling list updated",
+							);
 							this.broadcastSiblingUpdate();
 						}
-					} catch { /* silent */ }
+					} catch {
+						/* silent */
+					}
 				})();
 			}, 30000);
 		}
@@ -699,8 +899,15 @@ export class PluginBridgeServer {
 				if (!info.alive) {
 					info.missedHeartbeats++;
 					if (info.missedHeartbeats >= 3) {
-						logger.warn({ clientId: cId, fileKey: info.fileKey }, "Plugin bridge: client not responding to heartbeat, terminating");
-						try { info.ws.terminate(); } catch { /* ignore */ }
+						logger.warn(
+							{ clientId: cId, fileKey: info.fileKey },
+							"Plugin bridge: client not responding to heartbeat, terminating",
+						);
+						try {
+							info.ws.terminate();
+						} catch {
+							/* ignore */
+						}
 						this.removeClient(cId, "Heartbeat timeout");
 						continue;
 					}
@@ -710,7 +917,9 @@ export class PluginBridgeServer {
 				}
 				try {
 					info.ws.send(JSON.stringify({ type: "ping" }));
-				} catch { /* ignore */ }
+				} catch {
+					/* ignore */
+				}
 			}
 			this.heartbeatTimer = setTimeout(heartbeat, HEARTBEAT_INTERVAL_MS);
 		};
@@ -730,7 +939,10 @@ export class PluginBridgeServer {
 	 *
 	 * `_listenResolve` is called exactly once: on success or when all ports are exhausted.
 	 */
-	private tryListenWithAutoIncrement(port: number, gen: number = this.generation): void {
+	private tryListenWithAutoIncrement(
+		port: number,
+		gen: number = this.generation,
+	): void {
 		// v1.10.0: abandon chains started before the last stop()/restart()
 		if (gen !== this.generation) return;
 		if (port > MAX_PORT) {
@@ -747,7 +959,10 @@ export class PluginBridgeServer {
 		const next = () => this.tryListenWithAutoIncrement(port + 1, gen);
 
 		/** Bind `srv` on this port; on EADDRINUSE call onBusy, on other errors fail the start. */
-		const listenOn = (srv: ReturnType<typeof createServer>, onBusy: () => void) => {
+		const listenOn = (
+			srv: ReturnType<typeof createServer>,
+			onBusy: () => void,
+		) => {
 			srv.on("error", (err: NodeJS.ErrnoException) => {
 				if (err.code === "EADDRINUSE") {
 					srv.close();
@@ -773,72 +988,122 @@ export class PluginBridgeServer {
 		listenOn(server, () => {
 			const probeHost = bindHost === "0.0.0.0" ? "127.0.0.1" : bindHost;
 
-			this.probePort(port, probeHost).then(async (status) => {
-				if (gen !== this.generation) return;
-				if (status === "fmcp") {
-					// F-MCP bridge detected — check health
-					const { clients, uptime, idleSeconds } = await this.probeStatus(port, probeHost);
+			this.probePort(port, probeHost)
+				.then(async (status) => {
 					if (gen !== this.generation) return;
-					// v1.10.0+: idle time (since last client left) instead of process uptime, so a live
-					// session whose plugin just reconnected isn't treated as stale. Older bridges: uptime.
-					const idle = idleSeconds ?? uptime;
-
-					if (clients > 0) {
-						// HEALTHY bridge with active clients — coexist, skip to next port
-						logger.info({ port, clients }, "Port %d: healthy F-MCP bridge (%d clients), skipping to next port", port, clients);
-						console.error(`   Port ${port}: healthy bridge (${clients} client(s)), trying ${port + 1}…\n`);
-						next();
-
-					} else if (clients === 0 && idle >= 0 && idle < FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
-						// Fresh / briefly idle bridge (no clients yet) — skip, don't takeover
-						logger.info({ port, idle }, "Port %d: F-MCP bridge idle only %ds, skipping to next port", port, idle);
-						console.error(`   Port ${port}: recently active bridge (${idle}s idle), trying ${port + 1}…\n`);
-						next();
-
-					} else if (clients === 0 && idle >= FRESH_BRIDGE_UPTIME_THRESHOLD_S) {
-						// STALE bridge (0 clients for ≥ 30s) — takeover
-						logger.info({ port, idle }, "Port %d: stale F-MCP bridge (0 clients, %ds idle), requesting shutdown", port, idle);
-						console.error(`\n⚠️  Port ${port}: stale bridge (0 clients, ${idle}s idle). Requesting shutdown…\n`);
-						this.sendShutdownRequest(port, probeHost,
-							() => {
-								// Shutdown accepted — retry same port after delay; still busy → next port
-								this.later(() => {
-									if (gen !== this.generation) return;
-									listenOn(this.createBridgeHttpServer(), () => {
-										logger.warn({ port }, "Port %d still busy after takeover, trying next", port);
-										next();
-									});
-								}, SHUTDOWN_TAKEOVER_DELAY_MS);
-							},
-							() => next(), // Shutdown refused — move to next port
+					if (status === "fmcp") {
+						// F-MCP bridge detected — check health
+						const { clients, uptime, idleSeconds } = await this.probeStatus(
+							port,
+							probeHost,
 						);
+						if (gen !== this.generation) return;
+						// v1.10.0+: idle time (since last client left) instead of process uptime, so a live
+						// session whose plugin just reconnected isn't treated as stale. Older bridges: uptime.
+						const idle = idleSeconds ?? uptime;
 
+						if (clients > 0) {
+							// HEALTHY bridge with active clients — coexist, skip to next port
+							logger.info(
+								{ port, clients },
+								"Port %d: healthy F-MCP bridge (%d clients), skipping to next port",
+								port,
+								clients,
+							);
+							console.error(
+								`   Port ${port}: healthy bridge (${clients} client(s)), trying ${port + 1}…\n`,
+							);
+							next();
+						} else if (
+							clients === 0 &&
+							idle >= 0 &&
+							idle < FRESH_BRIDGE_UPTIME_THRESHOLD_S
+						) {
+							// Fresh / briefly idle bridge (no clients yet) — skip, don't takeover
+							logger.info(
+								{ port, idle },
+								"Port %d: F-MCP bridge idle only %ds, skipping to next port",
+								port,
+								idle,
+							);
+							console.error(
+								`   Port ${port}: recently active bridge (${idle}s idle), trying ${port + 1}…\n`,
+							);
+							next();
+						} else if (
+							clients === 0 &&
+							idle >= FRESH_BRIDGE_UPTIME_THRESHOLD_S
+						) {
+							// STALE bridge (0 clients for ≥ 30s) — takeover
+							logger.info(
+								{ port, idle },
+								"Port %d: stale F-MCP bridge (0 clients, %ds idle), requesting shutdown",
+								port,
+								idle,
+							);
+							console.error(
+								`\n⚠️  Port ${port}: stale bridge (0 clients, ${idle}s idle). Requesting shutdown…\n`,
+							);
+							this.sendShutdownRequest(
+								port,
+								probeHost,
+								() => {
+									// Shutdown accepted — retry same port after delay; still busy → next port
+									this.later(() => {
+										if (gen !== this.generation) return;
+										listenOn(this.createBridgeHttpServer(), () => {
+											logger.warn(
+												{ port },
+												"Port %d still busy after takeover, trying next",
+												port,
+											);
+											next();
+										});
+									}, SHUTDOWN_TAKEOVER_DELAY_MS);
+								},
+								() => next(), // Shutdown refused — move to next port
+							);
+						} else {
+							// Unknown health (old bridge version without /status, or probe failed)
+							// Safe choice: skip, don't kill
+							logger.info(
+								{ port, clients, uptime },
+								"Port %d: F-MCP bridge with unknown health (clients=%d, uptime=%d), skipping",
+								port,
+								clients,
+								uptime,
+							);
+							console.error(
+								`   Port ${port}: F-MCP bridge (unknown health), trying ${port + 1}…\n`,
+							);
+							next();
+						}
+					} else if (status === "dead") {
+						// Port held by stale/unresponsive process — retry after delay; still busy → next port
+						console.error(
+							`\n⚠️  Port ${port} is busy but not responding. Retrying in ${STALE_PORT_RETRY_DELAY_MS}ms…\n`,
+						);
+						this.later(() => {
+							if (gen !== this.generation) return;
+							listenOn(this.createBridgeHttpServer(), next);
+						}, STALE_PORT_RETRY_DELAY_MS);
 					} else {
-						// Unknown health (old bridge version without /status, or probe failed)
-						// Safe choice: skip, don't kill
-						logger.info({ port, clients, uptime }, "Port %d: F-MCP bridge with unknown health (clients=%d, uptime=%d), skipping", port, clients, uptime);
-						console.error(`   Port ${port}: F-MCP bridge (unknown health), trying ${port + 1}…\n`);
+						// Non-F-MCP service — skip to next port
+						logger.info(
+							{ port },
+							"Port %d occupied by non-F-MCP service, skipping",
+							port,
+						);
+						console.error(
+							`   Port ${port}: non-F-MCP service, trying ${port + 1}…\n`,
+						);
 						next();
 					}
-
-				} else if (status === "dead") {
-					// Port held by stale/unresponsive process — retry after delay; still busy → next port
-					console.error(`\n⚠️  Port ${port} is busy but not responding. Retrying in ${STALE_PORT_RETRY_DELAY_MS}ms…\n`);
-					this.later(() => {
-						if (gen !== this.generation) return;
-						listenOn(this.createBridgeHttpServer(), next);
-					}, STALE_PORT_RETRY_DELAY_MS);
-
-				} else {
-					// Non-F-MCP service — skip to next port
-					logger.info({ port }, "Port %d occupied by non-F-MCP service, skipping", port);
-					console.error(`   Port ${port}: non-F-MCP service, trying ${port + 1}…\n`);
+				})
+				.catch(() => {
+					// Probe failed — skip to next port
 					next();
-				}
-			}).catch(() => {
-				// Probe failed — skip to next port
-				next();
-			});
+				});
 		});
 	}
 
@@ -848,7 +1113,11 @@ export class PluginBridgeServer {
 	 * If fileKey is specified, routes to the client serving that file.
 	 * Otherwise routes to the most recently connected client.
 	 */
-	async request<T = unknown>(method: string, params?: Record<string, unknown>, fileKey?: string): Promise<T> {
+	async request<T = unknown>(
+		method: string,
+		params?: Record<string, unknown>,
+		fileKey?: string,
+	): Promise<T> {
 		let client = this.resolveClient(fileKey);
 		// If no client found, wait briefly for plugin "ready" (race condition: plugin connected but fileKey not yet set)
 		if (!client || client.ws.readyState !== 1) {
@@ -857,16 +1126,17 @@ export class PluginBridgeServer {
 		if (!client || client.ws.readyState !== 1) {
 			if (fileKey) {
 				const available = this.listConnectedFiles();
-				const fileList = available.length > 0
-					? ` Connected files: ${available.map(f => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
-					: "";
+				const fileList =
+					available.length > 0
+						? ` Connected files: ${available.map((f) => `${f.fileName || "?"} (${f.fileKey || "?"})`).join(", ")}`
+						: "";
 				throw new Error(
 					`No plugin connected for fileKey "${fileKey}".${fileList} ` +
-					"Open the target file in Figma and run the F-MCP ATezer Bridge plugin."
+						"Open the target file in Figma and run the F-MCP ATezer Bridge plugin.",
 				);
 			}
 			throw new Error(
-				"F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'Bridge active' (no debug port needed)."
+				"F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'Bridge active' (no debug port needed).",
 			);
 		}
 
@@ -877,8 +1147,18 @@ export class PluginBridgeServer {
 			const startTime = Date.now();
 			const timeout = setTimeout(() => {
 				if (this.pending.delete(id)) {
-					auditTool(this.auditLogPath, method, false, "timeout", Date.now() - startTime);
-					reject(new Error(`Plugin bridge request '${method}' timed out after ${this.requestTimeoutMs}ms`));
+					auditTool(
+						this.auditLogPath,
+						method,
+						false,
+						"timeout",
+						Date.now() - startTime,
+					);
+					reject(
+						new Error(
+							`Plugin bridge request '${method}' timed out after ${this.requestTimeoutMs}ms`,
+						),
+					);
 				}
 			}, this.requestTimeoutMs);
 
@@ -895,8 +1175,18 @@ export class PluginBridgeServer {
 			} catch (err) {
 				this.pending.delete(id);
 				clearTimeout(timeout);
-				auditTool(this.auditLogPath, method, false, "send_failed", Date.now() - startTime);
-				reject(new Error(`Failed to send request '${method}': ${err instanceof Error ? err.message : String(err)}`));
+				auditTool(
+					this.auditLogPath,
+					method,
+					false,
+					"send_failed",
+					Date.now() - startTime,
+				);
+				reject(
+					new Error(
+						`Failed to send request '${method}': ${err instanceof Error ? err.message : String(err)}`,
+					),
+				);
 			}
 		});
 	}
@@ -942,7 +1232,9 @@ export class PluginBridgeServer {
 				clearTimeout(p.timeout);
 				const durationMs = Date.now() - p.startTime;
 				auditTool(this.auditLogPath, p.method, false, reason, durationMs);
-				p.reject(new Error(`Plugin bridge request '${p.method}' failed: ${reason}`));
+				p.reject(
+					new Error(`Plugin bridge request '${p.method}' failed: ${reason}`),
+				);
 				this.pending.delete(id);
 			}
 		}
@@ -953,7 +1245,9 @@ export class PluginBridgeServer {
 			clearTimeout(p.timeout);
 			const durationMs = Date.now() - p.startTime;
 			auditTool(this.auditLogPath, p.method, false, reason, durationMs);
-			p.reject(new Error(`Plugin bridge request '${p.method}' failed: ${reason}`));
+			p.reject(
+				new Error(`Plugin bridge request '${p.method}' failed: ${reason}`),
+			);
 		}
 		this.pending.clear();
 	}
@@ -967,8 +1261,12 @@ export class PluginBridgeServer {
 		for (const client of this.clients.values()) {
 			if (client.ws.readyState === 1) {
 				try {
-					client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true }));
-				} catch { /* ignore */ }
+					client.ws.send(
+						JSON.stringify({ type: "tokenStatus", hasToken: true }),
+					);
+				} catch {
+					/* ignore */
+				}
 			}
 		}
 	}
@@ -979,8 +1277,12 @@ export class PluginBridgeServer {
 		for (const client of this.clients.values()) {
 			if (client.ws.readyState === 1) {
 				try {
-					client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: false }));
-				} catch { /* ignore */ }
+					client.ws.send(
+						JSON.stringify({ type: "tokenStatus", hasToken: false }),
+					);
+				} catch {
+					/* ignore */
+				}
 			}
 		}
 	}
@@ -996,8 +1298,16 @@ export class PluginBridgeServer {
 			for (const client of this.clients.values()) {
 				if (client.ws.readyState === 1) {
 					try {
-						client.ws.send(JSON.stringify({ type: "tokenStatus", hasToken: true, rateLimit: { remaining, limit, resetAt } }));
-					} catch { /* ignore */ }
+						client.ws.send(
+							JSON.stringify({
+								type: "tokenStatus",
+								hasToken: true,
+								rateLimit: { remaining, limit, resetAt },
+							}),
+						);
+					} catch {
+						/* ignore */
+					}
 				}
 			}
 		}
@@ -1022,7 +1332,11 @@ export class PluginBridgeServer {
 		}
 		this.rejectAllPending("Plugin bridge server stopped");
 		for (const client of this.clients.values()) {
-			try { client.ws.close(); } catch { /* ignore */ }
+			try {
+				client.ws.close();
+			} catch {
+				/* ignore */
+			}
 		}
 		this.clients.clear();
 		if (this.wss) {

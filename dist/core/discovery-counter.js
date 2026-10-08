@@ -110,7 +110,8 @@ export class DiscoveryCounter {
      */
     classify(toolName, executeCode) {
         // Validate/scan are post-build audits — neutral (don't count, don't reset)
-        if (toolName === "figma_validate_screen" || toolName === "figma_scan_ds_compliance") {
+        if (toolName === "figma_validate_screen" ||
+            toolName === "figma_scan_ds_compliance") {
             return "neutral";
         }
         // Build tools — explicit mutations

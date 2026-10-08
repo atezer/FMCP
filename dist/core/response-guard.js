@@ -43,7 +43,13 @@ export function truncateResponse(data, opts) {
     const originalJson = JSON.stringify(data);
     const originalSizeKB = originalJson.length / 1024;
     if (originalSizeKB <= o.maxKB) {
-        return { data, originalSizeKB, truncatedSizeKB: originalSizeKB, wasTruncated: false, itemsRemoved: 0 };
+        return {
+            data,
+            originalSizeKB,
+            truncatedSizeKB: originalSizeKB,
+            wasTruncated: false,
+            itemsRemoved: 0,
+        };
     }
     let itemsRemoved = 0;
     function truncate(val, depth, limits) {
@@ -52,7 +58,8 @@ export function truncateResponse(data, opts) {
         if (typeof val === "string") {
             if (val.length > limits.maxStringLength) {
                 itemsRemoved++;
-                return val.slice(0, limits.maxStringLength) + `... (${val.length - limits.maxStringLength} chars truncated)`;
+                return (val.slice(0, limits.maxStringLength) +
+                    `... (${val.length - limits.maxStringLength} chars truncated)`);
             }
             return val;
         }
@@ -61,15 +68,22 @@ export function truncateResponse(data, opts) {
         if (depth >= limits.maxObjectDepth) {
             itemsRemoved++;
             return typeof val === "object" && val !== null
-                ? (Array.isArray(val) ? `[Array: ${val.length} items]` : `[Object: ${Object.keys(val).length} keys]`)
+                ? Array.isArray(val)
+                    ? `[Array: ${val.length} items]`
+                    : `[Object: ${Object.keys(val).length} keys]`
                 : val;
         }
         if (Array.isArray(val)) {
             if (val.length > limits.maxArrayItems) {
-                const sliced = val.slice(0, limits.maxArrayItems).map((v) => truncate(v, depth + 1, limits));
+                const sliced = val
+                    .slice(0, limits.maxArrayItems)
+                    .map((v) => truncate(v, depth + 1, limits));
                 const removed = val.length - limits.maxArrayItems;
                 itemsRemoved += removed;
-                sliced.push({ _truncated: true, _message: `${removed} more items not shown` });
+                sliced.push({
+                    _truncated: true,
+                    _message: `${removed} more items not shown`,
+                });
                 return sliced;
             }
             return val.map((v) => truncate(v, depth + 1, limits));
@@ -84,7 +98,11 @@ export function truncateResponse(data, opts) {
         }
         return val;
     }
-    const firstLimits = { maxArrayItems: o.maxArrayItems, maxStringLength: o.maxStringLength, maxObjectDepth: o.maxObjectDepth };
+    const firstLimits = {
+        maxArrayItems: o.maxArrayItems,
+        maxStringLength: o.maxStringLength,
+        maxObjectDepth: o.maxObjectDepth,
+    };
     const truncated = truncate(data, 0, firstLimits);
     const truncatedJson = JSON.stringify(truncated);
     const truncatedSizeKB = truncatedJson.length / 1024;
@@ -105,7 +123,13 @@ export function truncateResponse(data, opts) {
             itemsRemoved,
         };
     }
-    return { data: truncated, originalSizeKB, truncatedSizeKB, wasTruncated: true, itemsRemoved };
+    return {
+        data: truncated,
+        originalSizeKB,
+        truncatedSizeKB,
+        wasTruncated: true,
+        itemsRemoved,
+    };
 }
 /**
  * Endpoint-aware truncation for Figma REST API responses.
@@ -115,12 +139,20 @@ export function truncateRestResponse(endpoint, data, maxKB = 200) {
     const originalJson = JSON.stringify(data);
     const originalSizeKB = originalJson.length / 1024;
     if (originalSizeKB <= maxKB) {
-        return { data, originalSizeKB, truncatedSizeKB: originalSizeKB, wasTruncated: false, itemsRemoved: 0 };
+        return {
+            data,
+            originalSizeKB,
+            truncatedSizeKB: originalSizeKB,
+            wasTruncated: false,
+            itemsRemoved: 0,
+        };
     }
     const obj = data;
     let itemsRemoved = 0;
     // /v1/files/:key/comments — keep last 20 comments
-    if (endpoint.includes("/comments") && obj.comments && Array.isArray(obj.comments)) {
+    if (endpoint.includes("/comments") &&
+        obj.comments &&
+        Array.isArray(obj.comments)) {
         const total = obj.comments.length;
         const kept = 20;
         if (total > kept) {
@@ -128,14 +160,26 @@ export function truncateRestResponse(endpoint, data, maxKB = 200) {
             const trimmed = {
                 ...obj,
                 comments: obj.comments.slice(-kept),
-                _truncated: { totalComments: total, showing: kept, message: `Son ${kept} yorum gösteriliyor (toplam ${total})` },
+                _truncated: {
+                    totalComments: total,
+                    showing: kept,
+                    message: `Son ${kept} yorum gösteriliyor (toplam ${total})`,
+                },
             };
             const sizeKB = JSON.stringify(trimmed).length / 1024;
-            return { data: trimmed, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved };
+            return {
+                data: trimmed,
+                originalSizeKB,
+                truncatedSizeKB: sizeKB,
+                wasTruncated: true,
+                itemsRemoved,
+            };
         }
     }
     // /v1/files/:key/versions — keep last 10 versions
-    if (endpoint.includes("/versions") && obj.versions && Array.isArray(obj.versions)) {
+    if (endpoint.includes("/versions") &&
+        obj.versions &&
+        Array.isArray(obj.versions)) {
         const total = obj.versions.length;
         const kept = 10;
         if (total > kept) {
@@ -143,10 +187,20 @@ export function truncateRestResponse(endpoint, data, maxKB = 200) {
             const trimmed = {
                 ...obj,
                 versions: obj.versions.slice(0, kept),
-                _truncated: { totalVersions: total, showing: kept, message: `Son ${kept} versiyon gösteriliyor (toplam ${total})` },
+                _truncated: {
+                    totalVersions: total,
+                    showing: kept,
+                    message: `Son ${kept} versiyon gösteriliyor (toplam ${total})`,
+                },
             };
             const sizeKB = JSON.stringify(trimmed).length / 1024;
-            return { data: trimmed, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved };
+            return {
+                data: trimmed,
+                originalSizeKB,
+                truncatedSizeKB: sizeKB,
+                wasTruncated: true,
+                itemsRemoved,
+            };
         }
     }
     // /v1/files/:key — trim document children (pages)
@@ -155,7 +209,9 @@ export function truncateRestResponse(endpoint, data, maxKB = 200) {
         if (doc.children && Array.isArray(doc.children)) {
             const total = doc.children.length;
             const kept = 20;
-            const trimmedChildren = doc.children.slice(0, kept).map((child) => {
+            const trimmedChildren = doc.children
+                .slice(0, kept)
+                .map((child) => {
                 if (typeof child === "object" && child !== null) {
                     const c = child;
                     // Remove nested children to save space
@@ -169,16 +225,31 @@ export function truncateRestResponse(endpoint, data, maxKB = 200) {
             const trimmed = {
                 ...obj,
                 document: { ...doc, children: trimmedChildren },
-                _truncated: { totalPages: total, showing: Math.min(total, kept), childrenStripped: true },
+                _truncated: {
+                    totalPages: total,
+                    showing: Math.min(total, kept),
+                    childrenStripped: true,
+                },
             };
             const sizeKB = JSON.stringify(trimmed).length / 1024;
             if (sizeKB <= maxKB * 1.5) {
-                return { data: trimmed, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved };
+                return {
+                    data: trimmed,
+                    originalSizeKB,
+                    truncatedSizeKB: sizeKB,
+                    wasTruncated: true,
+                    itemsRemoved,
+                };
             }
         }
     }
     // Fallback: generic truncation
-    return truncateResponse(data, { maxKB, maxArrayItems: 20, maxStringLength: 300, maxObjectDepth: 3 });
+    return truncateResponse(data, {
+        maxKB,
+        maxArrayItems: 20,
+        maxStringLength: 300,
+        maxObjectDepth: 3,
+    });
 }
 /**
  * Recursively prune a plugin node payload in-place, reducing detail at the
@@ -210,7 +281,14 @@ function pruneNodeTree(node, stage) {
         delete node.absoluteBoundingBox;
     }
     if (stage >= 4) {
-        const keep = new Set(["id", "name", "type", "children", "childCount", "_childrenTruncated"]);
+        const keep = new Set([
+            "id",
+            "name",
+            "type",
+            "children",
+            "childCount",
+            "_childrenTruncated",
+        ]);
         for (const k of Object.keys(node)) {
             if (!keep.has(k))
                 delete node[k];
@@ -230,7 +308,13 @@ export function truncatePluginResponse(data, toolName, opts) {
     const maxKB = opts?.maxKB ?? PLUGIN_SIZE_THRESHOLDS.WARNING_KB;
     const originalSizeKB = calculateSizeKB(data);
     if (originalSizeKB <= maxKB) {
-        return { data, originalSizeKB, truncatedSizeKB: originalSizeKB, wasTruncated: false, itemsRemoved: 0 };
+        return {
+            data,
+            originalSizeKB,
+            truncatedSizeKB: originalSizeKB,
+            wasTruncated: false,
+            itemsRemoved: 0,
+        };
     }
     // Deep clone so we don't mutate the caller's data
     let clone;
@@ -239,7 +323,12 @@ export function truncatePluginResponse(data, toolName, opts) {
     }
     catch {
         // Fallback to generic truncation if clone fails (circular refs, BigInt, etc.)
-        return truncateResponse(data, { maxKB, maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 3 });
+        return truncateResponse(data, {
+            maxKB,
+            maxArrayItems: 10,
+            maxStringLength: 200,
+            maxObjectDepth: 3,
+        });
     }
     // Resolve the root node(s) — envelope-aware. Only real node trees are pruned:
     // pruning a non-node root (e.g. {success, contract} or {image:{base64}}) at
@@ -255,7 +344,9 @@ export function truncatePluginResponse(data, toolName, opts) {
         candidates.push(cloneObj.document);
     if (isNodeLike(cloneObj.node))
         candidates.push(cloneObj.node);
-    if (candidates.length === 0 && isNodeLike(clone) && Array.isArray(cloneObj.children)) {
+    if (candidates.length === 0 &&
+        isNodeLike(clone) &&
+        Array.isArray(cloneObj.children)) {
         candidates.push(clone);
     }
     // Try progressive node-tree stages
@@ -270,13 +361,21 @@ export function truncatePluginResponse(data, toolName, opts) {
                 strategy: `plugin-prune-stage-${stage}`,
                 tool: toolName,
             };
-            return { data: clone, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved: 0 };
+            return {
+                data: clone,
+                originalSizeKB,
+                truncatedSizeKB: sizeKB,
+                wasTruncated: true,
+                itemsRemoved: 0,
+            };
         }
     }
     // No node tree (or still too large): progressively tighter generic truncation
     const generic = fitGeneric(clone, maxKB);
     const strategy = candidates.length > 0 ? "plugin-prune-fallback-generic" : "plugin-generic";
-    if (generic.data && typeof generic.data === "object" && !Array.isArray(generic.data)) {
+    if (generic.data &&
+        typeof generic.data === "object" &&
+        !Array.isArray(generic.data)) {
         generic.data._responseGuard = {
             originalSizeKB: Math.round(originalSizeKB * 10) / 10,
             truncatedSizeKB: Math.round(generic.truncatedSizeKB * 10) / 10,
@@ -288,7 +387,10 @@ export function truncatePluginResponse(data, toolName, opts) {
 }
 /** True for objects that look like a Figma node (have a string `type`). */
 function isNodeLike(v) {
-    return !!v && typeof v === "object" && !Array.isArray(v) && typeof v.type === "string";
+    return (!!v &&
+        typeof v === "object" &&
+        !Array.isArray(v) &&
+        typeof v.type === "string");
 }
 /** Generic truncation with progressively tighter limits until the payload fits maxKB. */
 function fitGeneric(data, maxKB) {
@@ -314,7 +416,11 @@ function fitGeneric(data, maxKB) {
 export function guardPluginPayload(data, toolName, debug = false) {
     const result = truncatePluginResponse(data, toolName);
     const payload = result.data;
-    if (!result.wasTruncated || debug || !payload || typeof payload !== "object" || Array.isArray(payload)) {
+    if (!result.wasTruncated ||
+        debug ||
+        !payload ||
+        typeof payload !== "object" ||
+        Array.isArray(payload)) {
         return payload;
     }
     const obj = { ...payload };

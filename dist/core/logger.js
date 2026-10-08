@@ -1,14 +1,14 @@
 /**
  * Logging infrastructure using pino
  */
-import pino from 'pino';
+import pino from "pino";
 /**
  * Create logger instance
  * Note: In Cloudflare Workers, console methods are automatically captured
  */
-export function createLogger(level = 'info') {
+export function createLogger(level = "info") {
     // Check if running in Cloudflare Workers environment
-    const isWorkers = typeof globalThis.caches !== 'undefined';
+    const isWorkers = typeof globalThis.caches !== "undefined";
     if (isWorkers) {
         // Cloudflare Workers: use simple console-based logging
         return pino({
@@ -28,13 +28,13 @@ export function createLogger(level = 'info') {
     // Development/terminal mode: use pretty printing
     return pino({
         level: process.env.LOG_LEVEL || level,
-        transport: process.env.NODE_ENV !== 'production'
+        transport: process.env.NODE_ENV !== "production"
             ? {
-                target: 'pino-pretty',
+                target: "pino-pretty",
                 options: {
                     colorize: true,
-                    translateTime: 'HH:MM:ss',
-                    ignore: 'pid,hostname',
+                    translateTime: "HH:MM:ss",
+                    ignore: "pid,hostname",
                     destination: 2, // Explicit stderr for transport
                 },
             }

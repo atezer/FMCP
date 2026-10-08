@@ -46,7 +46,9 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 
 	// 1a. FILL before appendChild — must set FILL *after* node is in auto-layout parent
 	if (/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i.test(code)) {
-		const fillIdx = code.search(/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i);
+		const fillIdx = code.search(
+			/layoutSizing(?:Horizontal|Vertical)\s*=\s*['"]FILL['"]/i,
+		);
 		const appendIdx = code.indexOf("appendChild");
 		if (appendIdx === -1 || fillIdx < appendIdx) {
 			warnings.push({
@@ -85,9 +87,18 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 		// v1.8.2: dynamic-page mode fixes
 		{ sync: "figma.getNodeById(", async: "figma.getNodeByIdAsync(" },
 		{ sync: "figma.getStyleById(", async: "figma.getStyleByIdAsync(" },
-		{ sync: "figma.variables.getVariableById(", async: "figma.variables.getVariableByIdAsync(" },
-		{ sync: "figma.variables.getVariableCollectionById(", async: "figma.variables.getVariableCollectionByIdAsync(" },
-		{ sync: "figma.importComponentByKey(", async: "figma.importComponentByKeyAsync(" },
+		{
+			sync: "figma.variables.getVariableById(",
+			async: "figma.variables.getVariableByIdAsync(",
+		},
+		{
+			sync: "figma.variables.getVariableCollectionById(",
+			async: "figma.variables.getVariableCollectionByIdAsync(",
+		},
+		{
+			sync: "figma.importComponentByKey(",
+			async: "figma.importComponentByKeyAsync(",
+		},
 	];
 	for (const api of syncApis) {
 		if (code.includes(api.sync) && !code.includes(api.async)) {
@@ -101,7 +112,9 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 
 	// 1d. Font not loaded before text modification
 	if (
-		(/\.characters\s*=/.test(code) || code.includes(".insertCharacters") || code.includes(".deleteCharacters")) &&
+		(/\.characters\s*=/.test(code) ||
+			code.includes(".insertCharacters") ||
+			code.includes(".deleteCharacters")) &&
 		!code.includes("loadFontAsync")
 	) {
 		warnings.push({
@@ -114,7 +127,10 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 	}
 
 	// 1e. Sync page assignment — does not work
-	if (/figma\.currentPage\s*=/.test(code) && !code.includes("setCurrentPageAsync")) {
+	if (
+		/figma\.currentPage\s*=/.test(code) &&
+		!code.includes("setCurrentPageAsync")
+	) {
 		warnings.push({
 			severity: "ADVISORY",
 			category: "SYNC_API",
@@ -131,7 +147,8 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 
 	// 2a. Hardcoded solid color literal — fills = [{type:'SOLID',color:{r:...,g:...,b:...}}]
 	// Matches any code that constructs a SOLID paint with inline RGB values.
-	const hardcodedSolidRegex = /type\s*:\s*['"]SOLID['"][\s\S]{0,200}?color\s*:\s*\{\s*r\s*:\s*[\d.]+/;
+	const hardcodedSolidRegex =
+		/type\s*:\s*['"]SOLID['"][\s\S]{0,200}?color\s*:\s*\{\s*r\s*:\s*[\d.]+/;
 	if (hardcodedSolidRegex.test(code)) {
 		// If the code ALSO uses setBoundVariableForPaint, it's probably binding the
 		// variable and using the solid as a structure scaffold — allow it.
@@ -159,11 +176,17 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 		code.includes("createInstance()") ||
 		code.includes(".createInstance(") ||
 		code.includes("importComponentSetByKeyAsync");
-	const setBoundVariableCount = (code.match(/setBoundVariable\s*\(/g) || []).length;
-	const setBoundVariableForPaintCount = (code.match(/setBoundVariableForPaint\s*\(/g) || []).length;
-	const setTextStyleCount = (code.match(/setTextStyleIdAsync\s*\(/g) || []).length;
-	const totalBindings = setBoundVariableCount + setBoundVariableForPaintCount + setTextStyleCount;
-	const isTokenBoundPrimitive = createFrameCount > 0 && totalBindings >= createFrameCount;
+	const setBoundVariableCount = (code.match(/setBoundVariable\s*\(/g) || [])
+		.length;
+	const setBoundVariableForPaintCount = (
+		code.match(/setBoundVariableForPaint\s*\(/g) || []
+	).length;
+	const setTextStyleCount = (code.match(/setTextStyleIdAsync\s*\(/g) || [])
+		.length;
+	const totalBindings =
+		setBoundVariableCount + setBoundVariableForPaintCount + setTextStyleCount;
+	const isTokenBoundPrimitive =
+		createFrameCount > 0 && totalBindings >= createFrameCount;
 
 	if (createFrameCount >= 3 && !hasInstanceCreation && !isTokenBoundPrimitive) {
 		warnings.push({
@@ -178,7 +201,11 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 				"Eger library components yoksa Rule 24 fallback chain: 24.1 REST API / 24.2 cache / " +
 				"24.3 token-bound primitives (her createFrame icin setBoundVariable + setTextStyleIdAsync).",
 		});
-	} else if (createFrameCount >= 3 && !hasInstanceCreation && isTokenBoundPrimitive) {
+	} else if (
+		createFrameCount >= 3 &&
+		!hasInstanceCreation &&
+		isTokenBoundPrimitive
+	) {
 		warnings.push({
 			severity: "ADVISORY",
 			category: "TOKEN_BOUND_PRIMITIVE_FALLBACK",
@@ -191,7 +218,10 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 	}
 
 	// 2c. Hardcoded fontSize without setTextStyleIdAsync
-	if (/\.fontSize\s*=\s*\d/.test(code) && !code.includes("setTextStyleIdAsync")) {
+	if (
+		/\.fontSize\s*=\s*\d/.test(code) &&
+		!code.includes("setTextStyleIdAsync")
+	) {
 		warnings.push({
 			severity: "SEVERE",
 			category: "HARDCODED_FONT_SIZE",
@@ -205,7 +235,8 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 	}
 
 	// 2d. Hardcoded padding/gap/radius without setBoundVariable
-	const spacingAssignRegex = /\.(?:paddingTop|paddingBottom|paddingLeft|paddingRight|itemSpacing|counterAxisSpacing|topLeftRadius|topRightRadius|bottomLeftRadius|bottomRightRadius|cornerRadius)\s*=\s*\d/;
+	const spacingAssignRegex =
+		/\.(?:paddingTop|paddingBottom|paddingLeft|paddingRight|itemSpacing|counterAxisSpacing|topLeftRadius|topRightRadius|bottomLeftRadius|bottomRightRadius|cornerRadius)\s*=\s*\d/;
 	if (spacingAssignRegex.test(code) && !code.includes("setBoundVariable")) {
 		warnings.push({
 			severity: "SEVERE",
@@ -221,7 +252,11 @@ export function analyzeCodeForWarnings(code: string): CodeWarning[] {
 
 	// 2e. Rectangle as separator without DS reference (often indicates hand-built dividers)
 	const rectCount = (code.match(/figma\.createRectangle\(\)/g) || []).length;
-	if (rectCount >= 2 && !hasInstanceCreation && !code.includes("setBoundVariableForPaint")) {
+	if (
+		rectCount >= 2 &&
+		!hasInstanceCreation &&
+		!code.includes("setBoundVariableForPaint")
+	) {
 		warnings.push({
 			severity: "SEVERE",
 			category: "HAND_BUILT_SEPARATORS",
