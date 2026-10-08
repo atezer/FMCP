@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "figma-mcp-bridge",
   "display_name": "F-MCP Bridge — Figma Design Tools",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "63 MCP tools for Figma design data. No REST API token required, Zero Trust architecture. Connects AI assistants to Figma via local plugin bridge.",
   "author": {
     "name": "Abdussamed Tezer"
