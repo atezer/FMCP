@@ -423,7 +423,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.9.15';
+    var FMCP_PLUGIN_VERSION = '1.9.16';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -728,6 +728,7 @@
         nodeId: params.nodeId,
         expectedDs: params.expectedDs || null,
         minScore: typeof params.minScore === 'number' ? params.minScore : 80,
+        detailed: params.detailed === true, // v1.9.16: scan_ds_compliance needs this
       }, 90000)
         .catch(function(err) { return { success: false, error: err.message || String(err) }; });
     };
@@ -838,6 +839,9 @@
             if (msg.data !== undefined) result.data = msg.data;
             if (msg.executionMs !== undefined) result.executionMs = msg.executionMs;
             if (msg.resultAnalysis !== undefined) result.resultAnalysis = msg.resultAnalysis;
+            // v1.9.16: forward post-execute scan + file context (were silently dropped)
+            if (msg._postExecuteScan !== undefined) result._postExecuteScan = msg._postExecuteScan;
+            if (msg.fileContext !== undefined) result.fileContext = msg.fileContext;
             request.resolve(result);
           } else {
             request.resolve({ success: false, error: msg.error || 'Unknown error' });
@@ -1097,7 +1101,7 @@
     };
 
     window.getDocumentStructure = (depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint) => {
-      var payload = { depth: depth || 1, verbosity: verbosity || 'summary' };
+      var payload = { depth: depth != null ? depth : 1, verbosity: verbosity || 'summary' }; // keeps depth=0
       if (includeLayout !== undefined) payload.includeLayout = !!includeLayout;
       if (includeVisual !== undefined) payload.includeVisual = !!includeVisual;
       if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;
@@ -1109,7 +1113,7 @@
       });
     };
     window.getNodeContext = (nodeId, depth, verbosity, includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint) => {
-      var payload = { nodeId: nodeId, depth: depth || 2, verbosity: verbosity || 'standard' };
+      var payload = { nodeId: nodeId, depth: depth != null ? depth : 2, verbosity: verbosity || 'standard' }; // keeps depth=0
       if (includeLayout !== undefined) payload.includeLayout = !!includeLayout;
       if (includeVisual !== undefined) payload.includeVisual = !!includeVisual;
       if (includeTypography !== undefined) payload.includeTypography = !!includeTypography;

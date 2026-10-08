@@ -241,27 +241,30 @@ export function truncatePluginResponse(data, toolName, opts) {
         // Fallback to generic truncation if clone fails (circular refs, BigInt, etc.)
         return truncateResponse(data, { maxKB, maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 3 });
     }
-    // Resolve the root node(s) — envelope-aware
+    // Resolve the root node(s) — envelope-aware. Only real node trees are pruned:
+    // pruning a non-node root (e.g. {success, contract} or {image:{base64}}) at
+    // stage 4 would delete every field and return {} (v1.9.16 fix).
     const cloneObj = clone;
     const dataField = cloneObj.data;
     const candidates = [];
-    if (dataField?.document)
-        candidates.push(dataField.document);
-    if (dataField?.node)
-        candidates.push(dataField.node);
-    if (cloneObj.document)
+    if (isNodeLike(dataField?.document))
+        candidates.push(dataField?.document);
+    if (isNodeLike(dataField?.node))
+        candidates.push(dataField?.node);
+    if (isNodeLike(cloneObj.document))
         candidates.push(cloneObj.document);
-    if (cloneObj.node)
+    if (isNodeLike(cloneObj.node))
         candidates.push(cloneObj.node);
-    if (candidates.length === 0)
+    if (candidates.length === 0 && isNodeLike(clone) && Array.isArray(cloneObj.children)) {
         candidates.push(clone);
-    // Try progressive stages
-    for (let stage = 1; stage <= 4; stage++) {
+    }
+    // Try progressive node-tree stages
+    for (let stage = 1; candidates.length > 0 && stage <= 4; stage++) {
         for (const root of candidates)
             pruneNodeTree(root, stage);
         const sizeKB = calculateSizeKB(clone);
         if (sizeKB <= maxKB) {
-            clone._responseGuard = {
+            cloneObj._responseGuard = {
                 originalSizeKB: Math.round(originalSizeKB * 10) / 10,
                 truncatedSizeKB: Math.round(sizeKB * 10) / 10,
                 strategy: `plugin-prune-stage-${stage}`,
@@ -270,16 +273,56 @@ export function truncatePluginResponse(data, toolName, opts) {
             return { data: clone, originalSizeKB, truncatedSizeKB: sizeKB, wasTruncated: true, itemsRemoved: 0 };
         }
     }
-    // Final fallback: aggressive generic truncation
-    const generic = truncateResponse(clone, { maxKB, maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 3 });
-    if (generic.data && typeof generic.data === "object") {
+    // No node tree (or still too large): progressively tighter generic truncation
+    const generic = fitGeneric(clone, maxKB);
+    const strategy = candidates.length > 0 ? "plugin-prune-fallback-generic" : "plugin-generic";
+    if (generic.data && typeof generic.data === "object" && !Array.isArray(generic.data)) {
         generic.data._responseGuard = {
             originalSizeKB: Math.round(originalSizeKB * 10) / 10,
             truncatedSizeKB: Math.round(generic.truncatedSizeKB * 10) / 10,
-            strategy: "plugin-prune-fallback-generic",
+            strategy,
             tool: toolName,
         };
     }
-    return generic;
+    return { ...generic, originalSizeKB };
+}
+/** True for objects that look like a Figma node (have a string `type`). */
+function isNodeLike(v) {
+    return !!v && typeof v === "object" && !Array.isArray(v) && typeof v.type === "string";
+}
+/** Generic truncation with progressively tighter limits until the payload fits maxKB. */
+function fitGeneric(data, maxKB) {
+    const presets = [
+        { maxArrayItems: 50, maxStringLength: 2000, maxObjectDepth: 8 },
+        { maxArrayItems: 20, maxStringLength: 500, maxObjectDepth: 6 },
+        { maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 4 },
+        { maxArrayItems: 5, maxStringLength: 100, maxObjectDepth: 3 },
+    ];
+    let last;
+    for (const p of presets) {
+        last = truncateResponse(data, { ...p, maxKB });
+        if (last.truncatedSizeKB <= maxKB)
+            return last;
+    }
+    return last;
+}
+/**
+ * Guard a plugin payload for a tool response. Always leaves a truncation marker
+ * when data was cut (full _responseGuard when debug, compact one otherwise) so
+ * the caller never mistakes a truncated payload for the complete one.
+ */
+export function guardPluginPayload(data, toolName, debug = false) {
+    const result = truncatePluginResponse(data, toolName);
+    const payload = result.data;
+    if (!result.wasTruncated || debug || !payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return payload;
+    }
+    const obj = { ...payload };
+    delete obj._responseGuard;
+    obj._truncated = {
+        originalSizeKB: Math.round(result.originalSizeKB),
+        hint: "Yanıt boyut sınırı (80 KB) nedeniyle kırpıldı. Daha dar kapsam (nodeId, depth, verbosity=summary) ile tekrar iste.",
+    };
+    return obj;
 }
 //# sourceMappingURL=response-guard.js.map

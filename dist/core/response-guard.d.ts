@@ -57,4 +57,10 @@ export declare function truncateRestResponse(endpoint: string, data: unknown, ma
 export declare function truncatePluginResponse(data: unknown, toolName: string, opts?: {
     maxKB?: number;
 }): TruncateResult;
+/**
+ * Guard a plugin payload for a tool response. Always leaves a truncation marker
+ * when data was cut (full _responseGuard when debug, compact one otherwise) so
+ * the caller never mistakes a truncated payload for the complete one.
+ */
+export declare function guardPluginPayload(data: unknown, toolName: string, debug?: boolean): unknown;
 //# sourceMappingURL=response-guard.d.ts.map

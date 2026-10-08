@@ -17,7 +17,8 @@ import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
-import { truncateRestResponse, truncatePluginResponse } from "./core/response-guard.js";
+import { truncateRestResponse, guardPluginPayload } from "./core/response-guard.js";
+import { hexToRgbLiteral, normalizeTokenValue, rgbaToHex } from "./core/color-utils.js";
 import { analyzeCodeForWarnings } from "./core/code-warnings.js";
 import { discoveryCounter } from "./core/discovery-counter.js";
 import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
@@ -159,25 +160,6 @@ function resolveDesignContextParams(params) {
     }
     return { fileKey, nodeId: nodeId || undefined };
 }
-function rgbaToHex(color) {
-    if (!color || typeof color !== "object")
-        return "";
-    const r = Math.round((Number(color.r) ?? 0) * 255);
-    const g = Math.round((Number(color.g) ?? 0) * 255);
-    const b = Math.round((Number(color.b) ?? 0) * 255);
-    return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
-}
-function normalizeTokenValue(value, resolvedType) {
-    if (value === undefined || value === null)
-        return "";
-    if (typeof value === "object" && "r" in value)
-        return rgbaToHex(value);
-    if (typeof value === "number")
-        return String(value);
-    if (typeof value === "boolean")
-        return value ? "true" : "false";
-    return String(value).trim();
-}
 function normalizeForCompare(s) {
     s = s.toLowerCase().trim();
     if (s.startsWith("#"))
@@ -264,9 +246,10 @@ export async function main() {
         return `${toolName}::${JSON.stringify(sortedEntries)}`;
     }
     /**
-     * Shared envelope wrapper for plugin tool results. Applies truncatePluginResponse
-     * unless skipGuard is true (for cache hits whose data was already guarded).
-     * When debug=true, the _responseGuard marker is preserved; otherwise stripped.
+     * Shared envelope wrapper for plugin tool results. Applies guardPluginPayload
+     * unless skipGuard is true (payload already guarded, e.g. cache hits).
+     * When debug=true the full _responseGuard marker is kept; otherwise a compact
+     * _truncated marker is left so truncation is never silent.
      */
     function toolResult(data, toolName, opts) {
         let payload;
@@ -277,14 +260,7 @@ export async function main() {
             payload = data;
         }
         else {
-            const result = truncatePluginResponse(data, toolName);
-            payload = result.data;
-            // Strip _responseGuard marker unless debug=true
-            if (!opts?.debug && payload && typeof payload === "object" && payload._responseGuard) {
-                const stripped = { ...payload };
-                delete stripped._responseGuard;
-                payload = stripped;
-            }
+            payload = guardPluginPayload(data, toolName, opts?.debug);
         }
         const text = typeof payload === "string" ? payload : JSON.stringify(payload);
         return { content: [{ type: "text", text }] };
@@ -352,12 +328,18 @@ export async function main() {
                 outputHint !== undefined
                 ? { includeLayout, includeVisual, includeTypography, includeCodeReady, outputHint }
                 : undefined;
+            // Cache stores the GUARDED payload so cache hits stay size-safe (v1.9.16)
             const cacheK = makeCacheKey("figma_get_file_data", { resolvedKey, depth, verbosity, opts });
             const cached = debug ? null : cache.get(cacheK, 60_000);
-            const data = cached ?? await conn.getDocumentStructure(depth, verbosity, opts);
-            if (!cached)
-                cache.set(cacheK, data);
-            return toolResult(data, "figma_get_file_data", { skipGuard: !!cached, debug });
+            if (cached)
+                return toolResult(cached, "figma_get_file_data", { skipGuard: true });
+            const data = await conn.getDocumentStructure(depth, verbosity, opts);
+            if (data === undefined || data === null)
+                return toolResult(data, "figma_get_file_data");
+            const guarded = guardPluginPayload(data, "figma_get_file_data", debug);
+            if (!debug)
+                cache.set(cacheK, guarded);
+            return toolResult(guarded, "figma_get_file_data", { skipGuard: true });
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -409,12 +391,17 @@ export async function main() {
             // Cache lookup (60s TTL) — bypassed when debug=true
             const cacheK = makeCacheKey("figma_get_design_context", { resolvedKey, effectiveNodeId, depth, verbosity, opts });
             const cached = debug ? null : cache.get(cacheK, 60_000);
-            const data = cached ?? (effectiveNodeId
+            if (cached)
+                return toolResult(cached, "figma_get_design_context", { skipGuard: true });
+            const data = effectiveNodeId
                 ? await conn.getNodeContext(effectiveNodeId, depth, verbosity, opts)
-                : await conn.getDocumentStructure(depth, verbosity, opts));
-            if (!cached)
-                cache.set(cacheK, data);
-            return toolResult(data, "figma_get_design_context", { skipGuard: !!cached, debug });
+                : await conn.getDocumentStructure(depth, verbosity, opts);
+            if (data === undefined || data === null)
+                return toolResult(data, "figma_get_design_context");
+            const guarded = guardPluginPayload(data, "figma_get_design_context", debug);
+            if (!debug)
+                cache.set(cacheK, guarded);
+            return toolResult(guarded, "figma_get_design_context", { skipGuard: true });
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -600,26 +587,46 @@ export async function main() {
             const postScan = typeof result === "object" && result !== null
                 ? result._postExecuteScan
                 : undefined;
+            // v1.9.16: the scan result now actually reaches the server (UI used to drop it).
+            // Default "warn" mode reports violations without blocking follow-up executes;
+            // FMCP_POST_SCAN_MODE=block restores the v1.9.6 BLOCKING + suppression behaviour.
+            const postScanBlockMode = process.env.FMCP_POST_SCAN_MODE === "block";
             const postScanBlocking = {};
             if (postScan && typeof postScan.violationCount === "number" && postScan.violationCount > 0) {
-                postScanBlocking._POST_EXECUTE_SCAN_BLOCKING = true;
-                postScanBlocking._postExecuteViolations = {
-                    count: postScan.violationCount,
-                    totalChecked: postScan.totalChecked ?? 0,
-                    severity: "BLOCKING",
-                    message: "❌ v1.9.6 POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " unbound tespit edildi. Kodu duzelt — her unbound icin setBoundVariable veya setTextStyleIdAsync cagrisi ekle.",
-                    violations: postScan.violations ?? [],
-                    action: "❌ BLOCKING: Execute sonucu KABUL EDILMEZ. Listelenen nodeId'lerdeki unbound node'lari bagla ve kodu tekrar calistir. Skip edemezsin.",
-                    retry_required: true,
+                const violations = {
+                    violations: (postScan.violations ?? []).slice(0, 50),
+                    ...((postScan.violations?.length ?? 0) > 50 ? { violationsOmitted: (postScan.violations?.length ?? 0) - 50 } : {}),
                 };
+                if (postScanBlockMode) {
+                    postScanBlocking._POST_EXECUTE_SCAN_BLOCKING = true;
+                    postScanBlocking._postExecuteViolations = {
+                        count: postScan.violationCount,
+                        totalChecked: postScan.totalChecked ?? 0,
+                        severity: "BLOCKING",
+                        message: "❌ v1.9.6 POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " unbound tespit edildi. Kodu duzelt — her unbound icin setBoundVariable veya setTextStyleIdAsync cagrisi ekle.",
+                        ...violations,
+                        action: "❌ BLOCKING: Execute sonucu KABUL EDILMEZ. Listelenen nodeId'lerdeki unbound node'lari bagla ve kodu tekrar calistir. Skip edemezsin.",
+                        retry_required: true,
+                    };
+                }
+                else {
+                    postScanBlocking._POST_EXECUTE_SCAN_WARNING = true;
+                    postScanBlocking._postExecuteViolations = {
+                        count: postScan.violationCount,
+                        totalChecked: postScan.totalChecked ?? 0,
+                        severity: "WARNING",
+                        message: "⚠️ POST-EXECUTE SCAN: Olusturulan node'larda " + postScan.violationCount + " token'a bagli olmayan deger var. DS kullaniliyorsa setBoundVariable / setTextStyleIdAsync ile bagla.",
+                        ...violations,
+                    };
+                }
             }
             // v1.9.7: Record blocking state for suppression tracker (any BLOCKING flag)
-            const hadBlocking = Object.keys(postScanBlocking).length > 0 ||
+            const hadBlocking = (postScanBlockMode && Object.keys(postScanBlocking).length > 0) ||
                 severeWarnings.length > 0;
             if (hadBlocking) {
                 const extracted = extractBlockingNodeIds({
-                    _postExecuteScan: result?._postExecuteScan,
-                    _postExecuteViolations: postScanBlocking._postExecuteViolations,
+                    _postExecuteScan: postScanBlockMode ? result?._postExecuteScan : undefined,
+                    _postExecuteViolations: postScanBlockMode ? postScanBlocking._postExecuteViolations : undefined,
                     _designSystemViolations: dsViolations._designSystemViolations,
                 });
                 if (extracted.nodeIds.length > 0) {
@@ -641,6 +648,8 @@ export async function main() {
                         ...budgetBlockingField, // v1.9.5: discovery BLOCKING flag at top
                         ...dsViolations, // v1.8.1: SEVERE warnings at top level
                         ...result,
+                        // warn mode: raw scan (with its "❌ fix it" hint) is summarized in _postExecuteViolations
+                        ...(!postScanBlockMode && { _postExecuteScan: undefined }),
                         _metrics: { durationMs, timeoutMs: clampedTimeout },
                         ...warningsField,
                         ...(nextStep && { _nextStep: nextStep }),
@@ -811,6 +820,7 @@ export async function main() {
         annotations: { destructiveHint: true },
     }, safeToolHandler(async ({ figmaUrl, fileKey, primaryColor, fontFamily, name, includeComponents }) => {
         const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+        invalidateCache();
         const result = await conn.createMiniDs({ primaryColor, fontFamily, name, includeComponents });
         const nextStep = bootstrapInjector.injectNextStep("figma_create_mini_ds", result);
         const enriched = nextStep && typeof result === "object" && result !== null
@@ -1104,7 +1114,8 @@ export async function main() {
     }, safeToolHandler(async ({ timeoutSeconds }) => {
         const conn = getConnector(bridge);
         const deadline = Date.now() + timeoutSeconds * 1000;
-        let lastSeenTime = 0;
+        // Only stream logs newer than the call — don't replay the old buffer (v1.9.16)
+        let lastSeenTime = Date.now();
         const stream = [];
         let pollIntervalMs = 1000;
         let consecutiveEmptyPolls = 0;
@@ -1503,7 +1514,10 @@ export async function main() {
                     entry.scopes = v.scopes;
                 }
                 else {
-                    entry.valuesByMode = v.valuesByMode;
+                    // summary: only the first mode's value (same shape, far smaller) — v1.9.16
+                    const modes = v.valuesByMode;
+                    const firstMode = modes ? Object.keys(modes)[0] : undefined;
+                    entry.valuesByMode = firstMode !== undefined ? { [firstMode]: modes?.[firstMode] } : modes;
                 }
                 c.variables.push(entry);
             }
@@ -1676,7 +1690,7 @@ export async function main() {
 					} catch (fillBindErr) {
 						console.warn('[figma_create_frame] fillVariableKey binding failed:', fillBindErr.message);
 					}
-					` : fillColor ? `frame.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					` : fillColor ? `frame.fills = [{ type: 'SOLID', color: ${hexToRgbLiteral(fillColor)} }];` : ""}
 					${paddingVariableKey ? `
 					try {
 						const padVar = await figma.variables.importVariableByKeyAsync(${JSON.stringify(paddingVariableKey)});
@@ -1736,6 +1750,7 @@ export async function main() {
     }, async ({ text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId }) => {
         try {
             const conn = getConnector(bridge);
+            invalidateCache();
             const code = `
 					const node = figma.createText();
 					await figma.loadFontAsync({ family: ${JSON.stringify(fontFamily)}, style: ${JSON.stringify(fontStyle)} });
@@ -1743,7 +1758,7 @@ export async function main() {
 					node.name = ${JSON.stringify(name || text.slice(0, 30))};
 					node.x = ${x}; node.y = ${y};
 					node.fontSize = ${fontSize};
-					${fillColor ? `node.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${fillColor ? `node.fills = [{ type: 'SOLID', color: ${hexToRgbLiteral(fillColor)} }];` : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(node);` : ""}
 					return { id: node.id, name: node.name, characters: node.characters };
 				`;
@@ -1769,12 +1784,13 @@ export async function main() {
     }, async ({ x, y, width, height, name, fillColor, cornerRadius, parentId }) => {
         try {
             const conn = getConnector(bridge);
+            invalidateCache();
             const code = `
 					const rect = figma.createRectangle();
 					rect.name = ${JSON.stringify(name)};
 					rect.x = ${x}; rect.y = ${y};
 					rect.resize(${width}, ${height});
-					${fillColor ? `rect.fills = [{ type: 'SOLID', color: { r: parseInt('${fillColor}'.slice(1,3),16)/255, g: parseInt('${fillColor}'.slice(3,5),16)/255, b: parseInt('${fillColor}'.slice(5,7),16)/255 } }];` : ""}
+					${fillColor ? `rect.fills = [{ type: 'SOLID', color: ${hexToRgbLiteral(fillColor)} }];` : ""}
 					${cornerRadius !== undefined ? `rect.cornerRadius = ${cornerRadius};` : ""}
 					${parentId ? `const parent = await figma.getNodeByIdAsync(${JSON.stringify(parentId)}); if (parent && 'appendChild' in parent) parent.appendChild(rect);` : ""}
 					return { id: rect.id, name: rect.name };
@@ -1795,6 +1811,7 @@ export async function main() {
     }, async ({ nodeIds, name }) => {
         try {
             const conn = getConnector(bridge);
+            invalidateCache();
             const code = `
 					const nodes = [];
 					for (const id of ${JSON.stringify(nodeIds)}) {

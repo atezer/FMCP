@@ -250,8 +250,14 @@ export class PluginBridgeConnector {
         return this.bridge.request("getLocalStyles", { verbosity: verbosity ?? "summary" }, this.fileKey);
     }
     async getConsoleLogs(limit = 50) {
-        const res = await this.bridge.request("getConsoleLogs", { limit }, this.fileKey);
-        return res?.data ?? { logs: [], total: 0 };
+        const res = (await this.bridge.request("getConsoleLogs", { limit }, this.fileKey));
+        // The UI already unwraps `data`; accept both shapes so old and new plugin UIs work (v1.9.16)
+        if (Array.isArray(res?.logs))
+            return res;
+        const inner = res?.data;
+        if (Array.isArray(inner?.logs))
+            return inner;
+        return { logs: [], total: 0 };
     }
     async clearConsole() {
         await this.bridge.request("clearConsole", {}, this.fileKey);

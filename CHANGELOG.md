@@ -12,6 +12,33 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.9.16] — 2026-10-08 — Sessizce bozuk özelliklerin düzeltilmesi
+
+### Fixed
+
+- **Boyut koruması (response guard) artık `{}` döndürmüyor.** 80 KB'ı aşan ve düğüm ağacı içermeyen yanıtlarda budama kök nesneye uygulanıyor ve bütün alanları siliyordu. Etkilenen araçlar: `figma_extract_contract`, `figma_get_component_image`, `figma_get_component_for_development`, `figma_validate_screen`, `figma_scan_ds_compliance`, `figma_clone_screen_to_device`, `figma_create_mini_ds`, `figma_get_prototype_connections`. Artık:
+  - Budama yalnızca gerçek düğüm ağaçlarına uygulanıyor.
+  - Diğer yanıtlar adım adım sıkılaşan genel kırpmadan geçiyor.
+  - Kırpma olduğunda yanıtta her zaman bir `_truncated` işareti kalıyor.
+- **Önbellek artık guard'lanmış veriyi saklıyor.** 60 sn içindeki ikinci `figma_get_file_data` / `figma_get_design_context` çağrısı boyut sınırını atlayıp ağacın tamamını döndürüyordu. `debug=true` çağrıları önbelleğe yazmıyor.
+- **`figma_get_console_logs` ve `figma_watch_console` her zaman boş dönüyordu.** Veri iki kez açılıyordu. Connector artık iki yanıt biçimini de kabul ediyor; eski ve yeni plugin UI'larıyla uyumlu. `watch_console` artık çağrıdan önceki eski logları tekrar göndermiyor.
+- **Plugin UI `_postExecuteScan` ve `fileContext` alanlarını iletmiyordu.** v1.9.6'daki post-execute tarama hiç çalışmıyordu.
+  - Tarama varsayılan olarak **uyarı modunda** etkin: yanıta `_POST_EXECUTE_SCAN_WARNING` + `_postExecuteViolations` ekleniyor, sonraki `figma_execute` çağrıları engellenmiyor.
+  - Eski engelleyici davranış için: `FMCP_POST_SCAN_MODE=block`.
+- **`figma_scan_ds_compliance` örnek döndürmüyordu.** UI `detailed` parametresini düşürüyordu.
+- **`depth=0` isteği UI'da 1'e (düğümde 2'ye) çevriliyordu.**
+- **`figma_create_text`, `figma_create_rectangle`, `figma_create_group` ve `figma_create_mini_ds` önbelleği temizlemiyordu.**
+- **`figma_check_design_parity`:** eksik renk kanalı `NaN` üretiyordu; alias değerleri `"[object Object]"` olarak karşılaştırılıyordu. Alias'lar artık `alias:<id>` ile karşılaştırılıyor.
+- **`figma_get_token_browser`:** summary modu artık yalnızca ilk mod değerini döndürüyor.
+- **Blocking tracker:** `"1:2"` düğüm kimliği `"11:23"` ve `"I1:2;3:4"` ile yanlışlıkla eşleşiyordu.
+- **Bootstrap yanıtı** sabit `1.9.8` yerine gerçek sürümü bildiriyor.
+- **`fillColor`** (`create_frame` / `create_text` / `create_rectangle`) artık doğrulanıyor: `#rgb` desteği eklendi, geçersiz değer koda gömülmek yerine hata veriyor.
+- **Post-execute ihlal listesi** en fazla 50 kayıtla sınırlandı.
+
+### Added
+
+- `src/core/color-utils.ts` (test edilebilir renk yardımcıları) ve 18 regresyon testi (`tests/core/v1916-regressions.test.ts`).
+
 ## [1.9.15] — 2026-10-06 — DS Change Tracker: DS değişiklik takibi
 
 ### Added — `ds-change-tracker` skill'i + `/track-ds-changes` komutu

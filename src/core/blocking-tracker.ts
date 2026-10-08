@@ -76,7 +76,7 @@ export class BlockingTracker {
 		// Scan code for tracked nodeIds
 		const matched: string[] = [];
 		for (const id of this.lastBlockingNodeIds) {
-			if (executeCode.includes(id)) matched.push(id);
+			if (containsNodeId(executeCode, id)) matched.push(id);
 		}
 
 		if (matched.length === 0) return {};
@@ -165,3 +165,11 @@ export function extractBlockingNodeIds(response: unknown): { nodeIds: string[]; 
 
 /** Singleton for server process lifetime */
 export const blockingTracker = new BlockingTracker();
+
+/**
+ * Whole-ID match: "1:2" must not match inside "11:23" or "I1:2;3:4" (v1.9.16).
+ */
+export function containsNodeId(code: string, id: string): boolean {
+	const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return new RegExp(`(?<![\\w:;])${escaped}(?![\\d])`).test(code);
+}

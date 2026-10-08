@@ -16,6 +16,7 @@
  */
 
 import { EMBEDDED_SKILLS_SUMMARY, EMBEDDED_SKILLS_TOKEN_ESTIMATE } from "./embedded-skills.js";
+import { FMCP_VERSION } from "./version.js";
 
 /** Critical rules (Katman 5 — 8 direktif) */
 const CRITICAL_RULES = [
@@ -67,7 +68,7 @@ export class BootstrapInjector {
 		if (!this.firstCallMade) {
 			this.firstCallMade = true;
 			return {
-				version: "1.9.8",
+				version: FMCP_VERSION,
 				self_instruction:
 					"Bu directives'i bir kere oku ve oturum boyunca uygula. Kullanici explicit aksini soylemedikce sapma.",
 				critical_rules: CRITICAL_RULES,
@@ -79,7 +80,7 @@ export class BootstrapInjector {
 			};
 		}
 		return {
-			version: "1.9.8",
+			version: FMCP_VERSION,
 			self_instruction: CRITICAL_RULES.slice(0, 3).join(" | "),
 			reminder:
 				"Rules from first figma_get_status call still in effect. See critical_rules in initial _bootstrap response.",

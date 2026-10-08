@@ -393,8 +393,13 @@ export class PluginBridgeConnector {
 	}
 
 	async getConsoleLogs(limit: number = 50): Promise<{ logs: Array<{ level: string; time: number; args: unknown[] }>; total: number }> {
-		const res = await this.bridge.request("getConsoleLogs", { limit }, this.fileKey);
-		return ((res as Record<string, unknown>)?.data as { logs: Array<{ level: string; time: number; args: unknown[] }>; total: number }) ?? { logs: [], total: 0 };
+		type ConsoleLogs = { logs: Array<{ level: string; time: number; args: unknown[] }>; total: number };
+		const res = (await this.bridge.request("getConsoleLogs", { limit }, this.fileKey)) as Record<string, unknown> | undefined;
+		// The UI already unwraps `data`; accept both shapes so old and new plugin UIs work (v1.9.16)
+		if (Array.isArray(res?.logs)) return res as unknown as ConsoleLogs;
+		const inner = res?.data as Record<string, unknown> | undefined;
+		if (Array.isArray(inner?.logs)) return inner as unknown as ConsoleLogs;
+		return { logs: [], total: 0 };
 	}
 
 	async clearConsole(): Promise<void> {
