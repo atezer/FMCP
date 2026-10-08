@@ -14,6 +14,20 @@ import type {
 	PluginCrudResult,
 } from "./types/figma.js";
 
+/** Bridge errors raised before the request was sent to any plugin (safe to retry). */
+export function isNotSentError(msg: string): boolean {
+	return (
+		msg.includes("No plugin connected for fileKey") ||
+		msg.includes("plugin not connected") ||
+		msg.startsWith("Failed to send request")
+	);
+}
+
+/** Bridge errors raised after the request was sent (outcome unknown — never auto-retry). */
+export function isSentButLostError(msg: string): boolean {
+	return msg.includes("Plugin bridge request") && msg.includes("failed:");
+}
+
 export class PluginBridgeConnector {
 	private fileKey?: string;
 
@@ -52,17 +66,19 @@ export class PluginBridgeConnector {
 				return await this.bridge.request("executeCodeViaUI", { code, timeout }, this.fileKey);
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				const isTransient =
-					msg.includes("WebSocket") ||
-					msg.includes("not open") ||
-					msg.includes("send_failed") ||
-					msg.includes("WebSocket closed") ||
-					msg.includes("No plugin connected for fileKey") ||
-					(msg.includes("Plugin bridge request") && msg.includes("failed:") && !msg.includes("timed out"));
-				if (isTransient && attempt < MAX_RETRIES) {
-					logger.warn({ attempt, error: msg }, "figma_execute: transient failure, retrying after 1s");
+				// v1.10.0: retry ONLY when the code never reached the plugin. Once sent, a
+				// dropped connection says nothing about whether it ran — re-sending could apply
+				// the mutation twice (or, after a reconnect, in another file).
+				if (isNotSentError(msg) && attempt < MAX_RETRIES) {
+					logger.warn({ attempt, error: msg }, "figma_execute: request not delivered, retrying after 1s");
 					await new Promise(r => setTimeout(r, 1000));
 					continue;
+				}
+				if (isSentButLostError(msg)) {
+					throw new Error(
+						`${msg} — EXECUTION_STATE_UNKNOWN: kod plugin'e ulaştı ama yanıt gelmeden bağlantı koptu; ` +
+						"değişiklik uygulanmış olabilir. Tekrar çalıştırmadan önce sonucu okuyarak doğrula.",
+					);
 				}
 				throw err;
 			}

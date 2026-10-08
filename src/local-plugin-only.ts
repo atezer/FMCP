@@ -21,6 +21,8 @@ import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import { truncateRestResponse, guardPluginPayload } from "./core/response-guard.js";
 import { hexToRgbLiteral, normalizeTokenValue, rgbaToHex } from "./core/color-utils.js";
+import { looksMutating } from "./core/mutation-detect.js";
+import { resolveFigmaRestUrl, isRetryableMethod } from "./core/rest-url.js";
 import { analyzeCodeForWarnings, type CodeWarning } from "./core/code-warnings.js";
 import { discoveryCounter } from "./core/discovery-counter.js";
 import { blockingTracker, extractBlockingNodeIds } from "./core/blocking-tracker.js";
@@ -199,6 +201,8 @@ const PLUGIN_NOT_CONNECTED =
 /** Categorize figma_execute errors for actionable user feedback. */
 function categorizeExecuteError(message: string, durationMs: number, timeoutMs: number): string {
 	const msg = (message ?? "").toLowerCase();
+	if (msg.includes("execution_state_unknown")) return "STATE_UNKNOWN";
+	if (msg.includes("birden fazla figma dosyası bağlı")) return "TARGET_REQUIRED";
 	if (msg.includes("timed out") || msg.includes("timeout") || (durationMs >= timeoutMs * 0.9)) return "TIMEOUT";
 	if (msg.includes("syntax error") || msg.includes("unexpected token") || msg.includes("unexpected identifier")) return "SYNTAX";
 	if (msg.includes("not connected") || msg.includes("plugin bridge") || msg.includes("websocket") || msg.includes("bridge active")) return "CONNECTION";
@@ -210,7 +214,9 @@ function categorizeExecuteError(message: string, durationMs: number, timeoutMs: 
 
 function getErrorHint(category: string): string {
 	switch (category) {
-		case "TIMEOUT": return "Islem cok uzun surdu. timeout parametresini artir (max 120000ms), veya islemi daha kucuk parcalara bol.";
+		case "TIMEOUT": return "Islem cok uzun surdu. Kod Figma'da hala calisiyor olabilir — tekrar calistirmadan once sonucu oku (kopya olusmasin). Sonra timeout parametresini artir (max 30000ms) veya islemi daha kucuk parcalara bol.";
+		case "STATE_UNKNOWN": return "Baglanti yanit gelmeden koptu; degisiklik uygulanmis olabilir. Kodu tekrar calistirmadan once ilgili node'lari okuyup durumu dogrula.";
+		case "TARGET_REQUIRED": return "Birden fazla dosya bagli. figma_list_connected_files ile dosyalari gor, cagriyi fileKey ile tekrarla.";
 		case "SYNTAX": return "JavaScript syntax hatasi. Kaçis karakterleri, eksik parantez veya reserved word kontrol et.";
 		case "CONNECTION": return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula.";
 		case "SERIALIZATION": return "Sonuc JSON serialize edilemedi. Figma node objesi degil, plain object don: { id: node.id, name: node.name }";
@@ -238,7 +244,23 @@ function safeToolHandler<T>(handler: (params: T) => Promise<{ content: Array<{ t
 	};
 }
 
-function getConnector(bridge: PluginBridgeServer, fileKey?: string): PluginBridgeConnector {
+/** v1.10.0: shared routing params — every bridge tool can target a specific connected file. */
+const TARGET_FILE_SCHEMA = {
+	figmaUrl: z.string().optional().describe("Figma file URL; routes the call to that connected file."),
+	fileKey: z.string().optional().describe("Target a specific connected file (required for writes when several files are connected)."),
+};
+type TargetFile = { figmaUrl?: string; fileKey?: string };
+
+/**
+ * Resolve a connector for the target file.
+ * v1.10.0: `mutating` calls without an explicit target fail when several files are
+ * connected, instead of silently writing to the most recently connected one.
+ */
+function getConnector(bridge: PluginBridgeServer, fileKey?: string, opts?: { mutating?: boolean }): PluginBridgeConnector {
+	if (opts?.mutating && !fileKey) {
+		const ambiguous = bridge.getAmbiguousTargetError();
+		if (ambiguous) throw new Error(ambiguous);
+	}
 	if (!bridge.isConnected(fileKey)) {
 		if (fileKey) {
 			const connected = bridge.listConnectedFiles();
@@ -628,7 +650,8 @@ export async function main() {
 				: {};
 			const startTime = Date.now();
 			try {
-				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+				// v1.10.0: writes need an explicit target when several files are connected
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: looksMutating(code) });
 				const result = await conn.executeCodeViaUI(code, clampedTimeout);
 				const durationMs = Date.now() - startTime;
 				// Plugin may return { success: false, error: "..." } without throwing
@@ -822,7 +845,7 @@ export async function main() {
 					);
 				}
 				invalidateCache();
-				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				const result = await conn.cloneScreenToDevice({
 					sourceNodeId,
 					targetWidth: resolved.width,
@@ -961,7 +984,7 @@ export async function main() {
 			name: string;
 			includeComponents: boolean;
 		}) => {
-			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			invalidateCache();
 			const result = await conn.createMiniDs({ primaryColor, fontFamily, name, includeComponents });
 			const nextStep = bootstrapInjector.injectNextStep("figma_create_mini_ds", result);
@@ -1089,7 +1112,7 @@ export async function main() {
 		},
 		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, properties }: { figmaUrl?: string; fileKey?: string; nodeId: string; properties: Record<string, unknown> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const result = await conn.setInstanceProperties(nodeId, properties);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1100,16 +1123,16 @@ export async function main() {
 		"figma_update_variable",
 		{
 			description: "Update a variable value in a mode. Get IDs from figma_get_variables.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				variableId: z.string(),
 				modeId: z.string(),
 				value: z.union([z.string(), z.number(), z.boolean()]),
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { variableId: string; modeId: string; value: unknown }) => {
+		safeToolHandler(async (p: TargetFile & { variableId: string; modeId: string; value: unknown }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.updateVariable(p.variableId, p.modeId, p.value);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1119,7 +1142,7 @@ export async function main() {
 		"figma_create_variable",
 		{
 			description: "Create a variable in a collection. Get collectionId from figma_get_variables.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				name: z.string(),
 				collectionId: z.string(),
 				resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]),
@@ -1127,9 +1150,9 @@ export async function main() {
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { name: string; collectionId: string; resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN"; options?: Record<string, unknown> }) => {
+		safeToolHandler(async (p: TargetFile & { name: string; collectionId: string; resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN"; options?: Record<string, unknown> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.createVariable(p.name, p.collectionId, p.resolvedType, p.options);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1139,12 +1162,12 @@ export async function main() {
 		"figma_create_variable_collection",
 		{
 			description: "Create a variable collection.",
-			inputSchema: { name: z.string(), options: z.record(z.any()).optional() },
+			inputSchema: { ...TARGET_FILE_SCHEMA, name: z.string(), options: z.record(z.any()).optional() },
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { name: string; options?: Record<string, unknown> }) => {
+		safeToolHandler(async (p: TargetFile & { name: string; options?: Record<string, unknown> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.createVariableCollection(p.name, p.options);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1152,44 +1175,44 @@ export async function main() {
 
 	server.registerTool("figma_delete_variable", {
 		description: "Delete a variable.",
-		inputSchema: { variableId: z.string() },
+		inputSchema: { ...TARGET_FILE_SCHEMA, variableId: z.string() },
 		annotations: { destructiveHint: true },
-	}, safeToolHandler(async (p: { variableId: string }) => {
+	}, safeToolHandler(async (p: TargetFile & { variableId: string }) => {
 		invalidateCache();
-		const conn = getConnector(bridge);
+		const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 		const result = await conn.deleteVariable(p.variableId);
 		return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 	}));
 
 	server.registerTool("figma_delete_variable_collection", {
 		description: "Delete a variable collection.",
-		inputSchema: { collectionId: z.string() },
+		inputSchema: { ...TARGET_FILE_SCHEMA, collectionId: z.string() },
 		annotations: { destructiveHint: true },
-	}, safeToolHandler(async (p: { collectionId: string }) => {
+	}, safeToolHandler(async (p: TargetFile & { collectionId: string }) => {
 		invalidateCache();
-		const conn = getConnector(bridge);
+		const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 		const result = await conn.deleteVariableCollection(p.collectionId);
 		return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 	}));
 
 	server.registerTool("figma_rename_variable", {
 		description: "Rename a variable.",
-		inputSchema: { variableId: z.string(), newName: z.string() },
+		inputSchema: { ...TARGET_FILE_SCHEMA, variableId: z.string(), newName: z.string() },
 		annotations: { destructiveHint: true },
-	}, safeToolHandler(async (p: { variableId: string; newName: string }) => {
+	}, safeToolHandler(async (p: TargetFile & { variableId: string; newName: string }) => {
 		invalidateCache();
-		const conn = getConnector(bridge);
+		const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 		const result = await conn.renameVariable(p.variableId, p.newName);
 		return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 	}));
 
 	server.registerTool("figma_add_mode", {
 		description: "Add a mode to a collection.",
-		inputSchema: { collectionId: z.string(), modeName: z.string() },
+		inputSchema: { ...TARGET_FILE_SCHEMA, collectionId: z.string(), modeName: z.string() },
 		annotations: { destructiveHint: true },
-	}, safeToolHandler(async (p: { collectionId: string; modeName: string }) => {
+	}, safeToolHandler(async (p: TargetFile & { collectionId: string; modeName: string }) => {
 		invalidateCache();
-		const conn = getConnector(bridge);
+		const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 		const result = await conn.addMode(p.collectionId, p.modeName);
 		return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 	}));
@@ -1198,12 +1221,12 @@ export async function main() {
 		"figma_rename_mode",
 		{
 			description: "Rename a mode in a collection.",
-			inputSchema: { collectionId: z.string(), modeId: z.string(), newName: z.string() },
+			inputSchema: { ...TARGET_FILE_SCHEMA, collectionId: z.string(), modeId: z.string(), newName: z.string() },
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { collectionId: string; modeId: string; newName: string }) => {
+		safeToolHandler(async (p: TargetFile & { collectionId: string; modeId: string; newName: string }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.renameMode(p.collectionId, p.modeId, p.newName);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1288,7 +1311,7 @@ export async function main() {
 				"Create a component instance. Use componentKey from figma_search_components, figma_search_assets, or REST API. " +
 				"Supports library components (importComponentByKeyAsync) and local components (by nodeId). " +
 				"After creation: use overrides with setProperties({...}) for component properties — do NOT use findAll(TEXT) to modify instance text.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				componentKey: z.string(),
 				options: z
 					.object({
@@ -1301,9 +1324,9 @@ export async function main() {
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { componentKey: string; options?: Record<string, unknown> }) => {
+		safeToolHandler(async (p: TargetFile & { componentKey: string; options?: Record<string, unknown> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.instantiateComponent(p.componentKey, p.options || {});
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1311,10 +1334,10 @@ export async function main() {
 
 	server.registerTool("figma_refresh_variables", {
 		description: "Refresh variables from the file.",
-		inputSchema: {},
+		inputSchema: { ...TARGET_FILE_SCHEMA,},
 		annotations: { readOnlyHint: false, destructiveHint: false },
-	}, safeToolHandler(async () => {
-		const conn = getConnector(bridge);
+	}, safeToolHandler(async ({ figmaUrl, fileKey }: TargetFile) => {
+		const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 		const result = await conn.refreshVariables();
 		return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 	}));
@@ -1342,11 +1365,11 @@ export async function main() {
 		"figma_watch_console",
 		{
 			description: "Stream new plugin console logs until timeout. Polls the plugin buffer. Timeout default 30s.",
-			inputSchema: { timeoutSeconds: z.number().min(1).max(120).optional().default(30) },
+			inputSchema: { ...TARGET_FILE_SCHEMA, timeoutSeconds: z.number().min(1).max(120).optional().default(30) },
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ timeoutSeconds }: { timeoutSeconds: number }) => {
-			const conn = getConnector(bridge);
+		safeToolHandler(async ({ figmaUrl, fileKey, timeoutSeconds }: TargetFile & { timeoutSeconds: number }) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const deadline = Date.now() + timeoutSeconds * 1000;
 			// Only stream logs newer than the call — don't replay the old buffer (v1.9.16)
 			let lastSeenTime = Date.now();
@@ -1383,10 +1406,10 @@ export async function main() {
 
 	server.registerTool("figma_clear_console", {
 		description: "Clear the plugin console log buffer.",
-		inputSchema: {},
+		inputSchema: { ...TARGET_FILE_SCHEMA,},
 		annotations: { destructiveHint: true },
-	}, safeToolHandler(async () => {
-		const conn = getConnector(bridge);
+	}, safeToolHandler(async ({ figmaUrl, fileKey }: TargetFile) => {
+		const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 		await conn.clearConsole();
 		return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: "Console cleared" }) }] };
 	}));
@@ -1396,16 +1419,16 @@ export async function main() {
 		"figma_set_description",
 		{
 			description: "Set description on a component, component set, or style node. Supports markdown (descriptionMarkdown).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeId: z.string(),
 				description: z.string(),
 				descriptionMarkdown: z.string().optional(),
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { nodeId: string; description: string; descriptionMarkdown?: string }) => {
+		safeToolHandler(async (p: TargetFile & { nodeId: string; description: string; descriptionMarkdown?: string }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.setNodeDescription(p.nodeId, p.description, p.descriptionMarkdown);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1436,7 +1459,7 @@ export async function main() {
 		"figma_get_component_for_development",
 		{
 			description: "Get component metadata plus base64 screenshot in one call. For design-to-code workflows. Defaults to JPG@1x q70 (v1.8.0 context-safe).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeId: z.string(),
 				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1),
 				format: z.enum(["PNG", "JPG"]).optional().default(LEGACY_DEFAULTS ? "PNG" : "JPG"),
@@ -1444,8 +1467,8 @@ export async function main() {
 			},
 			annotations: { readOnlyHint: true },
 		},
-		safeToolHandler(async ({ nodeId, scale, format, jpegQuality }: { nodeId: string; scale: number; format: string; jpegQuality: number }) => {
-			const conn = getConnector(bridge);
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeId, scale, format, jpegQuality }: TargetFile & { nodeId: string; scale: number; format: string; jpegQuality: number }) => {
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 			const [component, screenshot] = await Promise.all([
 				conn.getComponentFromPluginUI(nodeId),
 				conn.captureScreenshot(nodeId, { scale, format, jpegQuality }),
@@ -1547,7 +1570,7 @@ export async function main() {
 		"figma_batch_create_variables",
 		{
 			description: "Create up to 100 variables in one call. Each item: collectionId, name, resolvedType (COLOR/FLOAT/STRING/BOOLEAN), value, modeId. Returns created and failed lists.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				items: z.array(
 					z.object({
 						collectionId: z.string(),
@@ -1561,9 +1584,9 @@ export async function main() {
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async ({ items }: { items: Array<{ collectionId: string; name: string; resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN"; value?: unknown; modeId?: string; valuesByMode?: Record<string, unknown> }> }) => {
+		safeToolHandler(async ({ figmaUrl, fileKey, items }: TargetFile & { items: Array<{ collectionId: string; name: string; resolvedType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN"; value?: unknown; modeId?: string; valuesByMode?: Record<string, unknown> }> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const result = await conn.batchCreateVariables(items);
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...result }) }] };
 		})
@@ -1573,7 +1596,7 @@ export async function main() {
 		"figma_batch_update_variables",
 		{
 			description: "Update up to 100 variables. Each item: variableId, modeId, value. Returns updated and failed lists.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				items: z.array(
 					z.object({
 						variableId: z.string(),
@@ -1584,9 +1607,9 @@ export async function main() {
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async ({ items }: { items: Array<{ variableId: string; modeId: string; value: unknown }> }) => {
+		safeToolHandler(async ({ figmaUrl, fileKey, items }: TargetFile & { items: Array<{ variableId: string; modeId: string; value: unknown }> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const result = await conn.batchUpdateVariables(items);
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...result }) }] };
 		})
@@ -1596,7 +1619,7 @@ export async function main() {
 		"figma_setup_design_tokens",
 		{
 			description: "Atomically create a variable collection + modes + variables. Rollback on any error. Params: collectionName, modes (array), tokens (array of { name, type?, value? or values? }).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				collectionName: z.string(),
 				modes: z.array(z.string()).min(1),
 				tokens: z.array(
@@ -1610,9 +1633,9 @@ export async function main() {
 			},
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async (p: { collectionName: string; modes: string[]; tokens: Array<{ name: string; type?: string; value?: unknown; values?: Record<string, unknown> }> }) => {
+		safeToolHandler(async (p: TargetFile & { collectionName: string; modes: string[]; tokens: Array<{ name: string; type?: string; value?: unknown; values?: Record<string, unknown> }> }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(p.figmaUrl, p.fileKey), { mutating: true });
 			const result = await conn.setupDesignTokens(p);
 			return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
 		})
@@ -1622,12 +1645,12 @@ export async function main() {
 		"figma_arrange_component_set",
 		{
 			description: "Combine multiple component nodes into one Figma component set (combineAsVariants). Params: nodeIds (array of at least 2 component node IDs). Returns new component set nodeId.",
-			inputSchema: { nodeIds: z.array(z.string()).min(2) },
+			inputSchema: { ...TARGET_FILE_SCHEMA, nodeIds: z.array(z.string()).min(2) },
 			annotations: { destructiveHint: true },
 		},
-		safeToolHandler(async ({ nodeIds }: { nodeIds: string[] }) => {
+		safeToolHandler(async ({ figmaUrl, fileKey, nodeIds }: TargetFile & { nodeIds: string[] }) => {
 			invalidateCache();
-			const conn = getConnector(bridge);
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const result = await conn.arrangeComponentSet(nodeIds);
 			return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, ...result }) }] };
 		})
@@ -1638,14 +1661,14 @@ export async function main() {
 		"figma_check_design_parity",
 		{
 			description: "Compare Figma design tokens (variables + styles) with code-side tokens. Critical for design-code gap analysis. Returns matching, inFigmaOnly, inCodeOnly, and divergent (same name, different value). Optional codeTokens: JSON string of expected tokens, e.g. {\"primary\": \"#0066cc\", \"spacing.md\": 16} or {\"primary\": {\"value\": \"#0066cc\"}}.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				codeTokens: z.string().optional(),
 			},
 			annotations: { readOnlyHint: true },
 		},
-		async ({ codeTokens }) => {
+		async ({ figmaUrl, fileKey, codeTokens }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 				const [varsPayload, stylesPayload] = await Promise.all([
 					conn.getVariablesFromPluginUI(),
 					conn.getLocalStyles("full"),
@@ -1943,7 +1966,7 @@ export async function main() {
 				"Create a new frame node with optional auto-layout. Returns the created node ID. " +
 				"v1.8.0: defaults to layoutMode='VERTICAL' with paddingTop/Bottom=16, paddingLeft/Right=16, itemSpacing=12, " +
 				"primaryAxisSizingMode='AUTO', counterAxisSizingMode='AUTO'. Pass layoutMode='NONE' for legacy free-form frames.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				name: z.string().optional().default("Frame").describe("Frame name"),
 				x: z.number().optional().describe("X position. If omitted, auto-positions to the right of existing content"),
 				y: z.number().optional().default(0),
@@ -1971,10 +1994,10 @@ export async function main() {
 				cornerRadius: z.number().optional().describe("Hardcoded corner radius in px. DEPRECATED — prefer cornerRadiusVariableKey."),
 			},
 		},
-		async ({ name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap, fillVariableKey, paddingVariableKey, itemSpacingVariableKey, cornerRadiusVariableKey, cornerRadius }) => {
+		async ({ figmaUrl, fileKey, name, x, y, width, height, fillColor, parentId, layoutMode, paddingTop, paddingBottom, paddingLeft, paddingRight, itemSpacing, primaryAxisSizingMode, counterAxisSizingMode, primaryAxisAlignItems, counterAxisAlignItems, layoutWrap, fillVariableKey, paddingVariableKey, itemSpacingVariableKey, cornerRadiusVariableKey, cornerRadius }) => {
 			try {
 				invalidateCache();
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				const autoPosition = x === undefined && !parentId;
 				const useAutoLayout = layoutMode !== "NONE";
 				const code = `
@@ -2068,7 +2091,7 @@ export async function main() {
 				"Create a new text node on the current page. Returns the created node ID. " +
 				"IMPORTANT: fontFamily defaults to 'Inter' — if using a design system with a custom font (e.g. 'YourBrandFont'), specify the DS font from active-ds.md. " +
 				"For DS text with proper token binding, prefer figma_execute with importStyleByKeyAsync + setTextStyleIdAsync instead.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				text: z.string().describe("Text content"),
 				x: z.number().optional().default(0),
 				y: z.number().optional().default(0),
@@ -2080,9 +2103,9 @@ export async function main() {
 				parentId: z.string().optional().describe("Parent node ID"),
 			},
 		},
-		async ({ text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId }) => {
+		async ({ figmaUrl, fileKey, text, x, y, name, fontSize, fontFamily, fontStyle, fillColor, parentId }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				invalidateCache();
 				const code = `
 					const node = figma.createText();
@@ -2107,7 +2130,7 @@ export async function main() {
 		"figma_create_rectangle",
 		{
 			description: "Create a new rectangle node on the current page.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				x: z.number().optional().default(0),
 				y: z.number().optional().default(0),
 				width: z.number().optional().default(100),
@@ -2118,9 +2141,9 @@ export async function main() {
 				parentId: z.string().optional(),
 			},
 		},
-		async ({ x, y, width, height, name, fillColor, cornerRadius, parentId }) => {
+		async ({ figmaUrl, fileKey, x, y, width, height, name, fillColor, cornerRadius, parentId }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				invalidateCache();
 				const code = `
 					const rect = figma.createRectangle();
@@ -2144,14 +2167,14 @@ export async function main() {
 		"figma_create_group",
 		{
 			description: "Group existing nodes into a new group. Provide node IDs to group.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeIds: z.array(z.string()).min(1).describe("Array of node IDs to group"),
 				name: z.string().optional().default("Group"),
 			},
 		},
-		async ({ nodeIds, name }) => {
+		async ({ figmaUrl, fileKey, nodeIds, name }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				invalidateCache();
 				const code = `
 					const nodes = [];
@@ -2182,7 +2205,7 @@ export async function main() {
 				"Supports batch export (up to 50 nodes). No REST API token needed — uses plugin exportAsync. " +
 				"SVG preserves vectors; PNG/JPG are rasterized at configurable scale. " +
 				"v1.8.0: default scale=1 for context safety (was 2). Override for high-DPI exports.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeIds: z.array(z.string()).min(1).max(50).describe("Node IDs to export (1-50)"),
 				format: z.enum(["PNG", "SVG", "JPG", "PDF"]).optional().default("PNG").describe("Export format"),
 				scale: z.number().min(0.5).max(4).optional().default(LEGACY_DEFAULTS ? 2 : 1).describe("Scale factor (0.5-4, default 1)"),
@@ -2190,9 +2213,9 @@ export async function main() {
 				svgIncludeId: z.boolean().optional().describe("SVG: include node IDs in attributes"),
 			},
 		},
-		async ({ nodeIds, format, scale, svgOutlineText, svgIncludeId }) => {
+		async ({ figmaUrl, fileKey, nodeIds, format, scale, svgOutlineText, svgIncludeId }) => {
 			try {
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
 				const result = await conn.batchExportNodes({
 					nodeIds,
 					format: format as "PNG" | "SVG" | "JPG" | "PDF",
@@ -2688,7 +2711,7 @@ export async function main() {
 			figmaUrl?: string; fileKey?: string; nodeId: string; variableKey: string; property: string; paintIndex: number;
 		}) => {
 			invalidateCache();
-			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const idx = paintIndex ?? 0;
 			const code = `
 				var variable = await figma.variables.importVariableByKeyAsync(${JSON.stringify(variableKey)});
@@ -2736,7 +2759,7 @@ export async function main() {
 			figmaUrl?: string; fileKey?: string; styleKey: string; nodeId?: string;
 		}) => {
 			invalidateCache();
-			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey));
+			const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 			const code = `
 				var style;
 				try {
@@ -2996,16 +3019,26 @@ export async function main() {
 				};
 			}
 
-			const url = endpoint.startsWith("http") ? endpoint : `https://api.figma.com${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+			// v1.10.0: token is only ever sent to https://api.figma.com
+			let url: string;
+			try {
+				url = resolveFigmaRestUrl(endpoint);
+			} catch (e) {
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) }) }],
+					isError: true,
+				};
+			}
 			const MAX_RETRIES = 3;
 			const BACKOFF_BASE_MS = 5000;
 			const MAX_TOTAL_MS = 45000;
 			const startTime = Date.now();
 
 			for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+				let timeout: ReturnType<typeof setTimeout> | undefined;
 				try {
 					const controller = new AbortController();
-					const timeout = setTimeout(() => controller.abort(), 30000);
+					timeout = setTimeout(() => controller.abort(), 30000);
 					const fetchOpts: RequestInit = {
 						method: method || "GET",
 						headers: {
@@ -3094,7 +3127,10 @@ export async function main() {
 
 					return { content: contentBlocks };
 				} catch (err) {
-					if (attempt < MAX_RETRIES && (Date.now() - startTime) < MAX_TOTAL_MS) {
+					if (timeout) clearTimeout(timeout);
+					// v1.10.0: never re-send POST/PUT/DELETE after a network error — the first
+					// request may have been applied (e.g. duplicate comments)
+					if (isRetryableMethod(method) && attempt < MAX_RETRIES && (Date.now() - startTime) < MAX_TOTAL_MS) {
 						const delayMs = BACKOFF_BASE_MS * Math.pow(2, attempt);
 						logger.warn({ attempt, err, endpoint }, "figma_rest_api: fetch error, retrying");
 						await new Promise((r) => setTimeout(r, delayMs));
@@ -3131,7 +3167,7 @@ export async function main() {
 				"Uses Figma Plugin API setReactionsAsync (reactions property is readonly in 2024+ API). " +
 				"v1 scope: SET_VARIABLE, SET_VARIABLE_MODE, UPDATE_MEDIA_RUNTIME, CONDITIONAL actions are NOT included (future release). " +
 				"Overlay background/close-on-outside are readonly in Plugin API — configure in Figma UI (Prototype tab -> Advanced -> Overlay).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				sourceNodeId: z.string().describe("Source node id (FRAME/INSTANCE/COMPONENT/GROUP etc.) that will receive the reaction."),
 				destinationNodeId: z.string().optional().describe("Destination FRAME id. Required for NAVIGATE/OVERLAY/SWAP/SCROLL_TO/CHANGE_TO; omitted for BACK/CLOSE/URL."),
 				trigger: z.enum(["ON_CLICK","ON_HOVER","ON_PRESS","ON_DRAG","AFTER_TIMEOUT","MOUSE_ENTER","MOUSE_LEAVE","MOUSE_UP","MOUSE_DOWN","ON_KEY_DOWN"]).optional().default("ON_CLICK"),
@@ -3151,7 +3187,7 @@ export async function main() {
 				replace: z.boolean().optional().default(false).describe("true: replace reactions array; false (default): append."),
 			},
 		},
-		async ({ sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, replace }) => {
+		async ({ figmaUrl, fileKey, sourceNodeId, destinationNodeId, trigger, timeout, mouseDelay, keyCodes, device, action, url, transitionType, direction, matchLayers, duration, easing, preserveScrollPosition, overlayRelativePosition, replace }) => {
 			try {
 				invalidateCache();
 				// TS-side param validation (fail fast, before hitting the plugin)
@@ -3162,7 +3198,7 @@ export async function main() {
 				if (directionalTypes.includes(transitionType) && !direction) {
 					throw new Error(`DIRECTION_REQUIRED: transitionType=${transitionType} için direction (LEFT/RIGHT/TOP/BOTTOM) gerekli`);
 				}
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				// Trigger extras (inject into the generated JS as an object literal fragment)
 				let triggerExtras = "";
 				if (trigger === "AFTER_TIMEOUT") {
@@ -3330,17 +3366,17 @@ export async function main() {
 				"Mark a FRAME as a prototype flow starting point (shown in Figma Prototype panel). " +
 				"Uses page.setFlowStartingPointsAsync if available (future API), falls back to direct assignment. " +
 				"Description is stored via pluginData (Figma FlowStartingPoint shape is { nodeId, name } only).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeId: z.string().describe("FRAME node id to mark as a starting point."),
 				name: z.string().describe("Flow name shown in Prototype panel (e.g. 'Login Akışı')."),
 				description: z.string().optional().default(""),
 				replace: z.boolean().optional().default(false).describe("true: replace entire array; false (default): append or update same nodeId."),
 			},
 		},
-		async ({ nodeId, name, description, replace }) => {
+		async ({ figmaUrl, fileKey, nodeId, name, description, replace }) => {
 			try {
 				invalidateCache();
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
@@ -3378,7 +3414,7 @@ export async function main() {
 				"Uses reactions API with navigation: CHANGE_TO. Target variant resolved by id or name within the same COMPONENT_SET. " +
 				"Uses getMainComponentAsync for deprecation-safe main component access. " +
 				"v1 supports INSTANT/DISSOLVE/SMART_ANIMATE transitions (DirectionalTransition not applicable to variants).",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeId: z.string().describe("INSTANCE or variant node id."),
 				trigger: z.enum(["ON_HOVER","ON_PRESS","MOUSE_ENTER","MOUSE_LEAVE","MOUSE_DOWN","MOUSE_UP","ON_CLICK"]).optional().default("ON_HOVER"),
 				targetVariantId: z.string().optional(),
@@ -3388,10 +3424,10 @@ export async function main() {
 				easing: z.enum(["EASE_IN","EASE_OUT","EASE_IN_AND_OUT","LINEAR","GENTLE","QUICK","BOUNCY","SLOW"]).optional().default("EASE_IN"),
 			},
 		},
-		async ({ nodeId, trigger, targetVariantId, targetVariantName, transitionType, duration, easing }) => {
+		async ({ figmaUrl, fileKey, nodeId, trigger, targetVariantId, targetVariantName, transitionType, duration, easing }) => {
 			try {
 				invalidateCache();
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
@@ -3445,19 +3481,19 @@ export async function main() {
 				"overflowDirection (FrameNode): NONE/HORIZONTAL/VERTICAL/BOTH — defines prototype scroll axis. " +
 				"scrollBehavior (SceneNode): SCROLLS/FIXED/STICKY_SCROLLS — FIXED = sticky header, STICKY_SCROLLS = becomes sticky after scrolling past. " +
 				"At least one of overflowDirection or scrollBehavior must be provided.",
-			inputSchema: {
+			inputSchema: { ...TARGET_FILE_SCHEMA,
 				nodeId: z.string().describe("Target node id (FRAME/COMPONENT/COMPONENT_SET/INSTANCE for overflowDirection; any SceneNode for scrollBehavior)."),
 				overflowDirection: z.enum(["NONE","HORIZONTAL","VERTICAL","BOTH"]).optional(),
 				scrollBehavior: z.enum(["SCROLLS","FIXED","STICKY_SCROLLS"]).optional(),
 			},
 		},
-		async ({ nodeId, overflowDirection, scrollBehavior }) => {
+		async ({ figmaUrl, fileKey, nodeId, overflowDirection, scrollBehavior }) => {
 			try {
 				if (!overflowDirection && !scrollBehavior) {
 					throw new Error("MISSING_PARAM: overflowDirection veya scrollBehavior'dan en az biri verilmeli");
 				}
 				invalidateCache();
-				const conn = getConnector(bridge);
+				const conn = getConnector(bridge, resolveFileKey(figmaUrl, fileKey), { mutating: true });
 				const code = `
 					const node = await figma.getNodeByIdAsync(${JSON.stringify(nodeId)});
 					if (!node) throw new Error("NODE_NOT_FOUND: " + ${JSON.stringify(nodeId)});
@@ -3523,16 +3559,25 @@ export async function main() {
 		}
 	);
 
-	const shutdown = () => {
-		logger.info("Shutting down plugin-only MCP server...");
-		closeAuditLog();
+	let shuttingDown = false;
+	const shutdown = async (reason: string) => {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		logger.info({ reason }, "Shutting down plugin-only MCP server...");
+		// v1.10.0: stop the bridge first (its pending-request rejections are audited), then flush the log
 		try { bridge.stop(); } catch { /* ignore */ }
+		await closeAuditLog();
 		process.exit(0);
 	};
-	process.on("SIGINT", shutdown);
-	process.on("SIGTERM", shutdown);
+	process.on("SIGINT", () => void shutdown("SIGINT"));
+	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+	// v1.10.0: when the MCP host goes away (stdin closed) exit instead of lingering as an
+	// orphan that keeps a bridge port busy
+	process.stdin.on("end", () => void shutdown("stdin end"));
+	process.stdin.on("close", () => void shutdown("stdin closed"));
 
 	const transport = new StdioServerTransport();
+	transport.onclose = () => void shutdown("transport closed");
 	await server.connect(transport);
 	const actualPort = bridge.getPort();
 	const autoInc = bridge.getPreferredPort() !== actualPort;

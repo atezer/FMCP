@@ -7,7 +7,7 @@
  * DO NOT EDIT MANUALLY. Run `npm run generate:embedded-skills` to regenerate.
  * This file is regenerated on prepublishOnly hook before npm publish.
  *
- * Total estimated tokens: 13954
+ * Total estimated tokens: 14118
  */
 
 export const EMBEDDED_SKILLS_SUMMARY = `<!-- fmcp-intent-router (3157 tokens) -->
@@ -944,7 +944,7 @@ for (const id of uniqueStyleIds) {
 
 ---
 
-<!-- fmcp-project-rules (1662 tokens) -->
+<!-- fmcp-project-rules (1826 tokens) -->
 ---
 name: fmcp-project-rules
 description: F-MCP Bridge kullanım kuralları — Design Token Kuralı, Bağlı Token Kuralı, kütüphane yönetimi, otomatik yanıt kuralları. Tüm F-MCP skill'leri için geçerli temel kurallar. Her Figma işleminde bu kurallar otomatik olarak geçerlidir.
@@ -996,6 +996,14 @@ Kullanıcı Türkçe konuşuyor. Tüm dosyalarda Türkçe karakterler (ş, ç, �
 **Gerekçe:** Kullanıcı hex/px görmemeli — token adı DS-agnostic, DS değiştiğinde soru otomatik doğru kalır. Hex sunmak "Option A vs B" gibi sahte alternatifler üretir ve kullanıcıyı DS dışına çıkarır.
 
 **Tek istisna:** Kullanıcı açıkça "hex değeri göster" isterse debug/troubleshooting bağlamında gösterilebilir, ama UI seçim option'ı olarak DEĞİL.
+
+---
+
+## Hedef Dosya Kuralı (v1.10.0+)
+
+Birden fazla Figma dosyası bağlıyken **yazma yapan her çağrıya** (\`figma_execute\` mutation, \`figma_create_frame\` / \`figma_create_text\` gibi oluşturma araçları, variable CRUD, prototip araçları) \`fileKey\` (veya \`figmaUrl\`) ver. Hedefsiz yazma \`TARGET_REQUIRED\` hatası döner; hata mesajındaki dosya listesinden doğru \`fileKey\`'i seçip tekrar çağır. Hangi dosya olduğu belirsizse kullanıcıya sor — kütüphane dosyalarına (DS, ikon, asset) yanlışlıkla yazma.
+
+\`EXECUTION_STATE_UNKNOWN\` veya \`TIMEOUT\` dönerse kodu körlemesine tekrar çalıştırma: önce ilgili node'ları okuyup değişikliğin uygulanıp uygulanmadığını doğrula.
 
 ---
 
@@ -1061,4 +1069,4 @@ Kayıtlı kütüphaneleri görmek için \`.claude/libraries/\` dizinini kontrol 
 - Yeni platform desteği (Flutter, React Native vb.) eklendiğinde platform seçimi kuralları genişletilmelidir.
 - Kullanıcı geri bildirimine göre otomatik yanıt kuralları güncellenmelidir.`;
 
-export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 13954;
+export const EMBEDDED_SKILLS_TOKEN_ESTIMATE = 14118;

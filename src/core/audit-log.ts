@@ -84,9 +84,21 @@ export function auditPlugin(path: string | undefined, event: "plugin_connect" | 
 /**
  * Flush and close the audit log stream. Call on graceful shutdown.
  */
-export function closeAuditLog(): void {
-	if (stream) {
-		try { stream.end(); } catch { /* ignore */ }
-		stream = null;
-	}
+export function closeAuditLog(): Promise<void> {
+	const s = stream;
+	stream = null;
+	if (!s) return Promise.resolve();
+	// v1.10.0: resolve only after buffered lines are flushed (callers exit right after)
+	return new Promise((resolve) => {
+		const done = setTimeout(resolve, 1000); // never block shutdown on a stuck disk
+		try {
+			s.end(() => {
+				clearTimeout(done);
+				resolve();
+			});
+		} catch {
+			clearTimeout(done);
+			resolve();
+		}
+	});
 }

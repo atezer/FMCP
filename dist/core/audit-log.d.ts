@@ -28,5 +28,5 @@ export declare function auditPlugin(path: string | undefined, event: "plugin_con
 /**
  * Flush and close the audit log stream. Call on graceful shutdown.
  */
-export declare function closeAuditLog(): void;
+export declare function closeAuditLog(): Promise<void>;
 //# sourceMappingURL=audit-log.d.ts.map
