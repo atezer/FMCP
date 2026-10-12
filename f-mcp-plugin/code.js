@@ -6,7 +6,7 @@
 
 // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
 // Keep in sync with package.json and src/core/version.ts.
-var FMCP_PLUGIN_VERSION = '1.10.1';
+var FMCP_PLUGIN_VERSION = '1.10.2';
 
 /**
  * v1.9.6: Post-execute scan — figma_execute sonrasında oluşturulan node'ları
@@ -77,7 +77,9 @@ async function postExecuteScan(result) {
         violations.push({ nodeId: n.id, nodeName: n.name, category: 'UNBOUND_TEXTSTYLE', sample: String(n.characters || '').slice(0, 30) });
       }
 
-      if (n.children) {
+      // v1.10.2: instance içine inilmez — iç node'ların binding'leri main component'ten
+      // gelir (yanlış pozitif ihlal + gereksiz tarama).
+      if (n.children && n.type !== 'INSTANCE') {
         for (var ci = 0; ci < n.children.length; ci++) stack.push(n.children[ci]);
       }
     }
@@ -94,6 +96,66 @@ async function postExecuteScan(result) {
       ? '❌ v1.9.6 post-execute scan: ' + violations.length + ' unbound node tespit edildi. Kodu duzelt — her node icin setBoundVariable/setTextStyleIdAsync cagrisi eksik.'
       : '✅ v1.9.6 post-execute scan: Tum node\'lar bound.',
   };
+}
+
+/**
+ * v1.10.2: Instance mainComponent'larını sınırlı paralellikle çözer.
+ * Tek tek `await getMainComponentAsync()` yerine CHUNK'lık Promise.all grupları;
+ * sınırsız Promise.all (binlerce eşzamanlı istek) yerine de sabit grup boyutu.
+ * onResult(inst, mc) sırayla çağrılır (mc çözülemezse null); shouldStop() true
+ * dönerse kalan gruplar çözülmez. Senkron `mainComponent` getter'ı dynamic-page'de
+ * throw ettiği için hiç kullanılmaz.
+ */
+async function resolveMainComponentsBatched(instances, onResult, shouldStop) {
+  var CHUNK = 50;
+  for (var start = 0; start < instances.length; start += CHUNK) {
+    if (shouldStop && shouldStop()) return;
+    var chunk = instances.slice(start, start + CHUNK);
+    var mcs = await Promise.all(chunk.map(function (inst) {
+      if (!inst || !inst.getMainComponentAsync) return Promise.resolve(null);
+      return inst.getMainComponentAsync().catch(function () { return null; });
+    }));
+    for (var i = 0; i < chunk.length; i++) {
+      if (shouldStop && shouldStop()) return;
+      onResult(chunk[i], mcs[i]);
+    }
+  }
+}
+
+function isRemoteMainComponent(mc) {
+  return !!(mc && (mc.remote || (mc.parent && mc.parent.remote)));
+}
+
+/**
+ * v1.10.2: items üzerinde en fazla `limit` eşzamanlı async iş çalıştırır; sonuç sırası korunur.
+ * (50 export'u aynı anda başlatmak bellek ve sandbox thread'ini zorluyordu.)
+ */
+async function mapWithConcurrency(items, limit, fn) {
+  var results = new Array(items.length);
+  var next = 0;
+  async function worker() {
+    while (next < items.length) {
+      var idx = next++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  var workers = [];
+  for (var w = 0; w < Math.min(limit, items.length); w++) workers.push(worker());
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * v1.10.2: Raster export'ta (PNG/JPG) uzun kenar maxDimension pikseli geçmesin diye
+ * scale'i düşürür. maxDimension <= 0 ise sınır yok. Vektör formatlara dokunmaz.
+ */
+var DEFAULT_EXPORT_MAX_DIMENSION = 4096;
+function clampExportScale(node, format, scale, maxDimension) {
+  var maxDim = maxDimension != null ? maxDimension : DEFAULT_EXPORT_MAX_DIMENSION;
+  if (!(maxDim > 0) || (format !== 'PNG' && format !== 'JPG')) return { scale: scale, clamped: false };
+  var longest = Math.max(node && typeof node.width === 'number' ? node.width : 0, node && typeof node.height === 'number' ? node.height : 0);
+  if (!(longest > 0) || longest * scale <= maxDim) return { scale: scale, clamped: false };
+  return { scale: Math.floor((maxDim / longest) * 1000) / 1000, clamped: true };
 }
 
 // v1.9.5: Metadata summary builder for returnMode='summary' (screenshotsuz)
@@ -1446,9 +1508,8 @@ figma.ui.onmessage = async (msg) => {
           await processNodeList(nodes);
         }
       } else {
-        console.log('🌉 [F-MCP ATezer Bridge] Loading all pages...');
-        await figma.loadAllPagesAsync();
-        console.log('🌉 [F-MCP ATezer Bridge] All pages loaded, searching for components...');
+        // v1.10.2: loadAllPagesAsync yerine sayfa sayfa yükleme — limit dolunca
+        // kalan sayfalar hiç yüklenmez.
         var pages = figma.root.children;
         for (var p = 0; p < pages.length && !hitLimit; p++) {
           var pg = pages[p];
@@ -1541,6 +1602,9 @@ figma.ui.onmessage = async (msg) => {
         var componentSets = [];
         var libraryComponents = [];  // v1.8.0+: discovered from existing instances
         var seenLibKeys = {};         // dedupe library component/set keys
+        // v1.10.2: büyük dosyalarda instance taraması sınırlı (tüm sayfalar toplamı)
+        var instanceScanBudget = 5000;
+        var instanceScanTruncated = false;
         var hitLimit = false;
 
         function extractComponentData(node, fromSet) {
@@ -1566,12 +1630,10 @@ figma.ui.onmessage = async (msg) => {
         // The Figma Plugin API does not expose a list-library-components endpoint,
         // so we walk existing instances in the file and collect their library keys.
         // This finds Ana-DS/DS components that have been used at least once in the file.
-        async function extractFromInstance(inst) {
+        // v1.10.2: mc, resolveMainComponentsBatched tarafından toplu çözülüp verilir.
+        function extractFromInstance(inst, mc) {
           if (libraryComponents.length >= limit) return;
           try {
-            // dynamic-page'de senkron mainComponent getter'ı THROW eder ve ||
-            // fallback'e hiç ulaşılamaz — önce async denenmeli.
-            var mc = inst.getMainComponentAsync ? await inst.getMainComponentAsync() : inst.mainComponent;
             if (!mc) return;
             var isSet = mc.parent && mc.parent.type === 'COMPONENT_SET';
             var node = isSet ? mc.parent : mc;
@@ -1626,10 +1688,17 @@ figma.ui.onmessage = async (msg) => {
 
         async function scanInstancesOnPage(page) {
           if (!page || !page.findAllWithCriteria) return;
+          if (libraryComponents.length >= limit) return;
+          if (instanceScanBudget <= 0) { instanceScanTruncated = true; return; }
           var instances = page.findAllWithCriteria({ types: ['INSTANCE'] }) || [];
-          for (var i = 0; i < instances.length && libraryComponents.length < limit; i++) {
-            await extractFromInstance(instances[i]);
+          if (instances.length > instanceScanBudget) {
+            instances = instances.slice(0, instanceScanBudget);
+            instanceScanTruncated = true;
           }
+          instanceScanBudget -= instances.length;
+          await resolveMainComponentsBatched(instances, extractFromInstance, function () {
+            return libraryComponents.length >= limit;
+          });
         }
 
         if (currentPageOnly) {
@@ -1642,7 +1711,7 @@ figma.ui.onmessage = async (msg) => {
             await scanInstancesOnPage(page);
           }
         } else {
-          await figma.loadAllPagesAsync();
+          // v1.10.2: sayfa sayfa yükleme (loadAllPagesAsync gereksizdi — her sayfa zaten loadAsync ediliyor)
           var pages = figma.root.children;
           for (var p = 0; p < pages.length && !hitLimit; p++) {
             var pg = pages[p];
@@ -1657,6 +1726,10 @@ figma.ui.onmessage = async (msg) => {
         out.componentSets = componentSets;
         out.libraryComponents = libraryComponents;  // v1.8.0+
         out.truncatedByLimit = hitLimit;
+        if (instanceScanTruncated) {
+          out.instanceScanTruncated = true;
+          out.notes.push('Instance scan capped at 5000 instances; some library components may be missing. Use currentPageOnly or figma_enumerate_library_components.');
+        }
         out.currentPageOnly = currentPageOnly;
         if (libraryComponents.length > 0) {
           out.notes.push('libraryComponents: discovered ' + libraryComponents.length + ' remote library component(s) via existing instance scan. Use these keys with figma_instantiate_component.');
@@ -2515,15 +2588,10 @@ figma.ui.onmessage = async (msg) => {
         try {
           var instances = clonedNode.findAllWithCriteria({ types: ['INSTANCE'] }) || [];
           instanceCount = instances.length;
-          for (var i = 0; i < instances.length; i++) {
-            var inst = instances[i];
-            try {
-              // async-first: dynamic-page'de senkron getter throw eder
-              var mc = inst.getMainComponentAsync ? await inst.getMainComponentAsync() : inst.mainComponent;
-              var remote = mc && (mc.remote || (mc.parent && mc.parent.remote));
-              if (remote) libraryInstanceCount++;
-            } catch (e) { /* skip */ }
-          }
+          // v1.10.2: instance başına sıralı await yerine toplu çözüm
+          await resolveMainComponentsBatched(instances, function (inst, mc) {
+            if (isRemoteMainComponent(mc)) libraryInstanceCount++;
+          });
         } catch (e) { /* skip */ }
       }
       // Walk the tree counting boundVariables (iterative, stack-safe)
@@ -2666,21 +2734,11 @@ figma.ui.onmessage = async (msg) => {
         metrics.totalNodes++;
 
         // Instance check — DEFER async resolve to Pass 2
+        // v1.10.2: senkron mainComponent getter'ı dynamic-page'de her instance'ta throw
+        // ediyordu; doğrudan Pass 2'ye bırakılır.
         if (node.type === 'INSTANCE') {
           metrics.instanceNodes++;
-          // Try sync mainComponent first (works in most cases, free)
-          try {
-            var syncMc = node.mainComponent;
-            if (syncMc) {
-              var syncIsRemote = syncMc.remote || (syncMc.parent && syncMc.parent.remote);
-              if (syncIsRemote) metrics.libraryInstanceNodes++;
-            } else {
-              // Defer to Pass 2 if sync access unavailable
-              instanceNodesList.push(node);
-            }
-          } catch (e) {
-            instanceNodesList.push(node);
-          }
+          instanceNodesList.push(node);
         }
 
         // Frame auto-layout check
@@ -2820,31 +2878,23 @@ figma.ui.onmessage = async (msg) => {
         }
 
         // Push children
-        if (node.children) {
+        // v1.10.2: instance içine inilmez — iç node'lar main component'e aittir;
+        // ekran metriğini şişirip yanlış HARDCODED_FILL ihlali üretiyordu.
+        // Doğrulanan kök node'un kendisi instance ise içi yine taranır.
+        if (node.children && (node.type !== 'INSTANCE' || node === rootNode)) {
           for (var ci = 0; ci < node.children.length; ci++) {
             walkStack.push(node.children[ci]);
           }
         }
       }
 
-      // v1.8.2 Pass 2: Batch-resolve deferred instance mainComponents via Promise.all
-      // This is ~10x faster than serial await in the walk loop above
-      if (instanceNodesList.length > 0 && typeof Promise.all === 'function') {
+      // v1.8.2 Pass 2: Batch-resolve deferred instance mainComponents
+      // v1.10.2: sınırsız Promise.all yerine 50'lik gruplar
+      if (instanceNodesList.length > 0) {
         try {
-          var mcPromises = instanceNodesList.map(function (inst) {
-            if (inst.getMainComponentAsync) {
-              return inst.getMainComponentAsync().catch(function () { return null; });
-            }
-            return Promise.resolve(null);
+          await resolveMainComponentsBatched(instanceNodesList, function (inst, mc) {
+            if (isRemoteMainComponent(mc)) metrics.libraryInstanceNodes++;
           });
-          var mcResults = await Promise.all(mcPromises);
-          for (var mi = 0; mi < mcResults.length; mi++) {
-            var mc = mcResults[mi];
-            if (mc) {
-              var isRemote = mc.remote || (mc.parent && mc.parent.remote);
-              if (isRemote) metrics.libraryInstanceNodes++;
-            }
-          }
         } catch (batchErr) {
           console.warn('🌉 [F-MCP] Pass 2 batch mainComponent resolve failed:', batchErr.message);
         }
@@ -3432,10 +3482,13 @@ figma.ui.onmessage = async (msg) => {
       var regionStrategy = msg.regionStrategy || 'children';
       var maxRegions = msg.maxRegions != null ? msg.maxRegions : 8;
 
-      function buildExportSettings() {
-        var s = { format: format, constraint: { type: 'SCALE', value: scale } };
+      var maxDimension = msg.maxDimension;
+      // v1.10.2: node bazında piksel sınırı (uzun kenar ≤ 4096 px)
+      function buildExportSettings(target) {
+        var eff = clampExportScale(target, format, scale, maxDimension);
+        var s = { format: format, constraint: { type: 'SCALE', value: eff.scale } };
         if (format === 'JPG') s.quality = jpegQuality;
-        return s;
+        return { settings: s, scale: eff.scale, clamped: eff.clamped };
       }
 
       // ---------- v1.9.5 MODE: summary ----------
@@ -3469,7 +3522,8 @@ figma.ui.onmessage = async (msg) => {
           var child = children[ri];
           if (!('exportAsync' in child)) continue;
           try {
-            var cbytes = await child.exportAsync(buildExportSettings());
+            var cexp = buildExportSettings(child);
+            var cbytes = await child.exportAsync(cexp.settings);
             var cbase64 = figma.base64Encode(cbytes);
             regions.push({
               name: child.name,
@@ -3478,7 +3532,8 @@ figma.ui.onmessage = async (msg) => {
               image: {
                 base64: cbase64,
                 format: format,
-                scale: scale,
+                scale: cexp.scale,
+                scaleClamped: cexp.clamped || undefined,
                 byteLength: cbytes.length,
                 width: child.width,
                 height: child.height,
@@ -3529,11 +3584,12 @@ figma.ui.onmessage = async (msg) => {
         throw new Error('Node type ' + node.type + ' does not support export');
       }
 
-      var bytes = await node.exportAsync(buildExportSettings());
+      var exp = buildExportSettings(node);
+      var bytes = await node.exportAsync(exp.settings);
       var base64 = figma.base64Encode(bytes);
       var bounds = ('absoluteBoundingBox' in node) ? node.absoluteBoundingBox : null;
 
-      console.log('🌉 [F-MCP ATezer Bridge v1.9.5] Screenshot captured:', bytes.length, 'bytes (' + format + ' @' + scale + 'x)');
+      console.log('🌉 [F-MCP ATezer Bridge v1.9.5] Screenshot captured:', bytes.length, 'bytes (' + format + ' @' + exp.scale + 'x)');
 
       figma.ui.postMessage({
         type: 'CAPTURE_SCREENSHOT_RESULT',
@@ -3543,7 +3599,9 @@ figma.ui.onmessage = async (msg) => {
         image: {
           base64: base64,
           format: format,
-          scale: scale,
+          scale: exp.scale,
+          scaleClamped: exp.clamped || undefined,
+          requestedScale: exp.clamped ? scale : undefined,
           jpegQuality: format === 'JPG' ? jpegQuality : null,
           byteLength: bytes.length,
           width: node.width,
@@ -3572,7 +3630,8 @@ figma.ui.onmessage = async (msg) => {
     try {
       var nodeIds = msg.nodeIds || [];
       var format = (msg.format || 'PNG').toUpperCase();
-      var scale = msg.scale || 2;
+      // v1.10.2: varsayılan scale sunucuyla aynı (1); önceden 2'ydi
+      var scale = msg.scale || 1;
       var maxNodes = 50;
 
       if (nodeIds.length === 0) {
@@ -3592,35 +3651,35 @@ figma.ui.onmessage = async (msg) => {
         };
       }
 
-      var exportPromises = nodeIds.map(function(nodeId) {
-        return (async function() {
-          try {
-            var node = await figma.getNodeByIdAsync(nodeId);
-            if (!node) return { nodeId: nodeId, error: 'Node not found' };
-            if (!('exportAsync' in node)) return { nodeId: nodeId, name: node.name, error: 'Node type ' + node.type + ' does not support export' };
+      // v1.10.2: en fazla 4 eşzamanlı export + raster piksel sınırı
+      var results = await mapWithConcurrency(nodeIds, 4, async function(nodeId) {
+        try {
+          var node = await figma.getNodeByIdAsync(nodeId);
+          if (!node) return { nodeId: nodeId, error: 'Node not found' };
+          if (!('exportAsync' in node)) return { nodeId: nodeId, name: node.name, error: 'Node type ' + node.type + ' does not support export' };
 
-            var settings = { format: format, constraint: { type: 'SCALE', value: scale } };
-            if (format === 'SVG') {
-              settings = Object.assign({}, settings, svgOptions);
-            }
-
-            var bytes = await node.exportAsync(settings);
-            var base64 = figma.base64Encode(bytes);
-
-            return {
-              nodeId: node.id,
-              name: node.name,
-              format: format,
-              base64: base64,
-              byteLength: bytes.length
-            };
-          } catch (e) {
-            return { nodeId: nodeId, error: e && e.message ? e.message : String(e) };
+          var eff = clampExportScale(node, format, scale, msg.maxDimension);
+          var settings = { format: format, constraint: { type: 'SCALE', value: eff.scale } };
+          if (format === 'SVG') {
+            settings = Object.assign({}, settings, svgOptions);
           }
-        })();
-      });
 
-      var results = await Promise.all(exportPromises);
+          var bytes = await node.exportAsync(settings);
+          var base64 = figma.base64Encode(bytes);
+
+          var entry = {
+            nodeId: node.id,
+            name: node.name,
+            format: format,
+            base64: base64,
+            byteLength: bytes.length
+          };
+          if (eff.clamped) { entry.scale = eff.scale; entry.scaleClamped = true; }
+          return entry;
+        } catch (e) {
+          return { nodeId: nodeId, error: e && e.message ? e.message : String(e) };
+        }
+      });
 
       figma.ui.postMessage({
         type: 'BATCH_EXPORT_NODES_RESULT',
@@ -3746,10 +3805,11 @@ figma.ui.onmessage = async (msg) => {
   // ============================================================================
   else if (msg.type === 'GET_DOCUMENT_STRUCTURE') {
     try {
-      await figma.loadAllPagesAsync();
-
       // v1.8.0: Use != null instead of || so depth=0 is preserved (|| would rewrite 0 to default).
       var depth = Math.min(Math.max(msg.depth != null ? msg.depth : 1, 0), 3);
+      // v1.10.2: Sayfa listesi dynamic-page'de yüklemesiz erişilebilir; depth<=1 sayfa
+      // çocuklarına dokunmaz. Tüm sayfaları yüklemek yalnızca daha derin ağaçta gerekli.
+      if (depth >= 2) await figma.loadAllPagesAsync();
       var verbosity = msg.verbosity || 'summary';
       var opts = {
         verbosity: verbosity,

@@ -63,9 +63,21 @@ export function truncateResponse(
 	data: unknown,
 	opts?: TruncateOptions,
 ): TruncateResult {
+	return truncateWithKnownSize(data, opts);
+}
+
+/**
+ * truncateResponse with an optional precomputed original size, so callers that
+ * already serialized the payload don't pay for another full JSON.stringify (v1.10.2).
+ */
+function truncateWithKnownSize(
+	data: unknown,
+	opts?: TruncateOptions,
+	knownOriginalSizeKB?: number,
+): TruncateResult {
 	const o = { ...DEFAULT_TRUNCATE_OPTIONS, ...opts };
-	const originalJson = JSON.stringify(data);
-	const originalSizeKB = originalJson.length / 1024;
+	const originalSizeKB =
+		knownOriginalSizeKB ?? JSON.stringify(data).length / 1024;
 
 	if (originalSizeKB <= o.maxKB) {
 		return {
@@ -339,12 +351,13 @@ interface PluginNode {
 function pruneNodeTree(node: PluginNode, stage: number): void {
 	if (!node || typeof node !== "object") return;
 	if (Array.isArray(node.children)) {
-		for (const c of node.children) pruneNodeTree(c, stage);
+		// Cap first, then recurse — no work spent on children that are dropped (v1.10.2)
 		if (stage >= 1 && node.children.length > 5) {
 			const removed = node.children.length - 5;
 			node.children = node.children.slice(0, 5);
 			(node as Record<string, unknown>)._childrenTruncated = removed;
 		}
+		for (const c of node.children) pruneNodeTree(c, stage);
 	}
 	if (stage >= 2) {
 		delete (node as Record<string, unknown>).effects;
@@ -385,7 +398,9 @@ export function truncatePluginResponse(
 	opts?: { maxKB?: number },
 ): TruncateResult {
 	const maxKB = opts?.maxKB ?? PLUGIN_SIZE_THRESHOLDS.WARNING_KB;
-	const originalSizeKB = calculateSizeKB(data);
+	// v1.10.2: serialize once — the same string gives the size and the deep clone
+	const originalJson = typeof data === "string" ? data : JSON.stringify(data);
+	const originalSizeKB = originalJson.length / 1024;
 	if (originalSizeKB <= maxKB) {
 		return {
 			data,
@@ -399,7 +414,7 @@ export function truncatePluginResponse(
 	// Deep clone so we don't mutate the caller's data
 	let clone: unknown;
 	try {
-		clone = JSON.parse(JSON.stringify(data));
+		clone = typeof data === "string" ? data : JSON.parse(originalJson);
 	} catch {
 		// Fallback to generic truncation if clone fails (circular refs, BigInt, etc.)
 		return truncateResponse(data, {
@@ -452,8 +467,13 @@ export function truncatePluginResponse(
 		}
 	}
 
-	// No node tree (or still too large): progressively tighter generic truncation
-	const generic = fitGeneric(clone, maxKB);
+	// No node tree (or still too large): progressively tighter generic truncation.
+	// Without a node tree the clone is unchanged, so its size is already known.
+	const generic = fitGeneric(
+		clone,
+		maxKB,
+		candidates.length === 0 ? originalSizeKB : undefined,
+	);
 	const strategy =
 		candidates.length > 0 ? "plugin-prune-fallback-generic" : "plugin-generic";
 	if (
@@ -482,16 +502,22 @@ function isNodeLike(v: unknown): boolean {
 }
 
 /** Generic truncation with progressively tighter limits until the payload fits maxKB. */
-function fitGeneric(data: unknown, maxKB: number): TruncateResult {
+function fitGeneric(
+	data: unknown,
+	maxKB: number,
+	knownSizeKB?: number,
+): TruncateResult {
 	const presets: TruncateOptions[] = [
 		{ maxArrayItems: 50, maxStringLength: 2000, maxObjectDepth: 8 },
 		{ maxArrayItems: 20, maxStringLength: 500, maxObjectDepth: 6 },
 		{ maxArrayItems: 10, maxStringLength: 200, maxObjectDepth: 4 },
 		{ maxArrayItems: 5, maxStringLength: 100, maxObjectDepth: 3 },
 	];
+	// The input never changes between presets: measure it at most once
+	const sizeKB = knownSizeKB ?? JSON.stringify(data).length / 1024;
 	let last: TruncateResult | undefined;
 	for (const p of presets) {
-		last = truncateResponse(data, { ...p, maxKB });
+		last = truncateWithKnownSize(data, { ...p, maxKB }, sizeKB);
 		if (last.truncatedSizeKB <= maxKB) return last;
 	}
 	return last as TruncateResult;

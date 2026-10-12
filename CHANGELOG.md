@@ -12,6 +12,38 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.10.2] — 2026-10-12 — Performans (Faz 2)
+
+### Changed — performans
+
+- **`figma_get_file_data` / `figma_get_design_context` (dosya kökü, depth ≤ 1) artık tüm sayfaları yüklemiyor.** Sayfa listesi yüklemesiz okunabiliyor; `figma.loadAllPagesAsync()` yalnızca depth ≥ 2'de çağrılıyor. Büyük dosyalarda en pahalı çağrıydı.
+- **Bileşen ve kütüphane taraması (`figma_search_components`, `figma_search_assets`) sayfa sayfa yüklüyor.** Önce tüm belge yükleniyordu; artık limit dolunca kalan sayfalar hiç yüklenmiyor.
+- **Instance çözümlemesi toplu yapılıyor.**
+  - `getMainComponentAsync` çağrıları instance başına sıralı `await` yerine 50'lik paralel gruplar halinde. Kapsam: kütüphane taraması, `figma_clone_screen_to_device` sayımları, `figma_validate_screen`.
+  - `figma_validate_screen`, dynamic-page'de her instance'ta hata fırlatan senkron `mainComponent` getter'ını artık kullanmıyor. Sınırsız `Promise.all` (5000'e kadar eşzamanlı istek) kaldırıldı.
+  - Kütüphane taramasında instance sayısı 5000 ile sınırlı; aşılırsa yanıtta `instanceScanTruncated: true` dönüyor.
+- **Görsel dışa aktarma.**
+  - `figma_export_nodes` en fazla 4 export'u aynı anda çalıştırıyor; önceden 50'sini birden başlatıyordu.
+  - PNG/JPG çıktısında uzun kenar 4096 px ile sınırlı: scale gerekirse düşürülüyor ve yanıtta `scaleClamped` ile gerçek `scale` bildiriliyor. SVG/PDF etkilenmiyor. `figma_capture_screenshot` için de geçerli.
+  - Plugin tarafında varsayılan scale sunucuyla aynı (1); önceden 2'ydi.
+- **Plugin otomatik bağlanma tüm portları tarıyor.** Önceden her başarısız port bekleme süresini ikiye katlıyordu; 30 sn tavanında liste başa sarıldığı için 5460–5470 portları hiç denenmiyordu. Artık tarama sırasında sonraki porta 150 ms içinde geçiliyor, bekleme yalnızca tam tur başarısız olunca artıyor.
+- **Yanıt önbelleği.**
+  - LRU: isabet alan kayıt atılmıyor.
+  - Toplam boyut bütçesi var (~8M karakter).
+  - Guard'dan geçmiş yanıtın son metni saklanıyor, böylece isabette yeniden serialize edilmiyor.
+  - Bir plugin bağlanınca veya kopunca eski kayıtlar kullanılmıyor (anahtarda istemci nesli var).
+- **Response guard büyük yanıtı tek sefer serialize ediyor.** Boyut ölçümü ve klon aynı string'den alınıyor, generic kırpma girdinin boyutunu bir kez ölçüyor, budama atılacak çocuklara inmiyor. 3–5 MB'lık yanıtlarda guard %28–40 daha hızlı; çıktı aynı.
+- **Sunucu başlangıcı** istemci adı tespiti için `ps` komutunu artık senkron çalıştırmıyor (`execSync` → `execFile`); event loop 5 sn'ye kadar bloklanmıyor.
+
+### Changed — davranış değişikliği
+
+- **`figma_validate_screen` ve figma_execute sonrası tarama instance'ların içine inmiyor.** İç node'lar main component'e ait; önceden ekranın metriklerini şişiriyor ve yanlış `HARDCODED_FILL` / `UNBOUND_*` ihlalleri üretiyordu. Doğrulanan kök node'un kendisi instance ise içi yine taranıyor. Kütüphane instance'ları ağırlıklı ekranlarda skorlar yükselebilir.
+
+### Tests
+
+- `tests/plugin/plugin-perf.test.ts`: `code.js` sahte bir `figma` nesnesiyle yüklenip handler'lar sürülüyor (sayfa yükleme, toplu çözümleme, export eşzamanlılığı, piksel sınırı, instance sınırı).
+- `tests/core/v1102-performance.test.ts`: LRU / boyut bütçesi, istemci nesli, guard çıktısının korunması.
+
 ## [1.10.1] — 2026-10-08 — Repo düzeni, CI kontrolleri, bağımlılık güvenliği
 
 ### Fixed

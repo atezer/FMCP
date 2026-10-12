@@ -18,7 +18,7 @@
 
 import { WebSocketServer, type WebSocket } from "ws";
 import { createServer, get as httpGet, request as httpRequest } from "http";
-import { execSync } from "child_process";
+import { execFile } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 import { FMCP_VERSION } from "./version.js";
@@ -133,15 +133,27 @@ export class PluginBridgeServer {
 		return "MCP";
 	}
 
-	/** Async detection via process tree walk — updates clientName in background. */
-	private detectClientNameAsync(): void {
+	/**
+	 * Async detection via process tree walk — updates clientName in background.
+	 * v1.10.2: execFile (non-blocking); was execSync, which blocked the event loop
+	 * for up to 5 × 1s during start().
+	 */
+	private async detectClientNameAsync(): Promise<void> {
 		if (this.clientName !== "MCP") return; // Already detected via env
+		if (process.platform === "win32") return; // no `ps`
+		const psLine = (pid: number) =>
+			new Promise<string>((resolve, reject) => {
+				execFile(
+					"ps",
+					["-p", String(pid), "-o", "ppid=,comm="],
+					{ timeout: 1000 },
+					(err, stdout) => (err ? reject(err) : resolve(String(stdout).trim())),
+				);
+			});
 		try {
 			let pid = process.ppid;
 			for (let i = 0; i < 5 && pid > 1; i++) {
-				const line = execSync(`ps -p ${pid} -o ppid=,comm=`, { timeout: 1000 })
-					.toString()
-					.trim();
+				const line = await psLine(pid);
 				const comm = line.replace(/^\s*\d+\s+/, "");
 				const ppidMatch = line.match(/^\s*(\d+)/);
 				if (/[Cc]ursor/i.test(comm)) {
@@ -176,6 +188,16 @@ export class PluginBridgeServer {
 	private relocateTimer: ReturnType<typeof setTimeout> | null = null;
 	/** When the connected-client count last changed (for /status idleSeconds). */
 	private lastClientChangeAt = Date.now();
+	/**
+	 * v1.10.2: Bumped whenever a plugin client registers (ready) or disconnects.
+	 * Response caches include it in their keys so a different default file or a
+	 * reconnected plugin never gets served stale data.
+	 */
+	private clientGeneration = 0;
+
+	getClientGeneration(): number {
+		return this.clientGeneration;
+	}
 
 	/** setTimeout tracked for cancellation by stop(). */
 	private later(fn: () => void, ms: number): void {
@@ -192,7 +214,7 @@ export class PluginBridgeServer {
 			return;
 		}
 		this.startError = null;
-		this.detectClientNameAsync();
+		void this.detectClientNameAsync();
 		this.tryListenWithAutoIncrement(this.preferredPort);
 	}
 
@@ -345,6 +367,7 @@ export class PluginBridgeServer {
 		if (!info) return;
 		this.clients.delete(clientId);
 		this.lastClientChangeAt = Date.now();
+		this.clientGeneration++;
 		this.rejectPendingForClient(clientId, reason);
 		auditPlugin(this.auditLogPath, "plugin_disconnect");
 		logger.info(
@@ -718,6 +741,7 @@ export class PluginBridgeServer {
 						clientInfo.fileName = incomingFileName;
 						clientInfo.pluginVersion = incomingPluginVersion;
 						handshakeDone = true;
+						this.clientGeneration++;
 						logger.info(
 							{
 								clientId,

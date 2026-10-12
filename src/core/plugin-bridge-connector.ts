@@ -283,6 +283,9 @@ export class PluginBridgeConnector {
 			format?: string;
 			base64?: string;
 			byteLength?: number;
+			/** Present only when the plugin lowered the scale to fit the pixel cap. */
+			scale?: number;
+			scaleClamped?: boolean;
 			error?: string;
 		}>;
 	}> {

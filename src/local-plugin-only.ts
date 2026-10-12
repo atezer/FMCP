@@ -427,6 +427,8 @@ export async function main() {
 	/**
 	 * Build a stable cache key from tool name + params. Sort keys for determinism.
 	 * fileKey is included to avoid cross-file leakage in multi-file sessions.
+	 * v1.10.2: the bridge's client generation is part of the key, so a plugin
+	 * connecting/disconnecting (e.g. a different default file) never hits old entries.
 	 */
 	function makeCacheKey(
 		toolName: string,
@@ -435,7 +437,17 @@ export async function main() {
 		const sortedEntries = Object.entries(params)
 			.filter(([_, v]) => v !== undefined)
 			.sort(([a], [b]) => a.localeCompare(b));
-		return `${toolName}::${JSON.stringify(sortedEntries)}`;
+		return `${toolName}::g${bridge.getClientGeneration()}::${JSON.stringify(sortedEntries)}`;
+	}
+
+	/** Guard + serialize once; the text is what gets cached and returned (v1.10.2). */
+	function guardedText(
+		data: unknown,
+		toolName: string,
+		debug?: boolean,
+	): string {
+		const guarded = guardPluginPayload(data, toolName, debug);
+		return typeof guarded === "string" ? guarded : JSON.stringify(guarded);
 	}
 
 	/**
@@ -598,10 +610,10 @@ export async function main() {
 				const data = await conn.getDocumentStructure(depth, verbosity, opts);
 				if (data === undefined || data === null)
 					return toolResult(data, "figma_get_file_data");
-				const guarded = guardPluginPayload(data, "figma_get_file_data", debug);
-				if (!debug) cache.set(cacheK, guarded);
+				const text = guardedText(data, "figma_get_file_data", debug);
+				if (!debug) cache.set(cacheK, text);
 
-				return toolResult(guarded, "figma_get_file_data", { skipGuard: true });
+				return toolResult(text, "figma_get_file_data", { skipGuard: true });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				return {
@@ -734,14 +746,10 @@ export async function main() {
 					: await conn.getDocumentStructure(depth, verbosity, opts);
 				if (data === undefined || data === null)
 					return toolResult(data, "figma_get_design_context");
-				const guarded = guardPluginPayload(
-					data,
-					"figma_get_design_context",
-					debug,
-				);
-				if (!debug) cache.set(cacheK, guarded);
+				const text = guardedText(data, "figma_get_design_context", debug);
+				if (!debug) cache.set(cacheK, text);
 
-				return toolResult(guarded, "figma_get_design_context", {
+				return toolResult(text, "figma_get_design_context", {
 					skipGuard: true,
 				});
 			} catch (err) {
@@ -3766,6 +3774,7 @@ export async function main() {
 							name: r.name,
 							format: r.format,
 							byteLength: r.byteLength,
+							...(r.scaleClamped && { scale: r.scale, scaleClamped: true }),
 							...(r.base64 && { base64: r.base64 }),
 							...(r.error && { error: r.error }),
 						})),

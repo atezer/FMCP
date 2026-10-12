@@ -84,7 +84,11 @@ export declare class PluginBridgeServer {
     });
     /** Detect AI client name from env vars (instant, no I/O). */
     private detectClientNameSync;
-    /** Async detection via process tree walk — updates clientName in background. */
+    /**
+     * Async detection via process tree walk — updates clientName in background.
+     * v1.10.2: execFile (non-blocking); was execSync, which blocked the event loop
+     * for up to 5 × 1s during start().
+     */
     private detectClientNameAsync;
     private port;
     /** Last error message when bridge could not bind (port conflict, etc.) */
@@ -98,6 +102,13 @@ export declare class PluginBridgeServer {
     private relocateTimer;
     /** When the connected-client count last changed (for /status idleSeconds). */
     private lastClientChangeAt;
+    /**
+     * v1.10.2: Bumped whenever a plugin client registers (ready) or disconnects.
+     * Response caches include it in their keys so a different default file or a
+     * reconnected plugin never gets served stale data.
+     */
+    private clientGeneration;
+    getClientGeneration(): number;
     /** setTimeout tracked for cancellation by stop(). */
     private later;
     start(): void;

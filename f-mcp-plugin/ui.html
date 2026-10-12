@@ -423,7 +423,7 @@
     window.__figmaFileName = null;
     // v1.8.0+: Plugin version reported in WebSocket "ready" handshake.
     // Keep in sync with package.json, src/core/version.ts, f-mcp-plugin/code.js.
-    var FMCP_PLUGIN_VERSION = '1.10.1';
+    var FMCP_PLUGIN_VERSION = '1.10.2';
 
     // v1.9.2+ Startup log — Figma plugin iframe'de yeni kod yüklendiğini doğrulamak için.
     // Console'da bu log görünüyorsa plugin güncel. Görünmüyorsa iframe eski kopyayı tutuyor
@@ -805,7 +805,7 @@
       return window.sendPluginCommand('BATCH_EXPORT_NODES', {
         nodeIds: nodeIds,
         format: format || 'PNG',
-        scale: scale || 2,
+        scale: scale || 1,
         svgOutlineText: svgOutlineText,
         svgIncludeId: svgIncludeId,
         svgSimplifyStroke: svgSimplifyStroke
@@ -1467,20 +1467,22 @@
     var mcpHandshakeDone = false;
     var mcpKeepAliveTimer = null;
 
-    function scheduleReconnect() {
+    // v1.10.2: Tarama sırasında bir sonraki porta hemen geçilir (backoff yok).
+    // Eskiden her başarısız port backoff'u ikiye katlıyordu; 30 sn tavanında liste
+    // başa sarıldığı için 5460–5470 portları hiç denenmiyordu.
+    var MCP_PORT_PROBE_DELAY = 150;
+
+    /** delayOverride verilirse backoff büyütülmeden o gecikmeyle yeniden dener. */
+    function scheduleReconnect(delayOverride) {
       if (mcpBridgeReconnectTimer) clearTimeout(mcpBridgeReconnectTimer);
-      // Backoff tavana ulaştıysa bağlantı bir süredir kurulamıyor demektir —
-      // welcome sonrası tek porta daraltılan listeyi tam tarama listesine
-      // genişlet ki sunucu farklı bir portta yeniden açıldıysa bulunabilsin.
-      if (!manualPortLocked && mcpReconnectDelay >= MCP_RECONNECT_MAX) {
-        candidatePorts = listCandidatePorts();
-        candidatePortIndex = 0;
-      }
+      var delay = delayOverride != null ? delayOverride : mcpReconnectDelay;
       mcpBridgeReconnectTimer = setTimeout(function() {
         mcpBridgeReconnectTimer = null;
         connectMcpBridge();
-      }, mcpReconnectDelay);
-      mcpReconnectDelay = Math.min(mcpReconnectDelay * 2, MCP_RECONNECT_MAX);
+      }, delay);
+      if (delayOverride == null) {
+        mcpReconnectDelay = Math.min(mcpReconnectDelay * 2, MCP_RECONNECT_MAX);
+      }
     }
 
     function startKeepAlive(ws) {
@@ -1836,10 +1838,17 @@
           if (autoPortProbeActive && candidatePortIndex < candidatePorts.length - 1) {
             candidatePortIndex += 1;
             updateStatus('auto-connect :' + candidatePorts[candidatePortIndex], false, false);
+            scheduleReconnect(MCP_PORT_PROBE_DELAY);
           } else {
             updateStatus('no server', false, true);
+            // Tam tur başarısız (ya da welcome sonrası tek porta daraltılmış liste koptu):
+            // listeyi yeniden kur — sunucu farklı portta açılmış olabilir — ve backoff ile bekle.
+            if (!manualPortLocked) {
+              candidatePorts = listCandidatePorts();
+              candidatePortIndex = 0;
+            }
+            scheduleReconnect();
           }
-          scheduleReconnect();
         };
         mcpBridgeWs.onerror = function() {
           mcpConnecting = false;
