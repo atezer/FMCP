@@ -13,7 +13,7 @@
 | K1 | `figma_execute` — `eval` sınırı (tip, ~50KB) | `f-mcp-plugin/code.js` (~415) |
 | K2 | Bridge katmanı — `code` uzunluk: Zod `.max(51200)` + Python `len` | `src/local-plugin-only.ts`, `src/local.ts`, `python-bridge/fmcp_bridge/__main__.py` |
 | K3 | `nodeId` template injection | `src/core/figma-desktop-connector.ts` — `JSON.stringify(nodeId)` |
-| K4 | WebSocket — OPT-IN `FIGMA_BRIDGE_SECRET` + `verifyClient` | `src/core/plugin-bridge-server.ts` |
+| K4 | WebSocket — Origin denetimi (v1.10.0; kaçış `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1`) + eşleştirme kodu (v1.11.0, **varsayılan açık**; geçiş anahtarı `FMCP_PAIRING=off`) — **uygulandı** | `src/core/pairing.ts`, `src/core/plugin-bridge-server.ts`, `python-bridge/fmcp_bridge/pairing.py`, `f-mcp-plugin/ui.html` |
 
 ## Yüksek
 
@@ -40,12 +40,22 @@
 
 | ID | Konu | Konum özeti |
 |----|------|-------------|
-| D1 | CORS `*` bilinçli kullanım | `plugin-bridge-server.ts` |
+| D1 | CORS `*` — **kaldırıldı** (`/status` ve işaret yanıtı; plugin bu uçları hiç okumuyordu, yalnızca web sayfalarına durum okutuyordu) | `plugin-bridge-server.ts` |
 | D2 | `wrangler.jsonc` — id’lerin repo sızdırması riski (gizli tut / örnek şablon) | `wrangler.jsonc` |
 | D3 | TMPDIR / geçici yol | `config.ts` |
 | D4 | Debug host/port SSRF sınırı | `src/browser/local.ts` |
 
 ---
+
+### K4 kararı: neden OPT-IN değil de varsayılan açık?
+
+İlk plan (`docs/archived/WEBSOCKET-AUTH-K4-ANALYSIS.md`) sırrı isteğe bağlı tutuyordu: tanımlanmazsa her şey eskisi gibi. Ama saldırı — kullanıcının tarayıcısında açık bir web sayfasının `ws://localhost:5454`'e bağlanması — **herkese** açıktı; isteğe bağlı bir sır, onu bilerek açmayan kimseyi korumaz. Uygulanan hâl:
+
+- Kod ilk çalıştırmada `~/.config/fmcp/pairing` dosyasında üretilir (0600, dizin 0700; `FMCP_PAIRING_FILE` ile taşınabilir); aynı makinedeki tüm Node/Python bridge'leri aynı dosyayı okur. Kullanıcı kodu plugin'e **bir kez** girer (`figma.clientStorage`).
+- Kod URL'de değil, `ready` el sıkışmasında gider (URL'ler loglara düşer). Eşleşmeyen bağlantı istemci sayılmaz: istek almaz, token ayarlayamaz, başka istemcinin yanıtını veremez; 10 sn içinde eşleşmezse kapatılır.
+- `/shutdown` yalnızca `X-FMCP-Pairing` başlığıyla ve `Origin` taşımayan isteklerde çalışır (tarayıcıdan gelen her POST Origin taşır).
+- İki katman, iki bağımsız anahtar: Origin denetimi sıradan web sayfalarını upgrade'de keser, ama bir sayfa sandbox'lı bir iframe'den `Origin: null` gönderebilir; asıl doğrulama eşleştirme kodudur. `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1` yalnız Origin denetimini, `FMCP_PAIRING=off` yalnız eşleştirmeyi kapatır; biri açıkken bridge her başlangıçta uyarır, ikisi birden açıksa köprünün her web sayfasına açık olduğunu söyler.
+- Kırılma yalnızca **eski plugin + yeni bridge** birleşiminde olur; **yeni plugin + eski bridge** çalışır (eski bridge alanı yok sayar). Geçiş için `FMCP_PAIRING=off` vardır ve bridge her başlangıçta uyarır. OPT-IN'e dönmek istenirse değişecek tek yer `pairingRequired()` varsayılanıdır.
 
 ## Uygulama sırası (özet)
 

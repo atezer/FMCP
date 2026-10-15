@@ -11,6 +11,19 @@ def _log(msg: str) -> None:
 
 
 def main() -> None:
+    from .pairing import PairingFileError, load_or_create_pairing_secret
+
+    try:
+        secret = load_or_create_pairing_secret()
+    except PairingFileError as err:
+        _log(str(err))
+        sys.exit(1)
+
+    # `--print-pairing`: print the plugin pairing code (created on first use) and exit; nothing else starts.
+    if "--print-pairing" in sys.argv[1:]:
+        print(secret)
+        return
+
     from .bridge import BridgeClient, get_host, get_port, run_websocket_server
 
     host = get_host()
@@ -19,7 +32,7 @@ def main() -> None:
 
     def run_ws() -> None:
         import asyncio
-        asyncio.run(run_websocket_server(port, bridge, host))
+        asyncio.run(run_websocket_server(port, bridge, host, secret))
 
     ws_thread = threading.Thread(target=run_ws, daemon=True)
     ws_thread.start()
@@ -39,6 +52,7 @@ def main() -> None:
         if not bridge.is_connected():
             raise RuntimeError(
                 "F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'ready'."
+                + bridge.pairing_hint()
             )
         return bridge.request(method, params or {})
 
@@ -48,7 +62,7 @@ def main() -> None:
         """Check if the Figma plugin is connected. Returns status."""
         if bridge.is_connected():
             return "Plugin connected (ready)."
-        return "Plugin not connected. Open Figma, run F-MCP ATezer Bridge plugin, ensure it shows 'ready'."
+        return "Plugin not connected. Open Figma, run F-MCP ATezer Bridge plugin, ensure it shows 'ready'." + bridge.pairing_hint()
 
     @mcp.tool()
     def figma_get_variables() -> str:

@@ -22,6 +22,11 @@ import { execSync } from "child_process";
 import { logger } from "./logger.js";
 import { auditTool, auditPlugin } from "./audit-log.js";
 import { FMCP_VERSION } from "./version.js";
+import {
+	loadOrCreatePairingSecret,
+	pairingMatches,
+	pairingRequired,
+} from "./pairing.js";
 
 const HEARTBEAT_INTERVAL_MS = 3000;
 const MIN_PORT = 5454;
@@ -32,6 +37,31 @@ const SHUTDOWN_TAKEOVER_DELAY_MS = 2000;
 const FRESH_BRIDGE_UPTIME_THRESHOLD_S = 30;
 /** Explicit WebSocket payload cap (ws default is 100 MiB; batch PNG exports can be large). */
 const MAX_WS_PAYLOAD_BYTES = 100 * 1024 * 1024;
+/** A connection must send a "ready" handshake with the pairing secret within this time or it is closed. */
+const PAIRING_TIMEOUT_MS = 10_000;
+/**
+ * What an unpaired plugin is told. Static on purpose: the connection is not trusted yet, so it is not
+ * told the real file path (which carries the user name). python-bridge/fmcp_bridge/pairing.py mirrors these.
+ */
+const PAIRING_REQUIRED_MESSAGE =
+	"Pairing code required. Copy it from ~/.config/fmcp/pairing (or run `npx -y @atezer/figma-mcp-bridge@latest --print-pairing`) and paste it into the plugin: Advanced → Pairing code.";
+const PAIRING_MISMATCH_MESSAGE =
+	"Pairing code does not match this bridge. Copy the current code from ~/.config/fmcp/pairing (or run `npx -y @atezer/figma-mcp-bridge@latest --print-pairing`) and paste it into the plugin again.";
+/** How long a refused handshake is remembered, so "plugin not connected" can say why. */
+const PAIRING_REFUSAL_MEMORY_MS = 10 * 60_000;
+
+export type PairingRefusalCode = "pairing-required" | "pairing-mismatch";
+
+export interface PairingStatus {
+	/** False only under FMCP_PAIRING=off. */
+	required: boolean;
+	/** The last refused handshake within the last 10 minutes, if no plugin has paired since. */
+	lastRefusal: {
+		code: PairingRefusalCode;
+		secondsAgo: number;
+		pluginVersion: string | null;
+	} | null;
+}
 
 /**
  * v1.10.0: Which WebSocket/HTTP origins may talk to the bridge.
@@ -40,6 +70,10 @@ const MAX_WS_PAYLOAD_BYTES = 100 * 1024 * 1024;
  * - https://*.figma.com: in case Figma ever serves plugin UIs from its own origin
  * Any other browser origin (a regular web page) is rejected, unless
  * FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1 is set as an escape hatch.
+ *
+ * This is the first line only: a web page can also send "null" (from a sandboxed iframe or a
+ * data: URL). What authenticates the plugin is the pairing code in its "ready" handshake
+ * (src/core/pairing.ts); FMCP_BRIDGE_ALLOW_ANY_ORIGIN does not relax that.
  */
 export function isAllowedOrigin(origin: string | undefined): boolean {
 	if (process.env.FMCP_BRIDGE_ALLOW_ANY_ORIGIN === "1") return true;
@@ -116,11 +150,41 @@ export class PluginBridgeServer {
 	/** User/config preferred port (before clamp and fallback). */
 	private readonly preferredPort: number;
 
-	constructor(port: number, options?: { auditLogPath?: string }) {
+	/**
+	 * Pairing secret (src/core/pairing.ts). A plugin must present it in its "ready" handshake before it
+	 * is registered, receives a request or may set the REST token; /shutdown requires it too. Never logged.
+	 */
+	private readonly pairingSecret: string;
+
+	/** False only under FMCP_PAIRING=off (pairing.ts): plugins are then accepted without the code, as before pairing. */
+	private readonly requirePairing: boolean;
+
+	/** The last handshake refused for pairing (cleared when a plugin pairs). Feeds pairingStatus()/pairingHint(). */
+	private lastPairingRefusal: {
+		code: PairingRefusalCode;
+		at: number;
+		pluginVersion: string | null;
+	} | null = null;
+
+	/** How long a connection may stay unpaired before it is closed (PAIRING_TIMEOUT_MS; shorter in tests). */
+	private readonly pairingTimeoutMs: number;
+
+	constructor(
+		port: number,
+		options?: {
+			auditLogPath?: string;
+			pairingSecret?: string;
+			requirePairing?: boolean;
+			pairingTimeoutMs?: number;
+		},
+	) {
 		const clamped = Math.max(MIN_PORT, Math.min(MAX_PORT, port));
 		this.preferredPort = clamped;
 		this.port = clamped;
 		this.auditLogPath = options?.auditLogPath;
+		this.pairingSecret = options?.pairingSecret ?? loadOrCreatePairingSecret();
+		this.requirePairing = options?.requirePairing ?? pairingRequired();
+		this.pairingTimeoutMs = options?.pairingTimeoutMs ?? PAIRING_TIMEOUT_MS;
 		this.clientName = this.detectClientNameSync();
 	}
 
@@ -496,6 +560,9 @@ export class PluginBridgeServer {
 				path: "/shutdown",
 				method: "POST",
 				timeout: 3000,
+				// Same machine, same pairing file: a paired bridge accepts the request only with this
+				// header. A bridge older than pairing ignores it and decides as before.
+				headers: { "X-FMCP-Pairing": this.pairingSecret },
 			},
 			(res) => {
 				let body = "";
@@ -540,7 +607,11 @@ export class PluginBridgeServer {
 	// HTTP server factory (used by tryListenWithAutoIncrement)
 	// ──────────────────────────────────────────────────────────────────────
 
-	/** Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints. */
+	/**
+	 * Create an HTTP server with /shutdown, /status, and default F-MCP marker endpoints.
+	 * None of them sends CORS headers. /shutdown needs the pairing secret (X-FMCP-Pairing) and refuses
+	 * any request that carries an Origin.
+	 */
 	private createBridgeHttpServer(): ReturnType<typeof createServer> {
 		return createServer((req, res) => {
 			// Graceful shutdown endpoint: a new bridge instance requests this old one to exit.
@@ -555,6 +626,17 @@ export class PluginBridgeServer {
 						{ origin: req.headers.origin },
 						"Rejected /shutdown from a browser origin",
 					);
+					res.writeHead(403, { "Content-Type": "text/plain" });
+					res.end("forbidden\n");
+					return;
+				}
+				// v1.11.0: only another bridge on this machine (it reads the same pairing file) may stop
+				// this one — not any local process that can reach the port. Required even under
+				// FMCP_PAIRING=off, which only concerns the plugin handshake.
+				if (
+					!pairingMatches(this.pairingSecret, req.headers["x-fmcp-pairing"])
+				) {
+					logger.warn("Rejected /shutdown without a valid pairing header");
 					res.writeHead(403, { "Content-Type": "text/plain" });
 					res.end("forbidden\n");
 					return;
@@ -657,7 +739,6 @@ export class PluginBridgeServer {
 
 		this.wss.on("connection", (ws: WebSocket) => {
 			const clientId = this.generateClientId();
-			this.lastClientChangeAt = Date.now();
 			const clientInfo: ClientInfo = {
 				ws,
 				clientId,
@@ -668,13 +749,37 @@ export class PluginBridgeServer {
 				missedHeartbeats: 0,
 				connectedAt: Date.now(),
 			};
-			this.clients.set(clientId, clientInfo);
 			let handshakeDone = false;
-			logger.info(
-				{ port: this.port, clientId, totalClients: this.clients.size },
-				"Plugin bridge: new plugin connected",
-			);
-			auditPlugin(this.auditLogPath, "plugin_connect");
+			// v1.11.0: a connection is NOT a client until its "ready" handshake carries the pairing
+			// secret. Until then it is not registered, so it is never picked for a request, cannot
+			// replace a paired plugin for the same file, cannot set or clear the REST token and does
+			// not count in /status. A connection that does not pair in time is closed.
+			// Under FMCP_PAIRING=off every connection is a client from the start, as in v1.10.
+			const register = (how: string) => {
+				this.clients.set(clientId, clientInfo);
+				this.lastClientChangeAt = Date.now();
+				logger.info(
+					{ port: this.port, clientId, totalClients: this.clients.size },
+					`Plugin bridge: new plugin connected (${how})`,
+				);
+				auditPlugin(this.auditLogPath, "plugin_connect");
+			};
+			let paired = !this.requirePairing;
+			if (paired) register("pairing off");
+			const pairingTimer = paired
+				? undefined
+				: setTimeout(() => {
+						if (paired) return;
+						logger.warn(
+							{ clientId },
+							"Plugin bridge: closed a connection that did not pair in time",
+						);
+						try {
+							ws.close(4401, "pairing-required");
+						} catch {
+							/* ignore */
+						}
+					}, this.pairingTimeoutMs);
 
 			ws.on("message", (data: Buffer | string) => {
 				clientInfo.alive = true;
@@ -684,7 +789,56 @@ export class PluginBridgeServer {
 						fileKey?: string;
 						fileName?: string;
 						pluginVersion?: string;
+						pairing?: unknown;
 					};
+
+					if (!paired) {
+						// Nothing but the handshake is accepted from an unpaired connection.
+						if (msg.type !== "ready") return;
+						if (!pairingMatches(this.pairingSecret, msg.pairing)) {
+							const code: PairingRefusalCode = msg.pairing
+								? "pairing-mismatch"
+								: "pairing-required";
+							this.lastPairingRefusal = {
+								code,
+								at: Date.now(),
+								pluginVersion:
+									typeof msg.pluginVersion === "string"
+										? msg.pluginVersion
+										: null,
+							};
+							logger.warn(
+								{ clientId, code, pluginVersion: msg.pluginVersion ?? null },
+								"Plugin bridge: refused a plugin without a valid pairing code",
+							);
+							clearTimeout(pairingTimer);
+							try {
+								ws.send(
+									JSON.stringify({
+										type: "error",
+										code,
+										message:
+											code === "pairing-required"
+												? PAIRING_REQUIRED_MESSAGE
+												: PAIRING_MISMATCH_MESSAGE,
+									}),
+								);
+							} catch {
+								/* ignore */
+							}
+							try {
+								ws.close(4401, code);
+							} catch {
+								/* ignore */
+							}
+							return;
+						}
+						paired = true;
+						clearTimeout(pairingTimer);
+						this.lastPairingRefusal = null;
+						register("paired");
+						// Falls through to the regular "ready" handling below.
+					}
 
 					if (msg.type === "ready") {
 						const incomingFileKey = msg.fileKey || null;
@@ -832,6 +986,7 @@ export class PluginBridgeServer {
 			});
 
 			ws.on("close", () => {
+				clearTimeout(pairingTimer);
 				this.removeClient(clientId, "WebSocket closed");
 			});
 
@@ -1132,11 +1287,13 @@ export class PluginBridgeServer {
 						: "";
 				throw new Error(
 					`No plugin connected for fileKey "${fileKey}".${fileList} ` +
-						"Open the target file in Figma and run the F-MCP ATezer Bridge plugin.",
+						"Open the target file in Figma and run the F-MCP ATezer Bridge plugin." +
+						this.pairingHint(),
 				);
 			}
 			throw new Error(
-				"F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'Bridge active' (no debug port needed).",
+				"F-MCP ATezer Bridge plugin not connected. Open Figma, run the F-MCP ATezer Bridge plugin, and ensure it shows 'Bridge active' (no debug port needed)." +
+					this.pairingHint(),
 			);
 		}
 
@@ -1200,6 +1357,42 @@ export class PluginBridgeServer {
 			if (client.ws.readyState === 1) return true;
 		}
 		return false;
+	}
+
+	/** Pairing state for status tools: whether pairing is required and the last refused handshake (if recent). */
+	pairingStatus(): PairingStatus {
+		const refusal = this.lastPairingRefusal;
+		const age = refusal ? Date.now() - refusal.at : Number.POSITIVE_INFINITY;
+		return {
+			required: this.requirePairing,
+			lastRefusal:
+				refusal && age <= PAIRING_REFUSAL_MEMORY_MS
+					? {
+							code: refusal.code,
+							secondsAgo: Math.round(age / 1000),
+							pluginVersion: refusal.pluginVersion,
+						}
+					: null,
+		};
+	}
+
+	/**
+	 * Appended to "plugin not connected" errors: when the plugin DID try to connect but was refused for
+	 * pairing, say so — otherwise the caller (an agent, a pipeline script) only sees "not connected" and
+	 * looks for the fault in Figma. Empty when there is nothing to add.
+	 */
+	pairingHint(): string {
+		const refusal = this.pairingStatus().lastRefusal;
+		if (!refusal) return "";
+		const why =
+			refusal.code === "pairing-required"
+				? "it sent no pairing code (a plugin older than pairing, or the code was never entered)"
+				: "its pairing code does not match this bridge (the code changed)";
+		return (
+			` A plugin tried to connect ${refusal.secondsAgo}s ago but was refused: ${why}.` +
+			" Paste the code from ~/.config/fmcp/pairing into the plugin: Advanced → Pairing code" +
+			" (an older plugin must first be re-imported from f-mcp-plugin/manifest.json)."
+		);
 	}
 
 	listConnectedFiles(): ConnectedFileInfo[] {
@@ -1340,6 +1533,14 @@ export class PluginBridgeServer {
 		}
 		this.clients.clear();
 		if (this.wss) {
+			// Connections that never paired are not in this.clients; don't leave them holding the server open.
+			for (const socket of this.wss.clients) {
+				try {
+					socket.terminate();
+				} catch {
+					/* ignore */
+				}
+			}
 			this.wss.close();
 			this.wss = null;
 		}
