@@ -639,7 +639,7 @@ Her faz sonrası `capture_screenshot` ile görsel doğrulama yapılmalı.
 | T1-4 | Navigasyon haritası (button text heuristic, TR+EN) | PASS — 8 bağlantı çıkarıldı |
 | T1-5 | 5/6 bağlantı başarılı kuruldu | PARTIAL |
 | T1-6 | 1/6 bağlantı başarısız — OVERLAY action | FAIL — generic "Reaction at index 0 was invalid" |
-| T1-7 | `figma_set_flow_starting_point` "Ilan Detayı Akışı" | PASS |
+| T1-7 | `figma_set_flow_starting_point` "Ürün Detayı Akışı" | PASS |
 | T1-8 | `figma_get_prototype_connections({pageScope: true})` audit | PASS — toolResult envelope çalıştı |
 
 **Tespit edilen bug'lar (v1.9.10 ile çözüldü):**

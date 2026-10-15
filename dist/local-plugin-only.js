@@ -993,7 +993,7 @@ export async function main() {
                 .describe("Target a specific connected file."),
             sourceNodeId: z
                 .string()
-                .describe("Node ID of the source screen to clone (e.g. '139:3407')"),
+                .describe("Node ID of the source screen to clone (e.g. '12:345')"),
             targetDevice: z
                 .string()
                 .describe("Device preset name (e.g. 'iPhone 17', 'Android Compact') or custom 'WxH' (e.g. '1200x800')"),
