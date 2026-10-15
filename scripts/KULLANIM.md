@@ -8,8 +8,7 @@
 2. **+** → Git: `/Users/<kullanici>/FCM/scripts`
 3. **Figma Bridge Launcher.app** seç → Aç
 4. Listede **Figma Bridge Launcher** yanındaki kutu **işaretli** olsun
-5. Figma’yı kapatıp tekrar aç:  
-   `open -a "Figma" --args --remote-debugging-port=9222`
+5. Figma’yı kapatıp tekrar aç
 6. **En az 25–30 saniye** bekle (Figma yüklensin + script çalışsın)
 
 ---

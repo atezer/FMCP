@@ -18,7 +18,6 @@ npm test
 | `npm test` | Jest testleri calistir |
 | `npm run test:watch` | Test izleme modu |
 | `npm run validate:fmcp-skills` | Skill/tool isim eslesmesi |
-| `npm run dev:plugin-only` | Plugin-only modu calistir |
 
 ## Project Structure
 
@@ -48,16 +47,11 @@ tests/
 
 ## Version Bump Checklist
 
-Versiyon degistirirken bu dosyalari guncelle:
-- `package.json` version
-- `src/local-plugin-only.ts` McpServer version
-- `src/core/plugin-bridge-server.ts` bridgeVersion
-- `.cursor-plugin/plugin.json` version
-- `README.md` ornek versiyon
-- `FUTURE.md` paket surumu
-- `CHANGELOG.md` yeni giris
+1. `package.json` surumunu degistir (`npm version <surum> --no-git-tag-version`; `package-lock.json` da guncellenir)
+2. `npm run sync-version` calistir: `src/core/version.ts`, `f-mcp-plugin/code.js` + `ui.html`, `manifest.json`, `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `KURULUM.md`, `docs/TOOLS.md` damgalarini ve arac/skill/komut sayilarini esitler
+3. Elle: `README.md` surum rozeti ve "Guncel surum" satiri, `CHANGELOG.md` yeni giris
 
-CI otomatik versiyon tutarliligi kontrol eder.
+CI `npm run check:versions` ile tutarliligi denetler. Eklenti manifestlerindeki `version` alani sabitleyicidir: degismezse eklenti kullanicilari yeni skill ve komutlari almaz.
 
 ## Testing
 
