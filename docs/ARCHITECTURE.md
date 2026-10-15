@@ -65,4 +65,4 @@ Servers announce each other (`activeBridges`), and the plugin keeps a connection
 | `src/core/contract-extractor.ts` | `figma_extract_contract` scripts + assembly |
 | `src/core/embedded-skills.ts` | Generated — skill essentials sent with the first `figma_get_status` |
 | `f-mcp-plugin/` | Figma plugin (`manifest.json`, `ui.html`, `code.js`) |
-| `skills/`, `commands/`, `agents/`, `hooks/` | Claude Code / Cursor plugin content |
+| `skills/`, `commands/`, `agents/` | Claude Code / Cursor plugin content |

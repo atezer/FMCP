@@ -10,7 +10,6 @@ Claude Desktop **Claude Code'dan farklı çalışır**. Şu mekanizmalar **Deskt
 
 | Mekanizma | Claude Desktop | Claude Code |
 |---|---|---|
-| Hook'lar (PreToolUse, SessionStart) | ❌ Çalışmaz | ✅ Harness enforcer |
 | Sub-agent spawn (`Task(...)`) | ❌ Yok | ✅ Mevcut |
 | Slash command (`/ds-sync`) | ❌ Desteklenmez | ✅ Auto-register |
 | Plugin.json auto-discovery | ❌ Yüklenmez | ✅ Yüklenir |
@@ -165,7 +164,6 @@ Script 5454-5470 aralığındaki zombie FMCP process'lerini güvenle kill eder (
 | **5. Canvas ops Rule 10a** | `figma-canvas-ops` Rule 10a (v1.9.4+) | Execute içinde inline bind check — unbound tespit edilirse `throw` atılır, execute başarısız olur. |
 
 **Desktop'ta ÇALIŞMAYANLAR** (bunları beklemeyin):
-- hooks.json (PreToolUse, SessionStart)
 - slash command'lar
 - sub-agent spawn
 - auto-discovery

@@ -91,7 +91,7 @@ osascript autorun-bridge.applescript
 1. Test scripti çalıştırın: `./test-autorun.sh`
 2. Logları kontrol edin: `tail -f ~/Library/Logs/figma-bridge-autorun.log`
 3. Plugin'in Figma'da kurulu olduğundan emin olun
-4. Figma'yı remote debugging ile başlatın: `--remote-debugging-port=9222`
+4. Figma'yı tamamen kapatıp yeniden açın
 
 ### Problem: "Operation not permitted" hatası
 **Çözüm:**

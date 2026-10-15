@@ -73,7 +73,6 @@ Kurulum tek seferlik. Sonrasında **Claude Desktop'ı** açın — tıpkı Claud
 
 Claude Desktop **Claude Code'dan farklı** çalışır. Şu mekanizmalar **Desktop'ta yoktur**:
 
-- Hook'lar (PreToolUse, SessionStart) — çalışmaz
 - Sub-agent spawn — Task tool mevcut değil
 - Slash command'lar (`/ds-sync` vb.) — desteklenmez
 - `plugin.json` auto-discovery — yüklenmez
