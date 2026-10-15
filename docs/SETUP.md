@@ -49,8 +49,23 @@ cp .mcp.json.example .mcp.json
 ## 3. Import and run the plugin
 
 1. Figma → **Plugins → Development → Import plugin from manifest…** → `f-mcp-plugin/manifest.json`
-2. Open the file you want to work on and run **F-MCP ATezer Bridge**. Wait for "Bridge active".
-3. Restart your MCP client and ask: *"Check Figma status"*.
+2. Open the file you want to work on and run **F-MCP ATezer Bridge**.
+3. **Pair once (v1.11.0+).** The plugin says "eşleştirme gerekli" (pairing required) on first run. Copy the code and paste it into the plugin: **Advanced → Eşleştirme → Kaydet**. Wait for "Bridge active".
+   ```bash
+   cat ~/.config/fmcp/pairing          # Windows: type %USERPROFILE%\.config\fmcp\pairing
+   node dist/local-plugin-only.js --print-pairing   # creates the code if it does not exist yet
+   ```
+   The code is created on the first start (file mode 0600) and is shared by every bridge on this machine (all ports, Node and Python). The plugin stores it; you enter it once.
+4. Restart your MCP client and ask: *"Check Figma status"*.
+
+## Bridge security: two layers, two switches
+
+| Layer | What it stops | Switch (escape hatch only) |
+|---|---|---|
+| Origin check on the WebSocket upgrade | Ordinary web pages (`https://…`). A page can still send `Origin: null` from a sandboxed iframe, so this is the first line only. | `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1` |
+| Pairing code in the plugin's `ready` handshake | Anything that does not know the code: it is never registered, receives no request, cannot set the REST token and is closed after 10 s. | `FMCP_PAIRING=off` |
+
+Each switch relaxes only its own layer, and the bridge prints a warning on every start while one is set. `/shutdown` (used between bridge instances) always needs the pairing code in `X-FMCP-Pairing` and refuses any request that carries an `Origin`; CORS headers are never sent. `FMCP_PAIRING=off` exists for one case: a plugin that cannot be updated yet. Remove it once the plugin is updated.
 
 ## Several files open
 
@@ -68,7 +83,9 @@ The plugin can be running in several files at once; each one connects separately
 | `FIGMA_MCP_AUDIT_LOG_PATH` | — | Write an audit log of tool calls |
 | `FMCP_REQUIRE_TARGET` | on | `0` disables the "write needs a target when several files are open" rule |
 | `FMCP_POST_SCAN_MODE` | `warn` | `block` makes post-execute DS violations blocking |
-| `FMCP_BRIDGE_ALLOW_ANY_ORIGIN` | off | `1` disables the WebSocket origin check (escape hatch only) |
+| `FMCP_BRIDGE_ALLOW_ANY_ORIGIN` | off | `1` disables the WebSocket origin check (escape hatch only; pairing still applies) |
+| `FMCP_PAIRING` | on | `off` (or `0`/`false`) accepts plugins without the pairing code — transition only, see above |
+| `FMCP_PAIRING_FILE` | `~/.config/fmcp/pairing` | Where the pairing code lives (all bridges on the machine must read the same file) |
 | `FIGMA_REST_TOKEN` | — | Optional; only for the REST tools (`figma_rest_api`, version history) |
 
 ## Troubleshooting (short)

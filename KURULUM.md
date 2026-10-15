@@ -74,8 +74,9 @@ Config dosyası: `~/Library/Application Support/Claude/claude_desktop_config.jso
 1. **Build alın** (bir kez): `cd <proje> && npm run build`
 2. Claude config’te `local-plugin-only.js` kullanın (yukarıdaki örnek).
 3. Figma’yı **normal** açın (özel port gerekmez).
-4. Figma’da: **Plugins → Development → F-MCP ATezer Bridge** ile plugin’i çalıştırın; “ready” / “Bridge active” görünene kadar bekleyin.
-5. Claude’u yeniden başlatın; araçları kullanabilirsiniz.
+4. Figma’da: **Plugins → Development → F-MCP ATezer Bridge** ile plugin’i çalıştırın.
+5. **Bir kez eşleştirin (v1.11.0+):** plugin “eşleştirme gerekli” der. `cat ~/.config/fmcp/pairing` (Windows: `type %USERPROFILE%\.config\fmcp\pairing`) ya da `node <proje>/dist/local-plugin-only.js --print-pairing` ile kodu kopyalayıp plugin’de **Advanced → Eşleştirme** alanına yapıştırın, **Kaydet**’e basın. “ready” / “Bridge active” görünene kadar bekleyin. Kod bu makinedeki tüm bridge’lerde geçerlidir; plugin onu saklar.
+6. Claude’u yeniden başlatın; araçları kullanabilirsiniz.
 
 ---
 
@@ -130,7 +131,7 @@ npm run build
 
 | Bilgi | Kaynak |
 |-------|--------|
-| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.10.1**) |
+| Hangi sürümde olduğunuz | Depo kökünde `package.json` → `version` (ör. **1.11.0**) |
 | Ne değişti | Kök [CHANGELOG.md](CHANGELOG.md) |
 | Yayın bildirimi | GitHub [Releases](https://github.com/atezer/FMCP/releases) — depoyu izleyin (*Watch* → *Custom* → *Releases*) |
 | npm paket sürümü | [@atezer/figma-mcp-bridge](https://www.npmjs.com/package/@atezer/figma-mcp-bridge) veya `npm view @atezer/figma-mcp-bridge version` |
@@ -140,6 +141,7 @@ npm run build
 **NPX ile kurduysanız:** Config’te `@atezer/figma-mcp-bridge@latest` kullanıyorsanız yeni npm sürümü yayınlandıktan sonra genelde bir sonraki `npx` çalıştırmasında indirilir; önbellek sorununda `npx clear-npx-cache` veya sürümü sabitleyin (`@1.2.0` gibi). Değişiklik listesi için [CHANGELOG.md](CHANGELOG.md) ve [Releases](https://github.com/atezer/FMCP/releases).
 
 ### Plugin “ready” olmuyor
+- Plugin **“eşleştirme gerekli”** ya da **“Köprü bu kodu kabul etmedi”** diyorsa: `~/.config/fmcp/pairing` içindeki güncel kodu **Advanced → Eşleştirme** alanına yapıştırın. Eşleştirmeyi bilmeyen eski bir plugin’i önce yeniden import edin.
 - Plugin-only kullanıyorsanız: Claude (MCP sunucusu) açık olsun. Plugin artık 5454–5470 aralığında dinleyen portu otomatik dener; gerekirse **Advanced** bölümünden host/port elle girin.
 - Port alanını bir kez değiştirip bağlanamıyorsanız plugin **tek porta kilitlenmiş** olabilir: **Otomatik tara** düğmesine basın veya **Advanced** panelini kapatıp tekrar **auto port** moduna dönün; Claude’daki bridge portu ile eşleştiğinden emin olun.
 
@@ -200,4 +202,4 @@ bash <(curl -fsSL https://raw.githubusercontent.com/atezer/FMCP/main/scripts/set
 ---
 
 **Proje adı:** F-MCP ATezer (figma-mcp-bridge)
-**Sürüm:** 1.10.1 (`package.json` ile uyumlu)
+**Sürüm:** 1.11.0 (`package.json` ile uyumlu)

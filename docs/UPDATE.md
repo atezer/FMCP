@@ -277,6 +277,7 @@ Guncelleme sonrasi su adimlari uygulayin:
 - [ ] AI aracinizdan `figma_get_status` calistirin — surum numarasini kontrol edin
 - [ ] AI aracinizdan `figma_plugin_diagnostics` calistirin — bridge version, uptime, bagli dosyalar
 - [ ] Figma plugin'de yesil **"Ready"** yazisi + port numarasi gorunuyor
+- [ ] v1.11.0'a gecerken: plugin'i yeniden import ettiniz ve eslestirme kodunu (`cat ~/.config/fmcp/pairing`) **Advanced → Eslestirme** alanina bir kez girdiniz. Plugin "eslestirme gerekli" diyorsa bu adim eksiktir.
 - [ ] Yeni bir arac deneyin (orn. `figma_get_design_system_summary`)
 
 ---

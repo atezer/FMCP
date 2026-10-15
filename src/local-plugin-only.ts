@@ -17,6 +17,11 @@ import { z } from "zod";
 import { getConfig } from "./core/config.js";
 import { createChildLogger } from "./core/logger.js";
 import { PluginBridgeServer } from "./core/plugin-bridge-server.js";
+import {
+	loadOrCreatePairingSecret,
+	pairingFilePath,
+	pairingRequired,
+} from "./core/pairing.js";
 import { PluginBridgeConnector } from "./core/plugin-bridge-connector.js";
 import { parseFigmaUrl } from "./core/figma-url.js";
 import {
@@ -321,7 +326,7 @@ function getErrorHint(category: string): string {
 		case "SYNTAX":
 			return "JavaScript syntax hatasi. Kaçis karakterleri, eksik parantez veya reserved word kontrol et.";
 		case "CONNECTION":
-			return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula.";
+			return "Plugin bagli degil. Figma'da F-MCP ATezer Bridge plugin'ini ac ve 'Bridge active' gosterdigini dogrula. Plugin 'eslestirme gerekli' diyorsa ~/.config/fmcp/pairing icindeki kodu Advanced → Eslestirme alanina yapistir.";
 		case "SERIALIZATION":
 			return "Sonuc JSON serialize edilemedi. Figma node objesi degil, plain object don: { id: node.id, name: node.name }";
 		case "FONT_NOT_LOADED":
@@ -399,15 +404,27 @@ function getConnector(
 					: "";
 			throw new Error(
 				`No plugin connected for fileKey "${fileKey}".${fileList} ` +
-					"Open the target file in Figma and run the F-MCP ATezer Bridge plugin.",
+					"Open the target file in Figma and run the F-MCP ATezer Bridge plugin." +
+					bridge.pairingHint(),
 			);
 		}
-		throw new Error(PLUGIN_NOT_CONNECTED);
+		throw new Error(PLUGIN_NOT_CONNECTED + bridge.pairingHint());
 	}
 	return new PluginBridgeConnector(bridge, fileKey);
 }
 
 export async function main() {
+	// `--print-pairing`: print the plugin pairing code (created on first use) and exit; nothing else starts.
+	if (process.argv.includes("--print-pairing")) {
+		try {
+			process.stdout.write(`${loadOrCreatePairingSecret()}\n`);
+		} catch (err) {
+			console.error(err instanceof Error ? err.message : String(err));
+			process.exitCode = 1;
+		}
+		return;
+	}
+
 	const config = getConfig();
 	const port = config.local?.pluginBridgePort ?? 5454;
 	const auditLogPath = config.local?.auditLogPath;
@@ -417,6 +434,25 @@ export async function main() {
 	const envRestToken = process.env.FIGMA_REST_TOKEN?.trim();
 	if (envRestToken) bridge.setFigmaRestToken(envRestToken);
 	bridge.start();
+	// The pairing code itself is never logged; only where to get it.
+	if (pairingRequired()) {
+		console.error(
+			`F-MCP: the Figma plugin must be paired once. Copy the code from ${pairingFilePath()}` +
+				" (or run `npx -y @atezer/figma-mcp-bridge@latest --print-pairing`) and paste it into the plugin: Advanced → Pairing code.\n",
+		);
+	} else {
+		console.error(
+			"⚠️  F-MCP: FMCP_PAIRING=off — plugins connect without the pairing code, so a web page open in your browser" +
+				" can connect to this bridge as well (the origin check does not stop a sandboxed iframe). Use it only until the plugin is updated, then remove the setting.\n",
+		);
+	}
+	if (process.env.FMCP_BRIDGE_ALLOW_ANY_ORIGIN === "1") {
+		console.error(
+			pairingRequired()
+				? "⚠️  F-MCP: FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1 — the WebSocket origin check is off; the pairing code still authenticates the plugin.\n"
+				: "⚠️  F-MCP: FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1 together with FMCP_PAIRING=off — any web page open in your browser can connect to this bridge.\n",
+		);
+	}
 
 	const cache = new ResponseCache();
 	/** Invalidate cache after any mutating operation. */
@@ -502,9 +538,11 @@ export async function main() {
 							success: true,
 							connectedFiles: files,
 							totalConnections: files.length,
+							pairing: bridge.pairingStatus(),
 							message:
 								files.length === 0
-									? "No plugins connected. Open Figma and run the F-MCP ATezer Bridge plugin."
+									? "No plugins connected. Open Figma and run the F-MCP ATezer Bridge plugin." +
+										bridge.pairingHint()
 									: `${files.length} plugin(s) connected. Use fileKey parameter in other tools to target a specific file.`,
 						}),
 					},
@@ -3134,7 +3172,7 @@ export async function main() {
 				msg = `F-MCP ATezer Bridge: ${clientCount} plugin(s) connected on port ${currentPort}. You can use all figma_* tools.`;
 				if (versionWarning) msg += " " + versionWarning;
 			} else {
-				msg = PLUGIN_NOT_CONNECTED;
+				msg = PLUGIN_NOT_CONNECTED + bridge.pairingHint();
 			}
 
 			const autoIncremented = bridge.getPreferredPort() !== currentPort;
@@ -3163,6 +3201,7 @@ export async function main() {
 							connectedFiles,
 							bridgePort: currentPort,
 							serverVersion: FMCP_VERSION,
+							pairing: bridge.pairingStatus(),
 							...(autoIncremented && {
 								preferredPort: bridge.getPreferredPort(),
 								autoIncremented,

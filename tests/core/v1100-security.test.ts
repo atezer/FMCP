@@ -13,9 +13,12 @@ import { resolveFigmaRestUrl, isRetryableMethod } from "../../src/core/rest-url"
 
 type AnyServer = Record<string, any>;
 
+/** v1.11.0: a plugin pairs in its "ready" handshake; tests pass the code instead of reading ~/.config/fmcp. */
+const PAIRING = "test_Pairing-Code_0123456789abcd";
+
 /** Start the bridge's real HTTP+WS stack on an ephemeral port (bypasses port scanning). */
 async function startOnEphemeralPort(): Promise<{ bridge: PluginBridgeServer; port: number }> {
-	const bridge = new PluginBridgeServer(5454);
+	const bridge = new PluginBridgeServer(5454, { pairingSecret: PAIRING });
 	const b = bridge as unknown as AnyServer;
 	const http = b.createBridgeHttpServer();
 	await new Promise<void>((r) => http.listen(0, "127.0.0.1", r));
@@ -90,8 +93,9 @@ describe("bridge HTTP/WS hardening (ephemeral port)", () => {
 	it("a response from a different client cannot resolve someone else's request", async () => {
 		const plugin = await wsConnect(port, "null");
 		const intruder = await wsConnect(port, "null");
-		plugin.send(JSON.stringify({ type: "ready", fileKey: "FILE_A", fileName: "A" }));
-		intruder.send(JSON.stringify({ type: "ready", fileKey: "FILE_B", fileName: "B" }));
+		// Both paired: even a second paired client cannot answer a request sent to the first
+		plugin.send(JSON.stringify({ type: "ready", fileKey: "FILE_A", fileName: "A", pairing: PAIRING }));
+		intruder.send(JSON.stringify({ type: "ready", fileKey: "FILE_B", fileName: "B", pairing: PAIRING }));
 		await waitFor(() => bridge.listConnectedFiles().filter((f) => f.fileKey).length === 2);
 
 		plugin.on("message", (d) => {
@@ -124,7 +128,7 @@ describe("bridge HTTP/WS hardening (ephemeral port)", () => {
 
 describe("routing (strict fileKey, ambiguous writes)", () => {
 	function withClients(files: Array<string | null>): PluginBridgeServer {
-		const bridge = new PluginBridgeServer(5454);
+		const bridge = new PluginBridgeServer(5454, { pairingSecret: PAIRING });
 		const clients = (bridge as unknown as AnyServer).clients as Map<string, unknown>;
 		files.forEach((fileKey, i) =>
 			clients.set(`c${i}`, {

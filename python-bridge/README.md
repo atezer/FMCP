@@ -1,8 +1,8 @@
 # F-MCP Bridge — Python (Node.js olmadan) · **Deneysel**
 
-> **Deneysel:** Python köprüsü yalnızca 10 aracı destekler ve Node sürümünün güvenlik/yönlendirme düzeltmelerini (v1.10.0+) içermez. Mümkünse Node sürümünü (`dist/local-plugin-only.js`, 63 araç) kullanın.
+> **Deneysel:** Python köprüsü yalnızca 10 aracı destekler ve Node sürümünün dosya yönlendirme düzeltmelerini (v1.10.0+) içermez. Köprü güvenliği (Origin denetimi ve eşleştirme kodu, v1.11.0) Node ile aynıdır. Mümkünse Node sürümünü (`dist/local-plugin-only.js`, 63 araç) kullanın.
 
-Bu klasör, **Node.js kurulumu olmayan** ortamlarda (örn. Windows kurumsal bilgisayar) F-MCP Bridge kullanmak için Python ile yazılmış MCP sunucusudur. Plugin ile aynı WebSocket protokolünü (port 5454) kullanır; Figma plugin tarafında değişiklik gerekmez.
+Bu klasör, **Node.js kurulumu olmayan** ortamlarda (örn. Windows kurumsal bilgisayar) F-MCP Bridge kullanmak için Python ile yazılmış MCP sunucusudur. Plugin ile aynı WebSocket protokolünü (port 5454) ve Node köprüsüyle **aynı eşleştirme kodunu** kullanır; Figma plugin tarafında ayrı bir ayar gerekmez.
 
 ## Gereksinimler
 
@@ -66,7 +66,10 @@ Tam 63 araç için Node sürümünü kullanın (`dist/local-plugin-only.js`).
 
 1. Claude Desktop’u başlatın (MCP sunucusu 5454’ü açar).
 2. Figma’yı açın, Plugins → **F-MCP ATezer Bridge** çalıştırın.
-3. Plugin’de Port **5454** kalsın; “ready” görününce Claude’da Figma araçlarını kullanabilirsiniz.
+3. İlk seferde plugin **“eşleştirme gerekli”** der: kodu `python -m fmcp_bridge --print-pairing` ile (ya da `%USERPROFILE%\.config\fmcp\pairing` / `~/.config/fmcp/pairing` dosyasından) kopyalayıp plugin’de **Advanced → Eşleştirme** alanına yapıştırın. Kod bir kez girilir; Node ve Python bridge’leri aynı dosyayı okur.
+4. Plugin’de Port **5454** kalsın; “ready” görününce Claude’da Figma araçlarını kullanabilirsiniz.
+
+Eşleştirmeyi bilmeyen eski bir plugin’i güncelleyemediğiniz geçiş döneminde `FMCP_PAIRING=off` ile kapatabilirsiniz; bridge her başlangıçta uyarır. Origin denetiminin kaçış ayarı Node ile aynıdır: `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1` (yalnız Origin denetimini kapatır, eşleştirme kalır).
 
 ## Windows
 

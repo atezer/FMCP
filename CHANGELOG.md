@@ -12,6 +12,29 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimine uygu
 
 Bu changelog'a ekleme öncesi sürümlerin tam ayrıntıları için `git log` kullanılabilir.
 
+## [1.11.0] — 2026-10-15 — Köprü eşleştirmesi
+
+### Changed — davranış değişikliği
+
+- **Plugin köprüye bir eşleştirme koduyla bağlanıyor.** Kod ilk çalıştırmada `~/.config/fmcp/pairing` dosyasında üretilir (192 bit; dosya 0600, dizin 0700; `FMCP_PAIRING_FILE` ile taşınabilir). Aynı makinedeki tüm Node ve Python köprüleri aynı dosyayı okur. Kod hiçbir loga yazılmaz.
+  - Plugin'de **Advanced → Eşleştirme** alanı: kod bir kez girilir, `figma.clientStorage`'da saklanır ve her `ready` el sıkışmasıyla gönderilir (URL'de değil).
+  - Kodu göstermek için: `cat ~/.config/fmcp/pairing` ya da `node dist/local-plugin-only.js --print-pairing` (Python: `python -m fmcp_bridge --print-pairing`).
+  - **Güncellerken bir kez:** plugin'i yeniden import edin ve kodu girin. Eski plugin yeni köprüye bağlanamaz; yeni plugin eski köprülerle çalışır (eski köprü alanı yok sayar).
+  - Geçiş anahtarı: `FMCP_PAIRING=off` yalnızca plugin el sıkışmasını eski hâline döndürür; köprü her başlangıçta uyarır.
+
+### Security
+
+- **Kodu bilmeyen bağlantı istemci sayılmıyor.** Origin denetimi (v1.10.0) sıradan web sayfalarını keser, ama bir sayfa sandbox'lı bir iframe'den plugin'in gönderdiği `Origin: null` değerini gönderebilir; v1.10.0'da böyle bir bağlantı `ready` ile bir dosyanın gerçek plugin'inin yerine geçebiliyordu. Artık eşleşmeyen bağlantı kayda alınmaz, istek almaz, dosyanın plugin'inin yerine geçemez, REST token'ını değiştiremez, `/status`'ta sayılmaz ve 10 sn içinde kapatılır.
+- **`/shutdown` eşleştirme kodu istiyor** (`X-FMCP-Pairing`); `Origin` taşıyan istek yine reddediliyor. Aynı makinedeki köprüler aynı dosyayı okuduğundan devralma çalışmaya devam ediyor; v1.10.x bir köprünün isteği reddedilir ve o köprü sonraki porta geçer.
+- **İki katman, iki anahtar:** `FMCP_BRIDGE_ALLOW_ANY_ORIGIN=1` yalnız Origin denetimini, `FMCP_PAIRING=off` yalnız eşleştirmeyi kapatır. Biri açıkken köprü her başlangıçta uyarır; ikisi birden açıksa köprünün her web sayfasına açık olduğunu söyler. Ayrıntı: [docs/SETUP.md](docs/SETUP.md).
+- **Python köprüsü:** aynı eşleştirme kuralları ve Origin denetimi (aynı iki anahtar).
+
+### Fixed
+
+- **Tanı:** eşleştirme reddedildiğinde "plugin not connected" hataları ile `figma_get_status` / `figma_list_connected_files` nedeni de söylüyor (`pairing.lastRefusal`).
+- **Kurulum hatası açık:** eşleştirme dosyası oluşturulamazsa (ör. ev dizinine yazamayan, sandbox'lı bir kabuk) köprü ne yapılacağını söyleyerek duruyor.
+- **Python köprüsü `websockets` ≥ 14 ile çalışıyor.** `requirements.txt` `>=14` istiyordu, ama kod yalnız eski uygulamada olan `.open` özniteliğini okuyordu; artık `.state` de okunuyor.
+
 ## [1.10.1] — 2026-10-08 — Repo düzeni, CI kontrolleri, bağımlılık güvenliği
 
 ### Fixed
